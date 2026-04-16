@@ -7,3 +7,7 @@ build/
 *.dylib
 *.dll
 .venv/
+
+# underscore-prefixed files are WIP / not ready to commit
+_*.py
+!__init__.py
