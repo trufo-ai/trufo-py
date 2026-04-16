@@ -1,9 +1,0 @@
-LICENSE
-README.md
-pyproject.toml
-src/trufo/__init__.py
-src/trufo/py.typed
-src/trufo.egg-info/PKG-INFO
-src/trufo.egg-info/SOURCES.txt
-src/trufo.egg-info/dependency_links.txt
-src/trufo.egg-info/top_level.txt
