@@ -1,0 +1,14 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.so
+*.dylib
+*.dll
+.venv/
+
+# underscore-prefixed files are WIP / not ready to commit
+_*.md
+_*.py
+!__init__.py
