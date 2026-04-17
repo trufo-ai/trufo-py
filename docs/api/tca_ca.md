@@ -73,10 +73,26 @@ Test certificates can be enrolled without an account or organization. The CSR JW
 | `jti` | string | Unique ID (UUIDv7) |
 | `iat` | integer | Current UNIX timestamp |
 | `exp` | integer | Current UNIX timestamp + 300 |
-| `leaf_type` | string | Test leaf type value (e.g. `"c2pa-l1-test"`) |
-| `distinguished_name` | object | `{ "O": "...", "CN": "..." }` |
+| `leaf_type` | string | Test leaf type value |
+| `distinguished_name` | object | Certificate subject |
 | `record_id` | string | Unique ID (UUIDv7) |
 | `instance_id` | string | `"gpi_"` + UUIDv7 |
+
+**`leaf_type`** — allowed test values:
+
+| Value | Description |
+|-------|-------------|
+| `"c2pa-l1-test"` | C2PA Level 1 test signing |
+| `"c2pa-l2-test"` | C2PA Level 2 test signing |
+| `"cawg-interim-test"` | CAWG interim identity test signing |
+| `"ctsa-test"` | TSA test timestamping |
+
+**`distinguished_name`** — X.509 subject fields:
+
+| Key | Description |
+|-----|-------------|
+| `"O"` | Organization name |
+| `"CN"` | Common name |
 
 For CAWG interim test certificates, the payload also includes:
 
