@@ -9,7 +9,7 @@ Assembles subcommands from intf/ modules.
 
 import argparse
 
-from trufo.intf import credentials
+from trufo.intf import cli_credentials
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -17,7 +17,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="trufo", description="Trufo CLI")
     sub = parser.add_subparsers(dest="command", required=True)
 
-    credentials.register_subcommands(sub)
+    cli_credentials.register_subcommands(sub)
 
     return parser
 

@@ -15,20 +15,20 @@ from trufo.api.session import TrufoSession
 @pytest.fixture(autouse=True)
 def _patch_config_paths(tmp_path, monkeypatch):
     """Redirect all credential file operations to tmp_path."""
-    monkeypatch.setattr("trufo.intf.credentials.CONFIG_DIR", tmp_path / ".trufo")
+    monkeypatch.setattr("trufo.util.credentials.CONFIG_DIR", tmp_path / ".trufo")
     monkeypatch.setattr(
-        "trufo.intf.credentials.CREDENTIALS_DIR",
+        "trufo.util.credentials.CREDENTIALS_DIR",
         tmp_path / ".trufo" / "credentials",
     )
     monkeypatch.setattr(
-        "trufo.intf.credentials.SESSION_FILE",
+        "trufo.util.credentials.SESSION_FILE",
         tmp_path / ".trufo" / "session",
     )
     # patch the file lookup dicts so they point into tmp_path
-    from trufo.intf.credentials import TrufoApiKey
+    from trufo.util.credentials import TrufoApiKey
 
     monkeypatch.setattr(
-        "trufo.intf.credentials._API_KEY_FILES",
+        "trufo.util.credentials._API_KEY_FILES",
         {
             TrufoApiKey.TPS: tmp_path / ".trufo" / "credentials" / "tps_api_key",
             TrufoApiKey.TSA: tmp_path / ".trufo" / "credentials" / "tsa_api_key",
@@ -39,7 +39,7 @@ def _patch_config_paths(tmp_path, monkeypatch):
         monkeypatch.delenv(var, raising=False)
 
 
-from trufo.intf.credentials import (
+from trufo.util.credentials import (
     TrufoApiKey,
     clear_session,
     load_api_key,

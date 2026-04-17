@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 """
-Local credential storage and CLI commands for trufo authentication.
+Credential storage for trufo authentication.
 
 Persists API keys and session tokens to ~/.trufo/ with restricted
 file permissions (0600).
@@ -24,11 +24,9 @@ Each credential has exactly one source: env var OR file. The env var
 takes precedence — if set, the file is ignored for that credential.
 """
 
-import argparse
 import json
 import os
 import stat
-import sys
 from enum import Enum
 from pathlib import Path
 
@@ -186,49 +184,3 @@ def clear_session() -> None:
     """Remove ~/.trufo/session if it exists."""
     if SESSION_FILE.exists():
         SESSION_FILE.unlink()
-
-
-# --- CLI commands ---
-
-
-def cmd_set_api_key(args: argparse.Namespace) -> None:
-    """Save API key to ~/.trufo/credentials/."""
-    try:
-        save_api_key(args.key_type, args.key)
-    except ValueError as exc:
-        print(str(exc), file=sys.stderr)
-        sys.exit(1)
-    print(f"{args.key_type.upper()} API key saved.")
-
-
-def cmd_login(args: argparse.Namespace) -> None:
-    """Authenticate via device authorization flow."""
-    api_key = load_api_key(TrufoApiKey.TPS)
-    if not api_key:
-        print("No TPS API key configured. Run: trufo set-api-key tps <KEY>", file=sys.stderr)
-        sys.exit(1)
-
-    session = TrufoSession()
-    session.init_session(api_key)
-    save_session(session)
-    print("Login successful.")
-
-
-def cmd_logout(args: argparse.Namespace) -> None:
-    """Clear saved session tokens."""
-    clear_session()
-    print("Session cleared.")
-
-
-def register_subcommands(sub: argparse._SubParsersAction) -> None:
-    """Register credential-related subcommands on the parser."""
-    p = sub.add_parser("set-api-key", help="Save an API key.")
-    p.add_argument("key_type", choices=[k.value for k in TrufoApiKey], help="API key type (tps or tsa).")
-    p.add_argument("key", help="API key value.")
-    p.set_defaults(func=cmd_set_api_key)
-
-    p = sub.add_parser("login", help="Authenticate via device authorization.")
-    p.set_defaults(func=cmd_login)
-
-    p = sub.add_parser("logout", help="Clear saved session.")
-    p.set_defaults(func=cmd_logout)
