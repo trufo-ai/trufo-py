@@ -249,6 +249,6 @@ Some useful functions in the codebase:
 
 | Function | Location | Description |
 |----------|----------|-------------|
-| `create_instance()` | `trufo.api.tca.c2pa_cert` | Create an instance via `TrufoSession` |
-| `register_credential()` | `trufo.api.tca.c2pa_cert` | Register a credential via `TrufoSession` |
-| `request_c2pa_cert()` | `trufo.api.tca.c2pa_cert` | End-to-end production enrollment (assertion → CSR JWT → EST → cert chain) |
+| `create_instance()` | `trufo.api.tca.certs_c2pa` | Create an instance via `TrufoSession` |
+| `register_credential()` | `trufo.api.tca.certs_c2pa` | Register a credential via `TrufoSession` |
+| `request_c2pa_cert()` | `trufo.api.tca.certs_c2pa` | End-to-end production enrollment (assertion → CSR JWT → EST → cert chain) |
