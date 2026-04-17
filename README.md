@@ -1,13 +1,9 @@
 # Trufo
 
-Open-source SDK for content provenance, watermarking, and fingerprinting.
+Open-source SDK for Trufo's content provenance API services.
 
-## Installation
+Please see the `docs/` folder for documentation.
+- The `cli.md` file documents the command-line interface; for non-human interaction (e.g. production apps), please do not use the CLI and instead make use of the actual Python code.
+- The `api/` folder documents the Trufo Provenance Service (TPS) endpoints, as well as the Trufo Certificate Authority (TCA) endpoints. Please note that TLS 1.3+ is required for all requests.
 
-```bash
-pip install trufo
-```
-
-## License
-
-Apache-2.0
+The library is currently in an alpha release state.
