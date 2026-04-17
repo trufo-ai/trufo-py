@@ -9,5 +9,6 @@ build/
 .venv/
 
 # underscore-prefixed files are WIP / not ready to commit
+_*.md
 _*.py
 !__init__.py
