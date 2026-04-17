@@ -4,23 +4,24 @@
 """
 Local credential storage and CLI commands for trufo authentication.
 
-Persists API key and session tokens to ~/.trufo/ with restricted
-file permissions (0600). Environment variables take precedence.
+Persists API keys and session tokens to ~/.trufo/ with restricted
+file permissions (0600).
 
-File layout:
+File layout (CLI — ``trufo set-api-key``, ``trufo login``):
     ~/.trufo/
-    ├── credentials     # API key (plaintext, chmod 600)
-    └── session         # access + refresh tokens (JSON, chmod 600)
+    ├── credentials/
+    │   ├── tps_api_key     # TPS API key (plaintext, chmod 600)
+    │   └── tsa_api_key     # TSA API key (plaintext, chmod 600)
+    └── session             # access + refresh tokens (JSON, chmod 600)
 
-Environment variable overrides:
-    TRUFO_API_KEY          → overrides credentials file
-    TRUFO_ACCESS_TOKEN     → overrides session file (access token)
-    TRUFO_REFRESH_TOKEN    → overrides session file (refresh token)
+Environment variables (programmatic — CI/CD, containers):
+    TRUFO_TPS_API_KEY      → TPS API key
+    TRUFO_TSA_API_KEY      → TSA API key
+    TRUFO_ACCESS_TOKEN     → access token  (both must be set)
+    TRUFO_REFRESH_TOKEN    → refresh token (both must be set)
 
-CLI commands:
-    set-api-key <key>   Save API key to ~/.trufo/credentials.
-    login               Authenticate via device authorization (opens browser).
-    logout              Clear saved session tokens.
+Each credential has exactly one source: env var OR file. The env var
+takes precedence — if set, the file is ignored for that credential.
 """
 
 import argparse
@@ -28,99 +29,146 @@ import json
 import os
 import stat
 import sys
+from enum import Enum
 from pathlib import Path
 
 from trufo.api.session import TrufoSession
 
 CONFIG_DIR = Path.home() / ".trufo"
-CREDENTIALS_FILE = CONFIG_DIR / "credentials"
+CREDENTIALS_DIR = CONFIG_DIR / "credentials"
 SESSION_FILE = CONFIG_DIR / "session"
-TSA_CREDENTIALS_FILE = CONFIG_DIR / "tsa_credentials"
 
 _FILE_PERMISSIONS = stat.S_IRUSR | stat.S_IWUSR  # 0o600
 
 
-def _ensure_config_dir() -> None:
-    """Create ~/.trufo/ with restricted permissions if needed."""
-    CONFIG_DIR.mkdir(mode=0o700, parents=True, exist_ok=True)
+class TrufoApiKey(str, Enum):
+    """API key types."""
+
+    TPS = "tps"
+    TSA = "tsa"
+
+
+# env var name and file path for each key type
+_SESSION_ACCESS_TOKEN_ENV_VAR = "TRUFO_ACCESS_TOKEN"
+_SESSION_REFRESH_TOKEN_ENV_VAR = "TRUFO_REFRESH_TOKEN"
+
+_API_KEY_ENV_VARS = {
+    TrufoApiKey.TPS: "TRUFO_TPS_API_KEY",
+    TrufoApiKey.TSA: "TRUFO_TSA_API_KEY",
+}
+_API_KEY_FILES = {
+    TrufoApiKey.TPS: CREDENTIALS_DIR / "tps_api_key",
+    TrufoApiKey.TSA: CREDENTIALS_DIR / "tsa_api_key",
+}
 
 
 def _write_private(path: Path, content: str) -> None:
     """Write a file with 0600 permissions."""
-    _ensure_config_dir()
+    path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
     path.write_text(content, encoding="utf-8")
     path.chmod(_FILE_PERMISSIONS)
+
+
+def _resolve_api_key_type(key_type: str | TrufoApiKey) -> TrufoApiKey:
+    """Resolve a string or TrufoApiKey to TrufoApiKey.
+
+    Raises:
+        ValueError: If *key_type* is not a valid API key type.
+    """
+    if isinstance(key_type, TrufoApiKey):
+        return key_type
+    try:
+        return TrufoApiKey(key_type)
+    except ValueError:
+        valid = ", ".join(k.value for k in TrufoApiKey)
+        raise ValueError(f"Invalid API key type: {key_type!r} (expected {valid})") from None
 
 
 # --- API key ---
 
 
-def load_api_key() -> str | None:
-    """Load API key from env var or credentials file."""
-    env_key = os.environ.get("TRUFO_API_KEY")
+def load_api_key(key_type: str | TrufoApiKey) -> str | None:
+    """Load an API key from env var or credentials file.
+
+    Args:
+        key_type: ``"tps"`` / ``TrufoApiKey.TPS`` or
+            ``"tsa"`` / ``TrufoApiKey.TSA``.
+
+    Returns:
+        The API key string, or ``None`` if not configured.
+
+    Raises:
+        ValueError: If *key_type* is not a valid API key type.
+    """
+    kt = _resolve_api_key_type(key_type)
+
+    env_key = os.environ.get(_API_KEY_ENV_VARS[kt])
     if env_key:
         return env_key.strip()
 
-    if CREDENTIALS_FILE.exists():
-        content = CREDENTIALS_FILE.read_text(encoding="utf-8").strip()
+    key_file = _API_KEY_FILES[kt]
+    if key_file.exists():
+        content = key_file.read_text(encoding="utf-8").strip()
         if content:
             return content
 
     return None
 
 
-def save_api_key(api_key: str) -> None:
-    """Write API key to ~/.trufo/credentials. Clears existing session."""
-    _write_private(CREDENTIALS_FILE, api_key + "\n")
-    clear_session()
+def save_api_key(key_type: str | TrufoApiKey, api_key: str) -> None:
+    """Write an API key to ~/.trufo/credentials/{type}_api_key.
 
+    Args:
+        key_type: ``"tps"`` / ``TrufoApiKey.TPS`` or
+            ``"tsa"`` / ``TrufoApiKey.TSA``.
+        api_key: The API key value.
 
-# --- TSA API key ---
-
-
-def load_tsa_key() -> str | None:
-    """Load TSA API key from env var or tsa_credentials file."""
-    env_key = os.environ.get("TRUFO_TSA_API_KEY")
-    if env_key:
-        return env_key.strip()
-
-    if TSA_CREDENTIALS_FILE.exists():
-        content = TSA_CREDENTIALS_FILE.read_text(encoding="utf-8").strip()
-        if content:
-            return content
-
-    return None
-
-
-def save_tsa_key(tsa_key: str) -> None:
-    """Write TSA API key to ~/.trufo/tsa_credentials."""
-    _write_private(TSA_CREDENTIALS_FILE, tsa_key + "\n")
+    Raises:
+        ValueError: If *key_type* is not a valid API key type.
+    """
+    kt = _resolve_api_key_type(key_type)
+    _write_private(_API_KEY_FILES[kt], api_key + "\n")
 
 
 # --- Session tokens ---
 
 
-def load_session() -> TrufoSession | None:
+def load_session() -> TrufoSession:
     """Load a TrufoSession from env vars or session file.
 
-    Returns None if no stored tokens are found.
+    Raises:
+        RuntimeError: If no session is configured, the session file is
+            corrupt, or env vars are partially set.
     """
-    access = os.environ.get("TRUFO_ACCESS_TOKEN")
-    refresh = os.environ.get("TRUFO_REFRESH_TOKEN")
-    if access and refresh:
+    access = os.environ.get(_SESSION_ACCESS_TOKEN_ENV_VAR)
+    refresh = os.environ.get(_SESSION_REFRESH_TOKEN_ENV_VAR)
+
+    if access or refresh:
+        if not (access and refresh):
+            raise RuntimeError(
+                f"Both {_SESSION_ACCESS_TOKEN_ENV_VAR} and {_SESSION_REFRESH_TOKEN_ENV_VAR} must be set (only one found)."
+            )
         return TrufoSession(access_token=access.strip(), refresh_token=refresh.strip())
 
     if SESSION_FILE.exists():
+        text = SESSION_FILE.read_text(encoding="utf-8")
         try:
-            data = json.loads(SESSION_FILE.read_text(encoding="utf-8"))
+            data = json.loads(text)
+        except json.JSONDecodeError as exc:
+            raise RuntimeError(f"Corrupt session file ({SESSION_FILE}): {exc}") from exc
+        try:
             return TrufoSession(
                 access_token=data["access_token"],
                 refresh_token=data["refresh_token"],
             )
-        except (json.JSONDecodeError, KeyError):
-            return None
+        except KeyError as exc:
+            raise RuntimeError(
+                f"Session file ({SESSION_FILE}) missing key: {exc}"
+            ) from exc
 
-    return None
+    raise RuntimeError(
+        f"No session found. Run 'trufo login' or set {_SESSION_ACCESS_TOKEN_ENV_VAR} + {_SESSION_REFRESH_TOKEN_ENV_VAR}."
+    )
 
 
 def save_session(session: TrufoSession) -> None:
@@ -144,22 +192,20 @@ def clear_session() -> None:
 
 
 def cmd_set_api_key(args: argparse.Namespace) -> None:
-    """Save API key to ~/.trufo/credentials."""
-    save_api_key(args.key)
-    print("API key saved.")
-
-
-def cmd_set_tsa_key(args: argparse.Namespace) -> None:
-    """Save TSA API key to ~/.trufo/tsa_credentials."""
-    save_tsa_key(args.key)
-    print("TSA API key saved.")
+    """Save API key to ~/.trufo/credentials/."""
+    try:
+        save_api_key(args.key_type, args.key)
+    except ValueError as exc:
+        print(str(exc), file=sys.stderr)
+        sys.exit(1)
+    print(f"{args.key_type.upper()} API key saved.")
 
 
 def cmd_login(args: argparse.Namespace) -> None:
     """Authenticate via device authorization flow."""
-    api_key = load_api_key()
+    api_key = load_api_key(TrufoApiKey.TPS)
     if not api_key:
-        print("No API key configured. Run: trufo set-api-key <KEY>", file=sys.stderr)
+        print("No TPS API key configured. Run: trufo set-api-key tps <KEY>", file=sys.stderr)
         sys.exit(1)
 
     session = TrufoSession()
@@ -176,13 +222,10 @@ def cmd_logout(args: argparse.Namespace) -> None:
 
 def register_subcommands(sub: argparse._SubParsersAction) -> None:
     """Register credential-related subcommands on the parser."""
-    p = sub.add_parser("set-api-key", help="Save API key.")
-    p.add_argument("key", help="Trufo API key.")
+    p = sub.add_parser("set-api-key", help="Save an API key.")
+    p.add_argument("key_type", choices=[k.value for k in TrufoApiKey], help="API key type (tps or tsa).")
+    p.add_argument("key", help="API key value.")
     p.set_defaults(func=cmd_set_api_key)
-
-    p = sub.add_parser("set-tsa-key", help="Save TSA API key.")
-    p.add_argument("key", help="Trufo TSA API key.")
-    p.set_defaults(func=cmd_set_tsa_key)
 
     p = sub.add_parser("login", help="Authenticate via device authorization.")
     p.set_defaults(func=cmd_login)
