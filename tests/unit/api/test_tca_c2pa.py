@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, patch
 
 import jwt as pyjwt
 
-from trufo.api.tca.c2pa_cert import _build_gpic_assertion, create_instance, register_credential
+from trufo.api.tca.certs_c2pa import _build_gpic_assertion, create_instance, register_credential
 from trufo.api.tca.tca_utils import LeafType
 
 # --- LeafType ---

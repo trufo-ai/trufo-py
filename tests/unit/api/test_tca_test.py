@@ -9,7 +9,7 @@ import jwt as pyjwt
 import pytest
 
 from trufo.api.tca.tca_utils import TEST_HMAC_SECRET, LeafType
-from trufo.api.tca.test_cert import (
+from trufo.api.tca.certs_test import (
     _build_test_c2pa_csr_jwt,
     _build_test_cawg_csr_jwt,
     request_c2pa_test_cert,
@@ -51,9 +51,9 @@ class TestRequestC2paTestCert:
         with pytest.raises(ValueError, match="must be a C2PA test type"):
             request_c2pa_test_cert("Org", "CN", b"private-key", leaf_type=LeafType.C2PA_L1)
 
-    @patch("trufo.api.tca.test_cert.extract_cert_chain")
-    @patch("trufo.api.tca.test_cert.est_enroll")
-    @patch("trufo.api.tca.test_cert.build_csr")
+    @patch("trufo.api.tca.certs_test.extract_cert_chain")
+    @patch("trufo.api.tca.certs_test.est_enroll")
+    @patch("trufo.api.tca.certs_test.build_csr")
     def test_returns_cert_chain(self, mock_csr, mock_enroll, mock_extract_chain):
         mock_csr.return_value = b"fake-csr-der"
         mock_enroll.return_value = b"fake-pkcs7"
@@ -63,9 +63,9 @@ class TestRequestC2paTestCert:
 
         assert result == b"chain-pem"
 
-    @patch("trufo.api.tca.test_cert.extract_cert_chain")
-    @patch("trufo.api.tca.test_cert.est_enroll")
-    @patch("trufo.api.tca.test_cert.build_csr")
+    @patch("trufo.api.tca.certs_test.extract_cert_chain")
+    @patch("trufo.api.tca.certs_test.est_enroll")
+    @patch("trufo.api.tca.certs_test.build_csr")
     def test_passes_leaf_type_to_est_enroll(self, mock_csr, mock_enroll, mock_extract_chain):
         mock_csr.return_value = b"c"
         mock_enroll.return_value = b"e"
@@ -80,9 +80,9 @@ class TestRequestC2paTestCert:
 class TestRequestCawgTestCert:
     """request_cawg_test_cert orchestrates CAWG interim test enrollment."""
 
-    @patch("trufo.api.tca.test_cert.extract_cert_chain")
-    @patch("trufo.api.tca.test_cert.est_enroll")
-    @patch("trufo.api.tca.test_cert.build_csr")
+    @patch("trufo.api.tca.certs_test.extract_cert_chain")
+    @patch("trufo.api.tca.certs_test.est_enroll")
+    @patch("trufo.api.tca.certs_test.build_csr")
     def test_uses_cawg_leaf_type(self, mock_csr, mock_enroll, mock_extract_chain):
         mock_csr.return_value = b"c"
         mock_enroll.return_value = b"e"

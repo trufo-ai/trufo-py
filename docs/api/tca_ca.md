@@ -127,8 +127,8 @@ Request an RFC 3161 timestamp.
 
 | Function | Location | Description |
 |----------|----------|-------------|
-| `request_c2pa_test_cert()` | `trufo.api.tca.test_cert` | One-step test C2PA certificate enrollment |
-| `request_cawg_test_cert()` | `trufo.api.tca.test_cert` | One-step test CAWG interim certificate enrollment |
+| `request_c2pa_test_cert()` | `trufo.api.tca.certs_test` | One-step test C2PA certificate enrollment |
+| `request_cawg_test_cert()` | `trufo.api.tca.certs_test` | One-step test CAWG interim certificate enrollment |
 | `build_csr()` | `trufo.api.tca.tca_utils` | Build a PKCS#10 CSR from a leaf private key |
 | `est_enroll()` | `trufo.api.tca.tca_utils` | Submit CSR + CSR JWT to CA via EST simpleenroll |
 | `extract_cert_chain()` | `trufo.api.tca.tca_utils` | Extract PEM certificate chain from PKCS#7 response |
