@@ -141,8 +141,17 @@ Register an instance credential (public key).
 |-------|------|----------|-------------|
 | `gpi_id` | string | Yes | Instance ID |
 | `public_key_pem` | string | Yes | PEM-encoded public key |
-| `key_algorithm` | string | Yes | `"ES256"` (EC P-256) or `"EdDSA"` (Ed25519) |
+| `key_algorithm` | string | Yes | `"ES256"` or `"EdDSA"` |
 | `label` | string | Yes | Human-readable label |
+
+**`public_key_pem`** — must be a valid PEM public key. The server parses the key and verifies it matches `key_algorithm`:
+
+| `key_algorithm` | Key Type | Curve |
+|-----------------|----------|-------|
+| `"ES256"` | EC | NIST P-256 (secp256r1) |
+| `"EdDSA"` | OKP | Ed25519 |
+
+Other key types (RSA, wrong EC curves) are rejected. A mismatch between the declared algorithm and the actual key returns `400 AlgorithmMismatch`. Each instance supports at most 2 active (non-revoked) credentials.
 
 **Response (201):**
 
@@ -185,8 +194,17 @@ Request a CSR JWT from the RA. The CSR JWT authorizes certificate enrollment via
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `client_assertion` | string | Yes | JWT signed with instance private key |
-| `leaf_type` | string | Yes | Certificate type (see [tca_ca.md](tca_ca.md) for values) |
-| `validity_days` | integer | No | Requested validity in days (server enforces max) |
+| `leaf_type` | string | Yes | Certificate type |
+| `validity_days` | integer | No | Requested validity in days |
+
+**`leaf_type`** — allowed values for C2PA:
+
+| Value | Description | Max Validity |
+|-------|-------------|--------------|
+| `"c2pa-l1"` | C2PA Level 1 production signing | 366 days |
+| `"c2pa-l2"` | C2PA Level 2 production signing | 90 days |
+
+**`validity_days`** — must be between 1 and the max for the leaf type. Defaults to the max if omitted.
 
 **Response (200):**
 
@@ -214,7 +232,7 @@ The `client_assertion` is a JWT signed by the instance's registered private key.
 | `sub` | string | Credential ID (`gpic_...`) |
 | `aud` | string | `"trufo-ra"` |
 | `iat` | integer | Current UNIX timestamp |
-| `exp` | integer | Current UNIX timestamp + 60 |
+| `exp` | integer | Expiration — recommended `iat + 60`, hard max `iat + 300` |
 
 ### Errors
 
