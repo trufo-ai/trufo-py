@@ -20,15 +20,11 @@ To get access, you must first create an API key on the (Trufo dashboard)[app.tru
 | Trufo API | usage of TPS API endpoints |
 | Time Stamping | usage of the TSA timestamper |
 
+In `src/trufo/api/` there are a number of helper functions that have all the API queries pre-configured within Python functions. The documentation of these helper functions for API access is included here, but is not included in other `docs/api/*.md` files. Please have your AI agent read the source code or alternatively, check out `examples/` or `tests/` for inspiration.
+
 ## API Headers
 
-All requests to the TPS (unless otherwise indicated) must include both an API key and an access token. The procedure to obtain an access token is described below.
-
-**API key** — included via the `X-API-Key` header:
-
-```
-X-API-Key: tk_...
-```
+All requests to the TPS require authentication. Most endpoints require an access token; the device authorization flow requires the TPS API key instead. See individual endpoint docs for specifics.
 
 **Access token** — included via the `Authorization` header as a Bearer token:
 
@@ -42,7 +38,6 @@ Authorization: Bearer eyJhbG...
 POST /endpoint HTTP/1.1
 Host: api.trufo.ai
 Content-Type: application/json
-X-API-Key: tk_...
 Authorization: Bearer eyJhbG...
 
 { "field": "value" }
@@ -56,22 +51,24 @@ Error responses return a JSON object with a `detail` field:
 { "detail": "ErrorCode" }
 ```
 
-The main exceptions to the two-header requirement are:
-- Obtaining an access token. See below for more details.
-- Obtaining a CSR JWT for a C2PA Claim Signing Certificate using an instance credential. See [tca_ra.md](tca_ra.md) for more details.
-- All TCA endpoints (EST, TSA, OCSP). See [tca_ca.md](tca_ca.md) for more details.
+The main exceptions to the standard `Authorization: Bearer` auth are:
+- Device authorization flow (API key only). See below.
+- CSR JWT issuance via client assertion. See [tca_ra.md](tca_ra.md).
+- TCA endpoints (EST, TSA, OCSP). See [tca_ca.md](tca_ca.md).
 
 ## Access Token
 
-The TPS supports OAuth 2.0 device authorization flow for headless environments.
-
-### Step 1: Initiate
+The TPS supports OAuth 2.0 device authorization flow for headless environments. Both steps require a TPS API key, included via the `X-API-Key` header:
 
 ```
-POST /account/device/authorize
+X-API-Key: tk_...
 ```
 
-**Auth:** API key with `trufo-api` scope.
+### Step 1 — `POST /account/device/authorize`
+
+Initiate device authorization.
+
+**Auth:** API key (trufo-api).
 
 **Request body:** `{}`
 
@@ -88,19 +85,15 @@ POST /account/device/authorize
 }
 ```
 
-### Step 2: User Approval
+### Step 2 — User Approval
 
 The user visits `verification_uri_complete` in a browser and approves the device.
 
-### Step 3: Poll for Tokens
+### Step 3 — `POST /account/device/token`
 
-The device polls until the user approves or the code expires.
+Poll for tokens. The device polls until the user approves or the code expires.
 
-```
-POST /account/device/token
-```
-
-**Auth:** API key with `trufo-api` scope.
+**Auth:** API key (trufo-api).
 
 ```json
 {
@@ -146,13 +139,11 @@ session.init_session(api_key="tk_...")
 
 ## Token Refresh
 
+### `POST /account/refresh`
+
 Exchange a refresh token for a new access + refresh token pair. Each refresh token is single-use.
 
-```
-POST /account/refresh
-```
-
-**Auth:** None required (the refresh token itself is the credential).
+**Auth:** None (the refresh token itself is the credential).
 
 ```json
 {
