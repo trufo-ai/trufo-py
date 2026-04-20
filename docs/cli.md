@@ -4,10 +4,8 @@ The `trufo` CLI provides local credential management and authentication. The too
 
 ## Setup
 
-The CLI tool is not yet published to PyPI; you can install it with:
-
 ```bash
-pip install -e /path/to/trufo-py
+pip install trufo
 trufo --help
 ```
 
