@@ -2,11 +2,9 @@
 
 During the alpha release phase, external contributors may raise issues, but may not make PRs.
 
-## Internal Development
-
 Please refer to the `lib-dev` skill in `skills/` for guidance on coding.
 
-### Publishing to PyPI
+## Publishing to PyPI
 
 Publishing uses **Trusted Publishing** (OIDC) via GitHub Actions — no API tokens needed.
 
