@@ -21,8 +21,6 @@ Generate a C2PA-signed media file. Signs with the TPS production signer (`tps_le
 | `media_input` | string | Yes | Base64-encoded input media |
 | `actions` | list | Yes | Media processing actions to apply |
 | `assertions` | list | No | Assertions to include in the manifest (default `[]`) |
-| `c2pa` | bool | Yes | Unused — pass `true` |
-| `activate` | bool | Yes | Unused — pass `false` |
 
 ### `media_input`
 
@@ -130,10 +128,6 @@ Attach a CAWG identity assertion.
 ```json
 ["cawg_identity", {"cawg_identity_id": "test"}]
 ```
-
-### `c2pa` and `activate`
-
-These fields are required by the request schema but are not used by the generate endpoint. They exist for a future managed content flow. Pass `true` and `false` respectively.
 
 ### Response (200)
 
