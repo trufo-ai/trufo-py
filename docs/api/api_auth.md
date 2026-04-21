@@ -48,19 +48,34 @@ The main exceptions to the standard `Authorization: Bearer` auth are:
 - CSR JWT issuance via client assertion. See [tca_ra.md](tca_ra.md).
 - TCA endpoints (EST, TSA, OCSP). See [tca_ca.md](tca_ca.md).
 
+## API Key Scopes
+
+Every API key is issued with a single scope. The scope determines which endpoints the key can call.
+
+
+| Scope            | Used for                                               |
+| ---------------- | ------------------------------------------------------ |
+| `trufo-api`      | Device authorization flow (`/account/device/*`)        |
+| `c2pa-sign-prod` | `POST /c2pa/sign` (production signer)                  |
+| `c2pa-sign-test` | `POST /test/c2pa/sign` (test signer)                   |
+| `tsa`            | Timestamp Authority requests to `tsa.trufo.ai`         |
+
+
+Create keys at [app.trufo.ai/settings/org](https://app.trufo.ai/settings/org) under *API Keys*. Note that the keys will be of the form `{scope}:{key}` for readability.
+
 ## Access Token
 
-The TPS supports OAuth 2.0 device authorization flow for headless environments. Both steps require a TPS API key, included via the `X-API-Key` header:
+The TPS supports OAuth 2.0 device authorization flow for headless environments. Both steps require a `trufo-api` scoped key, included via the `X-API-Key` header:
 
 ```
-X-API-Key: tk_...
+X-API-Key: trufo-api:...
 ```
 
 ### Step 1 — `POST /account/device/authorize`
 
 Initiate device authorization.
 
-**Auth:** API key (trufo-api).
+**Auth:** API key (`trufo-api` scope).
 
 **Request body:** `{}`
 
@@ -85,7 +100,7 @@ The user visits `verification_uri_complete` in a browser and approves the device
 
 Poll for tokens. The device polls until the user approves or the code expires.
 
-**Auth:** API key (trufo-api).
+**Auth:** API key (`trufo-api` scope).
 
 ```json
 {
@@ -127,7 +142,7 @@ Poll for tokens. The device polls until the user approves or the code expires.
 from trufo.api.session import TrufoSession
 
 session = TrufoSession()
-session.init_session(api_key="tk_...")
+session.init_session(api_key="trufo-api:...")
 # Prints verification URL, then polls automatically
 ```
 
@@ -174,7 +189,7 @@ Exchange a refresh token for a new access + refresh token pair. Each refresh tok
 from trufo.api.session import TrufoSession
 
 session = TrufoSession()
-session.init_session(api_key="tk_...")
+session.init_session(api_key="trufo-api:...")
 
 # Make authenticated requests
 data = session.make_request("/some/endpoint", {"key": "value"})
@@ -194,10 +209,14 @@ Session tokens and API keys can be persisted to `~/.trufo/` via the `trufo.util.
 ```python
 from trufo.util.credentials import TrufoApiKey, load_api_key, load_session, save_session
 
-# Load TPS API key (env var or ~/.trufo/credentials/tps_api_key)
-api_key = load_api_key(TrufoApiKey.TPS)
+# Load a trufo-api key (env var or ~/.trufo/credentials/trufo_api_key)
+api_key = load_api_key(TrufoApiKey.TRUFO_API)
 
-# Load TSA API key (env var or ~/.trufo/credentials/tsa_api_key)
+# Load a c2pa-sign-prod / c2pa-sign-test key
+prod_key = load_api_key(TrufoApiKey.C2PA_SIGN_PROD)
+test_key = load_api_key(TrufoApiKey.C2PA_SIGN_TEST)
+
+# Load a tsa key
 tsa_key = load_api_key(TrufoApiKey.TSA)
 
 # Load saved session (env vars or ~/.trufo/session)

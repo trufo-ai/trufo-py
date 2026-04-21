@@ -10,18 +10,26 @@ file permissions (0600).
 File layout (CLI — ``trufo set-api-key``, ``trufo login``):
     ~/.trufo/
     ├── credentials/
-    │   ├── tps_api_key     # TPS API key (plaintext, chmod 600)
-    │   └── tsa_api_key     # TSA API key (plaintext, chmod 600)
-    └── session             # access + refresh tokens (JSON, chmod 600)
+    │   ├── trufo_api_key           # trufo-api key (device flow)
+    │   ├── c2pa_sign_prod_api_key  # c2pa-sign-prod key (/c2pa/sign)
+    │   ├── c2pa_sign_test_api_key  # c2pa-sign-test key (/test/c2pa/sign)
+    │   └── tsa_api_key             # tsa key (tsa.trufo.ai)
+    └── session                     # access + refresh tokens (JSON)
 
 Environment variables (programmatic — CI/CD, containers):
-    TRUFO_TPS_API_KEY      → TPS API key
-    TRUFO_TSA_API_KEY      → TSA API key
-    TRUFO_ACCESS_TOKEN     → access token  (both must be set)
-    TRUFO_REFRESH_TOKEN    → refresh token (both must be set)
+    TRUFO_API_KEY                   → trufo-api key
+    TRUFO_C2PA_SIGN_PROD_API_KEY    → c2pa-sign-prod key
+    TRUFO_C2PA_SIGN_TEST_API_KEY    → c2pa-sign-test key
+    TRUFO_TSA_API_KEY               → tsa key
+    TRUFO_ACCESS_TOKEN              → access token  (both must be set)
+    TRUFO_REFRESH_TOKEN             → refresh token (both must be set)
 
 Each credential has exactly one source: env var OR file. The env var
 takes precedence — if set, the file is ignored for that credential.
+
+``TrufoApiKey`` values match the server-side ``ApiKeyScope`` wire names,
+so the enum doubles as the scope identifier when creating keys in the
+Trufo dashboard.
 """
 
 import json
@@ -40,9 +48,11 @@ _FILE_PERMISSIONS = stat.S_IRUSR | stat.S_IWUSR  # 0o600
 
 
 class TrufoApiKey(str, Enum):
-    """API key types."""
+    """API key types. Values match the server-side ``ApiKeyScope``."""
 
-    TPS = "tps"
+    TRUFO_API = "trufo-api"
+    C2PA_SIGN_PROD = "c2pa-sign-prod"
+    C2PA_SIGN_TEST = "c2pa-sign-test"
     TSA = "tsa"
 
 
@@ -50,13 +60,18 @@ class TrufoApiKey(str, Enum):
 _SESSION_ACCESS_TOKEN_ENV_VAR = "TRUFO_ACCESS_TOKEN"
 _SESSION_REFRESH_TOKEN_ENV_VAR = "TRUFO_REFRESH_TOKEN"
 
+# "trufo-api" uses a short env var to avoid the awkward TRUFO_TRUFO_API_API_KEY
 _API_KEY_ENV_VARS = {
-    TrufoApiKey.TPS: "TRUFO_TPS_API_KEY",
-    TrufoApiKey.TSA: "TRUFO_TSA_API_KEY",
+    TrufoApiKey.TRUFO_API:      "TRUFO_API_KEY",
+    TrufoApiKey.C2PA_SIGN_PROD: "TRUFO_C2PA_SIGN_PROD_API_KEY",
+    TrufoApiKey.C2PA_SIGN_TEST: "TRUFO_C2PA_SIGN_TEST_API_KEY",
+    TrufoApiKey.TSA:            "TRUFO_TSA_API_KEY",
 }
 _API_KEY_FILES = {
-    TrufoApiKey.TPS: CREDENTIALS_DIR / "tps_api_key",
-    TrufoApiKey.TSA: CREDENTIALS_DIR / "tsa_api_key",
+    TrufoApiKey.TRUFO_API:      CREDENTIALS_DIR / "trufo_api_key",
+    TrufoApiKey.C2PA_SIGN_PROD: CREDENTIALS_DIR / "c2pa_sign_prod_api_key",
+    TrufoApiKey.C2PA_SIGN_TEST: CREDENTIALS_DIR / "c2pa_sign_test_api_key",
+    TrufoApiKey.TSA:            CREDENTIALS_DIR / "tsa_api_key",
 }
 
 
@@ -89,8 +104,9 @@ def load_api_key(key_type: str | TrufoApiKey) -> str | None:
     """Load an API key from env var or credentials file.
 
     Args:
-        key_type: ``"tps"`` / ``TrufoApiKey.TPS`` or
-            ``"tsa"`` / ``TrufoApiKey.TSA``.
+        key_type: A ``TrufoApiKey`` member or its string value (e.g.
+            ``"trufo-api"``, ``"c2pa-sign-prod"``, ``"c2pa-sign-test"``,
+            ``"tsa"``).
 
     Returns:
         The API key string, or ``None`` if not configured.
@@ -114,11 +130,10 @@ def load_api_key(key_type: str | TrufoApiKey) -> str | None:
 
 
 def save_api_key(key_type: str | TrufoApiKey, api_key: str) -> None:
-    """Write an API key to ~/.trufo/credentials/{type}_api_key.
+    """Write an API key to ``~/.trufo/credentials/``.
 
     Args:
-        key_type: ``"tps"`` / ``TrufoApiKey.TPS`` or
-            ``"tsa"`` / ``TrufoApiKey.TSA``.
+        key_type: A ``TrufoApiKey`` member or its string value.
         api_key: The API key value.
 
     Raises:

@@ -10,7 +10,7 @@ Additionally, the `{"set_source_type": True}` flag sets `digitalSourceType = tra
 
 ## Requirements
 
-- A TPS API key. See [0_auth.md](0_auth.md).
+- A `c2pa-sign-test` API key (scope required by `/test/c2pa/sign`). See [0_auth.md](0_auth.md).
 - When `assertions` is non-empty, at least one `cawg_identity` entry must be present.
 
 ---
@@ -21,7 +21,7 @@ Additionally, the `{"set_source_type": True}` flag sets `digitalSourceType = tra
 from trufo.api.tps.sign_c2pa import sign_c2pa_test
 from trufo.util.credentials import TrufoApiKey, load_api_key
 
-api_key = load_api_key(TrufoApiKey.TPS)
+api_key = load_api_key(TrufoApiKey.C2PA_SIGN_TEST)
 
 signed_bytes = sign_c2pa_test(
     api_key,
