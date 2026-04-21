@@ -1,4 +1,4 @@
-# C2PA Generation — API Reference
+# C2PA API Endpoints
 
 Endpoints for C2PA manifest generation (signing). All endpoints are hosted at `https://api.trufo.ai`.
 
@@ -6,60 +6,65 @@ Endpoints for C2PA manifest generation (signing). All endpoints are hosted at `h
 > **Default content type:** `application/json`.
 > See [api_access.md](api_access.md) for full header conventions.
 
-> **Status:** The production endpoint (`POST /c2pa/generate`) is not yet available. Use the test endpoint (`POST /test/c2pa/generate`) for development and integration testing.
+> **`POST /c2pa/generate` (production) is not yet available.** It is pending updates to the C2PA and CAWG specifications. Use `POST /test/c2pa/generate` for development and integration testing.
 
 ---
 
-## `POST /c2pa/generate`
+# Common Workflows
 
-Generate a C2PA-signed media file. Signs with the TPS production signer (`tps_level1`). Requires account setup, organization validation, and certificate enrollment — see [tca_ra.md](tca_ra.md) and [tca_ca.md](tca_ca.md).
+## AIGC Labeling
 
-**Auth:** Access token.
+## CAWG Publishing
+
+---
+
+# API Reference
+
+## `POST /test/c2pa/generate`
+
+Generate a C2PA-signed media file using the TPS C2PA test signer. The generated test files will NOT be marked as conformant by validators, but the API schema will match the production endpoint (coming soon!).
+
+**Auth:** API key (trufo-api) or access token.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `media_input` | string | Yes | Base64-encoded input media |
-| `actions` | list | Yes | Media processing actions to apply |
-| `assertions` | list | No | Assertions to include in the manifest (default `[]`) |
+| `media_input` | string | Yes | base64-encoded input media data |
+| `actions` | list | No | media processing instructions for the TPS to apply |
+| `assertions` | list | No | gathered assertions to include in the manifest |
 
 ### `media_input`
 
-Base64-encoded bytes of the input file. The MIME type is auto-detected from magic bytes. Supported types are defined by openprov's `GENERATE_TYPES` (see `openprov/util/av_format.py`):
+Base64-encoded bytes of the input file. The supported MIME types are listed below; more will be added over time (upon request).
 
 | Category | MIME types |
 |----------|------------|
-| Image | `image/jpeg`, `image/png`, `image/tiff`, `image/webp`, `image/avif`, `image/heic`, `image/heif`, `image/jxl`, `image/x-adobe-dng`, `image/svg+xml` |
+| Image | `image/jpeg`, `image/png`, `image/tiff`, `image/webp`, `image/avif`, `image/jxl`, `image/x-adobe-dng`, `image/svg+xml` |
 | Video | `video/mp4`, `video/quicktime` |
 | Audio | `audio/mpeg`, `audio/flac`, `audio/wav`, `audio/mp4` |
 
 ### `actions`
 
-List of `[action_name, params]` pairs. Each element is a two-element array. Pass `[]` for no-action signing (manifest only, no media processing).
+Ordered list of `[action_name, params]` pairs. Each element of the `actions` list is a two-element array, and will be executed by the TPS in order.
 
 | Action | Params | Description |
 |--------|--------|-------------|
-| `"transcode"` | `{"target_mime_type": "<mime>"}` | Transcode to target format |
-
-Only `"transcode"` is implemented. The `target_mime_type` must be one of the supported MIME types above.
+| `"transcode"` | `{"target_mime_type": "<mime>"}` | transcode to target format |
+| `"publish"` | `{}` | mark for final distribution |
 
 ### `assertions`
 
-List of `[assertion_name, params]` pairs. Each element is a two-element array. All assertions are optional.
+Ordered list of `[assertion_name, params]` pairs. Each assertion is treated as a gathered assertion when signing the manifest. If `assertions` is provided, at least one `"cawg_identity"` entry must be present — the signer automatically references all gathered assertions through the identity assertion.
 
 | Assertion | Params | C2PA label |
 |-----------|--------|------------|
-| `"ai_disclosure"` | `{"model_disclosure_id": "<id>"}` | `c2pa.ai-disclosure` |
+| `"ai_disclosure"` | `{}` | `c2pa.ai-disclosure` |
 | `"cawg_metadata"` | `{"assertion": {…}}` | `cawg.metadata` |
 | `"cawg_training"` | `{"assertion": {…}}` | `cawg.training-mining` |
 | `"cawg_identity"` | `{"cawg_identity_id": "<id>"}` | `cawg.identity` |
 
 #### `ai_disclosure`
 
-Marks the content as AI-generated. If the input media has no existing C2PA manifest, the ingredient's `digitalSourceType` is set to `trainedAlgorithmicMedia`.
-
-| Param | Type | Required | Description |
-|-------|------|----------|-------------|
-| `model_disclosure_id` | string | No | Custom model disclosure identifier. **Not yet implemented** — if provided, the server raises `NotImplementedError`. Omit to use the default assertion body `{"modelType": "c2pa.types.model"}`. |
+Marks the content as AI-generated. If the input media has no existing C2PA manifest, the ingredient's `digitalSourceType` is set to `trainedAlgorithmicMedia`. Uses a hardcoded default assertion body `{"modelType": "c2pa.types.model"}`.
 
 ```json
 ["ai_disclosure", {}]
@@ -119,15 +124,13 @@ Each entry must have:
 
 #### `cawg_identity`
 
-Attach a CAWG identity assertion.
+Attach a CAWG identity assertion. Only `"test"` is supported.
 
 | Param | Type | Required | Description |
 |-------|------|----------|-------------|
-| `cawg_identity_id` | string | Yes | Identity provider identifier. Only `"test"` is currently supported — any other value raises `NotImplementedError`. |
+| `cawg_identity_id` | string | Yes | Identity provider identifier. |
 
-```json
-["cawg_identity", {"cawg_identity_id": "test"}]
-```
+Currently, only `"test"` is supported in the test endpoint — any other value raises `NotImplementedError`.
 
 ### Response (200)
 
@@ -139,21 +142,8 @@ Attach a CAWG identity assertion.
 
 ---
 
-## `POST /test/c2pa/generate`
-
-Test variant of the production endpoint above. Signs with the TPS test signer (`tps_test`). No account or organization required — any valid API key or access token satisfies authentication.
-
-**Auth:** API key (trufo-api) or access token.
-
-The request and response schema is identical to `POST /c2pa/generate` with the following restrictions:
-
-- **`ai_disclosure`**: Do not submit `model_disclosure_id`. Only the default hardcoded assertion is available.
-- **`cawg_identity`**: `cawg_identity_id` must be `"test"`. No other identity providers are available.
-
----
-
 ## Python SDK
 
 | Function | Location | Description |
 |----------|----------|-------------|
-| _TBD_ | `trufo.api.tps.generate_c2pa` | C2PA generation helpers |
+| `generate_c2pa_test(api_key, media_bytes, actions, assertions)` | `trufo.api.tps.generate_c2pa` | Sign media via the TPS test endpoint |
