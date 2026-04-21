@@ -16,8 +16,11 @@ DEVICE_TOKEN = "/account/device/token"
 ACCOUNT_REFRESH = "/account/refresh"
 
 # registration authority
-RA_CSR_JWT = "/ra/csr-jwt"
+RA_CSR_JWT = "/ra/c2pa/csr-jwt"
 
 # generator product
 GP_INSTANCE_CREATE = "/gproduct/instance/create"
 GP_CREDENTIAL_REGISTER = "/gproduct/instance/credential/register"
+
+# TPS content endpoints
+TPS_C2PA_GENERATE_TEST = "/test/c2pa/generate"
