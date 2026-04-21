@@ -4,13 +4,13 @@
 """Quickstart: authenticate with the TPS and persist tokens for reuse.
 
 Steps:
-  1. Load the TPS API key (env var or disk).
+  1. Load the `trufo-api` API key (env var or disk).
   2. Run the device authorization flow — visit the printed URL in a browser
      and approve the device.
   3. Save the session tokens so future runs skip the device flow.
 
 See docs/quickstart/0_auth.md for setup instructions.
-Requires TRUFO_TPS_API_KEY env var or ~/.trufo/credentials/tps_api_key.
+Requires TRUFO_API_KEY env var or ~/.trufo/credentials/trufo_api_key.
 """
 
 from trufo.api.session import TrufoSession
@@ -18,8 +18,8 @@ from trufo.util.credentials import TrufoApiKey, load_api_key, load_session, save
 
 # --- load api key ---
 
-api_key = load_api_key(TrufoApiKey.TPS)
-assert api_key, "TPS API key not found. Set TRUFO_TPS_API_KEY or run: trufo set-api-key tps <KEY>"
+api_key = load_api_key(TrufoApiKey.TRUFO_API)
+assert api_key, "trufo-api key not found. Set TRUFO_API_KEY or run: trufo set-api-key trufo-api <KEY>"
 
 # --- device authorization flow ---
 

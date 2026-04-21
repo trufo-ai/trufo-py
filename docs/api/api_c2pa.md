@@ -11,7 +11,16 @@ Endpoints for C2PA manifest generation and signing.
 - **Auth:** API key (`X-API-Key`) or access token (`Authorization: Bearer`)
 - **Content type:** `application/json`
 
-See [api_auth.md](api_auth.md) for full header conventions, or the [Auth Quickstart](../quickstart/0_auth.md) for a setup guide.
+Authentication is per-endpoint; when using an API key, the scope must match the endpoint:
+
+
+| Endpoint               | Required auth                                                       |
+| ---------------------- | ------------------------------------------------------------------- |
+| `POST /c2pa/sign`      | API key with scope `c2pa-sign-prod`, **or** access token            |
+| `POST /test/c2pa/sign` | API key with scope `c2pa-sign-test`, **or** access token            |
+
+
+See [api_auth.md](api_auth.md) for full header conventions and the complete scope list, or the [Auth Quickstart](../quickstart/0_auth.md) for a setup guide.
 
 ---
 

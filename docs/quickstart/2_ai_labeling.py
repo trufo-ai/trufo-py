@@ -8,7 +8,8 @@ Attaches a C2PA manifest with:
   - CAWG identity assertion (test)
 
 See docs/quickstart/2_ai_labeling.md for details.
-Requires TRUFO_TPS_API_KEY env var or ~/.trufo/credentials/tps_api_key.
+Requires a c2pa-sign-test API key — set TRUFO_C2PA_SIGN_TEST_API_KEY
+or save it to ~/.trufo/credentials/c2pa_sign_test_api_key.
 """
 
 from pathlib import Path
@@ -21,8 +22,10 @@ from trufo.util.credentials import TrufoApiKey, load_api_key
 INPUT_FILE = Path("photo.jpg")
 OUTPUT_FILE = Path("labeled.jpg")
 
-api_key = load_api_key(TrufoApiKey.TPS)
-assert api_key, "Set TRUFO_TPS_API_KEY or run: trufo set-api-key tps <KEY>"
+api_key = load_api_key(TrufoApiKey.C2PA_SIGN_TEST)
+assert api_key, (
+    "Set TRUFO_C2PA_SIGN_TEST_API_KEY or run: trufo set-api-key c2pa-sign-test <KEY>"
+)
 
 # --- build assertions ---
 

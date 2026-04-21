@@ -1,41 +1,49 @@
 # Copyright 2025-2026 Trufo, Inc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-"""Unit tests for intf/credentials.py — credential storage."""
+"""Unit tests for trufo.util.credentials — API-key and session storage."""
 
 import json
-from unittest.mock import patch
 
 import pytest
 
 from trufo.api.session import TrufoSession
+
+_ALL_API_KEY_ENV_VARS = (
+    "TRUFO_API_KEY",
+    "TRUFO_C2PA_SIGN_PROD_API_KEY",
+    "TRUFO_C2PA_SIGN_TEST_API_KEY",
+    "TRUFO_TSA_API_KEY",
+    "TRUFO_ACCESS_TOKEN",
+    "TRUFO_REFRESH_TOKEN",
+)
 
 
 # Patch CONFIG_DIR, CREDENTIALS_DIR, SESSION_FILE to use tmp_path
 @pytest.fixture(autouse=True)
 def _patch_config_paths(tmp_path, monkeypatch):
     """Redirect all credential file operations to tmp_path."""
+    creds_dir = tmp_path / ".trufo" / "credentials"
     monkeypatch.setattr("trufo.util.credentials.CONFIG_DIR", tmp_path / ".trufo")
-    monkeypatch.setattr(
-        "trufo.util.credentials.CREDENTIALS_DIR",
-        tmp_path / ".trufo" / "credentials",
-    )
+    monkeypatch.setattr("trufo.util.credentials.CREDENTIALS_DIR", creds_dir)
     monkeypatch.setattr(
         "trufo.util.credentials.SESSION_FILE",
         tmp_path / ".trufo" / "session",
     )
-    # patch the file lookup dicts so they point into tmp_path
+    # patch the file lookup dict so it points into tmp_path
     from trufo.util.credentials import TrufoApiKey
 
     monkeypatch.setattr(
         "trufo.util.credentials._API_KEY_FILES",
         {
-            TrufoApiKey.TPS: tmp_path / ".trufo" / "credentials" / "tps_api_key",
-            TrufoApiKey.TSA: tmp_path / ".trufo" / "credentials" / "tsa_api_key",
+            TrufoApiKey.TRUFO_API:      creds_dir / "trufo_api_key",
+            TrufoApiKey.C2PA_SIGN_PROD: creds_dir / "c2pa_sign_prod_api_key",
+            TrufoApiKey.C2PA_SIGN_TEST: creds_dir / "c2pa_sign_test_api_key",
+            TrufoApiKey.TSA:            creds_dir / "tsa_api_key",
         },
     )
     # clear any real env vars so they don't leak into tests
-    for var in ("TRUFO_TPS_API_KEY", "TRUFO_TSA_API_KEY", "TRUFO_ACCESS_TOKEN", "TRUFO_REFRESH_TOKEN"):
+    for var in _ALL_API_KEY_ENV_VARS:
         monkeypatch.delenv(var, raising=False)
 
 
@@ -49,60 +57,75 @@ from trufo.util.credentials import (
 )
 
 
+# (enum, env var, credential file name) — the full scope matrix
+_ALL_SCOPES = [
+    (TrufoApiKey.TRUFO_API,      "TRUFO_API_KEY",                "trufo_api_key"),
+    (TrufoApiKey.C2PA_SIGN_PROD, "TRUFO_C2PA_SIGN_PROD_API_KEY", "c2pa_sign_prod_api_key"),
+    (TrufoApiKey.C2PA_SIGN_TEST, "TRUFO_C2PA_SIGN_TEST_API_KEY", "c2pa_sign_test_api_key"),
+    (TrufoApiKey.TSA,            "TRUFO_TSA_API_KEY",            "tsa_api_key"),
+]
+
+
 class TestLoadApiKey:
     """load_api_key reads from env var or credentials file."""
 
-    def test_returns_none_when_no_key(self):
-        assert load_api_key(TrufoApiKey.TPS) is None
+    @pytest.mark.parametrize("kt,_env,_fname", _ALL_SCOPES)
+    def test_returns_none_when_no_key(self, kt, _env, _fname):
+        assert load_api_key(kt) is None
 
-    def test_reads_tps_from_env_var(self, monkeypatch):
-        monkeypatch.setenv("TRUFO_TPS_API_KEY", "env-key-123")
-        assert load_api_key(TrufoApiKey.TPS) == "env-key-123"
-
-    def test_reads_tsa_from_env_var(self, monkeypatch):
-        monkeypatch.setenv("TRUFO_TSA_API_KEY", "tsa-env-key")
-        assert load_api_key(TrufoApiKey.TSA) == "tsa-env-key"
+    @pytest.mark.parametrize("kt,env,_fname", _ALL_SCOPES)
+    def test_reads_from_env_var(self, monkeypatch, kt, env, _fname):
+        monkeypatch.setenv(env, f"env-{kt.value}")
+        assert load_api_key(kt) == f"env-{kt.value}"
 
     def test_env_var_strips_whitespace(self, monkeypatch):
-        monkeypatch.setenv("TRUFO_TPS_API_KEY", "  key  ")
-        assert load_api_key(TrufoApiKey.TPS) == "key"
+        monkeypatch.setenv("TRUFO_API_KEY", "  key  ")
+        assert load_api_key(TrufoApiKey.TRUFO_API) == "key"
 
-    def test_reads_from_file(self, tmp_path):
-        save_api_key(TrufoApiKey.TPS, "file-key-456")
-        assert load_api_key(TrufoApiKey.TPS) == "file-key-456"
+    @pytest.mark.parametrize("kt,_env,_fname", _ALL_SCOPES)
+    def test_reads_from_file(self, kt, _env, _fname):
+        save_api_key(kt, f"file-{kt.value}")
+        assert load_api_key(kt) == f"file-{kt.value}"
 
-    def test_env_var_takes_precedence(self, tmp_path, monkeypatch):
-        save_api_key(TrufoApiKey.TPS, "file-key")
-        monkeypatch.setenv("TRUFO_TPS_API_KEY", "env-key")
-        assert load_api_key(TrufoApiKey.TPS) == "env-key"
+    def test_env_var_takes_precedence(self, monkeypatch):
+        save_api_key(TrufoApiKey.TRUFO_API, "file-key")
+        monkeypatch.setenv("TRUFO_API_KEY", "env-key")
+        assert load_api_key(TrufoApiKey.TRUFO_API) == "env-key"
 
-    def test_tps_and_tsa_are_independent(self, tmp_path):
-        save_api_key(TrufoApiKey.TPS, "tps-key")
-        save_api_key(TrufoApiKey.TSA, "tsa-key")
-        assert load_api_key(TrufoApiKey.TPS) == "tps-key"
-        assert load_api_key(TrufoApiKey.TSA) == "tsa-key"
+    def test_scopes_are_independent(self):
+        for kt, _env, _fname in _ALL_SCOPES:
+            save_api_key(kt, f"key-{kt.value}")
+        for kt, _env, _fname in _ALL_SCOPES:
+            assert load_api_key(kt) == f"key-{kt.value}"
 
-    def test_accepts_string_key_type(self, tmp_path):
-        save_api_key("tps", "string-key")
-        assert load_api_key("tps") == "string-key"
+    def test_accepts_string_key_type(self):
+        save_api_key("c2pa-sign-test", "string-key")
+        assert load_api_key("c2pa-sign-test") == "string-key"
 
     def test_invalid_key_type_raises(self):
         with pytest.raises(ValueError, match="Invalid API key type"):
             load_api_key("invalid")
 
+    def test_legacy_tps_alias_is_rejected(self):
+        # The old "tps" alias has been removed; ensure it is no longer accepted.
+        with pytest.raises(ValueError, match="Invalid API key type"):
+            load_api_key("tps")
+
 
 class TestSaveApiKey:
     """save_api_key writes key with restricted permissions."""
 
-    def test_saves_to_file(self, tmp_path):
-        save_api_key(TrufoApiKey.TPS, "my-api-key")
-        key_file = tmp_path / ".trufo" / "credentials" / "tps_api_key"
+    @pytest.mark.parametrize("kt,_env,fname", _ALL_SCOPES)
+    def test_saves_to_file(self, tmp_path, kt, _env, fname):
+        save_api_key(kt, "my-api-key")
+        key_file = tmp_path / ".trufo" / "credentials" / fname
         assert key_file.exists()
         assert key_file.read_text().strip() == "my-api-key"
 
-    def test_file_permissions_are_600(self, tmp_path):
-        save_api_key(TrufoApiKey.TPS, "key")
-        key_file = tmp_path / ".trufo" / "credentials" / "tps_api_key"
+    @pytest.mark.parametrize("kt,_env,fname", _ALL_SCOPES)
+    def test_file_permissions_are_600(self, tmp_path, kt, _env, fname):
+        save_api_key(kt, "key")
+        key_file = tmp_path / ".trufo" / "credentials" / fname
         mode = key_file.stat().st_mode & 0o777
         assert mode == 0o600
 
