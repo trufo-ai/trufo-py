@@ -130,7 +130,7 @@ def _request_c2pa_csr_jwt(
 ) -> str:
     """Request a CSR JWT from the Registration Authority.
 
-    Corresponds to: POST /ra/csr-jwt.
+    Corresponds to: POST /ra/c2pa/csr-jwt.
 
     Args:
         gpic_assertion: Signed GPIC assertion JWT.
