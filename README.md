@@ -10,7 +10,10 @@ There are a number of documents to get you started quickly with specific use cas
 
 | Example | Description |
 |---------|-------------|
-[TBD]
+| [docs/quickstart/0_tps_access.md](docs/quickstart/0_tps_access.md) | Set up access to the TPS API server |
+| [docs/quickstart/1_c2pa_cert.md](docs/quickstart/1_c2pa_cert.md) | Obtain a C2PA signing certificate from the Trufo CA |
+| [docs/quickstart/2_ai_labeling.md](docs/quickstart/2_ai_labeling.md) | Label media as AI-generated with a C2PA manifest |
+| [docs/quickstart/3_cawg_publish.md](docs/quickstart/3_cawg_publish.md) | Add CAWG assertions for organization-based publication |
 
 ## API Documentation (Detailed)
 
