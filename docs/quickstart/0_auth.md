@@ -131,6 +131,8 @@ resp = requests.post(
 )
 ```
 
+Note that TLS 1.3+ is required for all API requests.
+
 ---
 
 ## Reference

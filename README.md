@@ -2,7 +2,7 @@
 
 Open-source library to simplify interactions with the Trufo Provenance Service (TPS).
 
-The library is currently in an alpha release state. TLS 1.3+ is required for all API requests.
+The library is currently in an alpha release state. Please be advised that until the library enters a beta release state, there may be drift in the library schema.
 
 ## Workflow Examples (Quickstart)
 
