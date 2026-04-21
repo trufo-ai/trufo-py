@@ -16,7 +16,7 @@ DEVICE_TOKEN = "/account/device/token"
 ACCOUNT_REFRESH = "/account/refresh"
 
 # registration authority
-RA_CSR_JWT = "/ra/csr-jwt"
+RA_CSR_JWT = "/ra/c2pa/csr-jwt"
 
 # generator product
 GP_INSTANCE_CREATE = "/gproduct/instance/create"
