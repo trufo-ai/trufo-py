@@ -26,14 +26,17 @@ def cmd_set_api_key(args: argparse.Namespace) -> None:
     except ValueError as exc:
         print(str(exc), file=sys.stderr)
         sys.exit(1)
-    print(f"{args.key_type.upper()} API key saved.")
+    print(f"{args.key_type} API key saved.")
 
 
 def cmd_login(args: argparse.Namespace) -> None:
     """Authenticate via device authorization flow."""
-    api_key = load_api_key(TrufoApiKey.TPS)
+    api_key = load_api_key(TrufoApiKey.TRUFO_API)
     if not api_key:
-        print("No TPS API key configured. Run: trufo set-api-key tps <KEY>", file=sys.stderr)
+        print(
+            "No trufo-api key configured. Run: trufo set-api-key trufo-api <KEY>",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
     session = TrufoSession()
@@ -51,7 +54,11 @@ def cmd_logout(args: argparse.Namespace) -> None:
 def register_subcommands(sub: argparse._SubParsersAction) -> None:
     """Register credential-related subcommands on the parser."""
     p = sub.add_parser("set-api-key", help="Save an API key.")
-    p.add_argument("key_type", choices=[k.value for k in TrufoApiKey], help="API key type (tps or tsa).")
+    p.add_argument(
+        "key_type",
+        choices=[k.value for k in TrufoApiKey],
+        help="API key scope (trufo-api, c2pa-sign-prod, c2pa-sign-test, tsa).",
+    )
     p.add_argument("key", help="API key value.")
     p.set_defaults(func=cmd_set_api_key)
 
