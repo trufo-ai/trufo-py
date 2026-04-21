@@ -11,17 +11,6 @@ Instructions on setting up programmatic access to Trufo Provenance Service (TPS)
 | Timestamp Authority | `https://tsa.trufo.ai` | CA, timestamping (RFC 3161) |
 | OCSP Responder | `https://ocsp.trufo.ai` | CA, OCSP stapling |
 
-## Setup
-
-To get access, you must first create an API key on the (Trufo dashboard)[app.trufo.ai/settings/org] after setting up MFA (passkey or TOTP) for your account. Currently, only fixed-scope organization-level API keys are supported:
-
-| Name | Scope |
-|------|-------|
-| Trufo API | usage of TPS API endpoints |
-| Time Stamping | usage of the TSA timestamper |
-
-In `src/trufo/api/` there are a number of helper functions that have all the API queries pre-configured within Python functions. The documentation of these helper functions for API access is included here, but is not included in other `docs/api/*.md` files. Please have your AI agent read the source code or alternatively, check out `examples/` or `tests/` for inspiration.
-
 ## API Headers
 
 All requests to the TPS require authentication. Most endpoints require an access token; the device authorization flow requires the TPS API key instead. See individual endpoint docs for specifics.
@@ -213,3 +202,7 @@ save_session(session)
 ```
 
 See `src/trufo/util/credentials.py` for the full credential storage layout and environment variables.
+
+---
+
+For a step-by-step setup guide and runnable examples, see `docs/quickstart/0_tps_access.md`.
