@@ -57,17 +57,29 @@ Ordered list of `[assertion_name, params]` pairs. Each assertion is treated as a
 
 | Assertion | Params | C2PA label |
 |-----------|--------|------------|
-| `"ai_disclosure"` | `{}` | `c2pa.ai-disclosure` |
+| `"ai_disclosure"` | `{"set_source_type": false}` | `c2pa.ai-disclosure` |
 | `"cawg_metadata"` | `{"assertion": {…}}` | `cawg.metadata` |
 | `"cawg_training"` | `{"assertion": {…}}` | `cawg.training-mining` |
 | `"cawg_identity"` | `{"cawg_identity_id": "<id>"}` | `cawg.identity` |
 
 #### `ai_disclosure`
 
-Marks the content as AI-generated. If the input media has no existing C2PA manifest, the ingredient's `digitalSourceType` is set to `trainedAlgorithmicMedia`. Uses a hardcoded default assertion body `{"modelType": "c2pa.types.model"}`.
+Marks the content as AI-generated via a `c2pa.ai-disclosure` assertion. Uses a hardcoded default assertion body `{"modelType": "c2pa.types.model"}`.
+
+| Param | Type | Default | Description |
+|-------|------|---------|-------------|
+| `set_source_type` | bool | `false` | When `true` and the input has no existing C2PA manifest, sets `digitalSourceType = trainedAlgorithmicMedia` on the ingredient. See note below. |
+
+> **Note on `set_source_type`:** Setting `digitalSourceType` in C2PA ingredients is specified in C2PA v2.4 (§18.16.12.3) and is not yet supported by most existing validators. The `c2pa.ai-disclosure` assertion alone suffices for labeling purposes; `set_source_type` is provided for forwards-compatible use. If you need to set Digital Source Type and cannot use this parameter (e.g. for a full Generator Product workflow), reach out to Trufo or CAI/C2PA directly.
 
 ```json
 ["ai_disclosure", {}]
+```
+
+With source type explicitly set:
+
+```json
+["ai_disclosure", {"set_source_type": true}]
 ```
 
 #### `cawg_metadata`
@@ -139,11 +151,3 @@ Currently, only `"test"` is supported in the test endpoint — any other value r
   "media_output": "<base64-encoded signed media>"
 }
 ```
-
----
-
-## Python SDK
-
-| Function | Location | Description |
-|----------|----------|-------------|
-| `generate_c2pa_test(api_key, media_bytes, actions, assertions)` | `trufo.api.tps.generate_c2pa` | Sign media via the TPS test endpoint |
