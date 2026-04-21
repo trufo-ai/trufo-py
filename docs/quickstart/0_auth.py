@@ -9,7 +9,7 @@ Steps:
      and approve the device.
   3. Save the session tokens so future runs skip the device flow.
 
-See docs/quickstart/0_tps_access.md for setup instructions.
+See docs/quickstart/0_auth.md for setup instructions.
 Requires TRUFO_TPS_API_KEY env var or ~/.trufo/credentials/tps_api_key.
 """
 

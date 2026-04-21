@@ -1,19 +1,21 @@
-# API Access
+# API Auth
 
-Instructions on setting up programmatic access to Trufo Provenance Service (TPS) API endpoints.
+Instructions on setting up programmatic access to Trufo Provenance Service (TPS) API endpoints. For a quick setup guide, see the [Auth Quickstart](../quickstart/0_auth.md) page.
 
 ## Base URLs
 
-| Service | URL | Description |
-|---------|-----|-------------|
-| TPS API | `https://api.trufo.ai` | Trufo Provenance Service |
-| Certificate Authority | `https://ca.trufo.ai` | CA, EST enrollment (RFC 7030) |
-| Timestamp Authority | `https://tsa.trufo.ai` | CA, timestamping (RFC 3161) |
-| OCSP Responder | `https://ocsp.trufo.ai` | CA, OCSP stapling |
+
+| Service               | URL                     | Description                   |
+| --------------------- | ----------------------- | ----------------------------- |
+| TPS API               | `https://api.trufo.ai`  | Trufo Provenance Service      |
+| Certificate Authority | `https://ca.trufo.ai`   | CA, EST enrollment (RFC 7030) |
+| Timestamp Authority   | `https://tsa.trufo.ai`  | CA, timestamping (RFC 3161)   |
+| OCSP Responder        | `https://ocsp.trufo.ai` | CA, OCSP stapling             |
+
 
 ## API Headers
 
-All requests to the TPS require authentication. Most endpoints require an access token; the device authorization flow requires the TPS API key instead. See individual endpoint docs for specifics.
+All requests to the TPS (expect for OCSP) require authentication. Some endpoints require an access token while other endpoints require an API key. See individual endpoint docs for specifics.
 
 **Access token** — included via the `Authorization` header as a Bearer token:
 
@@ -41,6 +43,7 @@ Error responses return a JSON object with a `detail` field:
 ```
 
 The main exceptions to the standard `Authorization: Bearer` auth are:
+
 - Device authorization flow (API key only). See below.
 - CSR JWT issuance via client assertion. See [tca_ra.md](tca_ra.md).
 - TCA endpoints (EST, TSA, OCSP). See [tca_ca.md](tca_ca.md).
@@ -109,12 +112,14 @@ Poll for tokens. The device polls until the user approves or the code expires.
 
 **Errors:**
 
-| Code | Detail | Description |
-|------|--------|-------------|
-| 400 | `authorization_pending` | User has not yet approved |
-| 400 | `expired_token` | Device code expired |
-| 400 | `access_denied` | User denied the request |
-| 404 | `DeviceCodeNotFound` | Invalid device code |
+
+| Code | Detail                  | Description               |
+| ---- | ----------------------- | ------------------------- |
+| 400  | `authorization_pending` | User has not yet approved |
+| 400  | `expired_token`         | Device code expired       |
+| 400  | `access_denied`         | User denied the request   |
+| 404  | `DeviceCodeNotFound`    | Invalid device code       |
+
 
 ### Python SDK
 
@@ -151,11 +156,13 @@ Exchange a refresh token for a new access + refresh token pair. Each refresh tok
 
 **Errors:**
 
-| Code | Detail | Description |
-|------|--------|-------------|
-| 401 | `InvalidRefreshToken` | Token is malformed |
-| 401 | `TokenExpired` | Token has expired |
-| 401 | `TokenRevoked` | Token was revoked |
+
+| Code | Detail                | Description        |
+| ---- | --------------------- | ------------------ |
+| 401  | `InvalidRefreshToken` | Token is malformed |
+| 401  | `TokenExpired`        | Token has expired  |
+| 401  | `TokenRevoked`        | Token was revoked  |
+
 
 ## TrufoSession
 
@@ -205,4 +212,4 @@ See `src/trufo/util/credentials.py` for the full credential storage layout and e
 
 ---
 
-For a step-by-step setup guide and runnable examples, see `docs/quickstart/0_tps_access.md`.
+For a step-by-step setup guide and runnable examples, see `docs/quickstart/0_auth.md`.

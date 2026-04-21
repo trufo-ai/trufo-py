@@ -1,10 +1,10 @@
-# TCA Registration Authority (RA) — API Reference
+# TCA Registration Authority (RA)
 
 RA endpoints for managing generator products, instances, credentials, and requesting CSR JWTs for certificate enrollment. All RA endpoints are hosted at `https://api.trufo.ai`.
 
 > **Default auth:** Access token (`Authorization: Bearer`).
 > **Default content type:** `application/json`.
-> See [api_access.md](api_access.md) for full header conventions.
+> See [api_auth.md](api_auth.md) for full header conventions.
 
 ---
 

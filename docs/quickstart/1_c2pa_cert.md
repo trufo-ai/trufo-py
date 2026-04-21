@@ -1,13 +1,14 @@
-# Quickstart: C2PA Certificates
+# Quickstart: C2PA Signing Certificates
 
-A C2PA certificate identifies the signing entity embedded in a manifest. Two tracks are available:
+A C2PA Signing Certificate identifies the signing entity (software or hardware) embedded in a manifest. Two tracks are available:
 
-| Track | Purpose | Account required |
-|-------|---------|-----------------|
-| **Test** | Development and integration testing | No |
-| **Production** | Real-world publishing | Yes |
+| Track          | Purpose                             | Auth Required |
+| -------------- | ----------------------------------- | ------------- |
+| **Test**       | Development and integration testing | No            |
+| **Production** | Real-world publishing               | Yes           |
 
-> **Note:** A certificate is not required to use the TPS C2PA signing endpoints (`POST /c2pa/generate`) — that endpoint uses Trufo's own C2PA signer. A certificate is only required if you are operating your own conformant C2PA Generator Product.
+
+> **Note:** You do not need a C2PA Signing Certificate to use the Trufo C2PA signing endpoints (`POST /c2pa/sign`) — that endpoint uses Trufo's own C2PA signer. A C2PA Signing Certificate is only required if you are operating your own conformant C2PA Generator Product. See the [C2PA Signing Certificate product page](https://app.trufo.ai/tca/certs/c2pa) for more details.
 
 See [1_c2pa_cert.py](1_c2pa_cert.py) for a runnable example of both tracks.
 
@@ -49,10 +50,12 @@ All of the following must be in place before a production certificate can be iss
 
 Two key pairs are involved in production enrollment:
 
-| Key | Purpose | Lifetime |
-|-----|---------|---------|
-| **Instance key** | Signs the client assertion JWT sent to the RA | Long-lived; registered per instance |
-| **Leaf key** | Signs actual C2PA manifests; embedded in the certificate | Per-certificate (up to 366 days) |
+
+| Key              | Purpose                                                  | Lifetime                            |
+| ---------------- | -------------------------------------------------------- | ----------------------------------- |
+| **Instance key** | Signs the client assertion JWT sent to the RA            | Long-lived; registered per instance |
+| **Leaf key**     | Signs actual C2PA manifests; embedded in the certificate | Per-certificate (up to 366 days)    |
+
 
 ### One-Time Setup
 
@@ -106,10 +109,12 @@ cert_chain_pem = request_c2pa_cert(
 
 **Available leaf types:**
 
-| Value | Max validity |
-|-------|-------------|
-| `LeafType.C2PA_L1` | 366 days |
-| `LeafType.C2PA_L2` | 90 days |
+
+| Value              | Max validity |
+| ------------------ | ------------ |
+| `LeafType.C2PA_L1` | 366 days     |
+| `LeafType.C2PA_L2` | 90 days      |
+
 
 ---
 
@@ -117,3 +122,4 @@ cert_chain_pem = request_c2pa_cert(
 
 - RA endpoint reference: [../api/tca_ra.md](../api/tca_ra.md)
 - TCA enrollment reference: [../api/tca_ca.md](../api/tca_ca.md)
+
