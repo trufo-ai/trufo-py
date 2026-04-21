@@ -14,7 +14,7 @@ The CAWG (Creator Assertions Working Group) assertions add attribution and right
 
 ## Requirements
 
-- A TPS API key. See [0_auth.md](0_auth.md).
+- A `c2pa-sign-test` API key (scope required by `/test/c2pa/sign`). See [0_auth.md](0_auth.md).
 - `cawg_identity` is required when any assertions are present.
 
 ---

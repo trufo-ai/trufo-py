@@ -21,7 +21,7 @@ def sign_c2pa_test(
     """Sign a media file with C2PA via the TPS test endpoint.
 
     Args:
-        api_key: TPS API key (``X-API-Key`` header).
+        api_key: API key with scope ``c2pa-sign-test`` (``X-API-Key`` header).
         media_bytes: Raw bytes of the media file to sign.
         actions: Ordered list of ``[action_name, params]`` pairs (default ``[]``).
         assertions: List of ``[assertion_name, params]`` pairs (default ``[]``).
