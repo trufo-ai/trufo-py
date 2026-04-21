@@ -2,17 +2,17 @@
 # SPDX-License-Identifier: Apache-2.0
 
 """
-C2PA generation helpers for the Trufo TPS.
+C2PA signing helpers for the Trufo TPS.
 """
 
 import base64
 
 import requests
 
-from trufo.api.endpoints import TRUFO_API_URL, TPS_C2PA_GENERATE_TEST
+from trufo.api.endpoints import TRUFO_API_URL, TPS_C2PA_SIGN_TEST
 
 
-def generate_c2pa_test(
+def sign_c2pa_test(
     api_key: str,
     media_bytes: bytes,
     actions: list | None = None,
@@ -44,7 +44,7 @@ def generate_c2pa_test(
     }
 
     resp = requests.post(
-        TRUFO_API_URL + TPS_C2PA_GENERATE_TEST,
+        TRUFO_API_URL + TPS_C2PA_SIGN_TEST,
         json=body,
         headers={"X-API-Key": api_key},
         timeout=60,

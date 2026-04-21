@@ -1,9 +1,9 @@
-# TCA Certificate Authority (CA) — API Reference
+# TCA Certificate Authority (CA)
 
 Certificate enrollment, revocation checking, and timestamping via the Trufo Certificate Authority.
 
 > Auth and content types vary per endpoint — specified in each section.
-> See [api_access.md](api_access.md) for general conventions.
+> See [api_auth.md](api_auth.md) for general conventions.
 
 ---
 

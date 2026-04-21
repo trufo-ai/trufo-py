@@ -13,7 +13,7 @@ Requires TRUFO_TPS_API_KEY env var or ~/.trufo/credentials/tps_api_key.
 
 from pathlib import Path
 
-from trufo.api.tps.generate_c2pa import generate_c2pa_test
+from trufo.api.tps.sign_c2pa import sign_c2pa_test
 from trufo.util.credentials import TrufoApiKey, load_api_key
 
 # --- configuration ---
@@ -35,7 +35,7 @@ assertions = [
 
 # --- sign ---
 
-signed_bytes = generate_c2pa_test(api_key, INPUT_FILE.read_bytes(), assertions=assertions)
+signed_bytes = sign_c2pa_test(api_key, INPUT_FILE.read_bytes(), assertions=assertions)
 
 OUTPUT_FILE.write_bytes(signed_bytes)
 print(f"Labeled: {OUTPUT_FILE} ({len(signed_bytes):,} bytes)")

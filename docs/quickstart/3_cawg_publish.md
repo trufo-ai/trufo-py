@@ -14,7 +14,7 @@ The CAWG (Creator Assertions Working Group) assertions add attribution and right
 
 ## Requirements
 
-- A TPS API key. See [0_tps_access.md](0_tps_access.md).
+- A TPS API key. See [0_auth.md](0_auth.md).
 - `cawg_identity` is required when any assertions are present.
 
 ---
@@ -22,9 +22,9 @@ The CAWG (Creator Assertions Working Group) assertions add attribution and right
 ## Example
 
 ```python
-from trufo.api.tps.generate_c2pa import generate_c2pa_test
+from trufo.api.tps.sign_c2pa import sign_c2pa_test
 
-signed_bytes = generate_c2pa_test(
+signed_bytes = sign_c2pa_test(
     api_key,
     media_bytes,
     assertions=[
@@ -90,7 +90,7 @@ For more details, see [cawg.io/training-and-data-mining/1.1](https://cawg.io/tra
 
 ---
 
-# Appendix A: `cawg_metadata` Examples
+## Appendix A: `cawg_metadata` Examples
 
 From the CAWG metadata assertion spec §3.1 (non-normative).
 
