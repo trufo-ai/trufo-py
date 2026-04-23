@@ -24,3 +24,5 @@ GP_CREDENTIAL_REGISTER = "/gproduct/instance/credential/register"
 
 # TPS content endpoints
 TPS_C2PA_SIGN_TEST = "/test/c2pa/sign"
+TPS_C2PA_AI_DISCLOSURE_ADD = "/c2pa/ai-disclosure/add"
+TPS_C2PA_AI_DISCLOSURE_LIST = "/c2pa/ai-disclosure/list"
