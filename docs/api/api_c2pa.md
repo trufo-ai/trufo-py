@@ -22,7 +22,7 @@ Authentication is per-endpoint; when using an API key, the scope must match the 
 | `POST /c2pa/ai-disclosure/list`  | API key with scope `c2pa-sign-prod` or `c2pa-sign-test`, **or** access token  |
 
 
-When authenticating with an access token, the caller must be an activated member of the organization named in the request body (`oid`).
+The owning organization is inferred from the credential itself (the API key is bound to its org; an access token resolves to the caller's single org membership). Request bodies for c2pa endpoints do not take an `oid` field.
 
 See [api_auth.md](api_auth.md) for full header conventions and the complete scope list, or the [Auth Quickstart](../quickstart/0_auth.md) for a setup guide.
 
@@ -192,9 +192,10 @@ Register a custom `c2pa.ai-disclosure` assertion body for the calling organizati
 
 | Field       | Type   | Required | Description                                                                                    |
 | ----------- | ------ | -------- | ---------------------------------------------------------------------------------------------- |
-| `oid`       | string | Yes      | Organization ID that will own the stored disclosure.                                           |
 | `nickname`  | string | No       | Human-readable display label for the stored disclosure (e.g. `"Llama 2 70B — autonomous"`). Shown in `/c2pa/ai-disclosure/list` to help identify entries. Not included in the signed assertion. |
 | `assertion` | object | Yes      | A `c2pa.ai-disclosure` assertion body conforming to the `ai-model-disclosure-map` CDDL schema in C2PA 2.4 §18.29.1. See schema below. |
+
+The owning org is inferred from the caller's credential — no `oid` field.
 
 #### `assertion` schema
 
@@ -216,7 +217,6 @@ Any top-level key outside the above list is rejected. Fields introduced in draft
 
 ```json
 {
-  "oid": "org_01JABC...",
   "nickname": "Llama 2 70B — autonomous",
   "assertion": {
     "modelType": "c2pa.types.model.huggingface.transformers",
@@ -240,19 +240,17 @@ Any top-level key outside the above list is rejected. Fields introduced in draft
 
 - **400** — `assertion` fails the C2PA 2.4 schema check (e.g. unknown `modelType`, bad `humanOversightLevel`).
 - **401** — missing or invalid credential.
-- **403** — API-key scope not allowed, or access-token caller lacks the `c2pa_sign` permission on `oid`.
+- **403** — API-key scope not allowed, or access-token caller lacks the `c2pa_sign` permission.
 
 ---
 
 ## API Reference: `POST /c2pa/ai-disclosure/list`
 
-List the `c2pa.ai-disclosure` assertions stored for an organization.
+List the `c2pa.ai-disclosure` assertions stored for the caller's organization.
 
 ### Request Body
 
-| Field | Type   | Required | Description                                   |
-| ----- | ------ | -------- | --------------------------------------------- |
-| `oid` | string | Yes      | Organization ID whose disclosures to list.    |
+Empty. Send `{}`. The owning org is inferred from the caller's credential.
 
 ### Response (200)
 
@@ -287,4 +285,4 @@ Each entry:
 ### Errors
 
 - **401** — missing or invalid credential.
-- **403** — API-key scope not allowed, or access-token caller lacks the `c2pa_sign` permission on `oid`.
+- **403** — API-key scope not allowed, or access-token caller lacks the `c2pa_sign` permission.
