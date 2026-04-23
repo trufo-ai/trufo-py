@@ -46,18 +46,15 @@ Both endpoints share the same request/response schema. The production signer pro
 
 ### Request Body
 
-
 | Field         | Type   | Required | Description                                        |
 | ------------- | ------ | -------- | -------------------------------------------------- |
 | `media_input` | string | Yes      | base64-encoded input media data                    |
 | `actions`     | list   | No       | media processing instructions for the TPS to apply |
 | `assertions`  | list   | No       | gathered assertions to include in the manifest     |
 
-
 #### `media_input`
 
 Base64-encoded bytes of the input file. The supported MIME types are listed below; more will be added over time (upon request).
-
 
 | Category | MIME types                                                                                                             |
 | -------- | ---------------------------------------------------------------------------------------------------------------------- |
@@ -65,22 +62,18 @@ Base64-encoded bytes of the input file. The supported MIME types are listed belo
 | Video    | `video/mp4`, `video/quicktime`                                                                                         |
 | Audio    | `audio/mpeg`, `audio/flac`, `audio/wav`, `audio/mp4`                                                                   |
 
-
 #### `actions`
 
 Ordered list of `[action_name, params]` pairs. Each element of the `actions` list is a two-element array, and will be executed by the TPS in order.
-
 
 | Action        | Params                           | Description                 |
 | ------------- | -------------------------------- | --------------------------- |
 | `"transcode"` | `{"target_mime_type": "<mime>"}` | transcode to target format  |
 | `"publish"`   | `{}`                             | mark for final distribution |
 
-
 #### `assertions`
 
 Ordered list of `[assertion_name, params]` pairs. Each assertion is treated as a gathered assertion when signing the manifest. If `assertions` is provided, at least one `"cawg_identity"` entry must be present — the signer automatically references all gathered assertions through the identity assertion.
-
 
 | Assertion         | Params                         | C2PA label             |
 | ----------------- | ------------------------------ | ---------------------- |
@@ -89,17 +82,14 @@ Ordered list of `[assertion_name, params]` pairs. Each assertion is treated as a
 | `"cawg_training"` | `{"assertion": {…}}`           | `cawg.training-mining` |
 | `"cawg_identity"` | `{"cawg_identity_id": "<id>"}` | `cawg.identity`        |
 
-
 ##### `ai_disclosure`
 
 Marks the content as AI-generated via a `c2pa.ai-disclosure` assertion. By default, the minimal assertion body `{"modelType": "c2pa.types.model"}` is used; to attach a richer pre-registered assertion (e.g. identifying a specific model, dataset, or content profile), first register it via [`POST /c2pa/ai-disclosure/add`](#api-reference-post-c2paai-disclosureadd) and pass the returned `ai_disclosure_id`.
-
 
 | Param               | Type   | Default        | Description                                                                                                                                          |
 | ------------------- | ------ | -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `ai_disclosure_id`  | string | `null`         | When omitted, the default body `{"modelType": "c2pa.types.model"}` is used. When set, must be the `ai_disclosure_id` of a previously stored assertion — form: `aidisc_<uuidv7>`. The stored body replaces the default. |
 | `set_source_type`   | bool   | `false`        | When `true` and the input has no existing C2PA manifest, sets `digitalSourceType = trainedAlgorithmicMedia` on the ingredient. Also, see note below. |
-
 
 > **Note on `set_source_type`:** Setting `digitalSourceType` within C2PA ingredients is new to C2PA v2.4 (§18.16.12.3) and is not yet supported by most existing validators today (e.g. having this field may make the manifest show up as "invalid"). The `c2pa.ai-disclosure` assertion alone suffices for AI labeling purposes, though for forwards-compatibility purposes you may want to set both. If your use case allows for validators to temporarily display "invalid" messaging, we recommend setting both. If not, then include only the ai_disclosure.
 
@@ -121,8 +111,6 @@ Reference a pre-stored disclosure:
 ["ai_disclosure", {"ai_disclosure_id": "aidisc_0193f7e0abcd7a11bcde01234567890a"}]
 ```
 
-
-
 ##### `cawg_metadata`
 
 Embed CAWG creator metadata (JSON-LD). The `assertion` param is required and must include an `@context` mapping with allowed namespace prefixes.
@@ -140,7 +128,6 @@ Embed CAWG creator metadata (JSON-LD). The `assertion` param is required and mus
 
 Allowed namespace prefixes and their required URIs:
 
-
 | Prefix         | URI                                           |
 | -------------- | --------------------------------------------- |
 | `Iptc4xmpCore` | `http://iptc.org/std/Iptc4xmpCore/1.0/xmlns/` |
@@ -154,10 +141,7 @@ Allowed namespace prefixes and their required URIs:
 | `tiff`         | `http://ns.adobe.com/tiff/1.0/`               |
 | `xmp`          | `http://ns.adobe.com/xap/1.0/`                |
 
-
 Any prefix not in this list, or a URI that doesn't match exactly, is rejected.
-
-
 
 ##### `cawg_training`
 
@@ -180,21 +164,15 @@ Each entry must have:
 - `use` — **required**, one of `"allowed"`, `"notAllowed"`, `"constrained"`.
 - `constraint_info` — optional, non-empty string (typically provided when `use` is `"constrained"`).
 
-
-
 ##### `cawg_identity`
 
 Attach a CAWG identity assertion. Only `"test"` is supported.
-
 
 | Param              | Type   | Required | Description                   |
 | ------------------ | ------ | -------- | ----------------------------- |
 | `cawg_identity_id` | string | Yes      | Identity provider identifier. |
 
-
 Currently, only `"test"` is supported in the test endpoint — any other value raises `NotImplementedError`.
-
-
 
 ### Response (200)
 
@@ -212,17 +190,15 @@ Register a custom `c2pa.ai-disclosure` assertion body for the calling organizati
 
 ### Request Body
 
-
 | Field       | Type   | Required | Description                                                                                    |
 | ----------- | ------ | -------- | ---------------------------------------------------------------------------------------------- |
 | `oid`       | string | Yes      | Organization ID that will own the stored disclosure.                                           |
+| `nickname`  | string | No       | Human-readable display label for the stored disclosure (e.g. `"Llama 2 70B — autonomous"`). Shown in `/c2pa/ai-disclosure/list` to help identify entries. Not included in the signed assertion. |
 | `assertion` | object | Yes      | A `c2pa.ai-disclosure` assertion body conforming to the `ai-model-disclosure-map` CDDL schema in C2PA 2.4 §18.29.1. See schema below. |
-
 
 #### `assertion` schema
 
 The request-side validator rejects bodies that don't match the C2PA 2.4 `ai-model-disclosure-map` shape. Field summary:
-
 
 | Field                            | Type                   | Required | Notes                                                                                                |
 | -------------------------------- | ---------------------- | -------- | ---------------------------------------------------------------------------------------------------- |
@@ -234,7 +210,6 @@ The request-side validator rejects bodies that don't match the C2PA 2.4 `ai-mode
 | `contentProfile.scientificDomain` | string or list[string] | No       | Each value must match `^[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)+$` (e.g. `biology.genomics`).                 |
 | `metadata`                       | object                 | No       | Free-form assertion metadata.                                                                        |
 
-
 Any top-level key outside the above list is rejected. Fields introduced in draft/pending additions to the C2PA 2.4 spec are not accepted until finalized.
 
 ### Example
@@ -242,6 +217,7 @@ Any top-level key outside the above list is rejected. Fields introduced in draft
 ```json
 {
   "oid": "org_01JABC...",
+  "nickname": "Llama 2 70B — autonomous",
   "assertion": {
     "modelType": "c2pa.types.model.huggingface.transformers",
     "modelIdentifier": "pkg:huggingface/meta-llama/Llama-2-70b-chat-hf@main",
@@ -252,11 +228,9 @@ Any top-level key outside the above list is rejected. Fields introduced in draft
 
 ### Response (201)
 
-
 | Field              | Type   | Description                                               |
 | ------------------ | ------ | --------------------------------------------------------- |
 | `ai_disclosure_id` | string | Stored disclosure identifier, shape `aidisc_<uuidv7>`.    |
-
 
 ```json
 { "ai_disclosure_id": "aidisc_0193f7e0abcd7a11bcde01234567890a" }
@@ -276,34 +250,30 @@ List the `c2pa.ai-disclosure` assertions stored for an organization.
 
 ### Request Body
 
-
 | Field | Type   | Required | Description                                   |
 | ----- | ------ | -------- | --------------------------------------------- |
 | `oid` | string | Yes      | Organization ID whose disclosures to list.    |
 
-
 ### Response (200)
 
-
-| Field   | Type  | Description                                                          |
-| ------- | ----- | -------------------------------------------------------------------- |
-| `items` | list  | Zero or more `{ ai_disclosure_id, assertion }` entries for this org. |
-
+| Field   | Type  | Description                                                                      |
+| ------- | ----- | -------------------------------------------------------------------------------- |
+| `items` | list  | Zero or more `{ ai_disclosure_id, nickname, assertion }` entries for this org.   |
 
 Each entry:
 
-
-| Field              | Type   | Description                                                   |
-| ------------------ | ------ | ------------------------------------------------------------- |
-| `ai_disclosure_id` | string | Stored disclosure identifier, shape `aidisc_<uuidv7>`.        |
-| `assertion`        | object | The stored `c2pa.ai-disclosure` assertion body, as submitted. |
-
+| Field              | Type           | Description                                                                   |
+| ------------------ | -------------- | ----------------------------------------------------------------------------- |
+| `ai_disclosure_id` | string         | Stored disclosure identifier, shape `aidisc_<uuidv7>`.                        |
+| `nickname`         | string or null | Display label supplied when the disclosure was added, or `null` if none.      |
+| `assertion`        | object         | The stored `c2pa.ai-disclosure` assertion body, as submitted.                 |
 
 ```json
 {
   "items": [
     {
       "ai_disclosure_id": "aidisc_0193f7e0abcd7a11bcde01234567890a",
+      "nickname": "Llama 2 70B — autonomous",
       "assertion": {
         "modelType": "c2pa.types.model.huggingface.transformers",
         "modelIdentifier": "pkg:huggingface/meta-llama/Llama-2-70b-chat-hf@main",
