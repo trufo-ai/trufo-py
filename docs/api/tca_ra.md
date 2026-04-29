@@ -187,7 +187,7 @@ Revoke an instance credential.
 
 Request a CSR JWT from the RA. The CSR JWT authorizes certificate enrollment via EST (see [tca_ca.md](tca_ca.md)).
 
-### `POST /ra/csr-jwt`
+### `POST /ra/c2pa/csr-jwt`
 
 **Auth:** Client assertion (instance credential) — not an access token.
 
@@ -259,6 +259,50 @@ Production certificate enrollment requires:
 4. An active subscription
 5. An instance with a registered credential (public key)
 
+### `POST /ra/cawg-interim/csr-jwt`
+
+Request a CSR JWT for a CAWG interim certificate. Org-scoped: there is no gproduct or instance — the cert identifies the calling organization itself.
+
+**Auth:** Access token (org admin+, MFA).
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `validity_days` | integer | No | Requested validity in days. Range 1–366; defaults to 366 if omitted. |
+
+The CSR JWT is always issued for `leaf_type = "cawg-interim"`. The cert subject DN is derived server-side from the org's validated_info — the caller does not specify it.
+
+**Response (200):**
+
+```json
+{
+  "csr_jwt": "eyJhbG..."
+}
+```
+
+### CAWG Errors
+
+| Code | Detail | Description |
+|------|--------|-------------|
+| 400 | `InvalidValidityDays` | `validity_days` outside [1, 366] |
+| 401 | `MissingToken` / `InvalidToken` / `TokenExpired` | Bearer JWT missing or invalid |
+| 403 | `MFARequired` | MFA not verified on the access token |
+| 403 | `InsufficientPermissionForAction` | Caller lacks the `request_cawg_cert` permission (member role, etc.) |
+| 403 | `NotOrgMember` | Caller is not in any organization |
+| 403 | `NoEligiblePlan` | Org has no active `cawg_cert_organization` subscription |
+| 403 | `OVNotActive` | Organization Validation not approved |
+| 403 | `OVExpired` | Organization Validation has expired |
+| 403 | `OrgNotValidated` | Org `validated_info` is missing |
+
+### CAWG Prerequisites (Production)
+
+Production CAWG interim certificate enrollment requires:
+
+1. An authenticated account with an organization
+2. The caller's role in the org is `owner` or `admin`
+3. MFA verified on the access token
+4. Organization Validation (OV) approved and not expired
+5. An active `cawg_cert_organization` subscription
+
 ---
 
 ## Python SDK
@@ -269,4 +313,5 @@ Some useful functions in the codebase:
 |----------|----------|-------------|
 | `create_instance()` | `trufo.api.tca.certs_c2pa` | Create an instance via `TrufoSession` |
 | `register_credential()` | `trufo.api.tca.certs_c2pa` | Register a credential via `TrufoSession` |
-| `request_c2pa_cert()` | `trufo.api.tca.certs_c2pa` | End-to-end production enrollment (assertion → CSR JWT → EST → cert chain) |
+| `request_c2pa_cert()` | `trufo.api.tca.certs_c2pa` | End-to-end production C2PA enrollment (assertion → CSR JWT → EST → cert chain) |
+| `request_cawg_interim_cert()` | `trufo.api.tca.certs_cawg_interim` | End-to-end production CAWG interim enrollment (CSR JWT → EST → cert chain) |
