@@ -77,7 +77,7 @@ Ordered list of `[assertion_name, params]` pairs. Each assertion is treated as a
 
 | Assertion         | Params                         | C2PA label             |
 | ----------------- | ------------------------------ | ---------------------- |
-| `"ai_disclosure"` | `{"set_source_type": false}`   | `c2pa.ai-disclosure`   |
+| `"ai_disclosure"` | `{"ai_disclosure_id": "<id>", "set_source_type": false}` | `c2pa.ai-disclosure`   |
 | `"cawg_metadata"` | `{"assertion": {…}}`           | `cawg.metadata`        |
 | `"cawg_training"` | `{"assertion": {…}}`           | `cawg.training-mining` |
 | `"cawg_identity"` | `{"cawg_identity_id": "<id>"}` | `cawg.identity`        |
