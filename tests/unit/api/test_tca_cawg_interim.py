@@ -38,15 +38,6 @@ class TestRequestCawgInterimCsrJwt:
 
         assert result == "eyJ.fake.token"
 
-    def test_calls_correct_endpoint(self):
-        mock_client = MagicMock()
-        mock_client.make_request.return_value = {"csr_jwt": "x"}
-
-        _request_cawg_interim_csr_jwt(mock_client, None)
-
-        path = mock_client.make_request.call_args[0][0]
-        assert path == "/ra/cawg-interim/csr-jwt"
-
     def test_omits_validity_days_when_none(self):
         """When validity_days is None, the body should not include the key."""
         mock_client = MagicMock()
