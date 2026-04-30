@@ -17,6 +17,7 @@ ACCOUNT_REFRESH = "/account/refresh"
 
 # registration authority
 RA_CSR_JWT = "/ra/c2pa/csr-jwt"
+RA_CAWG_INTERIM_CSR_JWT = "/ra/cawg-interim/csr-jwt"
 
 # generator product
 GP_INSTANCE_CREATE = "/gproduct/instance/create"
