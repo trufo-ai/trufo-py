@@ -6,7 +6,6 @@ C2PA signing helpers for the Trufo TPS.
 """
 
 import base64
-
 import requests
 
 from trufo.api.endpoints import TRUFO_API_URL, TPS_C2PA_SIGN_TEST
