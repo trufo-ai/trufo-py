@@ -166,13 +166,18 @@ Each entry must have:
 
 ##### `cawg_identity`
 
-Attach a CAWG identity assertion. Only `"test"` is supported.
+Attach a CAWG identity assertion.
 
 | Param              | Type   | Required | Description                   |
 | ------------------ | ------ | -------- | ----------------------------- |
 | `cawg_identity_id` | string | Yes      | Identity provider identifier. |
 
-Currently, only `"test"` is supported in the test endpoint — any other value raises `NotImplementedError`.
+Supported values for `cawg_identity_id`:
+
+| Value         | Endpoint        | Description                                                                                                              |
+| ------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `"test"`      | Test            | Signs with a shared Trufo test certificate. Outputs are not recognized by C2PA validators. |
+| `"org_interim"` | Test, Prod    | Signs with a Trufo-hosted org-specific CAWG interim certificate. Requires the `cawg_cert_organization` billing plan. If your org has the plan but signing fails, contact support. |
 
 ### Response (200)
 
