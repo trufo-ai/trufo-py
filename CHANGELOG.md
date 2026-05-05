@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.2] — 2026-05-05
+
+### Added
+
+- `DefaultCawgIdentityId` enum — typed constants for standard CAWG identity ID values (`TEST`, `ORG_INTERIM`).
+
 ## [0.1.1] — 2026-04-29
 
 ### Added
@@ -31,6 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `trufo.intf`: credential storage and loading (env vars + file), CLI entry point.
 - PyPI trusted publishing via GitHub Actions (OIDC, no API tokens required).
 
-[Unreleased]: https://github.com/trufo-ai/trufo-py/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/trufo-ai/trufo-py/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/trufo-ai/trufo-py/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/trufo-ai/trufo-py/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/trufo-ai/trufo-py/releases/tag/v0.1.0
