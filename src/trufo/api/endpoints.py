@@ -24,6 +24,8 @@ GP_INSTANCE_CREATE = "/gproduct/instance/create"
 GP_CREDENTIAL_REGISTER = "/gproduct/instance/credential/register"
 
 # TPS content endpoints
+TPS_C2PA_SIGN = "/c2pa/sign"
 TPS_C2PA_SIGN_TEST = "/test/c2pa/sign"
+TPS_C2PA_GET_S3_URL = "/c2pa/io/get-s3-url"
 TPS_C2PA_AI_DISCLOSURE_ADD = "/c2pa/ai-disclosure/add"
 TPS_C2PA_AI_DISCLOSURE_LIST = "/c2pa/ai-disclosure/list"
