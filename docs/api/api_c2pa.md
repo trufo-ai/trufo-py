@@ -18,6 +18,7 @@ Authentication is per-endpoint; when using an API key, the scope must match the 
 | -------------------------------- | ----------------------------------------------------------------------------- |
 | `POST /c2pa/sign`                | API key with scope `c2pa-sign-prod`, **or** access token                      |
 | `POST /test/c2pa/sign`           | API key with scope `c2pa-sign-test`, **or** access token                      |
+| `POST /c2pa/io/get-s3-url`       | API key with scope `c2pa-sign-prod` or `c2pa-sign-test`, **or** access token  |
 | `POST /c2pa/ai-disclosure/add`   | API key with scope `c2pa-sign-prod` or `c2pa-sign-test`, **or** access token  |
 | `POST /c2pa/ai-disclosure/list`  | API key with scope `c2pa-sign-prod` or `c2pa-sign-test`, **or** access token  |
 
@@ -38,6 +39,39 @@ See [2_ai_labeling.md](../quickstart/2_ai_labeling.md) for a quickstart guide fo
 
 See [3_cawg_publish.md](../quickstart/3_cawg_publish.md) for a quickstart guide for this use case.
 
+### Python SDK helpers
+
+For direct byte uploads, use `sign_c2pa()` for production signing and `sign_c2pa_test()` for the test signer:
+
+```python
+from trufo.api.tps.sign_c2pa import sign_c2pa
+from trufo.util.credentials import TrufoApiKey, load_api_key
+
+api_key = load_api_key(TrufoApiKey.C2PA_SIGN_PROD)
+signed_bytes = sign_c2pa(
+  api_key,
+  media_bytes,
+  assertions=[
+    ["cawg_identity", {"cawg_identity_id": "org_interim"}],
+  ],
+)
+```
+
+For larger media, use the S3 convenience helper:
+
+```python
+from trufo.api.tps.sign_c2pa import sign_c2pa_via_s3
+
+signed_bytes = sign_c2pa_via_s3(
+  api_key,
+  media_bytes,
+  mime_type="image/jpeg",
+  assertions=[
+    ["cawg_identity", {"cawg_identity_id": "org_interim"}],
+  ],
+)
+```
+
 ---
 
 ## API Reference: `POST /c2pa/sign`, `POST /test/c2pa/sign`
@@ -46,11 +80,14 @@ Both endpoints share the same request/response schema. The production signer pro
 
 ### Request Body
 
-| Field         | Type   | Required | Description                                        |
-| ------------- | ------ | -------- | -------------------------------------------------- |
-| `media_input` | string | Yes      | base64-encoded input media data                    |
-| `actions`     | list   | No       | media processing instructions for the TPS to apply |
-| `assertions`  | list   | No       | gathered assertions to include in the manifest     |
+| Field            | Type   | Required | Description                                                            |
+| ---------------- | ------ | -------- | ---------------------------------------------------------------------- |
+| `media_input`    | string | Yes*     | base64-encoded input media data                                        |
+| `media_input_s3` | string | Yes*     | server-signed ephemeral S3 input reference from `/c2pa/io/get-s3-url`  |
+| `actions`        | list   | No       | media processing instructions for the TPS to apply                     |
+| `assertions`     | list   | No       | gathered assertions to include in the manifest                         |
+
+\* Provide exactly one of `media_input` or `media_input_s3`.
 
 #### `media_input`
 
@@ -61,6 +98,19 @@ Base64-encoded bytes of the input file. The supported MIME types are listed belo
 | Image    | `image/jpeg`, `image/png`, `image/tiff`, `image/webp`, `image/avif`, `image/jxl`, `image/x-adobe-dng`, `image/svg+xml` |
 | Video    | `video/mp4`, `video/quicktime`                                                                                         |
 | Audio    | `audio/mpeg`, `audio/flac`, `audio/wav`, `audio/mp4`                                                                   |
+
+#### `media_input_s3`
+
+Opaque server-signed input reference returned by [`POST /c2pa/io/get-s3-url`](#api-reference-post-c2paioget-s3-url). Use this mode for larger media or workflows that should avoid sending base64 media through the JSON request body.
+
+The flow is:
+
+1. Call `POST /c2pa/io/get-s3-url` with the source media MIME type.
+2. Upload the source media bytes to the returned `upload_url` with `Content-Type` set to the same MIME type.
+3. Call `POST /c2pa/sign` or `POST /test/c2pa/sign` with `media_input_s3`.
+4. Download the signed output from the returned `media_output_s3` URL.
+
+The Python SDK provides low-level helpers for each step and high-level helpers (`sign_c2pa_via_s3()` and `sign_c2pa_test_via_s3()`) that perform the full upload/sign/download sequence.
 
 #### `actions`
 
@@ -121,7 +171,7 @@ Embed CAWG creator metadata (JSON-LD). The `assertion` param is required and mus
     "@context": {
       "dc": "http://purl.org/dc/elements/1.1/"
     },
-    "dc:creator": ["Alice"]
+    "dc:creator": ["[CREATOR NAME]"]
   }
 }]
 ```
@@ -181,11 +231,57 @@ Supported values for `cawg_identity_id`:
 
 ### Response (200)
 
+Direct media response:
+
 ```json
 {
   "media_output": "<base64-encoded signed media>"
 }
 ```
+
+S3 media response:
+
+```json
+{
+  "media_output_s3": "<presigned download URL for signed media>"
+}
+```
+
+---
+
+## API Reference: `POST /c2pa/io/get-s3-url`
+
+Mint an ephemeral presigned S3 upload URL for C2PA signing. The returned `media_input_s3` reference is passed to `/c2pa/sign` or `/test/c2pa/sign` after upload.
+
+### Request Body
+
+| Field       | Type   | Required | Description                                                |
+| ----------- | ------ | -------- | ---------------------------------------------------------- |
+| `mime_type` | string | Yes      | MIME type of the object the caller will upload             |
+| `duration`  | string | No       | Ephemeral duration. Currently supported value: `"5m"`.     |
+
+### Response (200)
+
+| Field            | Type    | Description                                                   |
+| ---------------- | ------- | ------------------------------------------------------------- |
+| `media_input_s3` | string  | Opaque server-signed S3 input reference for signing           |
+| `upload_url`     | string  | Presigned PUT URL for uploading input media                   |
+| `expires_at`     | integer | Unix timestamp when the signed reference expires              |
+| `duration`       | string  | Duration value used for object keys and expiry                |
+
+```json
+{
+  "media_input_s3": "<opaque signed reference>",
+  "upload_url": "https://...",
+  "expires_at": 1770000000,
+  "duration": "5m"
+}
+```
+
+### Errors
+
+- **401** — missing or invalid credential.
+- **403** — API-key scope not allowed, access-token caller lacks the `c2pa_sign` permission, or production signing access is not active for the caller's organization.
 
 ---
 

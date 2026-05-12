@@ -6,16 +6,16 @@
 Attaches a C2PA manifest with:
   - CAWG creator metadata  (JSON-LD, Dublin Core)
   - CAWG training/mining permissions
-  - CAWG identity assertion  (test)
+    - CAWG identity assertion  (organization interim)
 
 See docs/quickstart/3_cawg_publish.md for details.
-Requires a c2pa-sign-test API key — set TRUFO_C2PA_SIGN_TEST_API_KEY
-or save it to ~/.trufo/credentials/c2pa_sign_test_api_key.
+Requires a c2pa-sign-prod API key — set TRUFO_C2PA_SIGN_PROD_API_KEY
+or save it to ~/.trufo/credentials/c2pa_sign_prod_api_key.
 """
 
 from pathlib import Path
 
-from trufo.api.tps.sign_c2pa import sign_c2pa_test
+from trufo.api.tps.sign_c2pa import sign_c2pa
 from trufo.util.credentials import TrufoApiKey, load_api_key
 
 # --- configuration ---
@@ -23,9 +23,9 @@ from trufo.util.credentials import TrufoApiKey, load_api_key
 INPUT_FILE = Path("photo.jpg")
 OUTPUT_FILE = Path("published.jpg")
 
-api_key = load_api_key(TrufoApiKey.C2PA_SIGN_TEST)
+api_key = load_api_key(TrufoApiKey.C2PA_SIGN_PROD)
 assert api_key, (
-    "Set TRUFO_C2PA_SIGN_TEST_API_KEY or run: trufo set-api-key c2pa-sign-test <KEY>"
+    "Set TRUFO_C2PA_SIGN_PROD_API_KEY or run: trufo set-api-key c2pa-sign-prod <KEY>"
 )
 
 # --- build assertions ---
@@ -37,8 +37,8 @@ assertions = [
             "@context": {
                 "dc": "http://purl.org/dc/elements/1.1/",
             },
-            "dc:creator": ["Alice"],
-            "dc:rights": "© 2026 Alice. All rights reserved.",
+            "dc:creator": ["[CREATOR NAME]"],
+            "dc:rights": "© 2026 [CREATOR NAME]. All rights reserved.",
         },
     }],
     # AI training and data-mining permissions
@@ -52,12 +52,12 @@ assertions = [
         },
     }],
     # identity assertion (required when assertions are present)
-    ["cawg_identity", {"cawg_identity_id": "test"}],
+    ["cawg_identity", {"cawg_identity_id": "org_interim"}],
 ]
 
 # --- sign ---
 
-signed_bytes = sign_c2pa_test(
+signed_bytes = sign_c2pa(
     api_key,
     INPUT_FILE.read_bytes(),
     assertions=assertions,
