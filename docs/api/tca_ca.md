@@ -115,12 +115,39 @@ For CAWG interim test certificates, the payload also includes:
 
 Check certificate revocation status.
 
+The base endpoint automatically disambiguates the certificate type from the OCSP request issuer and routes the request to the corresponding OCSP responder for C2PA, CAWG, or CTSA certificates. Build the OCSP request with the certificate's direct issuing CA certificate, not with the OCSP responder certificate or a separate OCSP signing CA certificate.
+
 **Auth:** None.
 **Headers:** `Content-Type: application/ocsp-request`.
 
 **Body:** DER-encoded OCSP request.
 
 **Response:** DER-encoded OCSP response.
+
+### `GET https://ocsp.trufo.ai/{base64url_request}`
+
+The responder also supports the RFC 6960 HTTP GET binding. Base64url-encode the DER OCSP request with no padding and append it to the path.
+
+### Profile-specific endpoints
+
+Advanced callers may use explicit profile routes:
+
+| Endpoint | Certificate profile |
+|----------|---------------------|
+| `https://ocsp.trufo.ai/c2pa` | C2PA signing certificates |
+| `https://ocsp.trufo.ai/cawg` | CAWG identity certificates |
+| `https://ocsp.trufo.ai/ctsa` | C2PA timestamping certificates |
+
+These routes reject requests whose issuer does not match the selected profile. Use the base endpoint unless you specifically need route-level profile enforcement.
+
+Common response statuses:
+
+| Status | Meaning |
+|--------|---------|
+| `GOOD` | Certificate is valid and not revoked |
+| `REVOKED` | Certificate has been revoked |
+| `UNKNOWN` | Certificate serial is not found for a recognized issuer |
+| `UNAUTHORIZED` | Issuer is not recognized, or the issuer does not match an explicit profile route |
 
 ---
 
