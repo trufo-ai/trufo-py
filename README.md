@@ -4,6 +4,8 @@ Open-source library to simplify interactions with the Trufo Provenance Service (
 
 The library is currently in an alpha release state. Please be advised that until the library enters a beta release state, there may be drift in the library schema.
 
+The Trufo Provenance Platform is under active beta development, with new provenance features and product workflows being added regularly. If you are building against the platform and have questions about the right integration path, please contact [support@trufo.ai](mailto:support@trufo.ai). We are happy to help.
+
 ## Workflow Examples (Quickstart)
 
 There are a number of documents to get you started quickly with specific use cases:

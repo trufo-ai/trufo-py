@@ -14,7 +14,9 @@ The CAWG (Creator Assertions Working Group) assertions add attribution and right
 
 ## Requirements
 
-- A `c2pa-sign-test` API key (scope required by `/test/c2pa/sign`). See [0_auth.md](0_auth.md).
+- For production signing: a `c2pa-sign-prod` API key (scope required by `/c2pa/sign`). See [0_auth.md](0_auth.md).
+- For test signing: a `c2pa-sign-test` API key (scope required by `/test/c2pa/sign`).
+- Production examples that use `cawg_identity_id="org_interim"` require your organization to have CAWG organization identity signing enabled.
 - `cawg_identity` is required when any assertions are present.
 
 ---
@@ -22,17 +24,17 @@ The CAWG (Creator Assertions Working Group) assertions add attribution and right
 ## Example
 
 ```python
-from trufo.api.tps.sign_c2pa import sign_c2pa_test
+from trufo.api.tps.sign_c2pa import sign_c2pa
 
-signed_bytes = sign_c2pa_test(
+signed_bytes = sign_c2pa(
     api_key,
     media_bytes,
     assertions=[
         ["cawg_metadata", {
             "assertion": {
                 "@context": {"dc": "http://purl.org/dc/elements/1.1/"},
-                "dc:creator": ["Alice"],
-                "dc:rights": "© 2026 Alice. All rights reserved.",
+                "dc:creator": ["[CREATOR NAME]"],
+                "dc:rights": "© 2026 [CREATOR NAME]. All rights reserved.",
             },
         }],
         ["cawg_training", {
@@ -43,10 +45,12 @@ signed_bytes = sign_c2pa_test(
                 },
             },
         }],
-        ["cawg_identity", {"cawg_identity_id": "test"}],
+        ["cawg_identity", {"cawg_identity_id": "org_interim"}],
     ],
 )
 ```
+
+For development-only test signing, use `sign_c2pa_test()` with a `c2pa-sign-test` API key and `cawg_identity_id="test"`. Test-signed outputs are useful for integration development but are not intended to be accepted as production C2PA credentials by conformant validators.
 
 ## `cawg_metadata` Namespaces
 

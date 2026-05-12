@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.3] — 2026-05-12
+
+### Added
+
+- `sign_c2pa()` — helper for production C2PA signing via `/c2pa/sign`.
+- Ephemeral S3 C2PA signing helpers for large-object workflows:
+  - `get_c2pa_s3_upload_url()`
+  - `sign_c2pa_s3()` / `sign_c2pa_test_s3()`
+  - `sign_c2pa_via_s3()` / `sign_c2pa_test_via_s3()`
+- `TPS_C2PA_SIGN` and `TPS_C2PA_GET_S3_URL` endpoint constants.
+
+### Changed
+
+- Refactored direct C2PA signing helpers to share request/response handling.
+
 ## [0.1.2] — 2026-05-05
 
 ### Added
@@ -37,7 +52,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `trufo.intf`: credential storage and loading (env vars + file), CLI entry point.
 - PyPI trusted publishing via GitHub Actions (OIDC, no API tokens required).
 
-[Unreleased]: https://github.com/trufo-ai/trufo-py/compare/v0.1.2...HEAD
+[Unreleased]: https://github.com/trufo-ai/trufo-py/compare/v0.1.3...HEAD
+[0.1.3]: https://github.com/trufo-ai/trufo-py/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/trufo-ai/trufo-py/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/trufo-ai/trufo-py/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/trufo-ai/trufo-py/releases/tag/v0.1.0
