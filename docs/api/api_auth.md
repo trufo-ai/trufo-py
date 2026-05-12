@@ -15,7 +15,7 @@ Instructions on setting up programmatic access to Trufo Provenance Service (TPS)
 
 ## API Headers
 
-All requests to the TPS (expect for OCSP) require authentication. Some endpoints require an access token while other endpoints require an API key. See individual endpoint docs for specifics.
+All requests to the TPS (except for OCSP) require authentication. Some endpoints require an access token while other endpoints require an API key. See individual endpoint docs for specifics.
 
 **Access token** — included via the `Authorization` header as a Bearer token:
 
