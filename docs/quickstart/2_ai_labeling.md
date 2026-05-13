@@ -29,7 +29,7 @@ signed_bytes = sign_c2pa(
     api_key,
     media_bytes,
     assertions=[
-        ["ai_disclosure", {"set_source_type": True}],
+        ["ai_disclosure", {}],
         ["cawg_identity", {"cawg_identity_id": "org_interim"}],
     ],
 )
@@ -37,7 +37,48 @@ signed_bytes = sign_c2pa(
 
 For development-only test signing, use `sign_c2pa_test()` with a `c2pa-sign-test` API key and `cawg_identity_id="test"`. Test-signed outputs are useful for integration development but are not intended to be accepted as production C2PA credentials by conformant validators.
 
-> **Note on `set_source_type`:** Setting `digitalSourceType` within C2PA ingredients is new to C2PA v2.4 (§18.16.12.3) and is not yet supported by most existing validators today (e.g. having this field may make the manifest show up as "invalid"). The `c2pa.ai-disclosure` assertion alone suffices for AI labeling purposes, though for forwards-compatibility purposes you may want to set both. If your use case allows for validators to temporarily display "invalid" messaging, we recommend setting both. If not, then include only the ai_disclosure (by deleting `{"set_source_type": True}` from the example above).
+> **Note on `set_source_type`:** For the most proper behavior, you should pass `"set_source_type": True` in the `ai_disclosure` params. However, because `digitalSourceType` within C2PA ingredients is new to C2PA v2.4 (§18.16.12.3) and is not yet supported by most existing validators today (e.g. having this field may make the manifest show up as "invalid"), we do not recommend passing it in yet. The `c2pa.ai-disclosure` assertion alone suffices for AI labeling purposes, though for forwards-compatibility purposes you may want to set both. If your use case allows for validators to temporarily display "invalid" messaging, we recommend setting both. If not, then include only the ai_disclosure (by deleting `{"set_source_type": True}` from the example above).
+
+## Using a Custom AI Disclosure
+
+By default, `"ai_disclosure"` uses the minimal disclosure body `{"modelType": "c2pa.types.model"}`. If you would like to disclose specific details about the AI model being used, then you need to first register the profile via `POST /c2pa/ai-disclosure/add`.
+
+```python
+import requests
+
+from trufo.api.endpoints import TPS_C2PA_AI_DISCLOSURE_ADD, TRUFO_API_URL
+
+resp = requests.post(
+    TRUFO_API_URL + TPS_C2PA_AI_DISCLOSURE_ADD,
+    headers={"X-API-Key": api_key},
+    json={
+        "nickname": "image model v3.2, 2026-03-11",
+        "assertion": {
+            "modelType": "c2pa.types.model.huggingface.transformers",
+            "modelName": "ImageGen Pro v3.2",
+        },
+    },
+    timeout=60,
+)
+resp.raise_for_status()
+
+ai_disclosure_id = resp.json()["ai_disclosure_id"]
+```
+
+The API returns an `ai_disclosure_id`, which can then be passed in the `ai_disclosure` assertion:
+
+```python
+signed_bytes = sign_c2pa(
+    api_key,
+    media_bytes,
+    assertions=[
+        ["ai_disclosure", {"ai_disclosure_id": "aidisc_0193f7e0abcd7a11bcde01234567890a"}],
+        ["cawg_identity", {"cawg_identity_id": "org_interim"}],
+    ],
+)
+```
+
+See the full [C2PA API reference](../api/api_c2pa.md#api-reference-post-c2paai-disclosureadd) for the add/list endpoints and the accepted disclosure schema.
 
 ---
 
@@ -45,4 +86,3 @@ For development-only test signing, use `sign_c2pa_test()` with a `c2pa-sign-test
 
 - `assertions` field reference: [../api/api_c2pa.md](../api/api_c2pa.md)
 - Complete runnable example: [2_ai_labeling.py](2_ai_labeling.py)
-
