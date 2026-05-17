@@ -11,8 +11,8 @@ See docs/quickstart/1_c2pa_cert.md for prerequisites and explanations.
 
 from pathlib import Path
 
-from trufo.crypto.algorithms import SigningAlgorithm
-from trufo.crypto.keygen import generate_keypair
+from openprov.crypt.algorithms import SigningAlgorithm
+from openprov.crypt.keygen import generate_keypair
 
 OUT_DIR = Path("certs")
 OUT_DIR.mkdir(parents=True, exist_ok=True)

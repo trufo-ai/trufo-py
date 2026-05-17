@@ -11,6 +11,7 @@ import jwt as pyjwt
 import requests
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec
+from openprov.crypt.algorithms import infer_signing_algorithm
 from openprov.crypt.tca_certs import LeafType, build_csr, est_enroll, extract_cert_chain
 
 from trufo.api.auth import extract_detail
@@ -21,7 +22,6 @@ from trufo.api.endpoints import (
     TRUFO_API_URL,
 )
 from trufo.api.session import TrufoSession
-from trufo.crypto.algorithms import infer_signing_algorithm
 
 logger = logging.getLogger(__name__)
 
