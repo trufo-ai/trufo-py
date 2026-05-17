@@ -8,7 +8,6 @@ from unittest.mock import MagicMock, patch
 import jwt as pyjwt
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives.serialization import Encoding, NoEncryption, PrivateFormat
-from openprov.crypt.tca_certs import LeafType
 
 from trufo.api.tca.certs_c2pa import (
     _build_gpic_assertion,
@@ -16,6 +15,7 @@ from trufo.api.tca.certs_c2pa import (
     register_credential,
     request_c2pa_cert,
 )
+from trufo.crypt.tca_certs import LeafType
 
 _MODULE = "trufo.api.tca.certs_c2pa"
 

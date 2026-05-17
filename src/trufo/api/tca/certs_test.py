@@ -12,7 +12,8 @@ from pathlib import Path
 
 import jwt as pyjwt
 from cryptography.hazmat.primitives.asymmetric import ec
-from openprov.crypt.tca_certs import (
+
+from trufo.crypt.tca_certs import (
     TEST_HMAC_SECRET,
     LeafType,
     build_csr,

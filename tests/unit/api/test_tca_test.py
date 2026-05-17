@@ -7,7 +7,6 @@ from unittest.mock import patch
 
 import jwt as pyjwt
 import pytest
-from openprov.crypt.tca_certs import TEST_HMAC_SECRET, LeafType
 
 from trufo.api.tca.certs_test import (
     _build_test_c2pa_csr_jwt,
@@ -15,6 +14,7 @@ from trufo.api.tca.certs_test import (
     request_c2pa_test_cert,
     request_cawg_test_cert,
 )
+from trufo.crypt.tca_certs import TEST_HMAC_SECRET, LeafType
 
 
 class TestBuildTestCsrJwt:
