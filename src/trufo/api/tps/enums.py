@@ -1,12 +1,5 @@
-"""Enums shared by TPS helper modules."""
+"""Compatibility exports for TPS helper enums."""
 
-import enum
+from openprov.c2pa.helpers.cawg_identity import CawgIdentitySpecialId
 
-
-class DefaultCawgIdentityId(str, enum.Enum):
-    """
-    CAWG identity IDs for standard-behavior use in the `cawg_identity` assertion.
-    """
-
-    TEST = "test"
-    ORG_INTERIM = "org_interim"
+__all__ = ["CawgIdentitySpecialId"]
