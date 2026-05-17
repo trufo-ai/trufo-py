@@ -88,8 +88,8 @@ gpic_id = register_credential(
 Run once per certificate renewal cycle:
 
 ```python
+from openprov.crypt.tca_certs import LeafType
 from trufo.api.tca.certs_c2pa import request_c2pa_cert
-from trufo.api.tca.tca_utils import LeafType
 from trufo.crypto.algorithms import SigningAlgorithm
 from trufo.crypto.keygen import generate_keypair
 

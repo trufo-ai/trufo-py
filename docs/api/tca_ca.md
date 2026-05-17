@@ -20,7 +20,7 @@ Certificate enrollment, revocation checking, and timestamping via the Trufo Cert
 | TSA | `ctsa` | Production timestamping | 398 days |
 | TSA Test | `ctsa-test` | Test timestamping | 90 days |
 
-These values are defined in `trufo.api.tca.tca_utils.LeafType`.
+These values are defined in `openprov.crypt.tca_certs.LeafType`.
 
 ---
 
@@ -172,6 +172,6 @@ Request an RFC 3161 timestamp.
 |----------|----------|-------------|
 | `request_c2pa_test_cert()` | `trufo.api.tca.certs_test` | One-step test C2PA certificate enrollment |
 | `request_cawg_test_cert()` | `trufo.api.tca.certs_test` | One-step test CAWG interim certificate enrollment |
-| `build_csr()` | `trufo.api.tca.tca_utils` | Build a PKCS#10 CSR from a leaf private key |
-| `est_enroll()` | `trufo.api.tca.tca_utils` | Submit CSR + CSR JWT to CA via EST simpleenroll |
-| `extract_cert_chain()` | `trufo.api.tca.tca_utils` | Extract PEM certificate chain from PKCS#7 response |
+| `build_csr()` | `openprov.crypt.tca_certs` | Build a PKCS#10 CSR from a leaf private key |
+| `est_enroll()` | `openprov.crypt.tca_certs` | Submit CSR + CSR JWT to CA via EST simpleenroll |
+| `extract_cert_chain()` | `openprov.crypt.tca_certs` | Extract PEM certificate chain from PKCS#7 response |

@@ -71,8 +71,8 @@ print(f"Test certificate saved to {OUT_DIR}/")
 
 # -- enrollment (run on each certificate renewal) --
 
+# from openprov.crypt.tca_certs import LeafType
 # from trufo.api.tca.certs_c2pa import request_c2pa_cert
-# from trufo.api.tca.tca_utils import LeafType
 #
 # leaf_private_pem, _ = generate_keypair(SigningAlgorithm.ES256)
 #

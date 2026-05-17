@@ -12,15 +12,14 @@ from pathlib import Path
 
 import jwt as pyjwt
 from cryptography.hazmat.primitives.asymmetric import ec
-from uuid_utils import uuid7
-
-from trufo.api.tca.tca_utils import (
+from openprov.crypt.tca_certs import (
     TEST_HMAC_SECRET,
     LeafType,
     build_csr,
     est_enroll,
     extract_cert_chain,
 )
+from uuid_utils import uuid7
 
 
 def _build_test_c2pa_csr_jwt(
