@@ -17,6 +17,8 @@ from trufo.api.endpoints import (
 from trufo.api.tps.sign_c2pa import (
     C2PAS3SignedOutput,
     C2PAS3Upload,
+    _validate_actions,
+    _validate_assertions,
     get_c2pa_s3_upload_url,
     sign_c2pa,
     sign_c2pa_s3,
@@ -255,3 +257,40 @@ class TestS3C2PASigning:
                 "signed-input-reference",
                 assertions=[["ai_disclosure", {}]],
             )
+
+
+class TestRequestValidation:
+    """Client-side action/assertion name validation, pre-API-call.
+
+    The cawg_identity requirement is exercised via the public signers above;
+    this targets the entry-name/enum validation in the pure helpers, which is
+    otherwise uncovered.
+    """
+
+    @pytest.mark.parametrize(
+        "validator, value",
+        [
+            (_validate_actions, None),
+            (_validate_actions, []),
+            (_validate_actions, [["publish", {}], ["transcode", {}]]),
+            (_validate_assertions, None),
+            (_validate_assertions, []),
+            (_validate_assertions, [["cawg_identity", {}]]),
+        ],
+    )
+    def test_valid_inputs_pass(self, validator, value):
+        validator(value)  # must not raise
+
+    @pytest.mark.parametrize(
+        "validator, entry_type, bad",
+        [
+            (_validate_actions, "action", [["not_an_action", {}]]),
+            (_validate_actions, "action", [[]]),
+            (_validate_actions, "action", [[123, {}]]),
+            (_validate_assertions, "assertion", [["not_an_assertion", {}]]),
+            (_validate_assertions, "assertion", [[]]),
+        ],
+    )
+    def test_invalid_entries_rejected(self, validator, entry_type, bad):
+        with pytest.raises(ValueError, match=f"Invalid {entry_type} entry"):
+            validator(bad)
