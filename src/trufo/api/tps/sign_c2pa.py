@@ -16,6 +16,8 @@ from trufo.api.endpoints import (
     TPS_C2PA_SIGN,
     TPS_C2PA_SIGN_TEST,
 )
+from trufo.c2pa.actions import TrufoAction
+from trufo.c2pa.assertions import UserAssertion
 
 
 @dataclass(frozen=True)
@@ -37,8 +39,27 @@ class C2PAS3SignedOutput:
 
 def _validate_assertions(assertions: list | None) -> None:
     """Validate client-side assertion requirements shared by C2PA helpers."""
-    if assertions and not any(a[0] == "cawg_identity" for a in assertions):
+    _validate_entry_names(assertions, UserAssertion, "assertion")
+    if assertions and not any(
+        a[0] == UserAssertion.CAWG_IDENTITY.value for a in assertions
+    ):
         raise ValueError("'cawg_identity' is required when assertions are provided")
+
+
+def _validate_actions(actions: list | None) -> None:
+    """Validate client-side action requirements shared by C2PA helpers."""
+    _validate_entry_names(actions, TrufoAction, "action")
+
+
+def _validate_entry_names(
+    entries: list | None, enum_type: type, entry_type: str
+) -> None:
+    """Validate the name field of request entries against a public enum."""
+    for entry in entries or []:
+        try:
+            enum_type(entry[0])
+        except (IndexError, KeyError, TypeError, ValueError) as exc:
+            raise ValueError(f"Invalid {entry_type} entry: {entry!r}") from exc
 
 
 def _sign_c2pa_direct(
@@ -49,6 +70,7 @@ def _sign_c2pa_direct(
     assertions: list | None = None,
 ) -> bytes:
     """Sign media bytes through a C2PA signing endpoint."""
+    _validate_actions(actions)
     _validate_assertions(assertions)
 
     body = {
@@ -119,6 +141,7 @@ def _sign_c2pa_s3(
     assertions: list | None = None,
 ) -> C2PAS3SignedOutput:
     """Sign an uploaded ephemeral S3 object through a C2PA signing endpoint."""
+    _validate_actions(actions)
     _validate_assertions(assertions)
 
     resp = requests.post(
