@@ -4,6 +4,8 @@
 """Unit tests for TPS C2PA signing helpers."""
 
 import base64
+import json
+import types
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -21,6 +23,8 @@ from trufo.api.tps.sign_c2pa import (
     _validate_assertions,
     get_c2pa_s3_upload_url,
     sign_c2pa,
+    sign_c2pa_remote,
+    sign_c2pa_remote_test,
     sign_c2pa_s3,
     sign_c2pa_test,
     sign_c2pa_test_s3,
@@ -34,6 +38,61 @@ def _mock_response(json_data: dict):
     resp = MagicMock()
     resp.json.return_value = json_data
     return resp
+
+
+def _install_fake_remote_stack(monkeypatch, signed: bytes = b"signed-remote-media"):
+    """Install fake optional tfprov modules and capture remote wrapper plumbing."""
+    calls = {
+        "cg_request": object(),
+        "claim_signer": object(),
+        "ocsp_stapler": object(),
+    }
+
+    def fake_require_provenance_module(module_name):
+        calls.setdefault("optional_imports", []).append(module_name)
+        match module_name:
+            case "tfprov.c2pa_generator":
+                return types.SimpleNamespace(
+                    build_cg_request=fake_build_cg_request,
+                    generate_claim=fake_generate_claim,
+                )
+            case "tfprov.crypt":
+                return types.SimpleNamespace(
+                    TrufoRemoteClaimSigner=fake_remote_claim_signer,
+                )
+            case "tfprov.c2pa_py.helpers.ocsp_stapler":
+                return types.SimpleNamespace(OcspStapler=fake_ocsp_stapler)
+            case "tfprov.util.av_format":
+                return types.SimpleNamespace(
+                    get_media_probe_result=fake_get_media_probe_result,
+                )
+        raise AssertionError(f"Unexpected optional import: {module_name}")
+
+    def fake_get_media_probe_result(media_bytes):
+        calls["media_probe"] = media_bytes
+        return types.SimpleNamespace(mime_type="image/jpeg")
+
+    def fake_build_cg_request(**kwargs):
+        calls["build_cg_request"] = kwargs
+        return calls["cg_request"]
+
+    def fake_remote_claim_signer(*, api_key):
+        calls["remote_claim_signer"] = api_key
+        return calls["claim_signer"]
+
+    def fake_ocsp_stapler():
+        calls["ocsp_stapler_constructed"] = True
+        return calls["ocsp_stapler"]
+
+    def fake_generate_claim(*args, **kwargs):
+        calls["generate_claim"] = {"args": args, "kwargs": kwargs}
+        return json.dumps({"media_output": base64.b64encode(signed).decode()})
+
+    monkeypatch.setattr(
+        "trufo.api.tps.sign_c2pa.require_provenance_module",
+        fake_require_provenance_module,
+    )
+    return calls
 
 
 class TestDirectC2PASigning:
@@ -91,6 +150,87 @@ class TestDirectC2PASigning:
     def test_assertions_require_cawg_identity(self, signer):
         with pytest.raises(ValueError, match="cawg_identity"):
             signer(
+                "api-key",
+                b"input-media",
+                assertions=[["ai_disclosure", {}]],
+            )
+
+
+class TestRemoteC2PASigning:
+    """Remote C2PA signing wrapper behavior."""
+
+    def test_remote_test_signing_wires_optional_provenance_stack(self, monkeypatch):
+        signed = b"signed-remote-media"
+        calls = _install_fake_remote_stack(monkeypatch, signed=signed)
+
+        result = sign_c2pa_remote_test(
+            "remote-sign-key",
+            b"input-media",
+            actions=[["publish", {}]],
+            assertions=[["cawg_identity", {"cawg_identity_id": "test"}]],
+            tsa_api_key="tsa-key",
+        )
+
+        assert result == signed
+        assert calls["optional_imports"] == [
+            "tfprov.c2pa_generator",
+            "tfprov.crypt",
+            "tfprov.c2pa_py.helpers.ocsp_stapler",
+            "tfprov.util.av_format",
+        ]
+        assert calls["media_probe"] == b"input-media"
+        assert calls["build_cg_request"] == {
+            "actions": [["publish", {}]],
+            "assertions": [["cawg_identity", {"cawg_identity_id": "test"}]],
+            "media_bytes": b"input-media",
+            "mime_type": "image/jpeg",
+        }
+        assert calls["remote_claim_signer"] == "remote-sign-key"
+        assert calls["ocsp_stapler_constructed"] is True
+        assert calls["generate_claim"] == {
+            "args": (calls["cg_request"],),
+            "kwargs": {
+                "claim_signer": calls["claim_signer"],
+                "ocsp_stapler": calls["ocsp_stapler"],
+                "tsa_api_key": "tsa-key",
+            },
+        }
+
+    def test_remote_test_signing_loads_configured_tsa_key(self, monkeypatch):
+        calls = _install_fake_remote_stack(monkeypatch, signed=b"signed")
+
+        def fake_load_api_key(key_type):
+            calls["key_type"] = key_type
+            return "configured-tsa-key"
+
+        monkeypatch.setattr("trufo.api.tps.sign_c2pa.load_api_key", fake_load_api_key)
+
+        assert sign_c2pa_remote_test("api-key", b"input-media") == b"signed"
+        assert calls["key_type"] == "tsa"
+        assert calls["generate_claim"]["kwargs"]["tsa_api_key"] == "configured-tsa-key"
+
+    def test_remote_test_signing_requires_tsa_key_before_optional_imports(
+        self, monkeypatch
+    ):
+        require_provenance_module = MagicMock()
+        monkeypatch.setattr("trufo.api.tps.sign_c2pa.load_api_key", lambda _key: None)
+        monkeypatch.setattr(
+            "trufo.api.tps.sign_c2pa.require_provenance_module",
+            require_provenance_module,
+        )
+
+        with pytest.raises(RuntimeError, match="TSA API key"):
+            sign_c2pa_remote_test("api-key", b"input-media")
+
+        require_provenance_module.assert_not_called()
+
+    def test_remote_prod_signing_is_explicit_stub(self):
+        with pytest.raises(NotImplementedError, match="not implemented server-side"):
+            sign_c2pa_remote("api-key", b"input-media")
+
+    def test_remote_assertions_require_cawg_identity(self):
+        with pytest.raises(ValueError, match="cawg_identity"):
+            sign_c2pa_remote_test(
                 "api-key",
                 b"input-media",
                 assertions=[["ai_disclosure", {}]],
