@@ -9,12 +9,11 @@ import types
 from unittest.mock import MagicMock, patch
 
 import pytest
-
 from trufo.api.endpoints import (
-    TRUFO_API_URL,
     TPS_C2PA_GET_S3_URL,
     TPS_C2PA_SIGN,
     TPS_C2PA_SIGN_TEST,
+    TRUFO_API_URL,
 )
 from trufo.api.tps.sign_c2pa import (
     C2PAS3SignedOutput,
@@ -45,6 +44,7 @@ def _install_fake_remote_stack(monkeypatch, signed: bytes = b"signed-remote-medi
     calls = {
         "cg_request": object(),
         "claim_signer": object(),
+        "identity_signers": {},
         "ocsp_stapler": object(),
     }
 
@@ -59,6 +59,7 @@ def _install_fake_remote_stack(monkeypatch, signed: bytes = b"signed-remote-medi
             case "tfprov.crypt":
                 return types.SimpleNamespace(
                     TrufoRemoteClaimSigner=fake_remote_claim_signer,
+                    TrufoRemoteIdentitySigner=fake_remote_identity_signer,
                 )
             case "tfprov.c2pa_py.helpers.ocsp_stapler":
                 return types.SimpleNamespace(OcspStapler=fake_ocsp_stapler)
@@ -79,6 +80,14 @@ def _install_fake_remote_stack(monkeypatch, signed: bytes = b"signed-remote-medi
     def fake_remote_claim_signer(*, api_key):
         calls["remote_claim_signer"] = api_key
         return calls["claim_signer"]
+
+    def fake_remote_identity_signer(*, api_key, cawg_identity_id):
+        calls.setdefault("remote_identity_signers", []).append(
+            {"api_key": api_key, "cawg_identity_id": cawg_identity_id}
+        )
+        signer = object()
+        calls["identity_signers"][cawg_identity_id] = signer
+        return signer
 
     def fake_ocsp_stapler():
         calls["ocsp_stapler_constructed"] = True
@@ -186,6 +195,9 @@ class TestRemoteC2PASigning:
             "mime_type": "image/jpeg",
         }
         assert calls["remote_claim_signer"] == "remote-sign-key"
+        assert calls["remote_identity_signers"] == [
+            {"api_key": "remote-sign-key", "cawg_identity_id": "test"}
+        ]
         assert calls["ocsp_stapler_constructed"] is True
         assert calls["generate_claim"] == {
             "args": (calls["cg_request"],),
@@ -193,6 +205,7 @@ class TestRemoteC2PASigning:
                 "claim_signer": calls["claim_signer"],
                 "ocsp_stapler": calls["ocsp_stapler"],
                 "tsa_api_key": "tsa-key",
+                "cawg_identity_signers": calls["identity_signers"],
             },
         }
 
@@ -269,7 +282,9 @@ class TestS3C2PASigning:
 
     @patch("trufo.api.tps.sign_c2pa.requests.post")
     def test_sign_c2pa_s3_posts_to_prod_endpoint(self, mock_post):
-        mock_post.return_value = _mock_response({"media_output_s3": "https://download.example"})
+        mock_post.return_value = _mock_response(
+            {"media_output_s3": "https://download.example"}
+        )
 
         result = sign_c2pa_s3(
             "prod-key",
@@ -292,7 +307,9 @@ class TestS3C2PASigning:
 
     @patch("trufo.api.tps.sign_c2pa.requests.post")
     def test_sign_c2pa_test_s3_posts_to_test_endpoint(self, mock_post):
-        mock_post.return_value = _mock_response({"media_output_s3": "https://download.example"})
+        mock_post.return_value = _mock_response(
+            {"media_output_s3": "https://download.example"}
+        )
 
         result = sign_c2pa_test_s3("test-key", "signed-input-reference")
 
@@ -340,7 +357,9 @@ class TestS3C2PASigning:
         )
 
         assert result == b"signed-media"
-        mock_get_upload_url.assert_called_once_with("prod-key", "image/jpeg", duration="5m")
+        mock_get_upload_url.assert_called_once_with(
+            "prod-key", "image/jpeg", duration="5m"
+        )
         mock_put.assert_called_once_with(
             "https://upload.example",
             content=b"input-media",

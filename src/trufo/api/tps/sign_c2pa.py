@@ -10,12 +10,11 @@ import json
 from dataclasses import dataclass
 
 import requests
-
 from trufo.api.endpoints import (
-    TRUFO_API_URL,
     TPS_C2PA_GET_S3_URL,
     TPS_C2PA_SIGN,
     TPS_C2PA_SIGN_TEST,
+    TRUFO_API_URL,
 )
 from trufo.c2pa.actions import TrufoAction
 from trufo.c2pa.assertions import UserAssertion
@@ -397,6 +396,30 @@ def _resolve_tsa_api_key(tsa_api_key: str | None) -> str:
     return configured_key
 
 
+def _build_remote_cawg_identity_signers(crypt, api_key: str, assertions: list | None):
+    """Build remote CAWG identity signers keyed by cawg_identity_id."""
+    signers = {}
+    for name, params in assertions or []:
+        if name != UserAssertion.CAWG_IDENTITY.value:
+            continue
+
+        cawg_identity_id = params.get("cawg_identity_id")
+        if not isinstance(cawg_identity_id, str) or not cawg_identity_id:
+            raise ValueError(
+                "The cawg_identity assertion requires a non-empty "
+                "'cawg_identity_id' parameter."
+            )
+        if cawg_identity_id in signers:
+            continue
+
+        signers[cawg_identity_id] = crypt.TrufoRemoteIdentitySigner(
+            api_key=api_key,
+            cawg_identity_id=cawg_identity_id,
+        )
+
+    return signers
+
+
 def sign_c2pa_remote_test(
     api_key: str,
     media_bytes: bytes,
@@ -428,12 +451,18 @@ def sign_c2pa_remote_test(
         mime_type=media_probe.mime_type,
     )
     claim_signer = crypt.TrufoRemoteClaimSigner(api_key=api_key)
+    cawg_identity_signers = _build_remote_cawg_identity_signers(
+        crypt,
+        api_key,
+        assertions,
+    )
     generated = json.loads(
         c2pa_generator.generate_claim(
             cg_request,
             claim_signer=claim_signer,
             ocsp_stapler=ocsp_stapler.OcspStapler(),
             tsa_api_key=resolved_tsa_api_key,
+            cawg_identity_signers=cawg_identity_signers,
         )
     )
     return base64.b64decode(generated["media_output"])
