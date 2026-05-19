@@ -6,6 +6,7 @@ C2PA signing helpers for the Trufo TPS.
 """
 
 import base64
+import json
 from dataclasses import dataclass
 
 import requests
@@ -18,6 +19,8 @@ from trufo.api.endpoints import (
 )
 from trufo.c2pa.actions import TrufoAction
 from trufo.c2pa.assertions import UserAssertion
+from trufo.util.credentials import TrufoApiKey, load_api_key
+from trufo.util.optional_imports import require_provenance_module
 
 
 @dataclass(frozen=True)
@@ -374,4 +377,78 @@ def sign_c2pa_test(
         media_bytes,
         actions=actions,
         assertions=assertions,
+    )
+
+
+def _resolve_tsa_api_key(tsa_api_key: str | None) -> str:
+    """Return explicit TSA API key or load the configured SDK TSA key."""
+    if tsa_api_key is not None:
+        resolved_key = tsa_api_key.strip()
+        if not resolved_key:
+            raise ValueError("tsa_api_key cannot be empty.")
+        return resolved_key
+
+    configured_key = load_api_key(TrufoApiKey.TSA)
+    if configured_key is None:
+        raise RuntimeError(
+            "A TSA API key is required for remote C2PA signing. Pass tsa_api_key "
+            "or configure TRUFO_TSA_API_KEY."
+        )
+    return configured_key
+
+
+def sign_c2pa_remote_test(
+    api_key: str,
+    media_bytes: bytes,
+    *,
+    actions: list | None = None,
+    assertions: list | None = None,
+    tsa_api_key: str | None = None,
+) -> bytes:
+    """Sign media locally using the Trufo test remote-signing endpoint.
+
+    The media claim is built on the client while the C2PA claim-signing key
+    stays server-side. This helper requires the optional ``trufo[provenance]``
+    dependency group.
+    """
+    _validate_actions(actions)
+    _validate_assertions(assertions)
+
+    resolved_tsa_api_key = _resolve_tsa_api_key(tsa_api_key)
+    c2pa_generator = require_provenance_module("tfprov.c2pa_generator")
+    crypt = require_provenance_module("tfprov.crypt")
+    ocsp_stapler = require_provenance_module("tfprov.c2pa_py.helpers.ocsp_stapler")
+    av_format = require_provenance_module("tfprov.util.av_format")
+
+    media_probe = av_format.get_media_probe_result(media_bytes)
+    cg_request = c2pa_generator.build_cg_request(
+        actions=actions,
+        assertions=assertions,
+        media_bytes=media_bytes,
+        mime_type=media_probe.mime_type,
+    )
+    claim_signer = crypt.TrufoRemoteClaimSigner(api_key=api_key)
+    generated = json.loads(
+        c2pa_generator.generate_claim(
+            cg_request,
+            claim_signer=claim_signer,
+            ocsp_stapler=ocsp_stapler.OcspStapler(),
+            tsa_api_key=resolved_tsa_api_key,
+        )
+    )
+    return base64.b64decode(generated["media_output"])
+
+
+def sign_c2pa_remote(
+    api_key: str,
+    media_bytes: bytes,
+    *,
+    actions: list | None = None,
+    assertions: list | None = None,
+    tsa_api_key: str | None = None,
+) -> bytes:
+    """Production remote C2PA signing placeholder."""
+    del api_key, media_bytes, actions, assertions, tsa_api_key
+    raise NotImplementedError(
+        "Production remote C2PA signing is not implemented server-side yet."
     )
