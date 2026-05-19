@@ -17,7 +17,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-local = ["boto3>=1.26", "trufo-provenance>=0.0.0"]
+provenance = ["trufo-provenance[c2pa]>=0.0.0"]
 test = ["pytest>=7.0"]
 
 [project.scripts]
