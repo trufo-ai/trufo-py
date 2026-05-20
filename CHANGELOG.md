@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-05-20
+
 ### Added
 
 - Public C2PA request enums for signing helpers:
@@ -16,12 +18,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `trufo.crypt.algorithms`
   - `trufo.crypt.keygen`
   - `trufo.crypt.tca_certs`
+- Remote C2PA signing helpers that build manifests locally while using Trufo-hosted remote signers:
+  - `sign_c2pa_remote()`
+  - `sign_c2pa_remote_test()`
 
 ### Changed
 
 - Reorganized SDK-facing crypto, certificate, and C2PA request helpers to align with the new `tfprov` provenance-engine package split.
 - Re-exported CAWG special identity IDs from the shared provenance engine instead of maintaining a separate SDK enum shim.
-- Moved `trufo-provenance` and `boto3` from required SDK dependencies to the `local` optional extra, because base hosted-API SDK workflows do not require the provenance engine or AWS KMS client dependencies.
+- Moved `trufo-provenance` from required SDK dependencies to the `provenance` optional extra, pinned to the compatible `0.1.x` provenance-engine release line, because base hosted-API SDK workflows do not require the provenance engine.
+- Changed gathered C2PA assertions without explicit CAWG identities from a hard client-side error to a warning while the CAWG trust model remains interim.
 
 ### Tests
 
@@ -75,7 +81,8 @@ Minor-version bump marks the general availability of the production C2PA signing
 - `trufo.intf`: credential storage and loading (env vars + file), CLI entry point.
 - PyPI trusted publishing via GitHub Actions (OIDC, no API tokens required).
 
-[Unreleased]: https://github.com/trufo-ai/trufo-py/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/trufo-ai/trufo-py/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/trufo-ai/trufo-py/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/trufo-ai/trufo-py/compare/v0.1.2...v0.2.0
 [0.1.2]: https://github.com/trufo-ai/trufo-py/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/trufo-ai/trufo-py/compare/v0.1.0...v0.1.1
