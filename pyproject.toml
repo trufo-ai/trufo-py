@@ -1,14 +1,14 @@
 [build-system]
-requires = ["setuptools>=68.0.0", "wheel"]
+requires = ["setuptools>=77.0.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "trufo"
-version = "0.2.0"
+version = "0.3.0"
 requires-python = ">=3.10"
 description = "Trufo SDK for content provenance API services."
 readme = "README.md"
-license = { text = "Apache-2.0" }
+license = "Apache-2.0"
 dependencies = [
     "cryptography>=41.0",
     "PyJWT>=2.6",
@@ -17,7 +17,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-provenance = ["trufo-provenance[c2pa]>=0.0.0"]
+provenance = ["trufo-provenance[c2pa]>=0.1.0,<0.2"]
 test = ["pytest>=7.0"]
 
 [project.scripts]
