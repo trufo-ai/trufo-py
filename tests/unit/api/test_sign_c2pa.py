@@ -9,6 +9,7 @@ import types
 from unittest.mock import MagicMock, patch
 
 import pytest
+
 from trufo.api.endpoints import (
     TPS_C2PA_GET_S3_URL,
     TPS_C2PA_SIGN,
@@ -156,13 +157,22 @@ class TestDirectC2PASigning:
         )
 
     @pytest.mark.parametrize("signer", [sign_c2pa, sign_c2pa_test])
-    def test_assertions_require_cawg_identity(self, signer):
-        with pytest.raises(ValueError, match="cawg_identity"):
-            signer(
+    @patch("trufo.api.tps.sign_c2pa.requests.post")
+    def test_assertions_without_cawg_identity_warn(self, mock_post, signer, caplog):
+        signed = b"signed"
+        mock_post.return_value = _mock_response(
+            {"media_output": base64.b64encode(signed).decode("utf-8")}
+        )
+
+        with caplog.at_level("WARNING", logger="trufo.api.tps.sign_c2pa"):
+            result = signer(
                 "api-key",
                 b"input-media",
                 assertions=[["ai_disclosure", {}]],
             )
+
+        assert result == signed
+        assert "Gathered assertions are being input by the client" in caplog.text
 
 
 class TestRemoteC2PASigning:
@@ -222,9 +232,7 @@ class TestRemoteC2PASigning:
         assert calls["key_type"] == "tsa"
         assert calls["generate_claim"]["kwargs"]["tsa_api_key"] == "configured-tsa-key"
 
-    def test_remote_test_signing_requires_tsa_key_before_optional_imports(
-        self, monkeypatch
-    ):
+    def test_remote_test_signing_requires_tsa_key_before_optional_imports(self, monkeypatch):
         require_provenance_module = MagicMock()
         monkeypatch.setattr("trufo.api.tps.sign_c2pa.load_api_key", lambda _key: None)
         monkeypatch.setattr(
@@ -241,13 +249,20 @@ class TestRemoteC2PASigning:
         with pytest.raises(NotImplementedError, match="not implemented server-side"):
             sign_c2pa_remote("api-key", b"input-media")
 
-    def test_remote_assertions_require_cawg_identity(self):
-        with pytest.raises(ValueError, match="cawg_identity"):
-            sign_c2pa_remote_test(
+    def test_remote_assertions_without_cawg_identity_warns_and_continues(self, monkeypatch, caplog):
+        calls = _install_fake_remote_stack(monkeypatch, signed=b"signed")
+
+        with caplog.at_level("WARNING", logger="trufo.api.tps.sign_c2pa"):
+            result = sign_c2pa_remote_test(
                 "api-key",
                 b"input-media",
                 assertions=[["ai_disclosure", {}]],
+                tsa_api_key="tsa-key",
             )
+
+        assert result == b"signed"
+        assert "Gathered assertions are being input by the client" in caplog.text
+        assert calls["generate_claim"]["kwargs"]["cawg_identity_signers"] == {}
 
 
 class TestS3C2PASigning:
@@ -282,9 +297,7 @@ class TestS3C2PASigning:
 
     @patch("trufo.api.tps.sign_c2pa.requests.post")
     def test_sign_c2pa_s3_posts_to_prod_endpoint(self, mock_post):
-        mock_post.return_value = _mock_response(
-            {"media_output_s3": "https://download.example"}
-        )
+        mock_post.return_value = _mock_response({"media_output_s3": "https://download.example"})
 
         result = sign_c2pa_s3(
             "prod-key",
@@ -307,9 +320,7 @@ class TestS3C2PASigning:
 
     @patch("trufo.api.tps.sign_c2pa.requests.post")
     def test_sign_c2pa_test_s3_posts_to_test_endpoint(self, mock_post):
-        mock_post.return_value = _mock_response(
-            {"media_output_s3": "https://download.example"}
-        )
+        mock_post.return_value = _mock_response({"media_output_s3": "https://download.example"})
 
         result = sign_c2pa_test_s3("test-key", "signed-input-reference")
 
@@ -342,9 +353,7 @@ class TestS3C2PASigning:
             expires_at=1770000000,
             duration="5m",
         )
-        mock_sign_s3.return_value = C2PAS3SignedOutput(
-            media_output_s3="https://download.example"
-        )
+        mock_sign_s3.return_value = C2PAS3SignedOutput(media_output_s3="https://download.example")
         mock_get.return_value.content = b"signed-media"
 
         result = sign_c2pa_via_s3(
@@ -357,9 +366,7 @@ class TestS3C2PASigning:
         )
 
         assert result == b"signed-media"
-        mock_get_upload_url.assert_called_once_with(
-            "prod-key", "image/jpeg", duration="5m"
-        )
+        mock_get_upload_url.assert_called_once_with("prod-key", "image/jpeg", duration="5m")
         mock_put.assert_called_once_with(
             "https://upload.example",
             content=b"input-media",
@@ -409,13 +416,19 @@ class TestS3C2PASigning:
         )
 
     @pytest.mark.parametrize("signer", [sign_c2pa_s3, sign_c2pa_test_s3])
-    def test_s3_assertions_require_cawg_identity(self, signer):
-        with pytest.raises(ValueError, match="cawg_identity"):
-            signer(
+    @patch("trufo.api.tps.sign_c2pa.requests.post")
+    def test_s3_assertions_without_cawg_identity_warn(self, mock_post, signer, caplog):
+        mock_post.return_value = _mock_response({"media_output_s3": "https://download.example"})
+
+        with caplog.at_level("WARNING", logger="trufo.api.tps.sign_c2pa"):
+            result = signer(
                 "api-key",
                 "signed-input-reference",
                 assertions=[["ai_disclosure", {}]],
             )
+
+        assert result == C2PAS3SignedOutput(media_output_s3="https://download.example")
+        assert "Gathered assertions are being input by the client" in caplog.text
 
 
 class TestRequestValidation:
