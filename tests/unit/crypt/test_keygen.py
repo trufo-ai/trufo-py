@@ -1,7 +1,7 @@
 # Copyright 2025-2026 Trufo, Inc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-"""Unit tests for crypto/keygen.py."""
+"""Unit tests for trufo.crypt.keygen."""
 
 import pytest
 from cryptography.hazmat.primitives.asymmetric import ec, ed25519
@@ -12,8 +12,8 @@ from cryptography.hazmat.primitives.serialization import (
     load_pem_public_key,
 )
 
-from trufo.crypto.algorithms import SigningAlgorithm
-from trufo.crypto.keygen import generate_keypair
+from trufo.crypt.algorithms import SigningAlgorithm
+from trufo.crypt.keygen import generate_keypair
 
 
 class TestGenerateKeypair:
@@ -77,7 +77,6 @@ class TestGenerateKeypair:
         priv, pub = generate_keypair(SigningAlgorithm.ES256)
         private_key = load_pem_private_key(priv, password=None)
         public_key = load_pem_public_key(pub)
-        # compare serialized public key bytes
         assert private_key.public_key().public_bytes(
             Encoding.PEM, PublicFormat.SubjectPublicKeyInfo
         ) == public_key.public_bytes(Encoding.PEM, PublicFormat.SubjectPublicKeyInfo)

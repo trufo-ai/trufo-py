@@ -7,10 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Public C2PA request enums for signing helpers:
+  - `TrufoAction`
+  - `UserAssertion`
+- Public SDK crypto and certificate helpers used by certificate procurement workflows:
+  - `trufo.crypt.algorithms`
+  - `trufo.crypt.keygen`
+  - `trufo.crypt.tca_certs`
+
+### Changed
+
+- Reorganized SDK-facing crypto, certificate, and C2PA request helpers to align with the new `tfprov` provenance-engine package split.
+- Re-exported CAWG special identity IDs from the shared provenance engine instead of maintaining a separate SDK enum shim.
+- Moved `trufo-provenance` and `boto3` from required SDK dependencies to the `local` optional extra, because base hosted-API SDK workflows do not require the provenance engine or AWS KMS client dependencies.
+
+### Tests
+
+- Added coverage for public enum member values and string-enum behavior.
+- Added client-side validation coverage for C2PA signing action and assertion names.
+
 ## [0.2.0] — 2026-05-12
 
 Minor-version bump marks the general availability of the production C2PA signing API.
-
 
 ### Added
 
