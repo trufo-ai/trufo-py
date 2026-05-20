@@ -15,7 +15,7 @@ from trufo.api.tca.certs_c2pa import (
     register_credential,
     request_c2pa_cert,
 )
-from trufo.api.tca.tca_utils import LeafType
+from trufo.crypt.tca_certs import LeafType
 
 _MODULE = "trufo.api.tca.certs_c2pa"
 

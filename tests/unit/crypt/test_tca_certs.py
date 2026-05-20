@@ -1,7 +1,7 @@
 # Copyright 2025-2026 Trufo, Inc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-"""Unit tests for api/tca/tca_utils.py — generic TCA certificate helpers."""
+"""Unit tests for generic TCA certificate helpers."""
 
 import base64
 import datetime
@@ -16,7 +16,7 @@ from cryptography.hazmat.primitives.serialization.pkcs7 import (
 )
 from cryptography.x509.oid import NameOID
 
-from trufo.api.tca.tca_utils import build_csr, est_enroll, extract_cert_chain
+from trufo.crypt.tca_certs import build_csr, est_enroll, extract_cert_chain
 
 # --- Fixtures ---
 
@@ -116,7 +116,7 @@ class TestBuildCsr:
 class TestEstEnroll:
     """est_enroll sends correct request to CA."""
 
-    @patch("trufo.api.tca.tca_utils.requests.post")
+    @patch("trufo.crypt.tca_certs.requests.post")
     def test_returns_response_content_on_success(self, mock_post):
         mock_post.return_value = MagicMock(
             status_code=200,
@@ -127,7 +127,7 @@ class TestEstEnroll:
 
         assert result == b"base64-pkcs7-data"
 
-    @patch("trufo.api.tca.tca_utils.requests.post")
+    @patch("trufo.crypt.tca_certs.requests.post")
     def test_sends_basic_auth_with_jwt(self, mock_post):
         mock_post.return_value = MagicMock(status_code=200, content=b"ok")
 
@@ -137,7 +137,7 @@ class TestEstEnroll:
         expected_auth = base64.b64encode(b":my-jwt").decode()
         assert call_kwargs["headers"]["Authorization"] == f"Basic {expected_auth}"
 
-    @patch("trufo.api.tca.tca_utils.requests.post")
+    @patch("trufo.crypt.tca_certs.requests.post")
     def test_url_includes_leaf_type(self, mock_post):
         mock_post.return_value = MagicMock(status_code=200, content=b"ok")
 
@@ -146,7 +146,7 @@ class TestEstEnroll:
         url = mock_post.call_args[0][0]
         assert "/c2pa-l1-test/simpleenroll" in url
 
-    @patch("trufo.api.tca.tca_utils.requests.post")
+    @patch("trufo.crypt.tca_certs.requests.post")
     def test_raises_on_failure(self, mock_post):
         resp = MagicMock(status_code=400, text="bad request")
         resp.json.return_value = {"detail": "invalid CSR"}
@@ -189,7 +189,8 @@ class TestExtractCertChain:
         chain_pem = extract_cert_chain(pkcs7_b64)
 
         first_pem = (
-            chain_pem.split(b"-----END CERTIFICATE-----\n", 1)[0] + b"-----END CERTIFICATE-----\n"
+            chain_pem.split(b"-----END CERTIFICATE-----\n", 1)[0]
+            + b"-----END CERTIFICATE-----\n"
         )
         parsed = x509.load_pem_x509_certificate(first_pem)
         assert parsed.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value == "test-leaf"

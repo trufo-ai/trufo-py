@@ -10,6 +10,8 @@ from cryptography.hazmat.primitives.asymmetric import ec, ed25519
 from cryptography.hazmat.primitives.serialization import load_pem_public_key
 
 
+# duplicated in tfprov.crypt.algorithms; keep values in sync with
+# the migration duplication register
 class SigningAlgorithm(Enum):
     """Supported signing algorithms (JWA identifiers)."""
 
@@ -21,6 +23,19 @@ class SigningAlgorithm(Enum):
     def __init__(self, alg_name: str, hash_alg: str | None):
         self.alg_name = alg_name
         self.hash_alg = hash_alg
+
+
+class LeafType(str, Enum):
+    """Certificate leaf types accepted by the Trufo CA."""
+
+    C2PA_L1 = "c2pa-l1"
+    C2PA_L2 = "c2pa-l2"
+    C2PA_L1_TEST = "c2pa-l1-test"
+    C2PA_L2_TEST = "c2pa-l2-test"
+    CTSA = "ctsa"
+    CTSA_TEST = "ctsa-test"
+    CAWG_INTERIM = "cawg-interim"
+    CAWG_INTERIM_TEST = "cawg-interim-test"
 
 
 ALG_TO_CURVE = {
