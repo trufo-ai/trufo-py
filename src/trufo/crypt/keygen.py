@@ -11,7 +11,7 @@ from cryptography.hazmat.primitives.serialization import (
     PublicFormat,
 )
 
-from trufo.crypto.algorithms import ALG_TO_CURVE, SigningAlgorithm
+from trufo.crypt.algorithms import ALG_TO_CURVE, SigningAlgorithm
 
 
 def generate_keypair(algorithm: SigningAlgorithm) -> tuple[bytes, bytes]:
@@ -31,9 +31,13 @@ def generate_keypair(algorithm: SigningAlgorithm) -> tuple[bytes, bytes]:
     elif algorithm in ALG_TO_CURVE:
         private_key = ec.generate_private_key(ALG_TO_CURVE[algorithm])
     else:
-        raise ValueError(f"Unsupported algorithm for key generation: {algorithm.alg_name}")
+        raise ValueError(
+            f"Unsupported algorithm for key generation: {algorithm.alg_name}"
+        )
 
-    private_pem = private_key.private_bytes(Encoding.PEM, PrivateFormat.PKCS8, NoEncryption())
+    private_pem = private_key.private_bytes(
+        Encoding.PEM, PrivateFormat.PKCS8, NoEncryption()
+    )
     public_pem = private_key.public_key().public_bytes(
         Encoding.PEM, PublicFormat.SubjectPublicKeyInfo
     )

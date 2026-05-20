@@ -1,16 +1,17 @@
 # Copyright 2025-2026 Trufo, Inc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-"""Unit tests for crypto/algorithms.py."""
+"""Unit tests for trufo.crypt.algorithms."""
 
 import pytest
 from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.asymmetric import ec, ed25519
+from cryptography.hazmat.primitives.asymmetric import ec, ed25519, rsa
 from cryptography.hazmat.primitives.serialization import Encoding, PublicFormat
 
-from trufo.crypto.algorithms import (
+from trufo.crypt.algorithms import (
     ALG_TO_CURVE,
     ALG_TO_HASH,
+    LeafType,
     SigningAlgorithm,
     infer_signing_algorithm,
 )
@@ -35,8 +36,31 @@ class TestSigningAlgorithm:
         assert SigningAlgorithm.EDDSA.hash_alg is None
 
     def test_ec_algorithms_have_hash_alg(self):
-        for alg in (SigningAlgorithm.ES256, SigningAlgorithm.ES384, SigningAlgorithm.ES512):
+        for alg in (
+            SigningAlgorithm.ES256,
+            SigningAlgorithm.ES384,
+            SigningAlgorithm.ES512,
+        ):
             assert alg.hash_alg is not None
+
+
+class TestLeafType:
+    """LeafType enum values."""
+
+    def test_c2pa_l1_value(self):
+        assert LeafType.C2PA_L1.value == "c2pa-l1"
+
+    def test_c2pa_l2_value(self):
+        assert LeafType.C2PA_L2.value == "c2pa-l2"
+
+    def test_c2pa_l1_test_value(self):
+        assert LeafType.C2PA_L1_TEST.value == "c2pa-l1-test"
+
+    def test_c2pa_l2_test_value(self):
+        assert LeafType.C2PA_L2_TEST.value == "c2pa-l2-test"
+
+    def test_is_str_subclass(self):
+        assert isinstance(LeafType.C2PA_L1, str)
 
 
 class TestAlgToCurve:
@@ -76,29 +100,37 @@ class TestInferSigningAlgorithm:
 
     def test_infer_es256(self):
         key = ec.generate_private_key(ec.SECP256R1())
-        pub_pem = key.public_key().public_bytes(Encoding.PEM, PublicFormat.SubjectPublicKeyInfo)
+        pub_pem = key.public_key().public_bytes(
+            Encoding.PEM, PublicFormat.SubjectPublicKeyInfo
+        )
         assert infer_signing_algorithm(pub_pem) == SigningAlgorithm.ES256
 
     def test_infer_es384(self):
         key = ec.generate_private_key(ec.SECP384R1())
-        pub_pem = key.public_key().public_bytes(Encoding.PEM, PublicFormat.SubjectPublicKeyInfo)
+        pub_pem = key.public_key().public_bytes(
+            Encoding.PEM, PublicFormat.SubjectPublicKeyInfo
+        )
         assert infer_signing_algorithm(pub_pem) == SigningAlgorithm.ES384
 
     def test_infer_es512(self):
         key = ec.generate_private_key(ec.SECP521R1())
-        pub_pem = key.public_key().public_bytes(Encoding.PEM, PublicFormat.SubjectPublicKeyInfo)
+        pub_pem = key.public_key().public_bytes(
+            Encoding.PEM, PublicFormat.SubjectPublicKeyInfo
+        )
         assert infer_signing_algorithm(pub_pem) == SigningAlgorithm.ES512
 
     def test_infer_eddsa(self):
         key = ed25519.Ed25519PrivateKey.generate()
-        pub_pem = key.public_key().public_bytes(Encoding.PEM, PublicFormat.SubjectPublicKeyInfo)
+        pub_pem = key.public_key().public_bytes(
+            Encoding.PEM, PublicFormat.SubjectPublicKeyInfo
+        )
         assert infer_signing_algorithm(pub_pem) == SigningAlgorithm.EDDSA
 
     def test_invalid_key_type_raises(self):
-        from cryptography.hazmat.primitives.asymmetric import rsa
-
         key = rsa.generate_private_key(65537, 2048)
-        pub_pem = key.public_key().public_bytes(Encoding.PEM, PublicFormat.SubjectPublicKeyInfo)
+        pub_pem = key.public_key().public_bytes(
+            Encoding.PEM, PublicFormat.SubjectPublicKeyInfo
+        )
         with pytest.raises(ValueError, match="Unsupported key type"):
             infer_signing_algorithm(pub_pem)
 

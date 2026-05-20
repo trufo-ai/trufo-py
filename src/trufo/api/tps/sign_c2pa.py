@@ -6,15 +6,30 @@ C2PA signing helpers for the Trufo TPS.
 """
 
 import base64
+import json
+import logging
 from dataclasses import dataclass
 
 import requests
 
 from trufo.api.endpoints import (
-    TRUFO_API_URL,
     TPS_C2PA_GET_S3_URL,
     TPS_C2PA_SIGN,
     TPS_C2PA_SIGN_TEST,
+    TRUFO_API_URL,
+)
+from trufo.c2pa.actions import TrufoAction
+from trufo.c2pa.assertions import UserAssertion
+from trufo.util.credentials import TrufoApiKey, load_api_key
+from trufo.util.optional_imports import require_provenance_module
+
+logger = logging.getLogger(__name__)
+
+_MISSING_CAWG_IDENTITY_WARNING = (
+    "Gathered assertions are being input by the client without specifying one or "
+    "more CAWG identities. Once the CAWG trust model is mature (currently, there "
+    "are only interim certificates being issued), it may be come mandatory to "
+    "specify one or more CAWG identities."
 )
 
 
@@ -37,8 +52,23 @@ class C2PAS3SignedOutput:
 
 def _validate_assertions(assertions: list | None) -> None:
     """Validate client-side assertion requirements shared by C2PA helpers."""
-    if assertions and not any(a[0] == "cawg_identity" for a in assertions):
-        raise ValueError("'cawg_identity' is required when assertions are provided")
+    _validate_entry_names(assertions, UserAssertion, "assertion")
+    if assertions and not any(a[0] == UserAssertion.CAWG_IDENTITY.value for a in assertions):
+        logger.warning(_MISSING_CAWG_IDENTITY_WARNING)
+
+
+def _validate_actions(actions: list | None) -> None:
+    """Validate client-side action requirements shared by C2PA helpers."""
+    _validate_entry_names(actions, TrufoAction, "action")
+
+
+def _validate_entry_names(entries: list | None, enum_type: type, entry_type: str) -> None:
+    """Validate the name field of request entries against a public enum."""
+    for entry in entries or []:
+        try:
+            enum_type(entry[0])
+        except (IndexError, KeyError, TypeError, ValueError) as exc:
+            raise ValueError(f"Invalid {entry_type} entry: {entry!r}") from exc
 
 
 def _sign_c2pa_direct(
@@ -49,6 +79,7 @@ def _sign_c2pa_direct(
     assertions: list | None = None,
 ) -> bytes:
     """Sign media bytes through a C2PA signing endpoint."""
+    _validate_actions(actions)
     _validate_assertions(assertions)
 
     body = {
@@ -119,6 +150,7 @@ def _sign_c2pa_s3(
     assertions: list | None = None,
 ) -> C2PAS3SignedOutput:
     """Sign an uploaded ephemeral S3 object through a C2PA signing endpoint."""
+    _validate_actions(actions)
     _validate_assertions(assertions)
 
     resp = requests.post(
@@ -154,7 +186,6 @@ def sign_c2pa_s3(
         Presigned S3 download URL for the signed output media.
 
     Raises:
-        ValueError: If ``assertions`` is provided without a ``"cawg_identity"`` entry.
         requests.HTTPError: If the API returns a non-2xx response.
     """
     return _sign_c2pa_s3(
@@ -184,7 +215,6 @@ def sign_c2pa_test_s3(
         Presigned S3 download URL for the signed output media.
 
     Raises:
-        ValueError: If ``assertions`` is provided without a ``"cawg_identity"`` entry.
         requests.HTTPError: If the API returns a non-2xx response.
     """
     return _sign_c2pa_s3(
@@ -221,7 +251,6 @@ def sign_c2pa_via_s3(
         Signed media bytes downloaded from the returned S3 output URL.
 
     Raises:
-        ValueError: If ``assertions`` is provided without a ``"cawg_identity"`` entry.
         requests.HTTPError: If an API, upload, or download request fails.
     """
     upload = get_c2pa_s3_upload_url(api_key, mime_type, duration=duration)
@@ -260,7 +289,6 @@ def sign_c2pa_test_via_s3(
         Signed media bytes downloaded from the returned S3 output URL.
 
     Raises:
-        ValueError: If ``assertions`` is provided without a ``"cawg_identity"`` entry.
         requests.HTTPError: If an API, upload, or download request fails.
     """
     upload = get_c2pa_s3_upload_url(api_key, mime_type, duration=duration)
@@ -305,13 +333,11 @@ def sign_c2pa(
         media_bytes: Raw bytes of the media file to sign.
         actions: Ordered list of ``[action_name, params]`` pairs (default ``[]``).
         assertions: List of ``[assertion_name, params]`` pairs (default ``[]``).
-            If provided, ``"cawg_identity"`` must be one of the entries.
 
     Returns:
         Signed media bytes.
 
     Raises:
-        ValueError: If ``assertions`` is provided without a ``"cawg_identity"`` entry.
         requests.HTTPError: If the API returns a non-2xx response.
     """
     return _sign_c2pa_direct(
@@ -336,13 +362,11 @@ def sign_c2pa_test(
         media_bytes: Raw bytes of the media file to sign.
         actions: Ordered list of ``[action_name, params]`` pairs (default ``[]``).
         assertions: List of ``[assertion_name, params]`` pairs (default ``[]``).
-            If provided, ``"cawg_identity"`` must be one of the entries.
 
     Returns:
         Signed media bytes.
 
     Raises:
-        ValueError: If ``assertions`` is provided without a ``"cawg_identity"`` entry.
         requests.HTTPError: If the API returns a non-2xx response.
     """
     return _sign_c2pa_direct(
@@ -352,3 +376,104 @@ def sign_c2pa_test(
         actions=actions,
         assertions=assertions,
     )
+
+
+def _resolve_tsa_api_key(tsa_api_key: str | None) -> str:
+    """Return explicit TSA API key or load the configured SDK TSA key."""
+    if tsa_api_key is not None:
+        resolved_key = tsa_api_key.strip()
+        if not resolved_key:
+            raise ValueError("tsa_api_key cannot be empty.")
+        return resolved_key
+
+    configured_key = load_api_key(TrufoApiKey.TSA)
+    if configured_key is None:
+        raise RuntimeError(
+            "A TSA API key is required for remote C2PA signing. Pass tsa_api_key "
+            "or configure TRUFO_TSA_API_KEY."
+        )
+    return configured_key
+
+
+def _build_remote_cawg_identity_signers(crypt, api_key: str, assertions: list | None):
+    """Build remote CAWG identity signers keyed by cawg_identity_id."""
+    signers = {}
+    for name, params in assertions or []:
+        if name != UserAssertion.CAWG_IDENTITY.value:
+            continue
+
+        cawg_identity_id = params.get("cawg_identity_id")
+        if not isinstance(cawg_identity_id, str) or not cawg_identity_id:
+            raise ValueError(
+                "The cawg_identity assertion requires a non-empty " "'cawg_identity_id' parameter."
+            )
+        if cawg_identity_id in signers:
+            continue
+
+        signers[cawg_identity_id] = crypt.TrufoRemoteIdentitySigner(
+            api_key=api_key,
+            cawg_identity_id=cawg_identity_id,
+        )
+
+    return signers
+
+
+def sign_c2pa_remote_test(
+    api_key: str,
+    media_bytes: bytes,
+    *,
+    actions: list | None = None,
+    assertions: list | None = None,
+    tsa_api_key: str | None = None,
+) -> bytes:
+    """Sign media locally using the Trufo test remote-signing endpoint.
+
+    The media claim is built on the client while the C2PA claim-signing key
+    stays server-side. This helper requires the optional ``trufo[provenance]``
+    dependency group.
+    """
+    _validate_actions(actions)
+    _validate_assertions(assertions)
+
+    resolved_tsa_api_key = _resolve_tsa_api_key(tsa_api_key)
+    c2pa_generator = require_provenance_module("tfprov.c2pa_generator")
+    crypt = require_provenance_module("tfprov.crypt")
+    ocsp_stapler = require_provenance_module("tfprov.c2pa_py.helpers.ocsp_stapler")
+    av_format = require_provenance_module("tfprov.util.av_format")
+
+    media_probe = av_format.get_media_probe_result(media_bytes)
+    cg_request = c2pa_generator.build_cg_request(
+        actions=actions,
+        assertions=assertions,
+        media_bytes=media_bytes,
+        mime_type=media_probe.mime_type,
+    )
+    claim_signer = crypt.TrufoRemoteClaimSigner(api_key=api_key)
+    cawg_identity_signers = _build_remote_cawg_identity_signers(
+        crypt,
+        api_key,
+        assertions,
+    )
+    generated = json.loads(
+        c2pa_generator.generate_claim(
+            cg_request,
+            claim_signer=claim_signer,
+            ocsp_stapler=ocsp_stapler.OcspStapler(),
+            tsa_api_key=resolved_tsa_api_key,
+            cawg_identity_signers=cawg_identity_signers,
+        )
+    )
+    return base64.b64decode(generated["media_output"])
+
+
+def sign_c2pa_remote(
+    api_key: str,
+    media_bytes: bytes,
+    *,
+    actions: list | None = None,
+    assertions: list | None = None,
+    tsa_api_key: str | None = None,
+) -> bytes:
+    """Production remote C2PA signing placeholder."""
+    del api_key, media_bytes, actions, assertions, tsa_api_key
+    raise NotImplementedError("Production remote C2PA signing is not implemented server-side yet.")

@@ -2,56 +2,65 @@
 # SPDX-License-Identifier: Apache-2.0
 
 """
-Generic TCA certificate enrollment helpers.
+Generic TCA certificate enrollment primitives.
 
-Shared infrastructure for certificate enrollment via any Trufo CA
+Shared low-level helpers for certificate enrollment via any Trufo CA
 EST endpoint (RFC 7030): CSR construction, EST submission, and
-PKCS#7 response parsing.
+PKCS#7 response parsing. Higher-level certificate procurement workflows
+remain SDK or server concerns.
 """
 
 import base64
-from enum import Enum
 from pathlib import Path
 
 import requests
 from cryptography import x509
-from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec
-from cryptography.hazmat.primitives.serialization.pkcs7 import load_der_pkcs7_certificates
+from cryptography.hazmat.primitives.serialization.pkcs7 import (
+    load_der_pkcs7_certificates,
+)
 from cryptography.x509.oid import NameOID
 
-from trufo.api.auth import extract_detail
 from trufo.api.endpoints import TRUFO_CA_URL
-from trufo.crypto.algorithms import ALG_TO_HASH, SigningAlgorithm, infer_signing_algorithm
-
-
-class LeafType(str, Enum):
-    """Certificate leaf types accepted by the Trufo CA."""
-
-    C2PA_L1 = "c2pa-l1"
-    C2PA_L2 = "c2pa-l2"
-    C2PA_L1_TEST = "c2pa-l1-test"
-    C2PA_L2_TEST = "c2pa-l2-test"
-    CTSA = "ctsa"
-    CTSA_TEST = "ctsa-test"
-    CAWG_INTERIM = "cawg-interim"
-    CAWG_INTERIM_TEST = "cawg-interim-test"
-
+from trufo.crypt.algorithms import ALG_TO_CURVE, ALG_TO_HASH, LeafType
 
 TEST_HMAC_SECRET = "hello-trufo"
 
+__all__ = [
+    "LeafType",
+    "TEST_HMAC_SECRET",
+    "build_csr",
+    "est_enroll",
+    "extract_cert_chain",
+]
 
-def _infer_algorithm_from_ec_key(
+
+def _extract_detail(resp: requests.Response) -> str:
+    """Extract error detail from a JSON response."""
+    try:
+        return resp.json().get("detail", resp.text)
+    except (ValueError, AttributeError):
+        return resp.text
+
+
+def _infer_hash_from_ec_key(
     private_key: ec.EllipticCurvePrivateKey,
-) -> SigningAlgorithm:
-    """Infer JWA signing algorithm from an EC private key object."""
-    pub_pem = private_key.public_key().public_bytes(
-        serialization.Encoding.PEM, serialization.PublicFormat.SubjectPublicKeyInfo
-    )
-    return infer_signing_algorithm(pub_pem)
+) -> hashes.HashAlgorithm:
+    """Infer the x509 signing hash from an EC private key object."""
+    curve_name = private_key.curve.name
+    for algorithm, curve in ALG_TO_CURVE.items():
+        if curve.name == curve_name:
+            hash_algorithm = ALG_TO_HASH[algorithm]
+            if hash_algorithm is None:
+                break
+            return hash_algorithm
+    raise ValueError(f"Unsupported EC curve: {curve_name}")
 
 
-def build_csr(private_key_signer: str | Path | bytes | ec.EllipticCurvePrivateKey) -> bytes:
+def build_csr(
+    private_key_signer: str | Path | bytes | ec.EllipticCurvePrivateKey,
+) -> bytes:
     """Build a PKCS#10 CSR signed by the leaf private key.
 
     The CSR subject DN is a placeholder — the CA uses the DN from the
@@ -76,17 +85,22 @@ def build_csr(private_key_signer: str | Path | bytes | ec.EllipticCurvePrivateKe
     if isinstance(private_key_signer, Path):
         private_key_signer = private_key_signer.read_bytes()
     if isinstance(private_key_signer, bytes):
-        private_key = serialization.load_pem_private_key(private_key_signer, password=None)
+        private_key = serialization.load_pem_private_key(
+            private_key_signer, password=None
+        )
     if isinstance(private_key_signer, ec.EllipticCurvePrivateKey):
         private_key = private_key_signer
     if private_key is None:
-        raise TypeError(f"Unsupported private_key_signer type: {type(private_key_signer)!r}")
+        raise TypeError(
+            f"Unsupported private_key_signer type: {type(private_key_signer)!r}"
+        )
 
-    signing_algorithm = _infer_algorithm_from_ec_key(private_key)
     csr = (
         x509.CertificateSigningRequestBuilder()
-        .subject_name(x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "placeholder")]))
-        .sign(private_key, ALG_TO_HASH[signing_algorithm])
+        .subject_name(
+            x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "placeholder")])
+        )
+        .sign(private_key, _infer_hash_from_ec_key(private_key))
     )
     return csr.public_bytes(serialization.Encoding.DER)
 
@@ -121,7 +135,7 @@ def est_enroll(csr_jwt: str, csr_der: bytes, leaf_type_value: str) -> bytes:
         timeout=30,
     )
     if resp.status_code != 200:
-        detail = extract_detail(resp)
+        detail = _extract_detail(resp)
         raise RuntimeError(f"EST enrollment failed ({resp.status_code}): {detail}")
 
     return resp.content

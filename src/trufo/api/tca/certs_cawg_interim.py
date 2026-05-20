@@ -17,7 +17,7 @@ from cryptography.hazmat.primitives.asymmetric import ec
 
 from trufo.api.endpoints import RA_CAWG_INTERIM_CSR_JWT
 from trufo.api.session import TrufoSession
-from trufo.api.tca.tca_utils import LeafType, build_csr, est_enroll, extract_cert_chain
+from trufo.crypt.tca_certs import LeafType, build_csr, est_enroll, extract_cert_chain
 
 
 # --- internal: CSR JWT request ---
