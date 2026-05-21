@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "trufo"
-version = "0.3.0"
+version = "0.3.1"
 requires-python = ">=3.10"
 description = "Trufo SDK for content provenance API services."
 readme = "README.md"
@@ -17,7 +17,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-provenance = ["trufo-provenance[c2pa]>=0.1.0,<0.2"]
+provenance = ["trufo-provenance[c2pa]>=0.1.1,<0.2"]
 test = ["pytest>=7.0"]
 
 [project.scripts]
