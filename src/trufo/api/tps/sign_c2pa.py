@@ -31,6 +31,7 @@ _MISSING_CAWG_IDENTITY_WARNING = (
     "are only interim certificates being issued), it may be come mandatory to "
     "specify one or more CAWG identities."
 )
+_ALLOWED_CAWG_IDENTITY_IDS = {"test", "org_interim"}
 
 
 @dataclass(frozen=True)
@@ -53,8 +54,29 @@ class C2PAS3SignedOutput:
 def _validate_assertions(assertions: list | None) -> None:
     """Validate client-side assertion requirements shared by C2PA helpers."""
     _validate_entry_names(assertions, UserAssertion, "assertion")
+
+    # cawg identity checks
     if assertions and not any(a[0] == UserAssertion.CAWG_IDENTITY.value for a in assertions):
         logger.warning(_MISSING_CAWG_IDENTITY_WARNING)
+    for name, params in (assertions or []):
+        match name:
+            case UserAssertion.CAWG_IDENTITY.value:
+                if not isinstance(params, dict):
+                    raise ValueError("The cawg_identity assertion requires a parameter object.")
+                cawg_identity_id = params.get("cawg_identity_id")
+                if not isinstance(cawg_identity_id, str) or not cawg_identity_id:
+                    raise ValueError(
+                        "The cawg_identity assertion requires a non-empty "
+                        "'cawg_identity_id' parameter."
+                    )
+                if cawg_identity_id not in _ALLOWED_CAWG_IDENTITY_IDS:
+                    allowed = ", ".join(sorted(_ALLOWED_CAWG_IDENTITY_IDS))
+                    raise ValueError(
+                        f"Unsupported cawg_identity_id: {cawg_identity_id!r}. "
+                        f"Supported values are: {allowed}."
+                    )
+            case _:
+                pass
 
 
 def _validate_actions(actions: list | None) -> None:
@@ -395,29 +417,6 @@ def _resolve_tsa_api_key(tsa_api_key: str | None) -> str:
     return configured_key
 
 
-def _build_remote_cawg_identity_signers(crypt, api_key: str, assertions: list | None):
-    """Build remote CAWG identity signers keyed by cawg_identity_id."""
-    signers = {}
-    for name, params in assertions or []:
-        if name != UserAssertion.CAWG_IDENTITY.value:
-            continue
-
-        cawg_identity_id = params.get("cawg_identity_id")
-        if not isinstance(cawg_identity_id, str) or not cawg_identity_id:
-            raise ValueError(
-                "The cawg_identity assertion requires a non-empty " "'cawg_identity_id' parameter."
-            )
-        if cawg_identity_id in signers:
-            continue
-
-        signers[cawg_identity_id] = crypt.TrufoRemoteIdentitySigner(
-            api_key=api_key,
-            cawg_identity_id=cawg_identity_id,
-        )
-
-    return signers
-
-
 def sign_c2pa_remote_test(
     api_key: str,
     media_bytes: bytes,
@@ -442,25 +441,31 @@ def sign_c2pa_remote_test(
     av_format = require_provenance_module("tfprov.util.av_format")
 
     media_probe = av_format.get_media_probe_result(media_bytes)
-    cg_request = c2pa_generator.build_cg_request(
+    CGRequest = c2pa_generator.CGRequest
+    cg_request = CGRequest.build(
         actions=actions,
         assertions=assertions,
         media_bytes=media_bytes,
         mime_type=media_probe.mime_type,
     )
     claim_signer = crypt.TrufoRemoteClaimSigner(api_key=api_key)
-    cawg_identity_signers = _build_remote_cawg_identity_signers(
-        crypt,
-        api_key,
-        assertions,
-    )
+    cawg_identities = [
+        c2pa_generator.CawgIdentity(
+            signer=crypt.TrufoRemoteIdentitySigner(
+                api_key=api_key,
+                cawg_identity_id=params["cawg_identity_id"],
+            )
+        )
+        for name, params in (assertions or [])
+        if name == UserAssertion.CAWG_IDENTITY.value
+    ]
     generated = json.loads(
         c2pa_generator.generate_claim(
             cg_request,
             claim_signer=claim_signer,
             ocsp_stapler=ocsp_stapler.OcspStapler(),
             tsa_api_key=resolved_tsa_api_key,
-            cawg_identity_signers=cawg_identity_signers,
+            cawg_identities=cawg_identities,
         )
     )
     return base64.b64decode(generated["media_output"])
