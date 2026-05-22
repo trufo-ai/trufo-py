@@ -6,9 +6,11 @@ The library is currently in an alpha release state. Please be advised that until
 
 The Trufo Provenance Platform is under active beta development, with new provenance features and product workflows being added regularly. If you are building against the platform and have questions about the right integration path, please contact [support@trufo.ai](mailto:support@trufo.ai). We are happy to help.
 
-## Optional Provenance Support
+## Optional Provenance Engine
 
-Install C2PA/provenance support with the `provenance` extra:
+*Note: Production usage of this feature is still pending C2PA Conformance Approval.*
+
+When using the standard C2PA Signing API, the raw digital media content is sent to the Trufo server for processing. In cases where data privacy is important or where the content file is large, a distributed API is available where most media processing is local (and signing is remote, on Trufo servers). To enable this functionality, please install the `provenance` extra:
 
 ```bash
 pip install "trufo[provenance]"
@@ -18,6 +20,8 @@ For `trufo` version `0.3.1`, this resolves to the `trufo-provenance` `0.1.x`
 implementation package. The relevant first fixed build is `trufo-provenance==0.1.1`.
 That build bundles the native C2PA bridge for Linux only; macOS and Windows
 wheels are not published yet.
+
+*Note: Currently, the `provenance` installation is only supported on Linux machines.*
 
 ## Workflow Examples (Quickstart)
 
