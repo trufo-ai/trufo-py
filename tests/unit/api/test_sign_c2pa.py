@@ -45,7 +45,7 @@ def _install_fake_remote_stack(monkeypatch, signed: bytes = b"signed-remote-medi
     calls = {
         "cg_request": object(),
         "claim_signer": object(),
-        "identity_signers": {},
+        "cawg_identities": [],
         "ocsp_stapler": object(),
     }
 
@@ -54,7 +54,8 @@ def _install_fake_remote_stack(monkeypatch, signed: bytes = b"signed-remote-medi
         match module_name:
             case "tfprov.c2pa_generator":
                 return types.SimpleNamespace(
-                    build_cg_request=fake_build_cg_request,
+                    CGRequest=types.SimpleNamespace(build=fake_cg_request_build),
+                    CawgIdentity=fake_cawg_identity,
                     generate_claim=fake_generate_claim,
                 )
             case "tfprov.crypt":
@@ -74,8 +75,8 @@ def _install_fake_remote_stack(monkeypatch, signed: bytes = b"signed-remote-medi
         calls["media_probe"] = media_bytes
         return types.SimpleNamespace(mime_type="image/jpeg")
 
-    def fake_build_cg_request(**kwargs):
-        calls["build_cg_request"] = kwargs
+    def fake_cg_request_build(**kwargs):
+        calls["CGRequest.build"] = kwargs
         return calls["cg_request"]
 
     def fake_remote_claim_signer(*, api_key):
@@ -87,8 +88,12 @@ def _install_fake_remote_stack(monkeypatch, signed: bytes = b"signed-remote-medi
             {"api_key": api_key, "cawg_identity_id": cawg_identity_id}
         )
         signer = object()
-        calls["identity_signers"][cawg_identity_id] = signer
         return signer
+
+    def fake_cawg_identity(*, signer):
+        identity = types.SimpleNamespace(signer=signer)
+        calls["cawg_identities"].append(identity)
+        return identity
 
     def fake_ocsp_stapler():
         calls["ocsp_stapler_constructed"] = True
@@ -198,7 +203,7 @@ class TestRemoteC2PASigning:
             "tfprov.util.av_format",
         ]
         assert calls["media_probe"] == b"input-media"
-        assert calls["build_cg_request"] == {
+        assert calls["CGRequest.build"] == {
             "actions": [["publish", {}]],
             "assertions": [["cawg_identity", {"cawg_identity_id": "test"}]],
             "media_bytes": b"input-media",
@@ -215,9 +220,51 @@ class TestRemoteC2PASigning:
                 "claim_signer": calls["claim_signer"],
                 "ocsp_stapler": calls["ocsp_stapler"],
                 "tsa_api_key": "tsa-key",
-                "cawg_identity_signers": calls["identity_signers"],
+                "cawg_identities": calls["cawg_identities"],
             },
         }
+
+    def test_remote_test_signing_preserves_duplicate_cawg_identities(self, monkeypatch):
+        calls = _install_fake_remote_stack(monkeypatch, signed=b"signed")
+
+        result = sign_c2pa_remote_test(
+            "remote-sign-key",
+            b"input-media",
+            assertions=[
+                ["cawg_identity", {"cawg_identity_id": "test"}],
+                ["cawg_identity", {"cawg_identity_id": "test"}],
+            ],
+            tsa_api_key="tsa-key",
+        )
+
+        assert result == b"signed"
+        assert calls["remote_identity_signers"] == [
+            {"api_key": "remote-sign-key", "cawg_identity_id": "test"},
+            {"api_key": "remote-sign-key", "cawg_identity_id": "test"},
+        ]
+        assert calls["generate_claim"]["kwargs"]["cawg_identities"] == calls[
+            "cawg_identities"
+        ]
+        assert len(calls["cawg_identities"]) == 2
+
+    def test_remote_test_signing_rejects_unsupported_cawg_identity_id(self, monkeypatch):
+        require_provenance_module = MagicMock()
+        monkeypatch.setattr(
+            "trufo.api.tps.sign_c2pa.require_provenance_module",
+            require_provenance_module,
+        )
+
+        with pytest.raises(ValueError, match="Unsupported cawg_identity_id"):
+            sign_c2pa_remote_test(
+                "api-key",
+                b"input-media",
+                assertions=[
+                    ["cawg_identity", {"cawg_identity_id": "unknown"}],
+                ],
+                tsa_api_key="tsa-key",
+            )
+
+        require_provenance_module.assert_not_called()
 
     def test_remote_test_signing_loads_configured_tsa_key(self, monkeypatch):
         calls = _install_fake_remote_stack(monkeypatch, signed=b"signed")
@@ -262,7 +309,7 @@ class TestRemoteC2PASigning:
 
         assert result == b"signed"
         assert "Gathered assertions are being input by the client" in caplog.text
-        assert calls["generate_claim"]["kwargs"]["cawg_identity_signers"] == {}
+        assert calls["generate_claim"]["kwargs"]["cawg_identities"] == []
 
 
 class TestS3C2PASigning:
@@ -447,11 +494,28 @@ class TestRequestValidation:
             (_validate_actions, [["publish", {}], ["transcode", {}]]),
             (_validate_assertions, None),
             (_validate_assertions, []),
-            (_validate_assertions, [["cawg_identity", {}]]),
+            (_validate_assertions, [["cawg_identity", {"cawg_identity_id": "test"}]]),
+            (
+                _validate_assertions,
+                [["cawg_identity", {"cawg_identity_id": "org_interim"}]],
+            ),
         ],
     )
     def test_valid_inputs_pass(self, validator, value):
         validator(value)  # must not raise
+
+    @pytest.mark.parametrize(
+        "bad, match",
+        [
+            ([["cawg_identity", {}]], "requires a non-empty"),
+            ([["cawg_identity", {"cawg_identity_id": ""}]], "requires a non-empty"),
+            ([["cawg_identity", {"cawg_identity_id": "unknown"}]], "Unsupported"),
+            ([["cawg_identity", []]], "requires a parameter object"),
+        ],
+    )
+    def test_invalid_cawg_identity_params_rejected(self, bad, match):
+        with pytest.raises(ValueError, match=match):
+            _validate_assertions(bad)
 
     @pytest.mark.parametrize(
         "validator, entry_type, bad",

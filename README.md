@@ -16,8 +16,12 @@ When using the standard C2PA Signing API, the raw digital media content is sent 
 pip install "trufo[provenance]"
 ```
 
-*Note: Currently, the `provenance` installation is only supported on Linux machines.*
+For `trufo` version `0.3.1`, this resolves to the `trufo-provenance` `0.1.x`
+implementation package. The relevant first fixed build is `trufo-provenance==0.1.1`.
+That build bundles the native C2PA bridge for Linux only; macOS and Windows
+wheels are not published yet.
 
+*Note: Currently, the `provenance` installation is only supported on Linux machines.*
 
 ## Workflow Examples (Quickstart)
 
