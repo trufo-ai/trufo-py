@@ -1,6 +1,6 @@
 # CLI
 
-The `trufo` CLI provides local credential management and authentication. The tool is meant to help you get started with Trufo API services. The CLI is not meant to be used in production deployments; please use the python
+The `trufo` CLI provides local credential management and authentication. The tool is meant to help you get started with Trufo API services. The CLI is not meant to be used in production deployments; please use the Python API directly.
 
 ## Setup
 
