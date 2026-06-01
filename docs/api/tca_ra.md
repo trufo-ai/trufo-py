@@ -10,24 +10,7 @@ RA endpoints for managing generator products, instances, credentials, and reques
 
 ## Generator Products
 
-### `POST /gproduct/create`
-
-Create a generator product.
-
-**Auth:** Access token (org admin+, MFA).
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `oid` | string | Yes | Organization ID |
-| `name` | string | Yes | Human-readable product name |
-
-**Response (201):**
-
-```json
-{
-  "gp_id": "gp_..."
-}
-```
+Generator products are created through the dashboard Product Validation flow. Use these RA endpoints to list, inspect, edit, cancel, and manage instances for existing generator products.
 
 ### `POST /gproduct/list`
 
@@ -60,15 +43,25 @@ Edit generator product metadata.
 | `gp_id` | string | Yes | Generator product ID |
 | `name` | string | No | New product name |
 
-### `POST /gproduct/delete`
+### `POST /gproduct/cancel`
 
-Delete a generator product.
+Cancel a generator product. Unapproved products are removed immediately. Approved products are scheduled for cancellation and remain active until `cancel_at`.
 
 **Auth:** Access token (org admin+, MFA).
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `gp_id` | string | Yes | Generator product ID |
+
+**Response (200):**
+
+```json
+{
+  "gp_id": "gp_...",
+  "cancel_at": "2027-01-01T00:00:00+00:00",
+  "removed": false
+}
+```
 
 ---
 
