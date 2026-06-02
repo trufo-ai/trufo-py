@@ -13,3 +13,4 @@ class UserAssertion(str, Enum):
     CAWG_IDENTITY = "cawg_identity"
     CAWG_METADATA = "cawg_metadata"
     CAWG_TRAINING = "cawg_training"
+    CUSTOM = "custom"
