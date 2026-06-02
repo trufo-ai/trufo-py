@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.2] — 2026-06-02
+
+### Added
+
+- `UserAssertion.CUSTOM` enum variant for custom assertion signing via the Trufo Provenance API.
+- CLI commands for gproduct management: `add-gpi`, `register-gpic`, and C2PA certificate request.
+- Documented `"custom"` assertion in `docs/api/api_c2pa.md`, including label constraints, billing requirements, and domain-validation prerequisites.
+
+### Changed
+
+- Updated `trufo-provenance` optional extra pin to `>=0.1.2,<0.2`.
+
+## [0.3.1] — 2026-05-20
+
+### Changed
+
+- Refactored remote C2PA signing to build `CGRequest` objects through the explicit `tfprov` signing API, with explicit TSA keys and CAWG identity validation.
+- Updated `trufo-provenance` optional extra pin to `>=0.1.1,<0.2`.
+
 ## [0.3.0] — 2026-05-20
 
 ### Added
@@ -81,7 +100,9 @@ Minor-version bump marks the general availability of the production C2PA signing
 - `trufo.intf`: credential storage and loading (env vars + file), CLI entry point.
 - PyPI trusted publishing via GitHub Actions (OIDC, no API tokens required).
 
-[Unreleased]: https://github.com/trufo-ai/trufo-py/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/trufo-ai/trufo-py/compare/v0.3.2...HEAD
+[0.3.2]: https://github.com/trufo-ai/trufo-py/compare/v0.3.1...v0.3.2
+[0.3.1]: https://github.com/trufo-ai/trufo-py/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/trufo-ai/trufo-py/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/trufo-ai/trufo-py/compare/v0.1.2...v0.2.0
 [0.1.2]: https://github.com/trufo-ai/trufo-py/compare/v0.1.1...v0.1.2
