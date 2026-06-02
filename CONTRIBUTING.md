@@ -14,6 +14,8 @@ Publishing uses **Trusted Publishing** (OIDC) via GitHub Actions — no API toke
 
    a. Update `version` in `pyproject.toml` (e.g. `0.1.1` → `0.1.2`).
 
+   a2. Update `__version__` in `src/trufo/__init__.py` to match.
+
    b. Update `CHANGELOG.md`:
       - Rename `## [Unreleased]` to `## [X.Y.Z] — YYYY-MM-DD`.
       - Add a new empty `## [Unreleased]` section at the top.

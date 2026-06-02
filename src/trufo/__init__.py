@@ -3,6 +3,6 @@
 
 from trufo.api.tps.sign_c2pa import sign_c2pa_remote, sign_c2pa_remote_test
 
-__version__ = "0.3.0"
+__version__ = "0.3.3"
 
 __all__ = ["__version__", "sign_c2pa_remote", "sign_c2pa_remote_test"]
