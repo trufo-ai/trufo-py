@@ -131,6 +131,7 @@ Ordered list of `[assertion_name, params]` pairs. Each assertion is treated as a
 | `"cawg_metadata"` | `{"assertion": {…}}`           | `cawg.metadata`        |
 | `"cawg_training"` | `{"assertion": {…}}`           | `cawg.training-mining` |
 | `"cawg_identity"` | `{"cawg_identity_id": "<id>"}` | `cawg.identity`        |
+| `"custom"`        | `{"label": "<reverse-dns-label>", "assertion": {…}}` | entity-specific label  |
 
 ##### `ai_disclosure`
 
@@ -228,6 +229,23 @@ Supported values for `cawg_identity_id`:
 | ------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------ |
 | `"test"`      | Test            | Signs with a shared Trufo test certificate. Outputs are not recognized by C2PA validators. |
 | `"org_interim"` | Test, Prod    | Signs with a Trufo-hosted org-specific CAWG interim certificate. Requires the `cawg_cert_organization` billing plan. If your org has the plan but signing fails, contact support. |
+
+##### `custom`
+
+Embed a custom assertion using a validated domain (C2PA §6.2).
+
+| Param       | Type   | Required | Description |
+| ----------- | ------ | -------- | ----------- |
+| `label`     | string | Yes      | Reverse-DNS assertion label, e.g. `com.example.custom-metadata`. The `c2pa.*` namespace and labels containing `__` are reserved and rejected. |
+| `assertion` | object | Yes      | Assertion data (arbitrary JSON object). |
+
+Requires the `c2pa_custom_domain` billing plan and an active domain-validation (DV) record for the base domain of the label (scope `c2pa-custom-assertion`). For example, to use the label `com.example.custom-metadata`, the org must have a DV record for `example.com`.
+
+Multiple `"custom"` entries may be included in a single request; each is validated independently against the org's DV records.
+
+```json
+["custom", {"label": "com.example.custom-metadata", "assertion": {"internalId": 1234}}]
+```
 
 ### Response (200)
 
