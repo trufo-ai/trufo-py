@@ -29,7 +29,8 @@ Publishing uses **Trusted Publishing** (OIDC) via GitHub Actions — no API toke
    - Body: paste the changelog section for this version.
 
 4. **CI publishes automatically** — the `publish.yml` workflow triggers on release creation,
-   builds the package, and uploads to PyPI via OIDC.
+   builds the package, and uploads to PyPI via OIDC. The run will appear in GitHub Actions as
+   `release: trufo-py vX.Y.Z`.
 
 5. **Verify** the release appears on [PyPI](https://pypi.org/project/trufo/) and `pip install trufo==X.Y.Z` works.
 

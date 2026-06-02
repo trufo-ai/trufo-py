@@ -11,6 +11,7 @@
 #   3. This workflow runs automatically
 
 name: Publish to PyPI
+run-name: "release: trufo-py ${{ github.event.release.tag_name }}"
 
 on:
   release:
