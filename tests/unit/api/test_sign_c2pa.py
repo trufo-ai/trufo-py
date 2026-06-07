@@ -187,7 +187,7 @@ class TestRemoteC2PASigning:
         assert kwargs["actions"] == [["publish", {}]]
         assert kwargs["assertions"] == [["cawg_identity", {"cawg_identity_id": "test"}]]
         assert kwargs["test"] is True
-        assert "trufo_api_url" not in kwargs
+        assert kwargs["trufo_api_url"] == "https://api.trufo.ai"
         assert kwargs["ocsp_stapler"] is calls["ocsp_stapler"]
 
         # a single timestamper is built with the resolved key and no URL override

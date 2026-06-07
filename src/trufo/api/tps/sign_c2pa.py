@@ -423,12 +423,28 @@ def sign_c2pa_remote_test(
     actions: list | None = None,
     assertions: list | None = None,
     tsa_api_key: str | None = None,
+    trufo_tsa_url: str | None = None,
+    trufo_api_url: str = "https://api.trufo.ai",
 ) -> bytes:
     """Sign media locally using the Trufo test remote-signing endpoint.
 
     The media claim is built on the client while the C2PA claim-signing key
     stays server-side. This helper requires the optional ``trufo[provenance]``
     dependency group.
+
+    Args:
+        api_key: API key with scope ``c2pa-sign-test``.
+        media_bytes: Raw bytes of the media file to sign.
+        actions: Ordered list of ``[action_name, params]`` pairs (default ``[]``).
+        assertions: List of ``[assertion_name, params]`` pairs (default ``[]``).
+        tsa_api_key: TSA API key. Falls back to the ``TRUFO_TSA_API_KEY``
+            environment variable or the SDK configured key.
+        trufo_tsa_url: Optional override for the Trufo TSA URL (advanced use).
+        trufo_api_url: Base URL for the Trufo API. Controls the preprocess,
+            claim-sign, and CAWG identity-sign endpoints.
+
+    Returns:
+        Signed media bytes.
     """
     _validate_actions(actions)
     _validate_assertions(assertions)
@@ -443,8 +459,12 @@ def sign_c2pa_remote_test(
         media_bytes,
         actions=actions or [],
         assertions=assertions or [],
-        timestamper=timestamper_mod.TrufoTimestamper(api_key=resolved_tsa_api_key),
+        timestamper=timestamper_mod.TrufoTimestamper(
+            api_key=resolved_tsa_api_key,
+            url=trufo_tsa_url,
+        ),
         ocsp_stapler=ocsp_stapler_mod.OcspStapler(),
+        trufo_api_url=trufo_api_url,
         test=True,
     )
     return signed
