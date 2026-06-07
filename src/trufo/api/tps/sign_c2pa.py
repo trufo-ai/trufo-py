@@ -6,7 +6,6 @@ C2PA signing helpers for the Trufo TPS.
 """
 
 import base64
-import json
 import logging
 from dataclasses import dataclass
 
@@ -435,41 +434,20 @@ def sign_c2pa_remote_test(
     _validate_assertions(assertions)
 
     resolved_tsa_api_key = _resolve_tsa_api_key(tsa_api_key)
-    c2pa_generator = require_provenance_module("tfprov.c2pa_generator")
-    crypt = require_provenance_module("tfprov.crypt")
-    ocsp_stapler = require_provenance_module("tfprov.c2pa_py.helpers.ocsp_stapler")
-    timestamper = require_provenance_module("tfprov.c2pa_py.helpers.timestamper")
-    av_format = require_provenance_module("tfprov.util.av_format")
+    remote_orchestrator = require_provenance_module("tfprov.c2pa_generator.remote_orchestrator")
+    ocsp_stapler_mod = require_provenance_module("tfprov.c2pa_py.helpers.ocsp_stapler")
+    timestamper_mod = require_provenance_module("tfprov.c2pa_py.helpers.timestamper")
 
-    media_probe = av_format.get_media_probe_result(media_bytes)
-    CGRequest = c2pa_generator.CGRequest
-    cg_request = CGRequest.build(
-        actions=actions,
-        assertions=assertions,
-        media_bytes=media_bytes,
-        mime_type=media_probe.mime_type,
+    signed, _ = remote_orchestrator.generate_claim_remote(
+        api_key,
+        media_bytes,
+        actions=actions or [],
+        assertions=assertions or [],
+        timestamper=timestamper_mod.TrufoTimestamper(api_key=resolved_tsa_api_key),
+        ocsp_stapler=ocsp_stapler_mod.OcspStapler(),
+        test=True,
     )
-    claim_signer = crypt.TrufoRemoteClaimSigner(api_key=api_key)
-    cawg_identities = [
-        c2pa_generator.CawgIdentity(
-            signer=crypt.TrufoRemoteIdentitySigner(
-                api_key=api_key,
-                cawg_identity_id=params["cawg_identity_id"],
-            )
-        )
-        for name, params in (assertions or [])
-        if name == UserAssertion.CAWG_IDENTITY.value
-    ]
-    generated = json.loads(
-        c2pa_generator.generate_claim(
-            cg_request,
-            claim_signer=claim_signer,
-            ocsp_stapler=ocsp_stapler.OcspStapler(),
-            timestamper=timestamper.TrufoTimestamper(api_key=resolved_tsa_api_key),
-            cawg_identities=cawg_identities,
-        )
-    )
-    return base64.b64decode(generated["media_output"])
+    return signed
 
 
 def sign_c2pa_remote(
@@ -479,7 +457,48 @@ def sign_c2pa_remote(
     actions: list | None = None,
     assertions: list | None = None,
     tsa_api_key: str | None = None,
+    trufo_tsa_url: str | None = None,
+    trufo_api_url: str = "https://api.trufo.ai",
 ) -> bytes:
-    """Production remote C2PA signing placeholder."""
-    del api_key, media_bytes, actions, assertions, tsa_api_key
-    raise NotImplementedError("Production remote C2PA signing is not implemented server-side yet.")
+    """Sign media locally using the Trufo production remote-signing endpoint.
+
+    The media claim is built on the client while the C2PA claim-signing key
+    stays server-side. This helper requires the optional ``trufo[provenance]``
+    dependency group.
+
+    Args:
+        api_key: API key with scope ``c2pa-sign-prod``.
+        media_bytes: Raw bytes of the media file to sign.
+        actions: Ordered list of ``[action_name, params]`` pairs (default ``[]``).
+        assertions: List of ``[assertion_name, params]`` pairs (default ``[]``).
+        tsa_api_key: TSA API key. Falls back to the ``TRUFO_TSA_API_KEY``
+            environment variable or the SDK configured key.
+        trufo_tsa_url: Optional override for the Trufo TSA URL (advanced use).
+        trufo_api_url: Base URL for the Trufo API. Controls the preprocess,
+            claim-sign, and CAWG identity-sign endpoints.
+
+    Returns:
+        Signed media bytes.
+    """
+    _validate_actions(actions)
+    _validate_assertions(assertions)
+
+    resolved_tsa_api_key = _resolve_tsa_api_key(tsa_api_key)
+    remote_orchestrator = require_provenance_module("tfprov.c2pa_generator.remote_orchestrator")
+    ocsp_stapler_mod = require_provenance_module("tfprov.c2pa_py.helpers.ocsp_stapler")
+    timestamper_mod = require_provenance_module("tfprov.c2pa_py.helpers.timestamper")
+
+    signed, _ = remote_orchestrator.generate_claim_remote(
+        api_key,
+        media_bytes,
+        actions=actions or [],
+        assertions=assertions or [],
+        timestamper=timestamper_mod.TrufoTimestamper(
+            api_key=resolved_tsa_api_key,
+            url=trufo_tsa_url,
+        ),
+        ocsp_stapler=ocsp_stapler_mod.OcspStapler(),
+        trufo_api_url=trufo_api_url,
+        test=False,
+    )
+    return signed
