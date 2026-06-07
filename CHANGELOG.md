@@ -7,7 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.3.3] — 2026-06-02
+## [0.4.0] — 2026-06-07
+
+### Added
+
+- `sign_c2pa_remote` — distributed (Edge/SDK) C2PA signing: builds the C2PA manifest
+  locally using the `trufo[provenance]` optional dependency, then calls the backend only
+  for claim signing and CAWG identity signing. Accepts `trufo_api_url` and `trufo_tsa_url`
+  overrides to target non-production environments.
+- `sign_c2pa_remote_test` — mirrors `sign_c2pa_remote` exactly, targeting the test
+  claim-signing endpoint (`/test/c2pa/remote-sign`). Accepts the same `trufo_api_url`
+  and `trufo_tsa_url` parameters.
+- `UserAssertion.CAWG_TRAINING` enum variant.
+- Automatic version registration: the trufo-py version is sent as the `X-TF-Version`
+  request header on all remote signing calls.
 
 ### Fixed
 
@@ -106,7 +119,8 @@ Minor-version bump marks the general availability of the production C2PA signing
 - `trufo.intf`: credential storage and loading (env vars + file), CLI entry point.
 - PyPI trusted publishing via GitHub Actions (OIDC, no API tokens required).
 
-[Unreleased]: https://github.com/trufo-ai/trufo-py/compare/v0.3.3...HEAD
+[Unreleased]: https://github.com/trufo-ai/trufo-py/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/trufo-ai/trufo-py/compare/v0.3.3...v0.4.0
 [0.3.3]: https://github.com/trufo-ai/trufo-py/compare/v0.3.2...v0.3.3
 [0.3.2]: https://github.com/trufo-ai/trufo-py/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/trufo-ai/trufo-py/compare/v0.3.0...v0.3.1
