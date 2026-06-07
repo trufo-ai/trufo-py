@@ -22,6 +22,7 @@ STR_ENUMS = {
         "CAWG_IDENTITY": "cawg_identity",
         "CAWG_METADATA": "cawg_metadata",
         "CAWG_TRAINING": "cawg_training",
+        "CUSTOM": "custom",
     },
     TrufoAction: {
         "TRANSCODE": "transcode",

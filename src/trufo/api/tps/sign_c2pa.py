@@ -57,7 +57,7 @@ def _validate_assertions(assertions: list | None) -> None:
     # cawg identity checks
     if assertions and not any(a[0] == UserAssertion.CAWG_IDENTITY.value for a in assertions):
         logger.warning(_MISSING_CAWG_IDENTITY_WARNING)
-    for name, params in (assertions or []):
+    for name, params in assertions or []:
         match name:
             case UserAssertion.CAWG_IDENTITY.value:
                 if not isinstance(params, dict):
