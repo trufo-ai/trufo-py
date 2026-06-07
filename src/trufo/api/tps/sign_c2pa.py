@@ -438,6 +438,7 @@ def sign_c2pa_remote_test(
     c2pa_generator = require_provenance_module("tfprov.c2pa_generator")
     crypt = require_provenance_module("tfprov.crypt")
     ocsp_stapler = require_provenance_module("tfprov.c2pa_py.helpers.ocsp_stapler")
+    timestamper = require_provenance_module("tfprov.c2pa_py.helpers.timestamper")
     av_format = require_provenance_module("tfprov.util.av_format")
 
     media_probe = av_format.get_media_probe_result(media_bytes)
@@ -464,7 +465,7 @@ def sign_c2pa_remote_test(
             cg_request,
             claim_signer=claim_signer,
             ocsp_stapler=ocsp_stapler.OcspStapler(),
-            tsa_api_key=resolved_tsa_api_key,
+            timestamper=timestamper.TrufoTimestamper(api_key=resolved_tsa_api_key),
             cawg_identities=cawg_identities,
         )
     )
