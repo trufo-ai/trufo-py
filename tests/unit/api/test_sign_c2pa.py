@@ -4,7 +4,6 @@
 """Unit tests for TPS C2PA signing helpers."""
 
 import base64
-import json
 import types
 from unittest.mock import MagicMock, patch
 
@@ -23,14 +22,15 @@ from trufo.api.tps.sign_c2pa import (
     _validate_assertions,
     get_c2pa_s3_upload_url,
     sign_c2pa,
-    sign_c2pa_remote,
-    sign_c2pa_remote_test,
+    sign_c2pa_distributed,
+    sign_c2pa_distributed_test,
     sign_c2pa_s3,
     sign_c2pa_test,
     sign_c2pa_test_s3,
     sign_c2pa_test_via_s3,
     sign_c2pa_via_s3,
 )
+from trufo.util.credentials import TrufoApiKey
 
 
 def _mock_response(json_data: dict):
@@ -40,68 +40,45 @@ def _mock_response(json_data: dict):
     return resp
 
 
-def _install_fake_remote_stack(monkeypatch, signed: bytes = b"signed-remote-media"):
-    """Install fake optional tfprov modules and capture remote wrapper plumbing."""
+def _install_fake_remote_stack(
+    monkeypatch,
+    signed: bytes = b"signed-remote-media",
+    warning_messages: list | None = None,
+):
+    """Install fake optional tfprov modules and capture generate_claim_remote plumbing."""
     calls = {
-        "cg_request": object(),
-        "claim_signer": object(),
-        "cawg_identities": [],
+        "imports": [],
         "ocsp_stapler": object(),
+        "timestampers": [],
     }
 
-    def fake_require_provenance_module(module_name):
-        calls.setdefault("optional_imports", []).append(module_name)
-        match module_name:
-            case "tfprov.c2pa_generator":
-                return types.SimpleNamespace(
-                    CGRequest=types.SimpleNamespace(build=fake_cg_request_build),
-                    CawgIdentity=fake_cawg_identity,
-                    generate_claim=fake_generate_claim,
-                )
-            case "tfprov.crypt":
-                return types.SimpleNamespace(
-                    TrufoRemoteClaimSigner=fake_remote_claim_signer,
-                    TrufoRemoteIdentitySigner=fake_remote_identity_signer,
-                )
-            case "tfprov.c2pa_py.helpers.ocsp_stapler":
-                return types.SimpleNamespace(OcspStapler=fake_ocsp_stapler)
-            case "tfprov.util.av_format":
-                return types.SimpleNamespace(
-                    get_media_probe_result=fake_get_media_probe_result,
-                )
-        raise AssertionError(f"Unexpected optional import: {module_name}")
-
-    def fake_get_media_probe_result(media_bytes):
-        calls["media_probe"] = media_bytes
-        return types.SimpleNamespace(mime_type="image/jpeg")
-
-    def fake_cg_request_build(**kwargs):
-        calls["CGRequest.build"] = kwargs
-        return calls["cg_request"]
-
-    def fake_remote_claim_signer(*, api_key):
-        calls["remote_claim_signer"] = api_key
-        return calls["claim_signer"]
-
-    def fake_remote_identity_signer(*, api_key, cawg_identity_id):
-        calls.setdefault("remote_identity_signers", []).append(
-            {"api_key": api_key, "cawg_identity_id": cawg_identity_id}
-        )
-        signer = object()
-        return signer
-
-    def fake_cawg_identity(*, signer):
-        identity = types.SimpleNamespace(signer=signer)
-        calls["cawg_identities"].append(identity)
-        return identity
+    def fake_timestamper(*, api_key, url=None):
+        timestamper = types.SimpleNamespace(api_key=api_key, url=url)
+        calls["timestampers"].append(timestamper)
+        return timestamper
 
     def fake_ocsp_stapler():
         calls["ocsp_stapler_constructed"] = True
         return calls["ocsp_stapler"]
 
-    def fake_generate_claim(*args, **kwargs):
-        calls["generate_claim"] = {"args": args, "kwargs": kwargs}
-        return json.dumps({"media_output": base64.b64encode(signed).decode()})
+    def fake_generate_claim_remote(api_key, media_bytes, **kwargs):
+        calls["generate_claim_remote"] = {
+            "api_key": api_key,
+            "media_bytes": media_bytes,
+            "kwargs": kwargs,
+        }
+        return signed, warning_messages or []
+
+    def fake_require_provenance_module(module_name):
+        calls["imports"].append(module_name)
+        match module_name:
+            case "tfprov.c2pa_generator.remote_orchestrator":
+                return types.SimpleNamespace(generate_claim_remote=fake_generate_claim_remote)
+            case "tfprov.c2pa_py.helpers.ocsp_stapler":
+                return types.SimpleNamespace(OcspStapler=fake_ocsp_stapler)
+            case "tfprov.c2pa_py.helpers.timestamper":
+                return types.SimpleNamespace(TrufoTimestamper=fake_timestamper)
+        raise AssertionError(f"Unexpected optional import: {module_name}")
 
     monkeypatch.setattr(
         "trufo.api.tps.sign_c2pa.require_provenance_module",
@@ -181,13 +158,14 @@ class TestDirectC2PASigning:
 
 
 class TestRemoteC2PASigning:
-    """Remote C2PA signing wrapper behavior."""
+    """Remote C2PA signing wrappers delegate to the tfprov orchestrator."""
 
-    def test_remote_test_signing_wires_optional_provenance_stack(self, monkeypatch):
-        signed = b"signed-remote-media"
-        calls = _install_fake_remote_stack(monkeypatch, signed=signed)
+    _REMOTE_SIGNERS = [sign_c2pa_distributed, sign_c2pa_distributed_test]
 
-        result = sign_c2pa_remote_test(
+    def test_test_signing_delegates_with_test_flag(self, monkeypatch):
+        calls = _install_fake_remote_stack(monkeypatch, signed=b"signed-test")
+
+        result = sign_c2pa_distributed_test(
             "remote-sign-key",
             b"input-media",
             actions=[["publish", {}]],
@@ -195,59 +173,76 @@ class TestRemoteC2PASigning:
             tsa_api_key="tsa-key",
         )
 
-        assert result == signed
-        assert calls["optional_imports"] == [
-            "tfprov.c2pa_generator",
-            "tfprov.crypt",
+        assert result == b"signed-test"
+        assert calls["imports"] == [
+            "tfprov.c2pa_generator.remote_orchestrator",
             "tfprov.c2pa_py.helpers.ocsp_stapler",
-            "tfprov.util.av_format",
+            "tfprov.c2pa_py.helpers.timestamper",
         ]
-        assert calls["media_probe"] == b"input-media"
-        assert calls["CGRequest.build"] == {
-            "actions": [["publish", {}]],
-            "assertions": [["cawg_identity", {"cawg_identity_id": "test"}]],
-            "media_bytes": b"input-media",
-            "mime_type": "image/jpeg",
-        }
-        assert calls["remote_claim_signer"] == "remote-sign-key"
-        assert calls["remote_identity_signers"] == [
-            {"api_key": "remote-sign-key", "cawg_identity_id": "test"}
-        ]
-        assert calls["ocsp_stapler_constructed"] is True
-        assert calls["generate_claim"] == {
-            "args": (calls["cg_request"],),
-            "kwargs": {
-                "claim_signer": calls["claim_signer"],
-                "ocsp_stapler": calls["ocsp_stapler"],
-                "tsa_api_key": "tsa-key",
-                "cawg_identities": calls["cawg_identities"],
-            },
-        }
+        remote_call = calls["generate_claim_remote"]
+        assert remote_call["api_key"] == "remote-sign-key"
+        assert remote_call["media_bytes"] == b"input-media"
 
-    def test_remote_test_signing_preserves_duplicate_cawg_identities(self, monkeypatch):
-        calls = _install_fake_remote_stack(monkeypatch, signed=b"signed")
+        kwargs = remote_call["kwargs"]
+        assert kwargs["actions"] == [["publish", {}]]
+        assert kwargs["assertions"] == [["cawg_identity", {"cawg_identity_id": "test"}]]
+        assert kwargs["test"] is True
+        assert kwargs["trufo_api_url"] == "https://api.trufo.ai"
+        assert kwargs["ocsp_stapler"] is calls["ocsp_stapler"]
 
-        result = sign_c2pa_remote_test(
+        # a single timestamper is built with the resolved key and no URL override
+        assert [ts.api_key for ts in calls["timestampers"]] == ["tsa-key"]
+        assert calls["timestampers"][0].url is None
+        assert kwargs["timestamper"] is calls["timestampers"][0]
+
+    def test_prod_signing_delegates_with_endpoint_overrides(self, monkeypatch):
+        calls = _install_fake_remote_stack(monkeypatch, signed=b"signed-prod")
+
+        result = sign_c2pa_distributed(
             "remote-sign-key",
             b"input-media",
-            assertions=[
-                ["cawg_identity", {"cawg_identity_id": "test"}],
-                ["cawg_identity", {"cawg_identity_id": "test"}],
-            ],
+            actions=[["publish", {}]],
+            assertions=[["cawg_identity", {"cawg_identity_id": "org_interim"}]],
             tsa_api_key="tsa-key",
+            trufo_tsa_url="https://tsa.trufo.example",
+            trufo_api_url="https://api.trufo.example",
         )
 
-        assert result == b"signed"
-        assert calls["remote_identity_signers"] == [
-            {"api_key": "remote-sign-key", "cawg_identity_id": "test"},
-            {"api_key": "remote-sign-key", "cawg_identity_id": "test"},
-        ]
-        assert calls["generate_claim"]["kwargs"]["cawg_identities"] == calls[
-            "cawg_identities"
-        ]
-        assert len(calls["cawg_identities"]) == 2
+        assert result == b"signed-prod"
+        kwargs = calls["generate_claim_remote"]["kwargs"]
+        assert kwargs["actions"] == [["publish", {}]]
+        assert kwargs["assertions"] == [["cawg_identity", {"cawg_identity_id": "org_interim"}]]
+        assert kwargs["test"] is False
+        assert kwargs["trufo_api_url"] == "https://api.trufo.example"
 
-    def test_remote_test_signing_rejects_unsupported_cawg_identity_id(self, monkeypatch):
+        # the TSA URL override flows into the timestamper
+        assert calls["timestampers"][0].api_key == "tsa-key"
+        assert calls["timestampers"][0].url == "https://tsa.trufo.example"
+        assert kwargs["timestamper"] is calls["timestampers"][0]
+
+    def test_prod_signing_uses_default_api_url(self, monkeypatch):
+        calls = _install_fake_remote_stack(monkeypatch)
+
+        sign_c2pa_distributed("remote-sign-key", b"input-media", tsa_api_key="tsa-key")
+
+        kwargs = calls["generate_claim_remote"]["kwargs"]
+        assert kwargs["test"] is False
+        assert kwargs["trufo_api_url"] == "https://api.trufo.ai"
+        assert calls["timestampers"][0].url is None
+
+    @pytest.mark.parametrize("signer", _REMOTE_SIGNERS)
+    def test_returns_signed_bytes_discarding_orchestrator_warnings(self, monkeypatch, signer):
+        _install_fake_remote_stack(
+            monkeypatch, signed=b"signed", warning_messages=["preprocess warning"]
+        )
+
+        result = signer("remote-sign-key", b"input-media", tsa_api_key="tsa-key")
+
+        # the orchestrator returns (bytes, warnings); only the bytes are surfaced
+        assert result == b"signed"
+
+    @pytest.mark.parametrize("signer", _REMOTE_SIGNERS)
+    def test_validates_before_optional_imports(self, monkeypatch, signer):
         require_provenance_module = MagicMock()
         monkeypatch.setattr(
             "trufo.api.tps.sign_c2pa.require_provenance_module",
@@ -255,31 +250,30 @@ class TestRemoteC2PASigning:
         )
 
         with pytest.raises(ValueError, match="Unsupported cawg_identity_id"):
-            sign_c2pa_remote_test(
-                "api-key",
+            signer(
+                "remote-sign-key",
                 b"input-media",
-                assertions=[
-                    ["cawg_identity", {"cawg_identity_id": "unknown"}],
-                ],
+                assertions=[["cawg_identity", {"cawg_identity_id": "unknown"}]],
                 tsa_api_key="tsa-key",
             )
 
         require_provenance_module.assert_not_called()
 
-    def test_remote_test_signing_loads_configured_tsa_key(self, monkeypatch):
+    @pytest.mark.parametrize("signer", _REMOTE_SIGNERS)
+    def test_loads_configured_tsa_key_when_not_passed(self, monkeypatch, signer):
         calls = _install_fake_remote_stack(monkeypatch, signed=b"signed")
+        key_types = []
+        monkeypatch.setattr(
+            "trufo.api.tps.sign_c2pa.load_api_key",
+            lambda key_type: key_types.append(key_type) or "configured-tsa-key",
+        )
 
-        def fake_load_api_key(key_type):
-            calls["key_type"] = key_type
-            return "configured-tsa-key"
+        assert signer("remote-sign-key", b"input-media") == b"signed"
+        assert key_types == [TrufoApiKey.TSA]
+        assert calls["timestampers"][0].api_key == "configured-tsa-key"
 
-        monkeypatch.setattr("trufo.api.tps.sign_c2pa.load_api_key", fake_load_api_key)
-
-        assert sign_c2pa_remote_test("api-key", b"input-media") == b"signed"
-        assert calls["key_type"] == "tsa"
-        assert calls["generate_claim"]["kwargs"]["tsa_api_key"] == "configured-tsa-key"
-
-    def test_remote_test_signing_requires_tsa_key_before_optional_imports(self, monkeypatch):
+    @pytest.mark.parametrize("signer", _REMOTE_SIGNERS)
+    def test_requires_tsa_key_before_optional_imports(self, monkeypatch, signer):
         require_provenance_module = MagicMock()
         monkeypatch.setattr("trufo.api.tps.sign_c2pa.load_api_key", lambda _key: None)
         monkeypatch.setattr(
@@ -288,20 +282,19 @@ class TestRemoteC2PASigning:
         )
 
         with pytest.raises(RuntimeError, match="TSA API key"):
-            sign_c2pa_remote_test("api-key", b"input-media")
+            signer("remote-sign-key", b"input-media")
 
         require_provenance_module.assert_not_called()
 
-    def test_remote_prod_signing_is_explicit_stub(self):
-        with pytest.raises(NotImplementedError, match="not implemented server-side"):
-            sign_c2pa_remote("api-key", b"input-media")
-
-    def test_remote_assertions_without_cawg_identity_warns_and_continues(self, monkeypatch, caplog):
-        calls = _install_fake_remote_stack(monkeypatch, signed=b"signed")
+    @pytest.mark.parametrize("signer", _REMOTE_SIGNERS)
+    def test_assertions_without_cawg_identity_warns_and_continues(
+        self, monkeypatch, signer, caplog
+    ):
+        _install_fake_remote_stack(monkeypatch, signed=b"signed")
 
         with caplog.at_level("WARNING", logger="trufo.api.tps.sign_c2pa"):
-            result = sign_c2pa_remote_test(
-                "api-key",
+            result = signer(
+                "remote-sign-key",
                 b"input-media",
                 assertions=[["ai_disclosure", {}]],
                 tsa_api_key="tsa-key",
@@ -309,7 +302,6 @@ class TestRemoteC2PASigning:
 
         assert result == b"signed"
         assert "Gathered assertions are being input by the client" in caplog.text
-        assert calls["generate_claim"]["kwargs"]["cawg_identities"] == []
 
 
 class TestS3C2PASigning:

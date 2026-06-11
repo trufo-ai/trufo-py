@@ -11,17 +11,24 @@ Endpoints for C2PA manifest generation and management of reusable assertion reco
 - **Auth:** API key (`X-API-Key`) or access token (`Authorization: Bearer`)
 - **Content type:** `application/json`
 
-Authentication is per-endpoint; when using an API key, the scope must match the endpoint:
+## Endpoints
+
+Authentication is per-endpoint. The table below summarizes each endpoint; legends follow.
+
+**Scope** — the API-key scope required when authenticating with a key: `prod` = `c2pa-sign-prod`, `test` = `c2pa-sign-test`. An account access token may be used in place of an API key on any of these endpoints (it requires the `c2pa_sign` permission and is scope-independent).
+
+**Billing Product** — the required plan entitlement, or `—` if none. Gated endpoints return `403` when the caller's org lacks the plan.
 
 
-| Endpoint                         | Required auth                                                                 |
-| -------------------------------- | ----------------------------------------------------------------------------- |
-| `POST /c2pa/sign`                | API key with scope `c2pa-sign-prod`, **or** access token                      |
-| `POST /test/c2pa/sign`           | API key with scope `c2pa-sign-test`, **or** access token                      |
-| `POST /c2pa/io/get-s3-url`       | API key with scope `c2pa-sign-prod` or `c2pa-sign-test`, **or** access token  |
-| `POST /c2pa/ai-disclosure/add`   | API key with scope `c2pa-sign-prod` or `c2pa-sign-test`, **or** access token  |
-| `POST /c2pa/ai-disclosure/list`  | API key with scope `c2pa-sign-prod` or `c2pa-sign-test`, **or** access token  |
-
+| Endpoint                            | Scope       | Billing Product                  |
+| ----------------------------------- | ----------- | -------------------------------- |
+| **Signing**                         |             |                                  |
+| `POST /c2pa/sign`                   | prod        | `c2pa_signing_api`               |
+| `POST /test/c2pa/sign`              | test        | —                                |
+| `POST /c2pa/io/get-s3-url`          | prod / test | `c2pa_signing_api` (prod only)   |
+| **Assertion records**               |             |                                  |
+| `POST /c2pa/ai-disclosure/add`      | prod / test | —                                |
+| `POST /c2pa/ai-disclosure/list`     | prod / test | —                                |
 
 The owning organization is inferred from the credential itself (the API key is bound to its org; an access token resolves to the caller's single org membership). Request bodies for c2pa endpoints do not take an `oid` field.
 
@@ -38,6 +45,10 @@ See [2_ai_labeling.md](../quickstart/2_ai_labeling.md) for a quickstart guide fo
 ### CAWG Publishing
 
 See [3_cawg_publish.md](../quickstart/3_cawg_publish.md) for a quickstart guide for this use case.
+
+### Remote (Distributed) Signing
+
+See [4_distributed_signing.md](../quickstart/4_distributed_signing.md) for a quickstart guide for this use case.
 
 ### Python SDK helpers
 
@@ -74,7 +85,9 @@ signed_bytes = sign_c2pa_via_s3(
 
 ---
 
-## API Reference: `POST /c2pa/sign`, `POST /test/c2pa/sign`
+# Standard Signing
+
+## `POST /c2pa/sign`, `POST /test/c2pa/sign`
 
 Both endpoints share the same request/response schema. The production signer produces manifests recognized by conformant C2PA validators; the test signer produces manifests that are not.
 
@@ -93,15 +106,16 @@ Both endpoints share the same request/response schema. The production signer pro
 
 Base64-encoded bytes of the input file. The supported MIME types are listed below; more will be added over time (upon request).
 
-| Category | MIME types                                                                                                             |
-| -------- | ---------------------------------------------------------------------------------------------------------------------- |
-| Image    | `image/jpeg`, `image/png`, `image/tiff`, `image/webp`, `image/avif`, `image/jxl`, `image/x-adobe-dng`, `image/svg+xml` |
-| Video    | `video/mp4`, `video/quicktime`                                                                                         |
-| Audio    | `audio/mpeg`, `audio/flac`, `audio/wav`, `audio/mp4`                                                                   |
+| Category | MIME types                                                                                                                              |
+| -------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Image    | `image/jpeg`, `image/png`, `image/tiff`, `image/webp`, `image/avif`, `image/jxl`, `image/gif`, `image/x-adobe-dng`, `image/svg+xml`     |
+| Video    | `video/mp4`, `video/quicktime`                                                                                                          |
+| Audio    | `audio/mpeg`, `audio/flac`, `audio/wav`, `audio/aac`, `audio/mp4`                                                                       |
+| Document | `application/pdf`                                                                                                                        |
 
 #### `media_input_s3`
 
-Opaque server-signed input reference returned by [`POST /c2pa/io/get-s3-url`](#api-reference-post-c2paioget-s3-url). Use this mode for larger media or workflows that should avoid sending base64 media through the JSON request body.
+Opaque server-signed input reference returned by [`POST /c2pa/io/get-s3-url`](#post-c2paioget-s3-url). Use this mode for larger media or workflows that should avoid sending base64 media through the JSON request body.
 
 The flow is:
 
@@ -135,7 +149,7 @@ Ordered list of `[assertion_name, params]` pairs. Each assertion is treated as a
 
 ##### `ai_disclosure`
 
-Marks the content as AI-generated via a `c2pa.ai-disclosure` assertion. By default, the minimal assertion body `{"modelType": "c2pa.types.model"}` is used; to attach a richer pre-registered assertion (e.g. identifying a specific model, dataset, or content profile), first register it via [`POST /c2pa/ai-disclosure/add`](#api-reference-post-c2paai-disclosureadd) and pass the returned `ai_disclosure_id`.
+Marks the content as AI-generated via a `c2pa.ai-disclosure` assertion. By default, the minimal assertion body `{"modelType": "c2pa.types.model"}` is used; to attach a richer pre-registered assertion (e.g. identifying a specific model, dataset, or content profile), first register it via [`POST /c2pa/ai-disclosure/add`](#post-c2paai-disclosureadd) and pass the returned `ai_disclosure_id`.
 
 | Param               | Type   | Default        | Description                                                                                                                                          |
 | ------------------- | ------ | -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -267,7 +281,7 @@ S3 media response:
 
 ---
 
-## API Reference: `POST /c2pa/io/get-s3-url`
+## `POST /c2pa/io/get-s3-url`
 
 Mint an ephemeral presigned S3 upload URL for C2PA signing. The returned `media_input_s3` reference is passed to `/c2pa/sign` or `/test/c2pa/sign` after upload.
 
@@ -303,7 +317,15 @@ Mint an ephemeral presigned S3 upload URL for C2PA signing. The returned `media_
 
 ---
 
-## API Reference: `POST /c2pa/ai-disclosure/add`
+# Remote (Distributed) Signing
+
+In the case where the media content cannot be sent over an API call (e.g. due to file size or privacy concerns), use distributed signing: the C2PA manifest is assembled and hashed locally, and the resulting hash is sent to Trufo for signing. To remain conformant with the C2PA specification, currently the only way to do so is via the `trufo[provenance]` optional installation and using the `sign_c2pa_distributed()` Python function. See [4_distributed_signing.md](../quickstart/4_distributed_signing.md) for an end-to-end guide.
+
+---
+
+# Auxiliary APIs
+
+## `POST /c2pa/ai-disclosure/add`
 
 Register a custom `c2pa.ai-disclosure` assertion body for the calling organization. Returns an opaque identifier that can be passed as the `ai_disclosure_id` param on the `ai_disclosure` assertion when calling `/c2pa/sign` or `/test/c2pa/sign`.
 
@@ -363,7 +385,7 @@ Any top-level key outside the above list is rejected. Fields introduced in draft
 
 ---
 
-## API Reference: `POST /c2pa/ai-disclosure/list`
+## `POST /c2pa/ai-disclosure/list`
 
 List the `c2pa.ai-disclosure` assertions stored for the caller's organization.
 

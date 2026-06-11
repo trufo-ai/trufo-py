@@ -1,10 +1,10 @@
-# Quickstart: Remote C2PA Signing
+# Quickstart: Distributed C2PA Signing
 
-Build the C2PA manifest locally while keeping the C2PA signing key in Trufo's remote signing service.
+Build the C2PA manifest locally while keeping the C2PA signing key in Trufo's infrastructure.
 
 ## What This Does
 
-`sign_c2pa_remote()` creates the C2PA claim in the client and calls Trufo only to procure the C2PA claim signature. This means that the media file is not sent the Trufo server and instead stays local.
+`sign_c2pa_distributed()` creates the C2PA claim in the client and calls Trufo only to procure the C2PA claim signature. This means that the media file is not sent to the Trufo server and instead stays local.
 
 ## Requirements
 
@@ -13,7 +13,7 @@ Build the C2PA manifest locally while keeping the C2PA signing key in Trufo's re
 - A `tsa` API key for timestamping. Configure it with `trufo set-api-key tsa <your-api-key>` or `TRUFO_TSA_API_KEY`.
 - When `assertions` is non-empty, at least one `cawg_identity` entry must be present.
 
-> **EXPERIMENTAL:** Currently this feature is in an experimental state, and may change substantially in the next few weeks. Note that `sign_c2pa_remote_test()` is available but `sign_c2pa_remote()` (that uses a real C2PA certificate) is not.
+> **EXPERIMENTAL:** Currently this feature is in an experimental state, and may change substantially in the next few weeks. Note that `sign_c2pa_distributed_test()` is available but `sign_c2pa_distributed()` (that uses a real C2PA certificate) is not.
 
 ---
 
@@ -22,13 +22,13 @@ Build the C2PA manifest locally while keeping the C2PA signing key in Trufo's re
 ```python
 from pathlib import Path
 
-from trufo import sign_c2pa_remote_test
+from trufo import sign_c2pa_distributed_test
 from trufo.util.credentials import TrufoApiKey, load_api_key
 
 api_key = load_api_key(TrufoApiKey.C2PA_SIGN_TEST)
 
 media_bytes = Path("input.jpg").read_bytes()
-signed_bytes = sign_c2pa_remote_test(
+signed_bytes = sign_c2pa_distributed_test(
     api_key,
     media_bytes,
     assertions=[
@@ -39,10 +39,10 @@ signed_bytes = sign_c2pa_remote_test(
 Path("signed.jpg").write_bytes(signed_bytes)
 ```
 
-`sign_c2pa_remote_test()` automatically loads the TSA key from the existing SDK credential path. To pass it explicitly instead:
+`sign_c2pa_distributed_test()` automatically loads the TSA key from the existing SDK credential path. To pass it explicitly instead:
 
 ```python
-signed_bytes = sign_c2pa_remote_test(
+signed_bytes = sign_c2pa_distributed_test(
     api_key,
     media_bytes,
     assertions=[
@@ -58,10 +58,10 @@ Test-signed outputs are useful for integration development but are not intended 
 
 ## Adding Actions and Assertions
 
-Remote signing accepts the same `actions` and `assertions` shape as `sign_c2pa_test()`:
+Distributed signing accepts the same `actions` and `assertions` shape as `sign_c2pa_test()`:
 
 ```python
-signed_bytes = sign_c2pa_remote_test(
+signed_bytes = sign_c2pa_distributed_test(
     api_key,
     media_bytes,
     actions=[
@@ -78,14 +78,14 @@ See [2_ai_labeling.md](2_ai_labeling.md) for `ai_disclosure` and [3_cawg_publish
 
 ---
 
-## Remote Signing vs Hosted Signing
+## Distributed vs Hosted Signing
 
 | Helper | Where manifest generation happens | What Trufo receives | Signing key location |
 |--------|-----------------------------------|---------------------|----------------------|
 | `sign_c2pa_test()` | Trufo server | media bytes or S3 reference | Trufo server |
-| `sign_c2pa_remote_test()` | your Python process | claim bytes-to-be-signed | Trufo server |
+| `sign_c2pa_distributed_test()` | your Python process | claim bytes-to-be-signed | Trufo server |
 
-Use hosted signing when you want the simplest flow. Use remote signing when your application needs to keep media processing and claim generation local.
+Use hosted signing when you want the simplest flow. Use distributed signing when your application needs to keep media processing and claim generation local.
 
 ---
 

@@ -16,11 +16,6 @@ When using the standard C2PA Signing API, the raw digital media content is sent 
 pip install "trufo[provenance]"
 ```
 
-For `trufo` version `0.3.1`, this resolves to the `trufo-provenance` `0.1.x`
-implementation package. The relevant first fixed build is `trufo-provenance==0.1.1`.
-That build bundles the native C2PA bridge for Linux only; macOS and Windows
-wheels are not published yet.
-
 *Note: Currently, the `provenance` installation is only supported on Linux machines.*
 
 ## Workflow Examples (Quickstart)
@@ -34,6 +29,7 @@ There are a number of documents to get you started quickly with specific use cas
 | C2PA Signing Certificate CSRs      | [C2PA Signing Certificates](https://app.trufo.ai/tca/certs/c2pa)       | [docs/quickstart/1_c2pa_cert.md](docs/quickstart/1_c2pa_cert.md)       |
 | AI Labeling                        | [C2PA & CAWG Signing API](https://app.trufo.ai/prov/apis/c2pa-signing) | [docs/quickstart/2_ai_labeling.md](docs/quickstart/2_ai_labeling.md)   |
 | Organization Stamping & Assertions | [C2PA & CAWG Signing API](https://app.trufo.ai/prov/apis/c2pa-signing) | [docs/quickstart/3_cawg_publish.md](docs/quickstart/3_cawg_publish.md) |
+| Distributed Signing               | [C2PA & CAWG Signing API](https://app.trufo.ai/prov/apis/c2pa-signing) | [docs/quickstart/4_distributed_signing.md](docs/quickstart/4_distributed_signing.md) |
 
 
 ## Reference Documentation
