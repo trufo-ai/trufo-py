@@ -11,16 +11,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- `sign_c2pa_remote` — distributed (Edge/SDK) C2PA signing: builds the C2PA manifest
-  locally using the `trufo[provenance]` optional dependency, then calls the backend only
-  for claim signing and CAWG identity signing. Accepts `trufo_api_url` and `trufo_tsa_url`
-  overrides to target non-production environments.
-- `sign_c2pa_remote_test` — mirrors `sign_c2pa_remote` exactly, targeting the test
-  claim-signing endpoint (`/test/c2pa/remote-sign`). Accepts the same `trufo_api_url`
-  and `trufo_tsa_url` parameters.
+- Rename remote signing to distributed signing.
+- Fleshing out `sign_c2pa_distributed()` using the `trufo[provenance]` optional dependency
+  in a conformant manner; accepts `trufo_api_url` and `trufo_tsa_url` overrides to target
+  non-production environments.
 - `UserAssertion.CAWG_TRAINING` enum variant.
+- Minor updates to documentation and supported MIME types.
 - Automatic version registration: the trufo-py version is sent as the `X-TF-Version`
-  request header on all remote signing calls.
+  request header on all distributed signing calls.
 
 ### Fixed
 

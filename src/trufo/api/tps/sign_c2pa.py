@@ -416,7 +416,7 @@ def _resolve_tsa_api_key(tsa_api_key: str | None) -> str:
     return configured_key
 
 
-def sign_c2pa_remote_test(
+def sign_c2pa_distributed_test(
     api_key: str,
     media_bytes: bytes,
     *,
@@ -470,7 +470,7 @@ def sign_c2pa_remote_test(
     return signed
 
 
-def sign_c2pa_remote(
+def sign_c2pa_distributed(
     api_key: str,
     media_bytes: bytes,
     *,

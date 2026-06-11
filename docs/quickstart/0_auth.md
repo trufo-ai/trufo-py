@@ -14,7 +14,7 @@ Depending on what you need, set up the corresponding API key:
 
 - **Development / interactive access** — create a `trufo-api` key, then run `trufo login` to exchange it for an access token via the device-authorization flow.
 - **Calling `/c2pa/sign` or `/test/c2pa/sign` in deployment** — create a `c2pa-sign-prod` key (for `/c2pa/sign`) or a `c2pa-sign-test` key (for `/test/c2pa/sign`).
-- **Calling `sign_c2pa_remote_test()` or `sign_c2pa_remote()`** — create a `c2pa-sign-test` or `c2pa-sign-prod` key (same as above) **plus** a `tsa` key for the RFC 3161 timestamping step.
+- **Calling `sign_c2pa_distributed_test()` or `sign_c2pa_distributed()`** — create a `c2pa-sign-test` or `c2pa-sign-prod` key (same as above) **plus** a `tsa` key for the RFC 3161 timestamping step.
 - **Calling `tsa.trufo.ai`** — create a `tsa` key.
 
 See [../api/api_auth.md](../api/api_auth.md) for the full scope reference.

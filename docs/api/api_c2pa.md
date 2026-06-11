@@ -48,7 +48,7 @@ See [3_cawg_publish.md](../quickstart/3_cawg_publish.md) for a quickstart guide 
 
 ### Remote (Distributed) Signing
 
-See [4_remote_signing.md](../quickstart/4_remote_signing.md) for a quickstart guide for this use case.
+See [4_distributed_signing.md](../quickstart/4_distributed_signing.md) for a quickstart guide for this use case.
 
 ### Python SDK helpers
 
@@ -319,7 +319,7 @@ Mint an ephemeral presigned S3 upload URL for C2PA signing. The returned `media_
 
 # Remote (Distributed) Signing
 
-In the case where the media content cannot be sent over an API call (e.g. due to file size or privacy concerns), use remote (distributed) signing: the C2PA manifest is assembled and hashed locally, and the resulting hash is sent to Trufo for signing. To remain conformant with the C2PA specification, currently the only way to do so is via the `trufo[provenance]` optional installation and using the `c2pa_remote_sign()` function — it is not available as a directly callable HTTP API. See [4_remote_signing.md](../quickstart/4_remote_signing.md) for an end-to-end guide.
+In the case where the media content cannot be sent over an API call (e.g. due to file size or privacy concerns), use distributed signing: the C2PA manifest is assembled and hashed locally, and the resulting hash is sent to Trufo for signing. To remain conformant with the C2PA specification, currently the only way to do so is via the `trufo[provenance]` optional installation and using the `sign_c2pa_distributed()` Python function. See [4_distributed_signing.md](../quickstart/4_distributed_signing.md) for an end-to-end guide.
 
 ---
 

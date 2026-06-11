@@ -22,8 +22,8 @@ from trufo.api.tps.sign_c2pa import (
     _validate_assertions,
     get_c2pa_s3_upload_url,
     sign_c2pa,
-    sign_c2pa_remote,
-    sign_c2pa_remote_test,
+    sign_c2pa_distributed,
+    sign_c2pa_distributed_test,
     sign_c2pa_s3,
     sign_c2pa_test,
     sign_c2pa_test_s3,
@@ -160,12 +160,12 @@ class TestDirectC2PASigning:
 class TestRemoteC2PASigning:
     """Remote C2PA signing wrappers delegate to the tfprov orchestrator."""
 
-    _REMOTE_SIGNERS = [sign_c2pa_remote, sign_c2pa_remote_test]
+    _REMOTE_SIGNERS = [sign_c2pa_distributed, sign_c2pa_distributed_test]
 
     def test_test_signing_delegates_with_test_flag(self, monkeypatch):
         calls = _install_fake_remote_stack(monkeypatch, signed=b"signed-test")
 
-        result = sign_c2pa_remote_test(
+        result = sign_c2pa_distributed_test(
             "remote-sign-key",
             b"input-media",
             actions=[["publish", {}]],
@@ -198,7 +198,7 @@ class TestRemoteC2PASigning:
     def test_prod_signing_delegates_with_endpoint_overrides(self, monkeypatch):
         calls = _install_fake_remote_stack(monkeypatch, signed=b"signed-prod")
 
-        result = sign_c2pa_remote(
+        result = sign_c2pa_distributed(
             "remote-sign-key",
             b"input-media",
             actions=[["publish", {}]],
@@ -223,7 +223,7 @@ class TestRemoteC2PASigning:
     def test_prod_signing_uses_default_api_url(self, monkeypatch):
         calls = _install_fake_remote_stack(monkeypatch)
 
-        sign_c2pa_remote("remote-sign-key", b"input-media", tsa_api_key="tsa-key")
+        sign_c2pa_distributed("remote-sign-key", b"input-media", tsa_api_key="tsa-key")
 
         kwargs = calls["generate_claim_remote"]["kwargs"]
         assert kwargs["test"] is False

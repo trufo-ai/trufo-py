@@ -9,9 +9,9 @@ certificate enrollment.
 - Current version: see `pyproject.toml` (`version = "X.Y.Z"`).
 - The `trufo[provenance]` optional dependency is **Linux-only**. macOS/Windows
   wheels are not published.
-- `sign_c2pa_remote()` (production distributed signing) requires AWS resources
-  that are **not yet provisioned**. Use `sign_c2pa_remote_test()` for development.
-- The remote signing path requires **two** API keys: a `c2pa-sign-test` key AND
+- `sign_c2pa_distributed()` (production distributed signing) requires AWS resources
+  that are **not yet provisioned**. Use `sign_c2pa_distributed_test()` for development.
+- The distributed signing path requires **two** API keys: a `c2pa-sign-test` key AND
   a `tsa` key.
 
 ## Documentation map
@@ -23,7 +23,7 @@ certificate enrollment.
 | C2PA certificate CSRs | `docs/quickstart/1_c2pa_cert.md` |
 | AI labeling (AIGC disclosure) | `docs/quickstart/2_ai_labeling.md` |
 | CAWG publish (org stamping) | `docs/quickstart/3_cawg_publish.md` |
-| Remote (distributed) signing | `docs/quickstart/4_remote_signing.md` |
+| Distributed signing | `docs/quickstart/4_distributed_signing.md` |
 | C2PA API reference | `docs/api/api_c2pa.md` |
 | Auth API reference | `docs/api/api_auth.md` |
 | TCA CA reference | `docs/api/tca_ca.md` |
@@ -40,5 +40,5 @@ Three modes exist; see `docs/c2pa_feature_list.md` for the full feature matrix.
 | Mode | Function | Requires `trufo[provenance]` | Media sent to server |
 |---|---|---|---|
 | Hosted (server) | `sign_c2pa`, `sign_c2pa_test` | No | Yes |
-| Remote (distributed) | `sign_c2pa_remote`, `sign_c2pa_remote_test` | Yes | No |
+| Distributed | `sign_c2pa_distributed`, `sign_c2pa_distributed_test` | Yes | No |
 | Fully local | (not exposed via trufo-py) | Yes | No |
