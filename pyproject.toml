@@ -17,7 +17,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-provenance = ["trufo-provenance[c2pa]>=0.1.2,<0.2"]
+provenance = ["trufo-provenance[c2pa]>=0.2.0,<0.3"]
 test = ["pytest>=7.0"]
 
 [project.scripts]
