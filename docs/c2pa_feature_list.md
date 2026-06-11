@@ -22,7 +22,7 @@ Three signing modes are available. Support varies by mode.
 | assertion | notes | fully-server | remote-signing | fully-local |
 |---|---|---|---|---|
 | `ai_disclosure` | default | ✅ | ✅ | ❌ |
-| `ai_disclosure` | registered | ✅ | ❌ | ❌ |
+| `ai_disclosure` | registered | ✅ | ✅ | ❌ |
 | `cawg_identity` | test | ✅ | ✅ | ❌ |
 | `cawg_identity` | org-interim | ✅ | ✅ | ❌ |
 | `cawg_metadata` | | ✅ | ✅ | ❌ |

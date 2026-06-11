@@ -16,12 +16,17 @@ Publishing uses **Trusted Publishing** (OIDC) via GitHub Actions — no API toke
 
    a2. Update `__version__` in `src/trufo/__init__.py` to match.
 
+   a3. Update `llms.txt`: the "Current version" line under **Key facts for AI assistants** should reference `pyproject.toml` (it already does — no edit needed unless the note wording changes).
+
    b. Update `CHANGELOG.md`:
       - Rename `## [Unreleased]` to `## [X.Y.Z] — YYYY-MM-DD`.
       - Add a new empty `## [Unreleased]` section at the top.
       - Update the comparison links at the bottom of the file.
 
-   c. Commit with message: `Release vX.Y.Z`.
+   c. Update `README.md` if the "Optional Provenance Engine" section contains
+      version-specific prose (e.g. pin ranges, platform notes) that changed.
+
+   d. Commit with message: `chore: prepare trufo X.Y.Z release`.
 
 2. **Merge to `main`** via PR (or push directly if the change is only the version bump + changelog).
 

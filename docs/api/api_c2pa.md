@@ -21,6 +21,10 @@ Authentication is per-endpoint; when using an API key, the scope must match the 
 | `POST /c2pa/io/get-s3-url`       | API key with scope `c2pa-sign-prod` or `c2pa-sign-test`, **or** access token  |
 | `POST /c2pa/ai-disclosure/add`   | API key with scope `c2pa-sign-prod` or `c2pa-sign-test`, **or** access token  |
 | `POST /c2pa/ai-disclosure/list`  | API key with scope `c2pa-sign-prod` or `c2pa-sign-test`, **or** access token  |
+| `POST /c2pa/remote-preprocess`   | API key with scope `c2pa-sign-prod` or `c2pa-sign-test`, **or** access token  |
+| `POST /c2pa/remote-sign`         | API key with scope `c2pa-sign-prod`, **or** access token                      |
+| `POST /test/c2pa/remote-sign`    | API key with scope `c2pa-sign-test`, **or** access token                      |
+| `POST /cawg/remote-sign`         | API key with scope `c2pa-sign-prod` or `c2pa-sign-test`, **or** access token  |
 
 
 The owning organization is inferred from the credential itself (the API key is bound to its org; an access token resolves to the caller's single org membership). Request bodies for c2pa endpoints do not take an `oid` field.
@@ -38,6 +42,12 @@ See [2_ai_labeling.md](../quickstart/2_ai_labeling.md) for a quickstart guide fo
 ### CAWG Publishing
 
 See [3_cawg_publish.md](../quickstart/3_cawg_publish.md) for a quickstart guide for this use case.
+
+### Remote (Distributed) Signing
+
+See [4_remote_signing.md](../quickstart/4_remote_signing.md) for a quickstart guide for this use case.
+
+> **Note:** `sign_c2pa_remote()` (production distributed signing) is not yet serviceable — the required AWS KMS key and certificate have not been provisioned. Use `sign_c2pa_remote_test()` for integration development.
 
 ### Python SDK helpers
 
