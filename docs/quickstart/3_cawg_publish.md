@@ -24,7 +24,7 @@ The CAWG (Creator Assertions Working Group) assertions add attribution and right
 ## Example
 
 ```python
-from trufo.api.tps.sign_c2pa import sign_c2pa
+from trufo import sign_c2pa
 
 signed_bytes = sign_c2pa(
     api_key,

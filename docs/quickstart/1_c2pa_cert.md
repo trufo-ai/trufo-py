@@ -19,9 +19,8 @@ See [1_c2pa_cert.py](1_c2pa_cert.py) for a runnable example of both tracks.
 No account authentication required. Uses a publicly known test HMAC secret; issued certificates are signed by Trufo's test CA and will not pass public validators.
 
 ```python
+from trufo import generate_keypair, request_c2pa_test_cert
 from trufo.crypt.algorithms import SigningAlgorithm
-from trufo.crypt.keygen import generate_keypair
-from trufo.api.tca.certs_test import request_c2pa_test_cert
 
 private_pem, _ = generate_keypair(SigningAlgorithm.ES256)
 
@@ -62,9 +61,8 @@ Two key pairs are involved in production enrollment:
 Run once per deployment environment to create an instance and register its credential:
 
 ```python
+from trufo import create_instance, generate_keypair, register_credential
 from trufo.crypt.algorithms import SigningAlgorithm
-from trufo.crypt.keygen import generate_keypair
-from trufo.api.tca.certs_c2pa import create_instance, register_credential
 from trufo.util.credentials import load_session
 
 session = load_session()
@@ -88,10 +86,9 @@ gpic_id = register_credential(
 Run once per certificate renewal cycle:
 
 ```python
+from trufo import generate_keypair, request_c2pa_cert
 from trufo.crypt.algorithms import SigningAlgorithm
-from trufo.crypt.keygen import generate_keypair
 from trufo.crypt.tca_certs import LeafType
-from trufo.api.tca.certs_c2pa import request_c2pa_cert
 
 # this should be a NEW key
 # this should be generated in a SECURE environment

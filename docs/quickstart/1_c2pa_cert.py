@@ -11,8 +11,8 @@ See docs/quickstart/1_c2pa_cert.md for prerequisites and explanations.
 
 from pathlib import Path
 
+from trufo import generate_keypair
 from trufo.crypt.algorithms import SigningAlgorithm
-from trufo.crypt.keygen import generate_keypair
 
 OUT_DIR = Path("certs")
 OUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -25,7 +25,7 @@ OUT_DIR.mkdir(parents=True, exist_ok=True)
 # pass public validators, but the certificate format is identical to
 # production.
 
-from trufo.api.tca.certs_test import request_c2pa_test_cert
+from trufo import request_c2pa_test_cert
 
 private_pem, _ = generate_keypair(SigningAlgorithm.ES256)
 
@@ -51,7 +51,7 @@ print(f"Test certificate saved to {OUT_DIR}/")
 
 # -- one-time setup (run once per deployment environment) --
 
-# from trufo.api.tca.certs_c2pa import create_instance, register_credential
+# from trufo import create_instance, register_credential
 # from trufo.util.credentials import load_session
 #
 # session = load_session()
@@ -72,7 +72,7 @@ print(f"Test certificate saved to {OUT_DIR}/")
 # -- enrollment (run on each certificate renewal) --
 
 # from trufo.crypt.tca_certs import LeafType
-# from trufo.api.tca.certs_c2pa import request_c2pa_cert
+# from trufo import request_c2pa_cert
 #
 # leaf_private_pem, _ = generate_keypair(SigningAlgorithm.ES256)
 #
