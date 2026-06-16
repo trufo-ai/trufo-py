@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.1] — 2026-06-16
+
+### Added
+
+- Top-level exports in `trufo.__init__`: `sign_c2pa`, `sign_c2pa_test`, `sign_c2pa_via_s3`,
+  `sign_c2pa_via_s3_test`, `sign_c2pa_distributed`, `sign_c2pa_distributed_test`,
+  `generate_keypair`, `load_api_key`, `save_api_key`, `request_c2pa_test_cert`,
+  `request_c2pa_cert`, `create_instance`, `register_credential`.
+
+### Changed
+
+- Renamed `sign_c2pa_test_s3` → `sign_c2pa_s3_test` and `sign_c2pa_test_via_s3` →
+  `sign_c2pa_via_s3_test` for naming consistency (`_test` suffix throughout).
+- Updated quickstart examples to use top-level `trufo` imports where applicable.
+
 ## [0.4.0] — 2026-06-11
 
 ### Added
