@@ -9,8 +9,8 @@ from trufo.api.tps.sign_c2pa import (
     sign_c2pa_distributed,
     sign_c2pa_distributed_test,
     sign_c2pa_test,
-    sign_c2pa_test_via_s3,
     sign_c2pa_via_s3,
+    sign_c2pa_via_s3_test,
 )
 from trufo.crypt.keygen import generate_keypair
 from trufo.util.credentials import load_api_key, save_api_key
@@ -32,8 +32,8 @@ __all__ = [
     "sign_c2pa_distributed",
     "sign_c2pa_distributed_test",
     "sign_c2pa_test",
-    "sign_c2pa_test_via_s3",
     "sign_c2pa_via_s3",
+    "sign_c2pa_via_s3_test",
 ]
 
 # register the trufo-py version with tfprov so X-TF-Version is sent on all

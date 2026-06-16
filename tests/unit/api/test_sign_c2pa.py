@@ -26,8 +26,8 @@ from trufo.api.tps.sign_c2pa import (
     sign_c2pa_distributed_test,
     sign_c2pa_s3,
     sign_c2pa_test,
-    sign_c2pa_test_s3,
-    sign_c2pa_test_via_s3,
+    sign_c2pa_s3_test,
+    sign_c2pa_via_s3_test,
     sign_c2pa_via_s3,
 )
 from trufo.util.credentials import TrufoApiKey
@@ -358,10 +358,10 @@ class TestS3C2PASigning:
         )
 
     @patch("trufo.api.tps.sign_c2pa.requests.post")
-    def test_sign_c2pa_test_s3_posts_to_test_endpoint(self, mock_post):
+    def test_sign_c2pa_s3_test_posts_to_test_endpoint(self, mock_post):
         mock_post.return_value = _mock_response({"media_output_s3": "https://download.example"})
 
-        result = sign_c2pa_test_s3("test-key", "signed-input-reference")
+        result = sign_c2pa_s3_test("test-key", "signed-input-reference")
 
         assert result == C2PAS3SignedOutput(media_output_s3="https://download.example")
         mock_post.assert_called_once_with(
@@ -424,9 +424,9 @@ class TestS3C2PASigning:
 
     @patch("trufo.api.tps.sign_c2pa.requests.get")
     @patch("trufo.api.tps.sign_c2pa.requests.put")
-    @patch("trufo.api.tps.sign_c2pa.sign_c2pa_test_s3")
+    @patch("trufo.api.tps.sign_c2pa.sign_c2pa_s3_test")
     @patch("trufo.api.tps.sign_c2pa.get_c2pa_s3_upload_url")
-    def test_sign_c2pa_test_via_s3_uses_test_signer(
+    def test_sign_c2pa_via_s3_test_uses_test_signer(
         self,
         mock_get_upload_url,
         mock_sign_test_s3,
@@ -444,7 +444,7 @@ class TestS3C2PASigning:
         )
         mock_get.return_value.content = b"signed-media"
 
-        result = sign_c2pa_test_via_s3("test-key", b"input-media", "image/jpeg")
+        result = sign_c2pa_via_s3_test("test-key", b"input-media", "image/jpeg")
 
         assert result == b"signed-media"
         mock_sign_test_s3.assert_called_once_with(
@@ -454,7 +454,7 @@ class TestS3C2PASigning:
             assertions=None,
         )
 
-    @pytest.mark.parametrize("signer", [sign_c2pa_s3, sign_c2pa_test_s3])
+    @pytest.mark.parametrize("signer", [sign_c2pa_s3, sign_c2pa_s3_test])
     @patch("trufo.api.tps.sign_c2pa.requests.post")
     def test_s3_assertions_without_cawg_identity_warn(self, mock_post, signer, caplog):
         mock_post.return_value = _mock_response({"media_output_s3": "https://download.example"})
