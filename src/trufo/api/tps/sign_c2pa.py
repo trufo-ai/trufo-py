@@ -128,7 +128,7 @@ def get_c2pa_s3_upload_url(
     """Request an ephemeral S3 upload URL for C2PA signing.
 
     The returned ``media_input_s3`` reference can be passed to
-    :func:`sign_c2pa_s3` or :func:`sign_c2pa_test_s3` after uploading media
+    :func:`sign_c2pa_s3` or :func:`sign_c2pa_s3_test` after uploading media
     bytes to ``upload_url``.
 
     Args:
@@ -218,7 +218,7 @@ def sign_c2pa_s3(
     )
 
 
-def sign_c2pa_test_s3(
+def sign_c2pa_s3_test(
     api_key: str,
     media_input_s3: str,
     actions: list | None = None,
@@ -285,7 +285,7 @@ def sign_c2pa_via_s3(
     return _download_c2pa_s3_media(signed_output.media_output_s3)
 
 
-def sign_c2pa_test_via_s3(
+def sign_c2pa_via_s3_test(
     api_key: str,
     media_bytes: bytes,
     mime_type: str,
@@ -296,7 +296,7 @@ def sign_c2pa_test_via_s3(
     """Upload, test-sign, and download media through the ephemeral S3 flow.
 
     This convenience helper composes the low-level helpers:
-    :func:`get_c2pa_s3_upload_url` and :func:`sign_c2pa_test_s3`.
+    :func:`get_c2pa_s3_upload_url` and :func:`sign_c2pa_s3_test`.
 
     Args:
         api_key: API key with scope ``c2pa-sign-test``.
@@ -314,7 +314,7 @@ def sign_c2pa_test_via_s3(
     """
     upload = get_c2pa_s3_upload_url(api_key, mime_type, duration=duration)
     _upload_c2pa_s3_media(upload.upload_url, media_bytes, mime_type)
-    signed_output = sign_c2pa_test_s3(
+    signed_output = sign_c2pa_s3_test(
         api_key,
         upload.media_input_s3,
         actions=actions,

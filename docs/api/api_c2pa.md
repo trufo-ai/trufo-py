@@ -124,7 +124,7 @@ The flow is:
 3. Call `POST /c2pa/sign` or `POST /test/c2pa/sign` with `media_input_s3`.
 4. Download the signed output from the returned `media_output_s3` URL.
 
-The Python SDK provides low-level helpers for each step and high-level helpers (`sign_c2pa_via_s3()` and `sign_c2pa_test_via_s3()`) that perform the full upload/sign/download sequence.
+The Python SDK provides low-level helpers for each step and high-level helpers (`sign_c2pa_via_s3()` and `sign_c2pa_via_s3_test()`) that perform the full upload/sign/download sequence.
 
 #### `actions`
 

@@ -14,7 +14,7 @@ or save it to ~/.trufo/credentials/c2pa_sign_prod_api_key.
 
 from pathlib import Path
 
-from trufo.api.tps.sign_c2pa import sign_c2pa
+from trufo import sign_c2pa
 from trufo.util.credentials import TrufoApiKey, load_api_key
 
 # --- configuration ---

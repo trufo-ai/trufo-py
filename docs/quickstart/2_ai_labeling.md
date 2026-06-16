@@ -20,7 +20,7 @@ Additionally, the `{"set_source_type": True}` flag sets `digitalSourceType = tra
 ## Minimal Example
 
 ```python
-from trufo.api.tps.sign_c2pa import sign_c2pa
+from trufo import sign_c2pa
 from trufo.util.credentials import TrufoApiKey, load_api_key
 
 api_key = load_api_key(TrufoApiKey.C2PA_SIGN_PROD)
