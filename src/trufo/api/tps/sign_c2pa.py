@@ -327,7 +327,7 @@ def _upload_c2pa_s3_media(upload_url: str, media_bytes: bytes, mime_type: str) -
     """Upload media bytes to an ephemeral presigned S3 URL."""
     resp = requests.put(
         upload_url,
-        content=media_bytes,
+        data=media_bytes,
         headers={"Content-Type": mime_type},
         timeout=60,
     )
