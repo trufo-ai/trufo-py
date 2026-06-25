@@ -15,7 +15,7 @@ from trufo.api.tps.sign_c2pa import (
 from trufo.crypt.keygen import generate_keypair
 from trufo.util.credentials import load_api_key, save_api_key
 
-__version__ = "0.4.1"
+__version__ = "0.4.2"
 
 __all__ = [
     "__version__",

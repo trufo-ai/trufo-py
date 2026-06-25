@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.2] — 2026-06-24
+
+### Fixed
+
+- S3 signing branch (`sign_c2pa_via_s3` / `sign_c2pa_s3`): the media upload now passes the
+  request body via `data=` instead of `content=`. `requests.put` has no `content` keyword,
+  so the S3 upload step raised a `TypeError` and the S3 signing path could never complete.
+
 ## [0.4.1] — 2026-06-16
 
 ### Added
