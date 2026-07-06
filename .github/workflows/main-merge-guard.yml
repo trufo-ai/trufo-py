@@ -16,11 +16,11 @@ jobs:
     name: main-merge-guard
     runs-on: ubuntu-latest
     steps:
-      - name: Require trufo-ai author or approval
+      - name: Require byh-trufo author or approval
         uses: actions/github-script@v7
         with:
           script: |
-            const requiredLogin = 'trufo-ai';
+            const requiredLogin = 'byh-trufo';
             const pull = context.payload.pull_request;
 
             if (!pull) {
