@@ -157,12 +157,30 @@ Common response statuses:
 
 Request an RFC 3161 timestamp.
 
-**Auth:** API key (tsa).
-**Headers:** `Content-Type: application/timestamp-query`.
+**Auth:** API key (tsa), passed in the `X-API-Key` header.
 
-**Body:** DER-encoded timestamp request.
+**Headers:**
 
-**Response:** DER-encoded timestamp response.
+| Header | Value |
+|--------|-------|
+| `Content-Type` | `application/timestamp-query` |
+| `X-API-Key` | The `tsa`-scoped API key |
+
+The API key is 64 characters (a 16-character key id followed by a 48-character
+secret). It may optionally carry a human-readable scope prefix separated by a
+colon, e.g. `tsa:<64-char-key>`; the prefix is a visual label only and is
+stripped server-side, so both `tsa:<key>` and the bare `<key>` are accepted.
+
+**Body:** DER-encoded timestamp request (`TimeStampReq`).
+
+**Response:** DER-encoded timestamp response (`TimeStampResp`).
+
+**Errors:**
+
+| Status | Meaning |
+|--------|---------|
+| `401` | Missing, malformed, or invalid `X-API-Key` |
+| `403` | Key is valid but its owning org is not permitted on this endpoint (dedicated / white-labeled endpoints only) |
 
 ---
 
