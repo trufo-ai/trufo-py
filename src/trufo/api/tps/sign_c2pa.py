@@ -98,6 +98,7 @@ def _sign_c2pa_direct(
     media_bytes: bytes,
     actions: list | None = None,
     assertions: list | None = None,
+    manifest_title: str | None = None,
 ) -> bytes:
     """Sign media bytes through a C2PA signing endpoint."""
     _validate_actions(actions)
@@ -108,6 +109,8 @@ def _sign_c2pa_direct(
         "actions": actions or [],
         "assertions": assertions or [],
     }
+    if manifest_title is not None:
+        body["manifest_title"] = manifest_title
 
     resp = requests.post(
         TRUFO_API_URL + endpoint,
@@ -169,18 +172,23 @@ def _sign_c2pa_s3(
     media_input_s3: str,
     actions: list | None = None,
     assertions: list | None = None,
+    manifest_title: str | None = None,
 ) -> C2PAS3SignedOutput:
     """Sign an uploaded ephemeral S3 object through a C2PA signing endpoint."""
     _validate_actions(actions)
     _validate_assertions(assertions)
 
+    body = {
+        "media_input_s3": media_input_s3,
+        "actions": actions or [],
+        "assertions": assertions or [],
+    }
+    if manifest_title is not None:
+        body["manifest_title"] = manifest_title
+
     resp = requests.post(
         TRUFO_API_URL + endpoint,
-        json={
-            "media_input_s3": media_input_s3,
-            "actions": actions or [],
-            "assertions": assertions or [],
-        },
+        json=body,
         headers={"X-API-Key": api_key},
         timeout=60,
     )
@@ -194,6 +202,7 @@ def sign_c2pa_s3(
     media_input_s3: str,
     actions: list | None = None,
     assertions: list | None = None,
+    manifest_title: str | None = None,
 ) -> C2PAS3SignedOutput:
     """Sign an uploaded ephemeral S3 object with production C2PA via the TPS.
 
@@ -215,6 +224,7 @@ def sign_c2pa_s3(
         media_input_s3,
         actions=actions,
         assertions=assertions,
+        manifest_title=manifest_title,
     )
 
 
@@ -223,6 +233,7 @@ def sign_c2pa_s3_test(
     media_input_s3: str,
     actions: list | None = None,
     assertions: list | None = None,
+    manifest_title: str | None = None,
 ) -> C2PAS3SignedOutput:
     """Sign an uploaded ephemeral S3 object with test C2PA via the TPS.
 
@@ -244,6 +255,7 @@ def sign_c2pa_s3_test(
         media_input_s3,
         actions=actions,
         assertions=assertions,
+        manifest_title=manifest_title,
     )
 
 
@@ -254,6 +266,7 @@ def sign_c2pa_via_s3(
     actions: list | None = None,
     assertions: list | None = None,
     duration: str | None = None,
+    manifest_title: str | None = None,
 ) -> bytes:
     """Upload, production-sign, and download media through the ephemeral S3 flow.
 
@@ -281,6 +294,7 @@ def sign_c2pa_via_s3(
         upload.media_input_s3,
         actions=actions,
         assertions=assertions,
+        manifest_title=manifest_title,
     )
     return _download_c2pa_s3_media(signed_output.media_output_s3)
 
@@ -292,6 +306,7 @@ def sign_c2pa_via_s3_test(
     actions: list | None = None,
     assertions: list | None = None,
     duration: str | None = None,
+    manifest_title: str | None = None,
 ) -> bytes:
     """Upload, test-sign, and download media through the ephemeral S3 flow.
 
@@ -319,6 +334,7 @@ def sign_c2pa_via_s3_test(
         upload.media_input_s3,
         actions=actions,
         assertions=assertions,
+        manifest_title=manifest_title,
     )
     return _download_c2pa_s3_media(signed_output.media_output_s3)
 
@@ -346,6 +362,7 @@ def sign_c2pa(
     media_bytes: bytes,
     actions: list | None = None,
     assertions: list | None = None,
+    manifest_title: str | None = None,
 ) -> bytes:
     """Sign a media file with production C2PA via the TPS.
 
@@ -367,6 +384,7 @@ def sign_c2pa(
         media_bytes,
         actions=actions,
         assertions=assertions,
+        manifest_title=manifest_title,
     )
 
 
@@ -375,6 +393,7 @@ def sign_c2pa_test(
     media_bytes: bytes,
     actions: list | None = None,
     assertions: list | None = None,
+    manifest_title: str | None = None,
 ) -> bytes:
     """Sign a media file with C2PA via the TPS test endpoint.
 
@@ -396,6 +415,7 @@ def sign_c2pa_test(
         media_bytes,
         actions=actions,
         assertions=assertions,
+        manifest_title=manifest_title,
     )
 
 
