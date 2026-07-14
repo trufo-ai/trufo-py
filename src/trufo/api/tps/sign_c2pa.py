@@ -445,6 +445,7 @@ def sign_c2pa_distributed_test(
     tsa_api_key: str | None = None,
     trufo_tsa_url: str | None = None,
     trufo_api_url: str = "https://api.trufo.ai",
+    manifest_title: str | None = None,
 ) -> bytes:
     """Sign media locally using the Trufo test remote-signing endpoint.
 
@@ -486,6 +487,7 @@ def sign_c2pa_distributed_test(
         ocsp_stapler=ocsp_stapler_mod.OcspStapler(),
         trufo_api_url=trufo_api_url,
         test=True,
+        manifest_title=manifest_title,
     )
     return signed
 
@@ -499,6 +501,7 @@ def sign_c2pa_distributed(
     tsa_api_key: str | None = None,
     trufo_tsa_url: str | None = None,
     trufo_api_url: str = "https://api.trufo.ai",
+    manifest_title: str | None = None,
 ) -> bytes:
     """Sign media locally using the Trufo production remote-signing endpoint.
 
@@ -540,5 +543,6 @@ def sign_c2pa_distributed(
         ocsp_stapler=ocsp_stapler_mod.OcspStapler(),
         trufo_api_url=trufo_api_url,
         test=False,
+        manifest_title=manifest_title,
     )
     return signed
