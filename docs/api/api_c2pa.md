@@ -99,6 +99,7 @@ Both endpoints share the same request/response schema. The production signer pro
 | `media_input_s3` | string | Yes*     | server-signed ephemeral S3 input reference from `/c2pa/io/get-s3-url`  |
 | `actions`        | list   | No       | media processing instructions for the TPS to apply                     |
 | `assertions`     | list   | No       | gathered assertions to include in the manifest                         |
+| `manifest_title` | string | No       | active-manifest title (the manifest's `dc:title`); signer default if omitted |
 
 \* Provide exactly one of `media_input` or `media_input_s3`.
 

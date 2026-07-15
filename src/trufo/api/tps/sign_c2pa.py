@@ -3,6 +3,16 @@
 
 """
 C2PA signing helpers for the Trufo TPS.
+
+Most signing helpers below accept optional ``manifest_title``/``ingredient_title``
+arguments (the active manifest's ``dc:title`` and, for ingesting/transcoding
+flows, the ``parentOf`` ingredient's ``dc:title``). When omitted, the engine
+derives a default by sniffing the media content's MIME type. Always pass these
+explicitly when the caller knows the real intended filename/identity of the
+output or its parent -- in particular, do not rely on the sniffed default for
+any format that shares an underlying container with a sibling format (e.g.
+TIFF/DNG, HEIC/HEIF/AVIF), since content sniffing cannot distinguish them and
+will silently pick the wrong title.
 """
 
 import base64
@@ -98,6 +108,8 @@ def _sign_c2pa_direct(
     media_bytes: bytes,
     actions: list | None = None,
     assertions: list | None = None,
+    manifest_title: str | None = None,
+    ingredient_title: str | None = None,
 ) -> bytes:
     """Sign media bytes through a C2PA signing endpoint."""
     _validate_actions(actions)
@@ -108,6 +120,10 @@ def _sign_c2pa_direct(
         "actions": actions or [],
         "assertions": assertions or [],
     }
+    if manifest_title is not None:
+        body["manifest_title"] = manifest_title
+    if ingredient_title is not None:
+        body["ingredient_title"] = ingredient_title
 
     resp = requests.post(
         TRUFO_API_URL + endpoint,
@@ -169,18 +185,26 @@ def _sign_c2pa_s3(
     media_input_s3: str,
     actions: list | None = None,
     assertions: list | None = None,
+    manifest_title: str | None = None,
+    ingredient_title: str | None = None,
 ) -> C2PAS3SignedOutput:
     """Sign an uploaded ephemeral S3 object through a C2PA signing endpoint."""
     _validate_actions(actions)
     _validate_assertions(assertions)
 
+    body = {
+        "media_input_s3": media_input_s3,
+        "actions": actions or [],
+        "assertions": assertions or [],
+    }
+    if manifest_title is not None:
+        body["manifest_title"] = manifest_title
+    if ingredient_title is not None:
+        body["ingredient_title"] = ingredient_title
+
     resp = requests.post(
         TRUFO_API_URL + endpoint,
-        json={
-            "media_input_s3": media_input_s3,
-            "actions": actions or [],
-            "assertions": assertions or [],
-        },
+        json=body,
         headers={"X-API-Key": api_key},
         timeout=60,
     )
@@ -194,6 +218,8 @@ def sign_c2pa_s3(
     media_input_s3: str,
     actions: list | None = None,
     assertions: list | None = None,
+    manifest_title: str | None = None,
+    ingredient_title: str | None = None,
 ) -> C2PAS3SignedOutput:
     """Sign an uploaded ephemeral S3 object with production C2PA via the TPS.
 
@@ -202,6 +228,10 @@ def sign_c2pa_s3(
         media_input_s3: Opaque reference returned by :func:`get_c2pa_s3_upload_url`.
         actions: Ordered list of ``[action_name, params]`` pairs (default ``[]``).
         assertions: List of ``[assertion_name, params]`` pairs (default ``[]``).
+        manifest_title: Optional active-manifest title (``dc:title``); see the
+            module docstring for when to set this explicitly.
+        ingredient_title: Optional ``parentOf`` ingredient title (``dc:title``);
+            see the module docstring for when to set this explicitly.
 
     Returns:
         Presigned S3 download URL for the signed output media.
@@ -215,6 +245,8 @@ def sign_c2pa_s3(
         media_input_s3,
         actions=actions,
         assertions=assertions,
+        manifest_title=manifest_title,
+        ingredient_title=ingredient_title,
     )
 
 
@@ -223,6 +255,8 @@ def sign_c2pa_s3_test(
     media_input_s3: str,
     actions: list | None = None,
     assertions: list | None = None,
+    manifest_title: str | None = None,
+    ingredient_title: str | None = None,
 ) -> C2PAS3SignedOutput:
     """Sign an uploaded ephemeral S3 object with test C2PA via the TPS.
 
@@ -231,6 +265,10 @@ def sign_c2pa_s3_test(
         media_input_s3: Opaque reference returned by :func:`get_c2pa_s3_upload_url`.
         actions: Ordered list of ``[action_name, params]`` pairs (default ``[]``).
         assertions: List of ``[assertion_name, params]`` pairs (default ``[]``).
+        manifest_title: Optional active-manifest title (``dc:title``); see the
+            module docstring for when to set this explicitly.
+        ingredient_title: Optional ``parentOf`` ingredient title (``dc:title``);
+            see the module docstring for when to set this explicitly.
 
     Returns:
         Presigned S3 download URL for the signed output media.
@@ -244,6 +282,8 @@ def sign_c2pa_s3_test(
         media_input_s3,
         actions=actions,
         assertions=assertions,
+        manifest_title=manifest_title,
+        ingredient_title=ingredient_title,
     )
 
 
@@ -254,6 +294,8 @@ def sign_c2pa_via_s3(
     actions: list | None = None,
     assertions: list | None = None,
     duration: str | None = None,
+    manifest_title: str | None = None,
+    ingredient_title: str | None = None,
 ) -> bytes:
     """Upload, production-sign, and download media through the ephemeral S3 flow.
 
@@ -267,6 +309,10 @@ def sign_c2pa_via_s3(
         actions: Ordered list of ``[action_name, params]`` pairs (default ``[]``).
         assertions: List of ``[assertion_name, params]`` pairs (default ``[]``).
         duration: Optional server-supported S3 URL duration. Currently ``"5m"``.
+        manifest_title: Optional active-manifest title (``dc:title``); see the
+            module docstring for when to set this explicitly.
+        ingredient_title: Optional ``parentOf`` ingredient title (``dc:title``);
+            see the module docstring for when to set this explicitly.
 
     Returns:
         Signed media bytes downloaded from the returned S3 output URL.
@@ -281,6 +327,8 @@ def sign_c2pa_via_s3(
         upload.media_input_s3,
         actions=actions,
         assertions=assertions,
+        manifest_title=manifest_title,
+        ingredient_title=ingredient_title,
     )
     return _download_c2pa_s3_media(signed_output.media_output_s3)
 
@@ -292,6 +340,8 @@ def sign_c2pa_via_s3_test(
     actions: list | None = None,
     assertions: list | None = None,
     duration: str | None = None,
+    manifest_title: str | None = None,
+    ingredient_title: str | None = None,
 ) -> bytes:
     """Upload, test-sign, and download media through the ephemeral S3 flow.
 
@@ -305,6 +355,10 @@ def sign_c2pa_via_s3_test(
         actions: Ordered list of ``[action_name, params]`` pairs (default ``[]``).
         assertions: List of ``[assertion_name, params]`` pairs (default ``[]``).
         duration: Optional server-supported S3 URL duration. Currently ``"5m"``.
+        manifest_title: Optional active-manifest title (``dc:title``); see the
+            module docstring for when to set this explicitly.
+        ingredient_title: Optional ``parentOf`` ingredient title (``dc:title``);
+            see the module docstring for when to set this explicitly.
 
     Returns:
         Signed media bytes downloaded from the returned S3 output URL.
@@ -319,6 +373,8 @@ def sign_c2pa_via_s3_test(
         upload.media_input_s3,
         actions=actions,
         assertions=assertions,
+        manifest_title=manifest_title,
+        ingredient_title=ingredient_title,
     )
     return _download_c2pa_s3_media(signed_output.media_output_s3)
 
@@ -346,6 +402,8 @@ def sign_c2pa(
     media_bytes: bytes,
     actions: list | None = None,
     assertions: list | None = None,
+    manifest_title: str | None = None,
+    ingredient_title: str | None = None,
 ) -> bytes:
     """Sign a media file with production C2PA via the TPS.
 
@@ -354,6 +412,10 @@ def sign_c2pa(
         media_bytes: Raw bytes of the media file to sign.
         actions: Ordered list of ``[action_name, params]`` pairs (default ``[]``).
         assertions: List of ``[assertion_name, params]`` pairs (default ``[]``).
+        manifest_title: Optional active-manifest title (``dc:title``); see the
+            module docstring for when to set this explicitly.
+        ingredient_title: Optional ``parentOf`` ingredient title (``dc:title``);
+            see the module docstring for when to set this explicitly.
 
     Returns:
         Signed media bytes.
@@ -367,6 +429,8 @@ def sign_c2pa(
         media_bytes,
         actions=actions,
         assertions=assertions,
+        manifest_title=manifest_title,
+        ingredient_title=ingredient_title,
     )
 
 
@@ -375,6 +439,8 @@ def sign_c2pa_test(
     media_bytes: bytes,
     actions: list | None = None,
     assertions: list | None = None,
+    manifest_title: str | None = None,
+    ingredient_title: str | None = None,
 ) -> bytes:
     """Sign a media file with C2PA via the TPS test endpoint.
 
@@ -383,6 +449,10 @@ def sign_c2pa_test(
         media_bytes: Raw bytes of the media file to sign.
         actions: Ordered list of ``[action_name, params]`` pairs (default ``[]``).
         assertions: List of ``[assertion_name, params]`` pairs (default ``[]``).
+        manifest_title: Optional active-manifest title (``dc:title``); see the
+            module docstring for when to set this explicitly.
+        ingredient_title: Optional ``parentOf`` ingredient title (``dc:title``);
+            see the module docstring for when to set this explicitly.
 
     Returns:
         Signed media bytes.
@@ -396,6 +466,8 @@ def sign_c2pa_test(
         media_bytes,
         actions=actions,
         assertions=assertions,
+        manifest_title=manifest_title,
+        ingredient_title=ingredient_title,
     )
 
 
@@ -425,6 +497,8 @@ def sign_c2pa_distributed_test(
     tsa_api_key: str | None = None,
     trufo_tsa_url: str | None = None,
     trufo_api_url: str = "https://api.trufo.ai",
+    manifest_title: str | None = None,
+    ingredient_title: str | None = None,
 ) -> bytes:
     """Sign media locally using the Trufo test remote-signing endpoint.
 
@@ -442,6 +516,10 @@ def sign_c2pa_distributed_test(
         trufo_tsa_url: Optional override for the Trufo TSA URL (advanced use).
         trufo_api_url: Base URL for the Trufo API. Controls the preprocess,
             claim-sign, and CAWG identity-sign endpoints.
+        manifest_title: Optional active-manifest title (``dc:title``); see the
+            module docstring for when to set this explicitly.
+        ingredient_title: Optional ``parentOf`` ingredient title (``dc:title``);
+            see the module docstring for when to set this explicitly.
 
     Returns:
         Signed media bytes.
@@ -466,6 +544,8 @@ def sign_c2pa_distributed_test(
         ocsp_stapler=ocsp_stapler_mod.OcspStapler(),
         trufo_api_url=trufo_api_url,
         test=True,
+        manifest_title=manifest_title,
+        ingredient_title=ingredient_title,
     )
     return signed
 
@@ -479,6 +559,8 @@ def sign_c2pa_distributed(
     tsa_api_key: str | None = None,
     trufo_tsa_url: str | None = None,
     trufo_api_url: str = "https://api.trufo.ai",
+    manifest_title: str | None = None,
+    ingredient_title: str | None = None,
 ) -> bytes:
     """Sign media locally using the Trufo production remote-signing endpoint.
 
@@ -496,6 +578,10 @@ def sign_c2pa_distributed(
         trufo_tsa_url: Optional override for the Trufo TSA URL (advanced use).
         trufo_api_url: Base URL for the Trufo API. Controls the preprocess,
             claim-sign, and CAWG identity-sign endpoints.
+        manifest_title: Optional active-manifest title (``dc:title``); see the
+            module docstring for when to set this explicitly.
+        ingredient_title: Optional ``parentOf`` ingredient title (``dc:title``);
+            see the module docstring for when to set this explicitly.
 
     Returns:
         Signed media bytes.
@@ -520,5 +606,7 @@ def sign_c2pa_distributed(
         ocsp_stapler=ocsp_stapler_mod.OcspStapler(),
         trufo_api_url=trufo_api_url,
         test=False,
+        manifest_title=manifest_title,
+        ingredient_title=ingredient_title,
     )
     return signed

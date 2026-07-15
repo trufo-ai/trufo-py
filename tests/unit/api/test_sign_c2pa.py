@@ -408,7 +408,7 @@ class TestS3C2PASigning:
         mock_get_upload_url.assert_called_once_with("prod-key", "image/jpeg", duration="5m")
         mock_put.assert_called_once_with(
             "https://upload.example",
-            content=b"input-media",
+            data=b"input-media",
             headers={"Content-Type": "image/jpeg"},
             timeout=60,
         )
@@ -418,6 +418,8 @@ class TestS3C2PASigning:
             "signed-input-reference",
             actions=[["publish", {}]],
             assertions=[["cawg_identity", {"cawg_identity_id": "org_interim"}]],
+            manifest_title=None,
+            ingredient_title=None,
         )
         mock_get.assert_called_once_with("https://download.example", timeout=60)
         mock_get.return_value.raise_for_status.assert_called_once_with()
@@ -452,6 +454,8 @@ class TestS3C2PASigning:
             "signed-input-reference",
             actions=None,
             assertions=None,
+            manifest_title=None,
+            ingredient_title=None,
         )
 
     @pytest.mark.parametrize("signer", [sign_c2pa_s3, sign_c2pa_s3_test])
