@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Automatic `ai.trufo.identity` assertion: every manifest signed through Trufo endpoints
+  (hosted and distributed) now carries a Trufo-authored assertion with the signing
+  organization's id and, when Organization Validation (OV) is active, its RA-validated
+  legal name. See `docs/api/api_c2pa.md` ("Automatic assertions").
+
+### Changed
+
+- **CAWG identity assertions are now explicitly optional.** Removed the client-side warning
+  for assertion lists without a `cawg_identity` entry, and removed the client-side allowlist
+  of known `cawg_identity_id` values. `cawg_identity_id` is now an opaque, server-validated
+  identifier (unrecognized values are rejected with `400 InvalidCawgIdentityId`), making room
+  for future identity types.
+- Production signing (`sign_c2pa` and related `/c2pa/sign` helpers, `sign_c2pa_distributed`)
+  now requires completed Organization Validation for the caller's organization; the API
+  returns `403 MissingOrganizationValidation` otherwise. Test signing helpers are unaffected.
+- Distributed signing minimum versions: the Trufo API now requires trufo ≥ 0.5.0 and
+  trufo-provenance ≥ 0.3.0 on distributed signing endpoints; older releases receive a `400`
+  asking for an upgrade. Hosted signing is not version-gated.
+- `trufo-provenance` optional extra pin updated to `>=0.3.0,<0.4`.
+- The `"resolved"` assertion entry name is reserved for server-injected content and is
+  rejected by client-side validation.
+
 ## [0.4.2] — 2026-06-24
 
 ### Fixed
