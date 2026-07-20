@@ -11,7 +11,8 @@ Build the C2PA manifest locally while keeping the C2PA signing key in Trufo's in
 - Install the optional provenance engine: `pip install "trufo[provenance]"`.
 - A `c2pa-sign-test` API key for the remote claim-signing endpoint. See [0_auth.md](0_auth.md).
 - A `tsa` API key for timestamping. Configure it with `trufo set-api-key tsa <your-api-key>` or `TRUFO_TSA_API_KEY`.
-- When `assertions` is non-empty, at least one `cawg_identity` entry must be present.
+
+Every signed manifest automatically carries an `ai.trufo.identity` assertion with your organization id and (with active OV) your RA-validated legal name — see [Automatic assertions](../api/api_c2pa.md#automatic-assertions).
 
 > **EXPERIMENTAL:** Currently this feature is in an experimental state, and may change substantially in the next few weeks. Note that `sign_c2pa_distributed_test()` is available but `sign_c2pa_distributed()` (that uses a real C2PA certificate) is not.
 
@@ -106,10 +107,6 @@ Store a TSA key or pass `tsa_api_key` explicitly:
 ```bash
 trufo set-api-key tsa <your-api-key>
 ```
-
-**`'cawg_identity' is required when assertions are provided`**
-
-Add a `cawg_identity` assertion. For test signing, use `cawg_identity_id="test"`.
 
 ---
 

@@ -5,7 +5,8 @@
 
 Attaches a C2PA manifest with:
   - AI disclosure  (c2pa.ai-disclosure)
-  - CAWG identity assertion (organization interim)
+
+To additionally stamp a CAWG organization identity, see 3_cawg_publish.py.
 
 See docs/quickstart/2_ai_labeling.md for details.
 Requires a c2pa-sign-prod API key — set TRUFO_C2PA_SIGN_PROD_API_KEY
@@ -32,13 +33,11 @@ assert api_key, (
 assertions = [
     # mark as AI-generated
     ["ai_disclosure", {}],
-    # identity assertion (required when assertions are present)
-    ["cawg_identity", {"cawg_identity_id": "org_interim"}],
 ]
 
 # --- sign ---
 
-  signed_bytes = sign_c2pa(api_key, INPUT_FILE.read_bytes(), assertions=assertions)
+signed_bytes = sign_c2pa(api_key, INPUT_FILE.read_bytes(), assertions=assertions)
 
 OUTPUT_FILE.write_bytes(signed_bytes)
 print(f"Labeled: {OUTPUT_FILE} ({len(signed_bytes):,} bytes)")

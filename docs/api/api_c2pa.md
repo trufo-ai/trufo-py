@@ -138,7 +138,7 @@ Ordered list of `[action_name, params]` pairs. Each element of the `actions` lis
 
 #### `assertions`
 
-Ordered list of `[assertion_name, params]` pairs. Each assertion is treated as a gathered assertion when signing the manifest. If `assertions` is provided, at least one `"cawg_identity"` entry must be present — the signer automatically references all gathered assertions through the identity assertion.
+Ordered list of `[assertion_name, params]` pairs. Each assertion is treated as a gathered assertion when signing the manifest. All entries are optional — in particular, a `"cawg_identity"` entry is not required. When one or more `"cawg_identity"` entries are present, the signer automatically references all gathered assertions through the identity assertion.
 
 | Assertion         | Params                         | C2PA label             |
 | ----------------- | ------------------------------ | ---------------------- |
@@ -238,7 +238,7 @@ Attach a CAWG identity assertion.
 | ------------------ | ------ | -------- | ----------------------------- |
 | `cawg_identity_id` | string | Yes      | Identity provider identifier. |
 
-Supported values for `cawg_identity_id`:
+`cawg_identity_id` is an opaque identifier validated server-side; unrecognized values are rejected with `400 InvalidCawgIdentityId`. The set of supported identifiers will grow as the CAWG trust model matures. Currently available:
 
 | Value         | Endpoint        | Description                                                                                                              |
 | ------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------ |
@@ -261,6 +261,23 @@ Multiple `"custom"` entries may be included in a single request; each is validat
 ```json
 ["custom", {"label": "com.example.custom-metadata", "assertion": {"internalId": 1234}}]
 ```
+
+#### Automatic assertions
+
+Every manifest signed through Trufo endpoints additionally carries an `ai.trufo.identity` assertion, injected server-side as a created assertion. It cannot be supplied, altered, or suppressed by the caller.
+
+| Field      | Presence                     | Description                                                        |
+| ---------- | ---------------------------- | ------------------------------------------------------------------ |
+| `oid`      | Always                       | Organization id of the signing credential.                          |
+| `org_name` | With active OV               | The org's RA-validated legal name from Organization Validation.     |
+
+Production signing requires completed Organization Validation (OV) for the caller's org. Without it, `POST /c2pa/sign` returns:
+
+```
+403 MissingOrganizationValidation: Use of C2PA API Signing Service requires completed Organization Validation.
+```
+
+Test signing (`POST /test/c2pa/sign`) does not require OV; the injected assertion then contains `oid` only.
 
 ### Response (200)
 

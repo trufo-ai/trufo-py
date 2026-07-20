@@ -4,6 +4,14 @@
 """
 C2PA signing helpers for the Trufo TPS.
 
+Every manifest signed through Trufo endpoints carries an automatic
+``ai.trufo.identity`` assertion injected server-side with the signing org's
+id and, when the org has completed Organization Validation (OV), its
+RA-validated legal name. Production signing requires completed OV (the API
+returns 403 otherwise); test signing works without it. CAWG identity
+assertions are optional; the ``cawg_identity_id`` value is validated
+server-side.
+
 Most signing helpers below accept optional ``manifest_title``/``ingredient_title``
 arguments (the active manifest's ``dc:title`` and, for ingesting/transcoding
 flows, the ``parentOf`` ingredient's ``dc:title``). When omitted, the engine
@@ -16,7 +24,6 @@ will silently pick the wrong title.
 """
 
 import base64
-import logging
 from dataclasses import dataclass
 
 import requests
@@ -31,16 +38,6 @@ from trufo.c2pa.actions import TrufoAction
 from trufo.c2pa.assertions import UserAssertion
 from trufo.util.credentials import TrufoApiKey, load_api_key
 from trufo.util.optional_imports import require_provenance_module
-
-logger = logging.getLogger(__name__)
-
-_MISSING_CAWG_IDENTITY_WARNING = (
-    "Gathered assertions are being input by the client without specifying one or "
-    "more CAWG identities. Once the CAWG trust model is mature (currently, there "
-    "are only interim certificates being issued), it may be come mandatory to "
-    "specify one or more CAWG identities."
-)
-_ALLOWED_CAWG_IDENTITY_IDS = {"test", "org_interim"}
 
 
 @dataclass(frozen=True)
@@ -64,9 +61,7 @@ def _validate_assertions(assertions: list | None) -> None:
     """Validate client-side assertion requirements shared by C2PA helpers."""
     _validate_entry_names(assertions, UserAssertion, "assertion")
 
-    # cawg identity checks
-    if assertions and not any(a[0] == UserAssertion.CAWG_IDENTITY.value for a in assertions):
-        logger.warning(_MISSING_CAWG_IDENTITY_WARNING)
+    # cawg identity checks; the identity id itself is validated server-side
     for name, params in assertions or []:
         match name:
             case UserAssertion.CAWG_IDENTITY.value:
@@ -77,12 +72,6 @@ def _validate_assertions(assertions: list | None) -> None:
                     raise ValueError(
                         "The cawg_identity assertion requires a non-empty "
                         "'cawg_identity_id' parameter."
-                    )
-                if cawg_identity_id not in _ALLOWED_CAWG_IDENTITY_IDS:
-                    allowed = ", ".join(sorted(_ALLOWED_CAWG_IDENTITY_IDS))
-                    raise ValueError(
-                        f"Unsupported cawg_identity_id: {cawg_identity_id!r}. "
-                        f"Supported values are: {allowed}."
                     )
             case _:
                 pass
@@ -223,6 +212,9 @@ def sign_c2pa_s3(
 ) -> C2PAS3SignedOutput:
     """Sign an uploaded ephemeral S3 object with production C2PA via the TPS.
 
+    Requires completed Organization Validation for the caller's org; the API
+    returns 403 otherwise.
+
     Args:
         api_key: API key with scope ``c2pa-sign-prod``.
         media_input_s3: Opaque reference returned by :func:`get_c2pa_s3_upload_url`.
@@ -298,6 +290,9 @@ def sign_c2pa_via_s3(
     ingredient_title: str | None = None,
 ) -> bytes:
     """Upload, production-sign, and download media through the ephemeral S3 flow.
+
+    Requires completed Organization Validation for the caller's org; the API
+    returns 403 otherwise.
 
     This convenience helper composes the low-level helpers:
     :func:`get_c2pa_s3_upload_url` and :func:`sign_c2pa_s3`.
@@ -406,6 +401,9 @@ def sign_c2pa(
     ingredient_title: str | None = None,
 ) -> bytes:
     """Sign a media file with production C2PA via the TPS.
+
+    Requires completed Organization Validation for the caller's org; the API
+    returns 403 otherwise.
 
     Args:
         api_key: API key with scope ``c2pa-sign-prod`` (``X-API-Key`` header).
@@ -566,7 +564,8 @@ def sign_c2pa_distributed(
 
     The media claim is built on the client while the C2PA claim-signing key
     stays server-side. This helper requires the optional ``trufo[provenance]``
-    dependency group.
+    dependency group. Requires completed Organization Validation for the
+    caller's org; the API returns 403 otherwise.
 
     Args:
         api_key: API key with scope ``c2pa-sign-prod``.
