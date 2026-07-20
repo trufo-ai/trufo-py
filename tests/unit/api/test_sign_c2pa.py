@@ -25,10 +25,10 @@ from trufo.api.tps.sign_c2pa import (
     sign_c2pa_distributed,
     sign_c2pa_distributed_test,
     sign_c2pa_s3,
-    sign_c2pa_test,
     sign_c2pa_s3_test,
-    sign_c2pa_via_s3_test,
+    sign_c2pa_test,
     sign_c2pa_via_s3,
+    sign_c2pa_via_s3_test,
 )
 from trufo.util.credentials import TrufoApiKey
 
@@ -140,13 +140,14 @@ class TestDirectC2PASigning:
 
     @pytest.mark.parametrize("signer", [sign_c2pa, sign_c2pa_test])
     @patch("trufo.api.tps.sign_c2pa.requests.post")
-    def test_assertions_without_cawg_identity_warn(self, mock_post, signer, caplog):
+    def test_assertions_without_cawg_identity_pass_silently(self, mock_post, signer, caplog):
+        """CAWG identity is optional: no warning is emitted when absent."""
         signed = b"signed"
         mock_post.return_value = _mock_response(
             {"media_output": base64.b64encode(signed).decode("utf-8")}
         )
 
-        with caplog.at_level("WARNING", logger="trufo.api.tps.sign_c2pa"):
+        with caplog.at_level("WARNING"):
             result = signer(
                 "api-key",
                 b"input-media",
@@ -154,7 +155,7 @@ class TestDirectC2PASigning:
             )
 
         assert result == signed
-        assert "Gathered assertions are being input by the client" in caplog.text
+        assert caplog.records == []
 
 
 class TestRemoteC2PASigning:
@@ -249,11 +250,11 @@ class TestRemoteC2PASigning:
             require_provenance_module,
         )
 
-        with pytest.raises(ValueError, match="Unsupported cawg_identity_id"):
+        with pytest.raises(ValueError, match="requires a non-empty"):
             signer(
                 "remote-sign-key",
                 b"input-media",
-                assertions=[["cawg_identity", {"cawg_identity_id": "unknown"}]],
+                assertions=[["cawg_identity", {"cawg_identity_id": ""}]],
                 tsa_api_key="tsa-key",
             )
 
@@ -287,12 +288,11 @@ class TestRemoteC2PASigning:
         require_provenance_module.assert_not_called()
 
     @pytest.mark.parametrize("signer", _REMOTE_SIGNERS)
-    def test_assertions_without_cawg_identity_warns_and_continues(
-        self, monkeypatch, signer, caplog
-    ):
+    def test_assertions_without_cawg_identity_pass_silently(self, monkeypatch, signer, caplog):
+        """CAWG identity is optional: no warning is emitted when absent."""
         _install_fake_remote_stack(monkeypatch, signed=b"signed")
 
-        with caplog.at_level("WARNING", logger="trufo.api.tps.sign_c2pa"):
+        with caplog.at_level("WARNING"):
             result = signer(
                 "remote-sign-key",
                 b"input-media",
@@ -301,7 +301,7 @@ class TestRemoteC2PASigning:
             )
 
         assert result == b"signed"
-        assert "Gathered assertions are being input by the client" in caplog.text
+        assert caplog.records == []
 
 
 class TestS3C2PASigning:
@@ -460,10 +460,11 @@ class TestS3C2PASigning:
 
     @pytest.mark.parametrize("signer", [sign_c2pa_s3, sign_c2pa_s3_test])
     @patch("trufo.api.tps.sign_c2pa.requests.post")
-    def test_s3_assertions_without_cawg_identity_warn(self, mock_post, signer, caplog):
+    def test_s3_assertions_without_cawg_identity_pass_silently(self, mock_post, signer, caplog):
+        """CAWG identity is optional: no warning is emitted when absent."""
         mock_post.return_value = _mock_response({"media_output_s3": "https://download.example"})
 
-        with caplog.at_level("WARNING", logger="trufo.api.tps.sign_c2pa"):
+        with caplog.at_level("WARNING"):
             result = signer(
                 "api-key",
                 "signed-input-reference",
@@ -471,7 +472,7 @@ class TestS3C2PASigning:
             )
 
         assert result == C2PAS3SignedOutput(media_output_s3="https://download.example")
-        assert "Gathered assertions are being input by the client" in caplog.text
+        assert caplog.records == []
 
 
 class TestRequestValidation:
@@ -495,6 +496,12 @@ class TestRequestValidation:
                 _validate_assertions,
                 [["cawg_identity", {"cawg_identity_id": "org_interim"}]],
             ),
+            # the id is an opaque server-validated string; any non-empty value
+            # passes client-side
+            (
+                _validate_assertions,
+                [["cawg_identity", {"cawg_identity_id": "ica:future-id"}]],
+            ),
         ],
     )
     def test_valid_inputs_pass(self, validator, value):
@@ -505,7 +512,6 @@ class TestRequestValidation:
         [
             ([["cawg_identity", {}]], "requires a non-empty"),
             ([["cawg_identity", {"cawg_identity_id": ""}]], "requires a non-empty"),
-            ([["cawg_identity", {"cawg_identity_id": "unknown"}]], "Unsupported"),
             ([["cawg_identity", []]], "requires a parameter object"),
         ],
     )
@@ -521,6 +527,12 @@ class TestRequestValidation:
             (_validate_actions, "action", [[123, {}]]),
             (_validate_assertions, "assertion", [["not_an_assertion", {}]]),
             (_validate_assertions, "assertion", [[]]),
+            # the resolved envelope is server-injected only; user input is rejected
+            (
+                _validate_assertions,
+                "assertion",
+                [["resolved", {"label": "ai.trufo.identity", "assertion": {}}]],
+            ),
         ],
     )
     def test_invalid_entries_rejected(self, validator, entry_type, bad):

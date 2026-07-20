@@ -10,10 +10,11 @@ Additionally, the `{"set_source_type": True}` flag sets `digitalSourceType = tra
 
 ## Requirements
 
-- For production signing: a `c2pa-sign-prod` API key (scope required by `/c2pa/sign`). See [0_auth.md](0_auth.md).
+- For production signing: a `c2pa-sign-prod` API key (scope required by `/c2pa/sign`). See [0_auth.md](0_auth.md). Production signing also requires completed Organization Validation (OV) for your organization.
 - For test signing: a `c2pa-sign-test` API key (scope required by `/test/c2pa/sign`).
-- Production examples that use `cawg_identity_id="org_interim"` require your organization to have CAWG organization identity signing enabled.
-- When `assertions` is non-empty, at least one `cawg_identity` entry must be present.
+- Optional: examples that use `cawg_identity_id="org_interim"` require your organization to have CAWG organization identity signing enabled.
+
+Every signed manifest automatically carries an `ai.trufo.identity` assertion with your organization id and (with active OV) your RA-validated legal name — see [Automatic assertions](../api/api_c2pa.md#automatic-assertions).
 
 ---
 
@@ -30,10 +31,11 @@ signed_bytes = sign_c2pa(
     media_bytes,
     assertions=[
         ["ai_disclosure", {}],
-        ["cawg_identity", {"cawg_identity_id": "org_interim"}],
     ],
 )
 ```
+
+To additionally stamp the manifest with a CAWG organization identity, add a `cawg_identity` entry — see [3_cawg_publish.md](3_cawg_publish.md).
 
 For development-only test signing, use `sign_c2pa_test()` with a `c2pa-sign-test` API key and `cawg_identity_id="test"`. Test-signed outputs are useful for integration development but are not intended to be accepted as production C2PA credentials by conformant validators.
 
@@ -73,7 +75,6 @@ signed_bytes = sign_c2pa(
     media_bytes,
     assertions=[
         ["ai_disclosure", {"ai_disclosure_id": "aidisc_0193f7e0abcd7a11bcde01234567890a"}],
-        ["cawg_identity", {"cawg_identity_id": "org_interim"}],
     ],
 )
 ```

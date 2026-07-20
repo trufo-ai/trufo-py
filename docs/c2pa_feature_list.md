@@ -27,6 +27,7 @@ Three signing modes are available. Support varies by mode.
 | `cawg_identity` | org-interim | ✅ | ✅ | ❌ |
 | `cawg_metadata` | | ✅ | ✅ | ❌ |
 | `cawg_training` | | ✅ | ✅ | ❌ |
+| `ai.trufo.identity` | automatic, server-injected | ✅ | ✅ | N/A |
 
 ## C2PA Claim Signing
 

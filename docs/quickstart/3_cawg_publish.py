@@ -51,7 +51,7 @@ assertions = [
             },
         },
     }],
-    # identity assertion (required when assertions are present)
+    # identity assertion binding the gathered assertions
     ["cawg_identity", {"cawg_identity_id": "org_interim"}],
 ]
 
