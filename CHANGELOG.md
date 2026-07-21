@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] — 2026-07-21
+
 ### Added
 
 - Automatic `ai.trufo.identity` assertion: every manifest signed through Trufo endpoints
@@ -164,7 +166,8 @@ Minor-version bump marks the general availability of the production C2PA signing
 - `trufo.intf`: credential storage and loading (env vars + file), CLI entry point.
 - PyPI trusted publishing via GitHub Actions (OIDC, no API tokens required).
 
-[Unreleased]: https://github.com/trufo-ai/trufo-py/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/trufo-ai/trufo-py/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/trufo-ai/trufo-py/compare/v0.4.2...v0.5.0
 [0.4.0]: https://github.com/trufo-ai/trufo-py/compare/v0.3.3...v0.4.0
 [0.3.3]: https://github.com/trufo-ai/trufo-py/compare/v0.3.2...v0.3.3
 [0.3.2]: https://github.com/trufo-ai/trufo-py/compare/v0.3.1...v0.3.2
