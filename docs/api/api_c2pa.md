@@ -269,7 +269,7 @@ Every manifest signed through Trufo endpoints additionally carries an `ai.trufo.
 | Field      | Presence                     | Description                                                        |
 | ---------- | ---------------------------- | ------------------------------------------------------------------ |
 | `oid`      | Always                       | Organization id of the signing credential.                          |
-| `org_name` | With active OV               | The org's RA-validated legal name from Organization Validation.     |
+| `orgName`  | With active OV               | The org's RA-validated legal name from Organization Validation.     |
 
 Production signing requires completed Organization Validation (OV) for the caller's org. Without it, `POST /c2pa/sign` returns:
 
