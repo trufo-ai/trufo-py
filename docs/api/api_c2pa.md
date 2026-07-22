@@ -111,7 +111,7 @@ Base64-encoded bytes of the input file. The supported MIME types are listed belo
 | -------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | Image    | `image/jpeg`, `image/png`, `image/tiff`, `image/webp`, `image/avif`, `image/jxl`, `image/gif`, `image/x-adobe-dng`, `image/svg+xml`     |
 | Video    | `video/mp4`, `video/quicktime`                                                                                                          |
-| Audio    | `audio/mpeg`, `audio/flac`, `audio/wav`, `audio/aac`, `audio/mp4`                                                                       |
+| Audio    | `audio/mpeg`, `audio/flac`, `audio/wav`, `audio/mp4`                                                                                    |
 | Document | `application/pdf`                                                                                                                        |
 
 #### `media_input_s3`
@@ -338,6 +338,9 @@ Mint an ephemeral presigned S3 upload URL for C2PA signing. The returned `media_
 # Remote (Distributed) Signing
 
 In the case where the media content cannot be sent over an API call (e.g. due to file size or privacy concerns), use distributed signing: the C2PA manifest is assembled and hashed locally, and the resulting hash is sent to Trufo for signing. To remain conformant with the C2PA specification, currently the only way to do so is via the `trufo[provenance]` optional installation and using the `sign_c2pa_distributed()` Python function. See [4_distributed_signing.md](../quickstart/4_distributed_signing.md) for an end-to-end guide.
+
+- `sign_c2pa_distributed()` uses the production `/c2pa/remote-sign` endpoint and requires a `c2pa-sign-prod` key, a TSA key, and completed Organization Validation (OV).
+- `sign_c2pa_distributed_test()` uses `/test/c2pa/remote-sign` with a `c2pa-sign-test` key and a TSA key. It is intended for integration development, not production credentials.
 
 ---
 
