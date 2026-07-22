@@ -48,9 +48,11 @@ class TrufoSession:
         self,
         access_token: str | None = None,
         refresh_token: str | None = None,
+        base_api_url: str = TRUFO_API_URL,
     ) -> None:
         self.access_token = access_token
         self.refresh_token = refresh_token
+        self.base_api_url = base_api_url
 
     def init_session(self, api_key: str) -> None:
         """Run the device authorization flow to obtain tokens.
@@ -58,7 +60,7 @@ class TrufoSession:
         Prints the verification URL for the user, then polls until
         the user approves (or the code expires).
         """
-        auth_resp = initiate_device_auth(api_key)
+        auth_resp = initiate_device_auth(api_key, base_url=self.base_api_url)
 
         print(f"Visit: {auth_resp.verification_uri_complete}")
         print(f"Enter code: {auth_resp.user_code}")
@@ -66,6 +68,7 @@ class TrufoSession:
         tokens = poll_for_tokens(
             api_key,
             auth_resp.device_code,
+            base_url=self.base_api_url,
             interval=auth_resp.interval,
             timeout=auth_resp.expires_in,
         )
@@ -89,7 +92,7 @@ class TrufoSession:
         if not self.access_token:
             raise AuthError("No active session. Call init_session() or set tokens first.")
 
-        url = f"{TRUFO_API_URL}{request_url}"
+        url = f"{self.base_api_url}{request_url}"
         resp = self._post(url, self.access_token, request_data)
 
         if resp.status_code == 401:
@@ -108,7 +111,7 @@ class TrufoSession:
         if not self.refresh_token:
             raise AuthError("No refresh token available.")
         try:
-            tokens = refresh_tokens(self.refresh_token)
+            tokens = refresh_tokens(self.refresh_token, base_url=self.base_api_url)
         except RuntimeError as exc:
             raise AuthError("Session expired. Please log in again.") from exc
         self.access_token = tokens.access_token
@@ -126,5 +129,3 @@ class TrufoSession:
             json=data,
             timeout=30,
         )
-
-

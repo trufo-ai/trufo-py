@@ -14,6 +14,7 @@ from trufo.api.endpoints import (
     TPS_C2PA_SIGN,
     TPS_C2PA_SIGN_TEST,
     TRUFO_API_URL,
+    TRUFO_TSA_URL,
 )
 from trufo.api.tps.sign_c2pa import (
     C2PAS3SignedOutput,
@@ -188,12 +189,12 @@ class TestRemoteC2PASigning:
         assert kwargs["actions"] == [["publish", {}]]
         assert kwargs["assertions"] == [["cawg_identity", {"cawg_identity_id": "test"}]]
         assert kwargs["test"] is True
-        assert kwargs["trufo_api_url"] == "https://api.trufo.ai"
+        assert kwargs["trufo_api_url"] == TRUFO_API_URL
         assert kwargs["ocsp_stapler"] is calls["ocsp_stapler"]
 
-        # a single timestamper is built with the resolved key and no URL override
+        # a single timestamper is built with the resolved key and SDK TSA default
         assert [ts.api_key for ts in calls["timestampers"]] == ["tsa-key"]
-        assert calls["timestampers"][0].url is None
+        assert calls["timestampers"][0].url == TRUFO_TSA_URL
         assert kwargs["timestamper"] is calls["timestampers"][0]
 
     def test_prod_signing_delegates_with_endpoint_overrides(self, monkeypatch):
@@ -228,8 +229,8 @@ class TestRemoteC2PASigning:
 
         kwargs = calls["generate_claim_remote"]["kwargs"]
         assert kwargs["test"] is False
-        assert kwargs["trufo_api_url"] == "https://api.trufo.ai"
-        assert calls["timestampers"][0].url is None
+        assert kwargs["trufo_api_url"] == TRUFO_API_URL
+        assert calls["timestampers"][0].url == TRUFO_TSA_URL
 
     @pytest.mark.parametrize("signer", _REMOTE_SIGNERS)
     def test_returns_signed_bytes_discarding_orchestrator_warnings(self, monkeypatch, signer):
@@ -405,7 +406,12 @@ class TestS3C2PASigning:
         )
 
         assert result == b"signed-media"
-        mock_get_upload_url.assert_called_once_with("prod-key", "image/jpeg", duration="5m")
+        mock_get_upload_url.assert_called_once_with(
+            "prod-key",
+            "image/jpeg",
+            duration="5m",
+            trufo_api_url=TRUFO_API_URL,
+        )
         mock_put.assert_called_once_with(
             "https://upload.example",
             data=b"input-media",
@@ -420,9 +426,58 @@ class TestS3C2PASigning:
             assertions=[["cawg_identity", {"cawg_identity_id": "org_interim"}]],
             manifest_title=None,
             ingredient_title=None,
+            trufo_api_url=TRUFO_API_URL,
         )
         mock_get.assert_called_once_with("https://download.example", timeout=60)
         mock_get.return_value.raise_for_status.assert_called_once_with()
+
+    @pytest.mark.parametrize(
+        "trufo_api_url",
+        [TRUFO_API_URL, "https://api.trufo.example"],
+        ids=["default", "supplied"],
+    )
+    @patch("trufo.api.tps.sign_c2pa.requests.get")
+    @patch("trufo.api.tps.sign_c2pa.requests.put")
+    @patch("trufo.api.tps.sign_c2pa.requests.post")
+    def test_hosted_signers_use_selected_api_url(
+        self,
+        mock_post,
+        _mock_put,
+        mock_get,
+        trufo_api_url,
+    ):
+        mock_post.side_effect = [
+            _mock_response({"media_output": base64.b64encode(b"direct-signed").decode()}),
+            _mock_response(
+                {
+                    "upload_url": "https://upload.example",
+                    "media_input_s3": "signed-input-reference",
+                    "expires_at": 1770000000,
+                    "duration": "5m",
+                }
+            ),
+            _mock_response({"media_output_s3": "https://download.example"}),
+        ]
+        mock_get.return_value.content = b"s3-signed"
+
+        assert (
+            sign_c2pa("prod-key", b"input-media", trufo_api_url=trufo_api_url) == b"direct-signed"
+        )
+        assert (
+            sign_c2pa_via_s3(
+                "prod-key",
+                b"input-media",
+                "image/jpeg",
+                trufo_api_url=trufo_api_url,
+            )
+            == b"s3-signed"
+        )
+
+        assert [call.args[0] for call in mock_post.call_args_list] == [
+            trufo_api_url + TPS_C2PA_SIGN,
+            trufo_api_url + TPS_C2PA_GET_S3_URL,
+            trufo_api_url + TPS_C2PA_SIGN,
+        ]
 
     @patch("trufo.api.tps.sign_c2pa.requests.get")
     @patch("trufo.api.tps.sign_c2pa.requests.put")
@@ -456,6 +511,7 @@ class TestS3C2PASigning:
             assertions=None,
             manifest_title=None,
             ingredient_title=None,
+            trufo_api_url=TRUFO_API_URL,
         )
 
     @pytest.mark.parametrize("signer", [sign_c2pa_s3, sign_c2pa_s3_test])
