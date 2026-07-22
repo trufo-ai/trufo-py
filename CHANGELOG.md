@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `redactions` parameter on `sign_c2pa`, `sign_c2pa_test`, `sign_c2pa_s3`, `sign_c2pa_s3_test`,
+  `sign_c2pa_via_s3`, and `sign_c2pa_via_s3_test`: a list of assertion labels to redact from
+  the input's existing C2PA manifest history (e.g. `["c2pa.metadata"]`). Each entry may be
+  suffixed with `__N` to target one specific disambiguated instance. Searches the full
+  ingredient history, not just the immediate parent. Currently supports a small, closed set
+  of labels (`c2pa.metadata`); not available on the distributed signers. A non-list value
+  (e.g. a bare string) is rejected client-side with a clear type error rather than being
+  iterated character-by-character.
+
+### Fixed
+
+- `test_sign_c2pa_via_s3_composes_low_level_helpers` asserted `requests.put(..., content=...)`,
+  which no longer matched the real call site — that call was switched to `data=` back in
+  `0.4.2` to fix a `TypeError`, but the test itself was never updated to match, so it had been
+  silently passing against the wrong keyword ever since. Corrected the assertion to `data=`.
+
 ## [0.5.0] — 2026-07-21
 
 ### Added

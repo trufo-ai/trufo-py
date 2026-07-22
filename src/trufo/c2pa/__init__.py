@@ -5,5 +5,6 @@
 
 from trufo.c2pa.actions import TrufoAction
 from trufo.c2pa.assertions import UserAssertion
+from trufo.c2pa.redactions import RedactableAssertion
 
-__all__ = ["TrufoAction", "UserAssertion"]
+__all__ = ["RedactableAssertion", "TrufoAction", "UserAssertion"]

@@ -36,6 +36,7 @@ from trufo.api.endpoints import (
 )
 from trufo.c2pa.actions import TrufoAction
 from trufo.c2pa.assertions import UserAssertion
+from trufo.c2pa.redactions import RedactableAssertion
 from trufo.util.credentials import TrufoApiKey, load_api_key
 from trufo.util.optional_imports import require_provenance_module
 
@@ -82,6 +83,28 @@ def _validate_actions(actions: list | None) -> None:
     _validate_entry_names(actions, TrufoAction, "action")
 
 
+def _validate_redactions(redactions: list | None) -> None:
+    """Validate client-side redaction label requirements shared by C2PA helpers.
+
+    Each entry is a bare assertion label (e.g. ``"c2pa.metadata"``), optionally
+    suffixed with ``__N`` to target one specific disambiguated instance.
+    Duplicate entries are permitted here (deduplicated server-side); this is a
+    name/shape check only, not a transform.
+    """
+    if redactions is not None and not isinstance(redactions, list):
+        raise ValueError(f"redactions must be a list, got {type(redactions).__name__}.")
+
+    for label in redactions or []:
+        if not isinstance(label, str) or not label:
+            raise ValueError(f"Invalid redaction entry: {label!r}")
+        base, sep, suffix = label.rpartition("__")
+        base_label = base if sep and suffix.isdigit() else label
+        try:
+            RedactableAssertion(base_label)
+        except ValueError as exc:
+            raise ValueError(f"Invalid redaction entry: {label!r}") from exc
+
+
 def _validate_entry_names(entries: list | None, enum_type: type, entry_type: str) -> None:
     """Validate the name field of request entries against a public enum."""
     for entry in entries or []:
@@ -97,17 +120,20 @@ def _sign_c2pa_direct(
     media_bytes: bytes,
     actions: list | None = None,
     assertions: list | None = None,
+    redactions: list | None = None,
     manifest_title: str | None = None,
     ingredient_title: str | None = None,
 ) -> bytes:
     """Sign media bytes through a C2PA signing endpoint."""
     _validate_actions(actions)
     _validate_assertions(assertions)
+    _validate_redactions(redactions)
 
     body = {
         "media_input": base64.b64encode(media_bytes).decode(),
         "actions": actions or [],
         "assertions": assertions or [],
+        "redactions": redactions or [],
     }
     if manifest_title is not None:
         body["manifest_title"] = manifest_title
@@ -174,17 +200,20 @@ def _sign_c2pa_s3(
     media_input_s3: str,
     actions: list | None = None,
     assertions: list | None = None,
+    redactions: list | None = None,
     manifest_title: str | None = None,
     ingredient_title: str | None = None,
 ) -> C2PAS3SignedOutput:
     """Sign an uploaded ephemeral S3 object through a C2PA signing endpoint."""
     _validate_actions(actions)
     _validate_assertions(assertions)
+    _validate_redactions(redactions)
 
     body = {
         "media_input_s3": media_input_s3,
         "actions": actions or [],
         "assertions": assertions or [],
+        "redactions": redactions or [],
     }
     if manifest_title is not None:
         body["manifest_title"] = manifest_title
@@ -207,6 +236,7 @@ def sign_c2pa_s3(
     media_input_s3: str,
     actions: list | None = None,
     assertions: list | None = None,
+    redactions: list | None = None,
     manifest_title: str | None = None,
     ingredient_title: str | None = None,
 ) -> C2PAS3SignedOutput:
@@ -220,6 +250,10 @@ def sign_c2pa_s3(
         media_input_s3: Opaque reference returned by :func:`get_c2pa_s3_upload_url`.
         actions: Ordered list of ``[action_name, params]`` pairs (default ``[]``).
         assertions: List of ``[assertion_name, params]`` pairs (default ``[]``).
+        redactions: List of assertion labels to redact (default ``[]``). Each
+            entry may be suffixed with ``__N`` to target one specific
+            disambiguated instance. Searches the full ingredient history, not
+            just the immediate parent.
         manifest_title: Optional active-manifest title (``dc:title``); see the
             module docstring for when to set this explicitly.
         ingredient_title: Optional ``parentOf`` ingredient title (``dc:title``);
@@ -237,6 +271,7 @@ def sign_c2pa_s3(
         media_input_s3,
         actions=actions,
         assertions=assertions,
+        redactions=redactions,
         manifest_title=manifest_title,
         ingredient_title=ingredient_title,
     )
@@ -247,6 +282,7 @@ def sign_c2pa_s3_test(
     media_input_s3: str,
     actions: list | None = None,
     assertions: list | None = None,
+    redactions: list | None = None,
     manifest_title: str | None = None,
     ingredient_title: str | None = None,
 ) -> C2PAS3SignedOutput:
@@ -257,6 +293,10 @@ def sign_c2pa_s3_test(
         media_input_s3: Opaque reference returned by :func:`get_c2pa_s3_upload_url`.
         actions: Ordered list of ``[action_name, params]`` pairs (default ``[]``).
         assertions: List of ``[assertion_name, params]`` pairs (default ``[]``).
+        redactions: List of assertion labels to redact (default ``[]``). Each
+            entry may be suffixed with ``__N`` to target one specific
+            disambiguated instance. Searches the full ingredient history, not
+            just the immediate parent.
         manifest_title: Optional active-manifest title (``dc:title``); see the
             module docstring for when to set this explicitly.
         ingredient_title: Optional ``parentOf`` ingredient title (``dc:title``);
@@ -274,6 +314,7 @@ def sign_c2pa_s3_test(
         media_input_s3,
         actions=actions,
         assertions=assertions,
+        redactions=redactions,
         manifest_title=manifest_title,
         ingredient_title=ingredient_title,
     )
@@ -285,6 +326,7 @@ def sign_c2pa_via_s3(
     mime_type: str,
     actions: list | None = None,
     assertions: list | None = None,
+    redactions: list | None = None,
     duration: str | None = None,
     manifest_title: str | None = None,
     ingredient_title: str | None = None,
@@ -303,6 +345,10 @@ def sign_c2pa_via_s3(
         mime_type: MIME type of the media file.
         actions: Ordered list of ``[action_name, params]`` pairs (default ``[]``).
         assertions: List of ``[assertion_name, params]`` pairs (default ``[]``).
+        redactions: List of assertion labels to redact (default ``[]``). Each
+            entry may be suffixed with ``__N`` to target one specific
+            disambiguated instance. Searches the full ingredient history, not
+            just the immediate parent.
         duration: Optional server-supported S3 URL duration. Currently ``"5m"``.
         manifest_title: Optional active-manifest title (``dc:title``); see the
             module docstring for when to set this explicitly.
@@ -322,6 +368,7 @@ def sign_c2pa_via_s3(
         upload.media_input_s3,
         actions=actions,
         assertions=assertions,
+        redactions=redactions,
         manifest_title=manifest_title,
         ingredient_title=ingredient_title,
     )
@@ -334,6 +381,7 @@ def sign_c2pa_via_s3_test(
     mime_type: str,
     actions: list | None = None,
     assertions: list | None = None,
+    redactions: list | None = None,
     duration: str | None = None,
     manifest_title: str | None = None,
     ingredient_title: str | None = None,
@@ -349,6 +397,10 @@ def sign_c2pa_via_s3_test(
         mime_type: MIME type of the media file.
         actions: Ordered list of ``[action_name, params]`` pairs (default ``[]``).
         assertions: List of ``[assertion_name, params]`` pairs (default ``[]``).
+        redactions: List of assertion labels to redact (default ``[]``). Each
+            entry may be suffixed with ``__N`` to target one specific
+            disambiguated instance. Searches the full ingredient history, not
+            just the immediate parent.
         duration: Optional server-supported S3 URL duration. Currently ``"5m"``.
         manifest_title: Optional active-manifest title (``dc:title``); see the
             module docstring for when to set this explicitly.
@@ -368,6 +420,7 @@ def sign_c2pa_via_s3_test(
         upload.media_input_s3,
         actions=actions,
         assertions=assertions,
+        redactions=redactions,
         manifest_title=manifest_title,
         ingredient_title=ingredient_title,
     )
@@ -397,6 +450,7 @@ def sign_c2pa(
     media_bytes: bytes,
     actions: list | None = None,
     assertions: list | None = None,
+    redactions: list | None = None,
     manifest_title: str | None = None,
     ingredient_title: str | None = None,
 ) -> bytes:
@@ -410,6 +464,10 @@ def sign_c2pa(
         media_bytes: Raw bytes of the media file to sign.
         actions: Ordered list of ``[action_name, params]`` pairs (default ``[]``).
         assertions: List of ``[assertion_name, params]`` pairs (default ``[]``).
+        redactions: List of assertion labels to redact (default ``[]``). Each
+            entry may be suffixed with ``__N`` to target one specific
+            disambiguated instance. Searches the full ingredient history, not
+            just the immediate parent.
         manifest_title: Optional active-manifest title (``dc:title``); see the
             module docstring for when to set this explicitly.
         ingredient_title: Optional ``parentOf`` ingredient title (``dc:title``);
@@ -427,6 +485,7 @@ def sign_c2pa(
         media_bytes,
         actions=actions,
         assertions=assertions,
+        redactions=redactions,
         manifest_title=manifest_title,
         ingredient_title=ingredient_title,
     )
@@ -437,6 +496,7 @@ def sign_c2pa_test(
     media_bytes: bytes,
     actions: list | None = None,
     assertions: list | None = None,
+    redactions: list | None = None,
     manifest_title: str | None = None,
     ingredient_title: str | None = None,
 ) -> bytes:
@@ -447,6 +507,10 @@ def sign_c2pa_test(
         media_bytes: Raw bytes of the media file to sign.
         actions: Ordered list of ``[action_name, params]`` pairs (default ``[]``).
         assertions: List of ``[assertion_name, params]`` pairs (default ``[]``).
+        redactions: List of assertion labels to redact (default ``[]``). Each
+            entry may be suffixed with ``__N`` to target one specific
+            disambiguated instance. Searches the full ingredient history, not
+            just the immediate parent.
         manifest_title: Optional active-manifest title (``dc:title``); see the
             module docstring for when to set this explicitly.
         ingredient_title: Optional ``parentOf`` ingredient title (``dc:title``);
@@ -464,6 +528,7 @@ def sign_c2pa_test(
         media_bytes,
         actions=actions,
         assertions=assertions,
+        redactions=redactions,
         manifest_title=manifest_title,
         ingredient_title=ingredient_title,
     )

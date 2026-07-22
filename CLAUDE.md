@@ -24,6 +24,7 @@ certificate enrollment.
 | AI labeling (AIGC disclosure) | `docs/quickstart/2_ai_labeling.md` |
 | CAWG publish (org stamping) | `docs/quickstart/3_cawg_publish.md` |
 | Distributed signing | `docs/quickstart/4_distributed_signing.md` |
+| Redaction | `docs/quickstart/5_redaction.md` |
 | C2PA API reference | `docs/api/api_c2pa.md` |
 | Auth API reference | `docs/api/api_auth.md` |
 | TCA CA reference | `docs/api/tca_ca.md` |

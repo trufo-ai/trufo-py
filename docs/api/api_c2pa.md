@@ -100,6 +100,7 @@ Both endpoints share the same request/response schema. The production signer pro
 | `actions`        | list   | No       | media processing instructions for the TPS to apply                     |
 | `assertions`     | list   | No       | gathered assertions to include in the manifest                         |
 | `manifest_title` | string | No       | active-manifest title (the manifest's `dc:title`); signer default if omitted |
+| `redactions`     | list   | No       | assertion labels to redact from the ingredient's manifest history      |
 
 \* Provide exactly one of `media_input` or `media_input_s3`.
 
@@ -260,6 +261,28 @@ Multiple `"custom"` entries may be included in a single request; each is validat
 
 ```json
 ["custom", {"label": "com.example.custom-metadata", "assertion": {"internalId": 1234}}]
+```
+
+#### `redactions`
+
+List of assertion labels to redact from the input's existing manifest history. Each entry is a bare assertion label (e.g. `"c2pa.metadata"`), optionally suffixed with `__N` to target one specific disambiguated instance (e.g. `"c2pa.metadata__1"`) when a manifest carries more than one assertion under the same base label — matching is exact, a bare label does not also match its numbered instances. The search covers the full ingredient history, not just the immediate parent, so a label is found and redacted wherever it lives in the chain. Requires the input to already have a C2PA manifest. Duplicate entries are deduplicated server-side, not an error.
+
+Only a small, closed set of labels is currently supported:
+
+| Label            | C2PA label     |
+| ---------------- | -------------- |
+| `"c2pa.metadata"` | `c2pa.metadata` |
+
+Redacting an unsupported or protected label (e.g. `c2pa.hash.*`, `c2pa.actions.v2`), or a label that doesn't exist anywhere in the input's manifest history, fails the request — there is no partial-success reporting.
+
+```json
+["c2pa.metadata"]
+```
+
+Redact one specific disambiguated instance, leaving other instances of the same base label untouched:
+
+```json
+["c2pa.metadata__1"]
 ```
 
 #### Automatic assertions

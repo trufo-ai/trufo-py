@@ -29,6 +29,12 @@ Three signing modes are available. Support varies by mode.
 | `cawg_training` | | ✅ | ✅ | ❌ |
 | `ai.trufo.identity` | automatic, server-injected | ✅ | ✅ | N/A |
 
+## Redactions
+
+| redaction | notes | fully-server | distributed | fully-local |
+|---|---|---|---|---|
+| `c2pa.metadata` | searches full manifest history | ✅ | ❌ | ❌ |
+
 ## C2PA Claim Signing
 
 | | notes | fully-server | distributed | fully-local |

@@ -20,6 +20,7 @@ from trufo.api.tps.sign_c2pa import (
     C2PAS3Upload,
     _validate_actions,
     _validate_assertions,
+    _validate_redactions,
     get_c2pa_s3_upload_url,
     sign_c2pa,
     sign_c2pa_distributed,
@@ -102,6 +103,7 @@ class TestDirectC2PASigning:
             b"input-media",
             actions=[["publish", {}]],
             assertions=[["cawg_identity", {"cawg_identity_id": "org_interim"}]],
+            redactions=["c2pa.metadata"],
         )
 
         assert result == signed
@@ -111,6 +113,7 @@ class TestDirectC2PASigning:
                 "media_input": base64.b64encode(b"input-media").decode(),
                 "actions": [["publish", {}]],
                 "assertions": [["cawg_identity", {"cawg_identity_id": "org_interim"}]],
+                "redactions": ["c2pa.metadata"],
             },
             headers={"X-API-Key": "prod-key"},
             timeout=60,
@@ -133,6 +136,7 @@ class TestDirectC2PASigning:
                 "media_input": base64.b64encode(b"input-media").decode(),
                 "actions": [],
                 "assertions": [],
+                "redactions": [],
             },
             headers={"X-API-Key": "test-key"},
             timeout=60,
@@ -343,6 +347,7 @@ class TestS3C2PASigning:
             "signed-input-reference",
             actions=[["publish", {}]],
             assertions=[["cawg_identity", {"cawg_identity_id": "org_interim"}]],
+            redactions=["c2pa.metadata"],
         )
 
         assert result == C2PAS3SignedOutput(media_output_s3="https://download.example")
@@ -352,6 +357,7 @@ class TestS3C2PASigning:
                 "media_input_s3": "signed-input-reference",
                 "actions": [["publish", {}]],
                 "assertions": [["cawg_identity", {"cawg_identity_id": "org_interim"}]],
+                "redactions": ["c2pa.metadata"],
             },
             headers={"X-API-Key": "prod-key"},
             timeout=60,
@@ -370,6 +376,7 @@ class TestS3C2PASigning:
                 "media_input_s3": "signed-input-reference",
                 "actions": [],
                 "assertions": [],
+                "redactions": [],
             },
             headers={"X-API-Key": "test-key"},
             timeout=60,
@@ -418,6 +425,7 @@ class TestS3C2PASigning:
             "signed-input-reference",
             actions=[["publish", {}]],
             assertions=[["cawg_identity", {"cawg_identity_id": "org_interim"}]],
+            redactions=None,
             manifest_title=None,
             ingredient_title=None,
         )
@@ -454,6 +462,7 @@ class TestS3C2PASigning:
             "signed-input-reference",
             actions=None,
             assertions=None,
+            redactions=None,
             manifest_title=None,
             ingredient_title=None,
         )
@@ -502,6 +511,11 @@ class TestRequestValidation:
                 _validate_assertions,
                 [["cawg_identity", {"cawg_identity_id": "ica:future-id"}]],
             ),
+            (_validate_redactions, None),
+            (_validate_redactions, []),
+            (_validate_redactions, ["c2pa.metadata"]),
+            (_validate_redactions, ["c2pa.metadata__1"]),
+            (_validate_redactions, ["c2pa.metadata", "c2pa.metadata__1"]),
         ],
     )
     def test_valid_inputs_pass(self, validator, value):
@@ -538,3 +552,25 @@ class TestRequestValidation:
     def test_invalid_entries_rejected(self, validator, entry_type, bad):
         with pytest.raises(ValueError, match=f"Invalid {entry_type} entry"):
             validator(bad)
+
+    @pytest.mark.parametrize(
+        "bad",
+        [
+            ["c2pa.hash.data"],
+            ["c2pa.actions.v2"],
+            ["c2pa.metadata__abc"],
+            [""],
+            [123],
+        ],
+    )
+    def test_invalid_redactions_rejected(self, bad):
+        with pytest.raises(ValueError, match="Invalid redaction entry"):
+            _validate_redactions(bad)
+
+    def test_non_list_redactions_rejected_with_clear_type_error(self):
+        with pytest.raises(ValueError, match="redactions must be a list"):
+            _validate_redactions("c2pa.metadata")
+
+    def test_duplicate_redactions_pass_client_side_validation(self):
+        """Client-side validation checks names only; dedup happens server-side."""
+        _validate_redactions(["c2pa.metadata", "c2pa.metadata"])  # must not raise
