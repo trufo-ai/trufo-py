@@ -111,7 +111,7 @@ Base64-encoded bytes of the input file. The supported MIME types are listed belo
 | -------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | Image    | `image/jpeg`, `image/png`, `image/tiff`, `image/webp`, `image/avif`, `image/jxl`, `image/gif`, `image/x-adobe-dng`, `image/svg+xml`     |
 | Video    | `video/mp4`, `video/quicktime`                                                                                                          |
-| Audio    | `audio/mpeg`, `audio/flac`, `audio/wav`, `audio/aac`, `audio/mp4`                                                                       |
+| Audio    | `audio/mpeg`, `audio/flac`, `audio/wav`, `audio/mp4`                                                                                    |
 | Document | `application/pdf`                                                                                                                        |
 
 #### `media_input_s3`
