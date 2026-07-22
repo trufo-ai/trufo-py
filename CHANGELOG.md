@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.1] — 2026-07-22
+
+### Changed
+
+- Documented production distributed signing through `sign_c2pa_distributed()`, including
+  its `c2pa-sign-prod`, TSA, and Organization Validation requirements. The quickstart now
+  distinguishes it from the test-only `sign_c2pa_distributed_test()` flow.
+- Raised the `trufo[provenance]` optional-extra minimum to `trufo-provenance>=0.3.1`
+  so distributed signing does not install the raw-input manifest-selection bug fixed in
+  provenance 0.3.1.
+
 ## [0.5.0] — 2026-07-21
 
 ### Added
@@ -166,7 +177,8 @@ Minor-version bump marks the general availability of the production C2PA signing
 - `trufo.intf`: credential storage and loading (env vars + file), CLI entry point.
 - PyPI trusted publishing via GitHub Actions (OIDC, no API tokens required).
 
-[Unreleased]: https://github.com/trufo-ai/trufo-py/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/trufo-ai/trufo-py/compare/v0.5.1...HEAD
+[0.5.1]: https://github.com/trufo-ai/trufo-py/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/trufo-ai/trufo-py/compare/v0.4.2...v0.5.0
 [0.4.0]: https://github.com/trufo-ai/trufo-py/compare/v0.3.3...v0.4.0
 [0.3.3]: https://github.com/trufo-ai/trufo-py/compare/v0.3.2...v0.3.3
