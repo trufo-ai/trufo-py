@@ -98,7 +98,10 @@ def _validate_redactions(redactions: list | None) -> None:
         if not isinstance(label, str) or not label:
             raise ValueError(f"Invalid redaction entry: {label!r}")
         base, sep, suffix = label.rpartition("__")
-        base_label = base if sep and suffix.isdigit() else label
+        # instance 0 is always the bare label, never suffixed, so "__0"/"__00" can
+        # never match a real assertion; require a leading-zero-free positive integer
+        valid_suffix = sep and suffix.isdigit() and suffix[0] != "0"
+        base_label = base if valid_suffix else label
         try:
             RedactableAssertion(base_label)
         except ValueError as exc:

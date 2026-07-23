@@ -408,6 +408,7 @@ class TestS3C2PASigning:
             "image/jpeg",
             actions=[["publish", {}]],
             assertions=[["cawg_identity", {"cawg_identity_id": "org_interim"}]],
+            redactions=["c2pa.metadata"],
             duration="5m",
         )
 
@@ -425,7 +426,7 @@ class TestS3C2PASigning:
             "signed-input-reference",
             actions=[["publish", {}]],
             assertions=[["cawg_identity", {"cawg_identity_id": "org_interim"}]],
-            redactions=None,
+            redactions=["c2pa.metadata"],
             manifest_title=None,
             ingredient_title=None,
         )
@@ -559,6 +560,10 @@ class TestRequestValidation:
             ["c2pa.hash.data"],
             ["c2pa.actions.v2"],
             ["c2pa.metadata__abc"],
+            ["c2pa.metadata__0"],
+            ["c2pa.metadata__00"],
+            ["c2pa.metadata__01"],
+            ["c2pa.metadata__-1"],
             [""],
             [123],
         ],
