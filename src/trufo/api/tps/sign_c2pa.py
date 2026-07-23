@@ -36,7 +36,7 @@ from trufo.api.endpoints import (
 )
 from trufo.c2pa.actions import TrufoAction
 from trufo.c2pa.assertions import UserAssertion
-from trufo.c2pa.redactions import RedactableAssertion
+from trufo.c2pa.redactions import RedactableAssertion, RedactionReason
 from trufo.util.credentials import TrufoApiKey, load_api_key
 from trufo.util.optional_imports import require_provenance_module
 
@@ -108,6 +108,16 @@ def _validate_redactions(redactions: list | None) -> None:
             raise ValueError(f"Invalid redaction entry: {label!r}") from exc
 
 
+def _validate_redaction_reason(redaction_reason: str | None) -> None:
+    """Validate the redaction rationale against the closed set of spec values."""
+    if redaction_reason is None:
+        return
+    try:
+        RedactionReason(redaction_reason)
+    except ValueError as exc:
+        raise ValueError(f"Invalid redaction_reason: {redaction_reason!r}") from exc
+
+
 def _validate_entry_names(entries: list | None, enum_type: type, entry_type: str) -> None:
     """Validate the name field of request entries against a public enum."""
     for entry in entries or []:
@@ -124,6 +134,7 @@ def _sign_c2pa_direct(
     actions: list | None = None,
     assertions: list | None = None,
     redactions: list | None = None,
+    redaction_reason: str | None = None,
     manifest_title: str | None = None,
     ingredient_title: str | None = None,
 ) -> bytes:
@@ -131,6 +142,7 @@ def _sign_c2pa_direct(
     _validate_actions(actions)
     _validate_assertions(assertions)
     _validate_redactions(redactions)
+    _validate_redaction_reason(redaction_reason)
 
     body = {
         "media_input": base64.b64encode(media_bytes).decode(),
@@ -138,6 +150,8 @@ def _sign_c2pa_direct(
         "assertions": assertions or [],
         "redactions": redactions or [],
     }
+    if redaction_reason is not None:
+        body["redaction_reason"] = redaction_reason
     if manifest_title is not None:
         body["manifest_title"] = manifest_title
     if ingredient_title is not None:
@@ -204,6 +218,7 @@ def _sign_c2pa_s3(
     actions: list | None = None,
     assertions: list | None = None,
     redactions: list | None = None,
+    redaction_reason: str | None = None,
     manifest_title: str | None = None,
     ingredient_title: str | None = None,
 ) -> C2PAS3SignedOutput:
@@ -211,6 +226,7 @@ def _sign_c2pa_s3(
     _validate_actions(actions)
     _validate_assertions(assertions)
     _validate_redactions(redactions)
+    _validate_redaction_reason(redaction_reason)
 
     body = {
         "media_input_s3": media_input_s3,
@@ -218,6 +234,8 @@ def _sign_c2pa_s3(
         "assertions": assertions or [],
         "redactions": redactions or [],
     }
+    if redaction_reason is not None:
+        body["redaction_reason"] = redaction_reason
     if manifest_title is not None:
         body["manifest_title"] = manifest_title
     if ingredient_title is not None:
@@ -240,6 +258,7 @@ def sign_c2pa_s3(
     actions: list | None = None,
     assertions: list | None = None,
     redactions: list | None = None,
+    redaction_reason: str | None = None,
     manifest_title: str | None = None,
     ingredient_title: str | None = None,
 ) -> C2PAS3SignedOutput:
@@ -257,6 +276,11 @@ def sign_c2pa_s3(
             entry may be suffixed with ``__N`` to target one specific
             disambiguated instance. Searches the full ingredient history, not
             just the immediate parent.
+        redaction_reason: Rationale recorded on a ``c2pa.redacted`` action for
+            each entry in ``redactions`` (one of ``RedactionReason``). When
+            omitted, no ``c2pa.redacted`` action is recorded — the manifest
+            still redacts the requested assertions, since that record is
+            independent of this action.
         manifest_title: Optional active-manifest title (``dc:title``); see the
             module docstring for when to set this explicitly.
         ingredient_title: Optional ``parentOf`` ingredient title (``dc:title``);
@@ -275,6 +299,7 @@ def sign_c2pa_s3(
         actions=actions,
         assertions=assertions,
         redactions=redactions,
+        redaction_reason=redaction_reason,
         manifest_title=manifest_title,
         ingredient_title=ingredient_title,
     )
@@ -286,6 +311,7 @@ def sign_c2pa_s3_test(
     actions: list | None = None,
     assertions: list | None = None,
     redactions: list | None = None,
+    redaction_reason: str | None = None,
     manifest_title: str | None = None,
     ingredient_title: str | None = None,
 ) -> C2PAS3SignedOutput:
@@ -300,6 +326,11 @@ def sign_c2pa_s3_test(
             entry may be suffixed with ``__N`` to target one specific
             disambiguated instance. Searches the full ingredient history, not
             just the immediate parent.
+        redaction_reason: Rationale recorded on a ``c2pa.redacted`` action for
+            each entry in ``redactions`` (one of ``RedactionReason``). When
+            omitted, no ``c2pa.redacted`` action is recorded — the manifest
+            still redacts the requested assertions, since that record is
+            independent of this action.
         manifest_title: Optional active-manifest title (``dc:title``); see the
             module docstring for when to set this explicitly.
         ingredient_title: Optional ``parentOf`` ingredient title (``dc:title``);
@@ -318,6 +349,7 @@ def sign_c2pa_s3_test(
         actions=actions,
         assertions=assertions,
         redactions=redactions,
+        redaction_reason=redaction_reason,
         manifest_title=manifest_title,
         ingredient_title=ingredient_title,
     )
@@ -330,6 +362,7 @@ def sign_c2pa_via_s3(
     actions: list | None = None,
     assertions: list | None = None,
     redactions: list | None = None,
+    redaction_reason: str | None = None,
     duration: str | None = None,
     manifest_title: str | None = None,
     ingredient_title: str | None = None,
@@ -352,6 +385,11 @@ def sign_c2pa_via_s3(
             entry may be suffixed with ``__N`` to target one specific
             disambiguated instance. Searches the full ingredient history, not
             just the immediate parent.
+        redaction_reason: Rationale recorded on a ``c2pa.redacted`` action for
+            each entry in ``redactions`` (one of ``RedactionReason``). When
+            omitted, no ``c2pa.redacted`` action is recorded — the manifest
+            still redacts the requested assertions, since that record is
+            independent of this action.
         duration: Optional server-supported S3 URL duration. Currently ``"5m"``.
         manifest_title: Optional active-manifest title (``dc:title``); see the
             module docstring for when to set this explicitly.
@@ -372,6 +410,7 @@ def sign_c2pa_via_s3(
         actions=actions,
         assertions=assertions,
         redactions=redactions,
+        redaction_reason=redaction_reason,
         manifest_title=manifest_title,
         ingredient_title=ingredient_title,
     )
@@ -385,6 +424,7 @@ def sign_c2pa_via_s3_test(
     actions: list | None = None,
     assertions: list | None = None,
     redactions: list | None = None,
+    redaction_reason: str | None = None,
     duration: str | None = None,
     manifest_title: str | None = None,
     ingredient_title: str | None = None,
@@ -404,6 +444,11 @@ def sign_c2pa_via_s3_test(
             entry may be suffixed with ``__N`` to target one specific
             disambiguated instance. Searches the full ingredient history, not
             just the immediate parent.
+        redaction_reason: Rationale recorded on a ``c2pa.redacted`` action for
+            each entry in ``redactions`` (one of ``RedactionReason``). When
+            omitted, no ``c2pa.redacted`` action is recorded — the manifest
+            still redacts the requested assertions, since that record is
+            independent of this action.
         duration: Optional server-supported S3 URL duration. Currently ``"5m"``.
         manifest_title: Optional active-manifest title (``dc:title``); see the
             module docstring for when to set this explicitly.
@@ -424,6 +469,7 @@ def sign_c2pa_via_s3_test(
         actions=actions,
         assertions=assertions,
         redactions=redactions,
+        redaction_reason=redaction_reason,
         manifest_title=manifest_title,
         ingredient_title=ingredient_title,
     )
@@ -454,6 +500,7 @@ def sign_c2pa(
     actions: list | None = None,
     assertions: list | None = None,
     redactions: list | None = None,
+    redaction_reason: str | None = None,
     manifest_title: str | None = None,
     ingredient_title: str | None = None,
 ) -> bytes:
@@ -471,6 +518,11 @@ def sign_c2pa(
             entry may be suffixed with ``__N`` to target one specific
             disambiguated instance. Searches the full ingredient history, not
             just the immediate parent.
+        redaction_reason: Rationale recorded on a ``c2pa.redacted`` action for
+            each entry in ``redactions`` (one of ``RedactionReason``). When
+            omitted, no ``c2pa.redacted`` action is recorded — the manifest
+            still redacts the requested assertions, since that record is
+            independent of this action.
         manifest_title: Optional active-manifest title (``dc:title``); see the
             module docstring for when to set this explicitly.
         ingredient_title: Optional ``parentOf`` ingredient title (``dc:title``);
@@ -489,6 +541,7 @@ def sign_c2pa(
         actions=actions,
         assertions=assertions,
         redactions=redactions,
+        redaction_reason=redaction_reason,
         manifest_title=manifest_title,
         ingredient_title=ingredient_title,
     )
@@ -500,6 +553,7 @@ def sign_c2pa_test(
     actions: list | None = None,
     assertions: list | None = None,
     redactions: list | None = None,
+    redaction_reason: str | None = None,
     manifest_title: str | None = None,
     ingredient_title: str | None = None,
 ) -> bytes:
@@ -514,6 +568,11 @@ def sign_c2pa_test(
             entry may be suffixed with ``__N`` to target one specific
             disambiguated instance. Searches the full ingredient history, not
             just the immediate parent.
+        redaction_reason: Rationale recorded on a ``c2pa.redacted`` action for
+            each entry in ``redactions`` (one of ``RedactionReason``). When
+            omitted, no ``c2pa.redacted`` action is recorded — the manifest
+            still redacts the requested assertions, since that record is
+            independent of this action.
         manifest_title: Optional active-manifest title (``dc:title``); see the
             module docstring for when to set this explicitly.
         ingredient_title: Optional ``parentOf`` ingredient title (``dc:title``);
@@ -532,6 +591,7 @@ def sign_c2pa_test(
         actions=actions,
         assertions=assertions,
         redactions=redactions,
+        redaction_reason=redaction_reason,
         manifest_title=manifest_title,
         ingredient_title=ingredient_title,
     )

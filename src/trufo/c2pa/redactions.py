@@ -17,3 +17,14 @@ class RedactableAssertion(str, Enum):
     """
 
     METADATA = "c2pa.metadata"
+
+
+class RedactionReason(str, Enum):
+    """Rationale for a redaction, recorded on the resulting ``c2pa.redacted``
+    action (C2PA spec §18.15.4.2). Applies to every label in a given
+    ``redactions`` list."""
+
+    PII_PRESENT = "c2pa.PII.present"
+    INVALID_DATA = "c2pa.invalid.data"
+    TRADE_SECRET_PRESENT = "c2pa.trade-secret.present"
+    GOVERNMENT_CONFIDENTIAL = "c2pa.government.confidential"

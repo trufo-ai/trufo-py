@@ -18,6 +18,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Currently supports a small, closed set of labels (`c2pa.metadata`); not available on the
   distributed signers. A non-list value (e.g. a bare string) is rejected client-side with a
   clear type error rather than being iterated character-by-character.
+- `redaction_reason` parameter on the same six signers: an optional rationale (one of
+  `RedactionReason` — `c2pa.PII.present`, `c2pa.invalid.data`, `c2pa.trade-secret.present`,
+  `c2pa.government.confidential`) recorded on a `c2pa.redacted` action for each entry in
+  `redactions`, alongside a reference to the specific assertion that was removed. When omitted,
+  redactions still take effect and are recorded in the manifest's `redacted_assertions`; no
+  `c2pa.redacted` action is added, since the C2PA spec requires a reason once that action is
+  present.
 
 ### Fixed
 

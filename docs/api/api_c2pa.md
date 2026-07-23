@@ -101,6 +101,7 @@ Both endpoints share the same request/response schema. The production signer pro
 | `assertions`     | list   | No       | gathered assertions to include in the manifest                         |
 | `manifest_title` | string | No       | active-manifest title (the manifest's `dc:title`); signer default if omitted |
 | `redactions`     | list   | No       | assertion labels to redact from the ingredient's manifest history      |
+| `redaction_reason` | string | No     | rationale recorded on a `c2pa.redacted` action for each entry in `redactions` |
 
 \* Provide exactly one of `media_input` or `media_input_s3`.
 
@@ -283,6 +284,23 @@ Redact one specific disambiguated instance, leaving other instances of the same 
 
 ```json
 ["c2pa.metadata__1"]
+```
+
+#### `redaction_reason`
+
+Optional rationale for the redactions in this request, recorded on a `c2pa.redacted` action for each entry in `redactions`. **Strongly recommended** — without it, the redaction is still recorded in `redacted_assertions`, but no `c2pa.redacted` action is added, so the provenance record shows that an assertion was removed but not why. One of a small closed set:
+
+| Value                            |
+| --------------------------------- |
+| `c2pa.PII.present`                |
+| `c2pa.invalid.data`               |
+| `c2pa.trade-secret.present`       |
+| `c2pa.government.confidential`    |
+
+When supplied, each redacted assertion gets its own `c2pa.redacted` action recorded in the manifest, carrying this reason and a reference to the specific assertion that was removed. When omitted, redaction still happens — `redacted_assertions` on the resulting claim always records what was removed, regardless of `redaction_reason` — but no `c2pa.redacted` action is added, since the C2PA spec requires a reason once that action is present.
+
+```json
+"c2pa.PII.present"
 ```
 
 #### Automatic assertions

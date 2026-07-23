@@ -20,6 +20,7 @@ from trufo.api.tps.sign_c2pa import (
     C2PAS3Upload,
     _validate_actions,
     _validate_assertions,
+    _validate_redaction_reason,
     _validate_redactions,
     get_c2pa_s3_upload_url,
     sign_c2pa,
@@ -104,6 +105,7 @@ class TestDirectC2PASigning:
             actions=[["publish", {}]],
             assertions=[["cawg_identity", {"cawg_identity_id": "org_interim"}]],
             redactions=["c2pa.metadata"],
+            redaction_reason="c2pa.PII.present",
         )
 
         assert result == signed
@@ -114,6 +116,7 @@ class TestDirectC2PASigning:
                 "actions": [["publish", {}]],
                 "assertions": [["cawg_identity", {"cawg_identity_id": "org_interim"}]],
                 "redactions": ["c2pa.metadata"],
+                "redaction_reason": "c2pa.PII.present",
             },
             headers={"X-API-Key": "prod-key"},
             timeout=60,
@@ -348,6 +351,7 @@ class TestS3C2PASigning:
             actions=[["publish", {}]],
             assertions=[["cawg_identity", {"cawg_identity_id": "org_interim"}]],
             redactions=["c2pa.metadata"],
+            redaction_reason="c2pa.PII.present",
         )
 
         assert result == C2PAS3SignedOutput(media_output_s3="https://download.example")
@@ -358,6 +362,7 @@ class TestS3C2PASigning:
                 "actions": [["publish", {}]],
                 "assertions": [["cawg_identity", {"cawg_identity_id": "org_interim"}]],
                 "redactions": ["c2pa.metadata"],
+                "redaction_reason": "c2pa.PII.present",
             },
             headers={"X-API-Key": "prod-key"},
             timeout=60,
@@ -409,6 +414,7 @@ class TestS3C2PASigning:
             actions=[["publish", {}]],
             assertions=[["cawg_identity", {"cawg_identity_id": "org_interim"}]],
             redactions=["c2pa.metadata"],
+            redaction_reason="c2pa.PII.present",
             duration="5m",
         )
 
@@ -427,6 +433,7 @@ class TestS3C2PASigning:
             actions=[["publish", {}]],
             assertions=[["cawg_identity", {"cawg_identity_id": "org_interim"}]],
             redactions=["c2pa.metadata"],
+            redaction_reason="c2pa.PII.present",
             manifest_title=None,
             ingredient_title=None,
         )
@@ -464,6 +471,7 @@ class TestS3C2PASigning:
             actions=None,
             assertions=None,
             redactions=None,
+            redaction_reason=None,
             manifest_title=None,
             ingredient_title=None,
         )
@@ -579,3 +587,20 @@ class TestRequestValidation:
     def test_duplicate_redactions_pass_client_side_validation(self):
         """Client-side validation checks names only; dedup happens server-side."""
         _validate_redactions(["c2pa.metadata", "c2pa.metadata"])  # must not raise
+
+    @pytest.mark.parametrize(
+        "reason",
+        [
+            None,
+            "c2pa.PII.present",
+            "c2pa.invalid.data",
+            "c2pa.trade-secret.present",
+            "c2pa.government.confidential",
+        ],
+    )
+    def test_valid_redaction_reason_accepted(self, reason):
+        _validate_redaction_reason(reason)  # must not raise
+
+    def test_invalid_redaction_reason_rejected(self):
+        with pytest.raises(ValueError, match="Invalid redaction_reason"):
+            _validate_redaction_reason("not-a-real-reason")
