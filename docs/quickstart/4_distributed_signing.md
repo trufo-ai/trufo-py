@@ -9,16 +9,16 @@ Build the C2PA manifest locally while keeping the C2PA signing key in Trufo's in
 ## Requirements
 
 - Install the optional provenance engine: `pip install "trufo[provenance]"`.
-- A `c2pa-sign-test` API key for the remote claim-signing endpoint. See [0_auth.md](0_auth.md).
-- A `tsa` API key for timestamping. Configure it with `trufo set-api-key tsa <your-api-key>` or `TRUFO_TSA_API_KEY`.
+- A `tsa` API key for RFC 3161 timestamping. Configure it with `trufo set-api-key tsa <your-api-key>` or `TRUFO_TSA_API_KEY`.
+- For test signing, a `c2pa-sign-test` API key. For production signing, a `c2pa-sign-prod` API key and completed Organization Validation (OV) for your organization. See [0_auth.md](0_auth.md).
 
 Every signed manifest automatically carries an `ai.trufo.identity` assertion with your organization id and (with active OV) your RA-validated legal name — see [Automatic assertions](../api/api_c2pa.md#automatic-assertions).
 
-> **EXPERIMENTAL:** Currently this feature is in an experimental state, and may change substantially in the next few weeks. Note that `sign_c2pa_distributed_test()` is available but `sign_c2pa_distributed()` (that uses a real C2PA certificate) is not.
-
 ---
 
-## Minimal Example
+## Test Signing
+
+Use `sign_c2pa_distributed_test()` with a `c2pa-sign-test` key for integration development:
 
 ```python
 from pathlib import Path
@@ -57,34 +57,57 @@ Test-signed outputs are useful for integration development but are not intended 
 
 ---
 
-## Adding Actions and Assertions
+## Production Signing
 
-Distributed signing accepts the same `actions` and `assertions` shape as `sign_c2pa_test()`:
+Use `sign_c2pa_distributed()` with a `c2pa-sign-prod` key to obtain a production C2PA claim signature. Production signing requires completed Organization Validation (OV) for the calling organization. Otherwise, the API returns `403 MissingOrganizationValidation`.
 
 ```python
-signed_bytes = sign_c2pa_distributed_test(
+from pathlib import Path
+
+from trufo import sign_c2pa_distributed
+from trufo.util.credentials import TrufoApiKey, load_api_key
+
+api_key = load_api_key(TrufoApiKey.C2PA_SIGN_PROD)
+
+media_bytes = Path("input.jpg").read_bytes()
+signed_bytes = sign_c2pa_distributed(
+    api_key,
+    media_bytes,
+)
+
+Path("signed.jpg").write_bytes(signed_bytes)
+```
+
+Both helpers automatically load the TSA key from the SDK credential path. To pass it explicitly, provide `tsa_api_key="tsa_..."`.
+
+---
+
+## Adding Actions and Assertions
+
+Both distributed signing helpers accept the same `actions` and `assertions` shape as the hosted signing helpers:
+
+```python
+signed_bytes = sign_c2pa_distributed(
     api_key,
     media_bytes,
     actions=[
         ["publish", {}],
     ],
-    assertions=[
-        ["ai_disclosure", {}],
-        ["cawg_identity", {"cawg_identity_id": "test"}],
-    ],
 )
 ```
 
-See [2_ai_labeling.md](2_ai_labeling.md) for `ai_disclosure` and [3_cawg_publish.md](3_cawg_publish.md) for CAWG metadata, training, and identity assertions.
+See [2_ai_labeling.md](2_ai_labeling.md) for `ai_disclosure` and [3_cawg_publish.md](3_cawg_publish.md) for CAWG metadata, training, and identity assertions. For test signing, use `cawg_identity_id="test"`; production CAWG identities require the appropriate organization configuration.
 
 ---
 
 ## Distributed vs Hosted Signing
 
-| Helper | Where manifest generation happens | What Trufo receives | Signing key location |
-|--------|-----------------------------------|---------------------|----------------------|
-| `sign_c2pa_test()` | Trufo server | media bytes or S3 reference | Trufo server |
-| `sign_c2pa_distributed_test()` | your Python process | claim bytes-to-be-signed | Trufo server |
+| Helper | Environment | Where manifest generation happens | What Trufo receives | Signing key location |
+|--------|-------------|-----------------------------------|---------------------|----------------------|
+| `sign_c2pa()` | Production | Trufo server | media bytes or S3 reference | Trufo server |
+| `sign_c2pa_test()` | Test | Trufo server | media bytes or S3 reference | Trufo server |
+| `sign_c2pa_distributed()` | Production | your Python process | claim bytes-to-be-signed | Trufo server |
+| `sign_c2pa_distributed_test()` | Test | your Python process | claim bytes-to-be-signed | Trufo server |
 
 Use hosted signing when you want the simplest flow. Use distributed signing when your application needs to keep media processing and claim generation local.
 
@@ -107,6 +130,10 @@ Store a TSA key or pass `tsa_api_key` explicitly:
 ```bash
 trufo set-api-key tsa <your-api-key>
 ```
+
+**`403 MissingOrganizationValidation`**
+
+Production distributed signing requires completed Organization Validation for the calling organization. Use `sign_c2pa_distributed_test()` for test signing until OV is complete.
 
 ---
 

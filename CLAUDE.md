@@ -9,10 +9,10 @@ certificate enrollment.
 - Current version: see `pyproject.toml` (`version = "X.Y.Z"`).
 - The `trufo[provenance]` optional dependency is **Linux-only**. macOS/Windows
   wheels are not published.
-- `sign_c2pa_distributed()` (production distributed signing) requires AWS resources
-  that are **not yet provisioned**. Use `sign_c2pa_distributed_test()` for development.
-- The distributed signing path requires **two** API keys: a `c2pa-sign-test` key AND
-  a `tsa` key.
+- `sign_c2pa_distributed()` uses the production remote signing endpoint and requires
+  completed Organization Validation plus `c2pa-sign-prod` and `tsa` API keys.
+- `sign_c2pa_distributed_test()` uses the test remote signing endpoint and requires
+  `c2pa-sign-test` and `tsa` API keys.
 
 ## Documentation map
 
