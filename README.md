@@ -8,8 +8,6 @@ The Trufo Provenance Platform is under active beta development, with new provena
 
 ## Optional Provenance Engine
 
-*Note: Production usage of this feature is still pending C2PA Conformance Approval.*
-
 When using the standard C2PA Signing API, the raw digital media content is sent to the Trufo server for processing. In cases where data privacy is important or where the content file is large, a distributed API is available where most media processing is local (and signing is remote, on Trufo servers). To enable this functionality, please install the `provenance` extra:
 
 ```bash
