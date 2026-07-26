@@ -182,12 +182,6 @@ stripped server-side, so both `tsa:<key>` and the bare `<key>` are accepted.
 | `401` | Missing, malformed, or invalid `X-API-Key` |
 | `403` | Key is valid but its owning org is not permitted on this endpoint (dedicated / white-labeled endpoints only) |
 
-**Dedicated endpoints.** Some tenants are provisioned a dedicated,
-white-labeled endpoint at `{custom}.tsa.trufo.ai` (e.g.
-`shutterstock.tsa.trufo.ai`). These work exactly like the shared endpoint above
-— same request/response and `X-API-Key` auth — but only accept API keys
-belonging to approved organizations.
-
 ---
 
 ## Python SDK

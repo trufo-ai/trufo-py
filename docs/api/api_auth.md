@@ -1,17 +1,46 @@
 # API Auth
 
-Instructions on setting up programmatic access to Trufo Provenance Service (TPS) API endpoints. For a quick setup guide, see the [Auth Quickstart](../quickstart/0_auth.md) page.
+Documentation for programmatic access to Trufo Provenance Service (TPS) API endpoints. For a quick setup guide, see the [Auth Quickstart](../quickstart/0_auth.md) page.
 
 ## Base URLs
 
 
-| Service               | URL                     | Description                   |
-| --------------------- | ----------------------- | ----------------------------- |
-| TPS API               | `https://api.trufo.ai`  | Trufo Provenance Service      |
-| Certificate Authority | `https://ca.trufo.ai`   | CA, EST enrollment (RFC 7030) |
-| Timestamp Authority   | `https://tsa.trufo.ai`  | CA, timestamping (RFC 3161)   |
-| OCSP Responder        | `https://ocsp.trufo.ai` | CA, OCSP stapling             |
+| Service                     | URL                        | Description                   |
+| --------------------------- | -------------------------- | ----------------------------- |
+| TPS API (Global-sync)       | `https://api.trufo.ai`     | Trufo Provenance Service      |
+| TPS API (Europe-only)       | `https://eu.api.trufo.ai`  | Europe processing server      |
+| Certificate Authority       | `https://ca.trufo.ai`      | CA, EST enrollment (RFC 7030) |
+| Timestamp Authority         | `https://tsa.trufo.ai`     | CA, timestamping (RFC 3161)   |
+| OCSP Responder              | `https://ocsp.trufo.ai`    | CA, OCSP stapling             |
 
+
+## Regional Endpoints
+
+The SDK defaults to `https://api.trufo.ai`. To restrict processing to the dedicated EU server, please call `https://eu.api.trufo.ai`. When using the dedicated EU server, sensitive content data will be stored in deducated EU clusters per our DPA and TIA. Other endpoints will route to the nearest server. Users have the option to select, per API request, which endpoint to hit; please note that certain types of data will or will not be available cross-region.
+
+The recommended method to target the dedicated EU server for a login session is:
+
+```python
+from trufo.api.endpoints import TRUFO_API_URL_EUROPE
+from trufo.api.session import TrufoSession
+
+session = TrufoSession(base_api_url=TRUFO_API_URL_EUROPE)
+```
+
+When using other function calls within the SDK, you will want to set `trufo_api_url` to be `TRUFO_API_URL_EUROPE`, for example:
+
+```python
+from trufo.api.endpoints import TRUFO_API_URL_EUROPE
+from trufo.api.tps.sign_c2pa import sign_c2pa
+
+signed_bytes = sign_c2pa(
+  api_key,
+  media_bytes,
+  trufo_api_url=TRUFO_API_URL_EUROPE,
+)
+```
+
+Direct API calls should also use the corresponding URL.
 
 ## API Headers
 

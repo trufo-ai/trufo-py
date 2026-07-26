@@ -2,7 +2,8 @@
 
 Endpoints for C2PA manifest generation and management of reusable assertion records.
 
-- **Base URL:** `https://api.trufo.ai`
+- **Trufo Global API URL:** `https://api.trufo.ai`
+- **Trufo Europe API URL:** `https://eu.api.trufo.ai`
 - **Test paths:** `/test/<route>` — signed with a test certificate; outputs may not be recognized by C2PA validators
 - **Production paths:** `/<route>` — signed with a proper certificate; outputs are recognized by conformant C2PA validators; same schema as test
 
@@ -33,6 +34,36 @@ Authentication is per-endpoint. The table below summarizes each endpoint; legend
 The owning organization is inferred from the credential itself (the API key is bound to its org; an access token resolves to the caller's single org membership). Request bodies for c2pa endpoints do not take an `oid` field.
 
 See [api_auth.md](api_auth.md) for full header conventions and the complete scope list, or the [Auth Quickstart](../quickstart/0_auth.md) for a setup guide.
+
+---
+
+## Server Selection
+
+The SDK defaults to the Global API endpoint. To instead use the Europe API endpoint, specify:
+
+```python
+from trufo.api.endpoints import TRUFO_API_URL_EUROPE
+from trufo.api.tps.sign_c2pa import sign_c2pa
+
+signed_bytes = sign_c2pa(
+  api_key,
+  media_bytes,
+  trufo_api_url=TRUFO_API_URL_EUROPE,
+)
+```
+
+Organizations provisioned with a dedicated API or TSA can set them explicitly:
+
+```python
+signed_bytes = sign_c2pa(
+    api_key,
+    media_bytes,
+    trufo_api_url="https://company.api.trufo.ai",
+    trufo_tsa_url="https://company.tsa.trufo.ai",
+)
+```
+
+Please note that certain types of data will or will not be available cross-region.
 
 ---
 

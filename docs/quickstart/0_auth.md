@@ -136,6 +136,21 @@ Note that TLS 1.3+ is required for all API requests.
 
 ---
 
+## Region Selection
+
+The SDK defaults to the Global API endpoint. To instead use the Europe API endpoint for your developer session, specify:
+
+```python
+from trufo.api.endpoints import TRUFO_API_URL_EUROPE
+from trufo.api.session import TrufoSession
+
+session = TrufoSession(base_api_url=TRUFO_API_URL_EUROPE)
+```
+
+Please note that certain types of data will or will not be available cross-region.
+
+---
+
 ## Reference
 
 - Endpoint reference: [../api/api_auth.md](../api/api_auth.md)
