@@ -128,7 +128,7 @@ Both endpoints share the same request/response schema. The production signer pro
 | ---------------- | ------ | -------- | ---------------------------------------------------------------------- |
 | `media_input`    | string | Yes*     | base64-encoded input media data                                        |
 | `media_input_s3` | string | Yes*     | server-signed ephemeral S3 input reference from `/c2pa/io/get-s3-url`  |
-| `actions`        | list   | No       | media processing instructions for the TPS to apply                     |
+| `actions`        | list   | No       | instructions for the TPS to apply, in order                            |
 | `assertions`     | list   | No       | gathered assertions to include in the manifest                         |
 | `manifest_title` | string | No       | active-manifest title (the manifest's `dc:title`); signer default if omitted |
 
@@ -197,7 +197,7 @@ The preset `reason` values are listed below. A `reason` may also be a custom ent
 
 A custom reason requires an active domain-validation (DV) record for its base domain (scope `c2pa-custom-assertion`, the same record used for custom assertions); without one the request returns `403 InvalidC2PACustomDomain`.
 
-The search covers the full ingredient history, not just the immediate parent, so one entry produces one `c2pa.redacted` action per matching manifest. Repeat the entry to redact several assertions, each with its own `reason`; the same label may not be targeted twice in one request. Redaction requires the input to already have a C2PA manifest — that, or a label absent from its history, returns `400`. Entries take effect in list order, so an entry's position determines where its action appears in the recorded history; what gets redacted does not depend on position. Not available on the distributed signers.
+The search covers the full ingredient history, not just the immediate parent, so one entry produces one `c2pa.redacted` action per matching manifest. Repeat the entry to redact several assertions, each with its own `reason`; the same label may not be targeted twice in one request. Redaction requires the input to already have a C2PA manifest — that, or a label absent from its history, returns `400`. What gets redacted never depends on where the entry sits in `actions`: redaction always targets the input's existing manifest history, not the output of a transform in the same call. Not available on the distributed signers.
 
 ```json
 ["redact", {"label": "c2pa.metadata", "reason": "c2pa.PII.present"}],

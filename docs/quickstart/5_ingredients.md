@@ -113,7 +113,7 @@ Instance numbers come from the input's own manifest, so inspect it to see which 
 
 ### Combining With Other Actions
 
-`redact` entries are executed in list order along with everything else, so where you place an entry determines where its `c2pa.redacted` action appears in the recorded edit history:
+`redact` entries sit in the same list as any other action:
 
 ```python
 signed_bytes = sign_c2pa(
@@ -127,7 +127,7 @@ signed_bytes = sign_c2pa(
 )
 ```
 
-What gets redacted does not depend on position: redaction always targets the input's *existing* manifest history, never the output of a transform in the same call. Position affects only where the `c2pa.redacted` action is recorded in the action list.
+What gets redacted does not depend on where the entry sits in the list: redaction always targets the input's *existing* manifest history, never the output of a transform in the same call.
 
 ### When Redaction Fails
 
