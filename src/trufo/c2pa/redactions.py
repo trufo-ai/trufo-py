@@ -7,9 +7,13 @@ from enum import Enum
 
 
 class RedactableAssertion(str, Enum):
-    """User-facing C2PA assertion label that may be redacted."""
+    """C2PA assertion label that may be redacted.
 
-    METADATA = "c2pa.metadata"
+    These are wire labels as they appear in a manifest, not the assertion
+    names accepted by ``assertions=`` (see :class:`UserAssertion`).
+    """
+
+    C2PA_METADATA = "c2pa.metadata"
     CAWG_METADATA = "cawg.metadata"
     CAWG_TRAINING_MINING = "cawg.training-mining"
     CAWG_IDENTITY = "cawg.identity"
