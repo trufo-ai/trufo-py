@@ -6,6 +6,7 @@ Trufo API endpoint definitions.
 """
 
 TRUFO_API_URL = "https://api.trufo.ai"
+TRUFO_API_URL_EUROPE = "https://eu.api.trufo.ai"
 TRUFO_CA_URL = "https://ca.trufo.ai"
 TRUFO_TSA_URL = "https://tsa.trufo.ai"
 TRUFO_OCSP_URL = "https://ocsp.trufo.ai"

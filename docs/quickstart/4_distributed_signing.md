@@ -82,6 +82,35 @@ Both helpers automatically load the TSA key from the SDK credential path. To pas
 
 ---
 
+## Server Selection
+
+The SDK defaults to the Global API endpoint. To instead use the Europe API endpoint, specify:
+
+```python
+from trufo.api.endpoints import TRUFO_API_URL_EUROPE
+
+signed_bytes = sign_c2pa_distributed(
+    api_key,
+    media_bytes,
+    trufo_api_url=TRUFO_API_URL_EUROPE,
+)
+```
+
+Organizations provisioned with a dedicated API or TSA can set them explicitly:
+
+```python
+signed_bytes = sign_c2pa_distributed(
+    api_key,
+    media_bytes,
+    trufo_api_url="https://company.api.trufo.ai",
+    trufo_tsa_url="https://company.tsa.trufo.ai",
+)
+```
+
+Please note that certain types of data will or will not be available cross-region.
+
+---
+
 ## Adding Actions and Assertions
 
 Both distributed signing helpers accept the same `actions` and `assertions` shape as the hosted signing helpers:

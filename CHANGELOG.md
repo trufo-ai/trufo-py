@@ -29,6 +29,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A redaction the input cannot satisfy — no existing C2PA manifest, or a label absent from its
   manifest history — returns `400`.
 
+## [0.5.2] — 2026-07-26
+
+### Added
+
+- `TRUFO_API_URL_EUROPE` for explicit Europe-only TPS calls.
 
 ## [0.5.1] — 2026-07-22
 
