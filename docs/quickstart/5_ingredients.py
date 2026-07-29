@@ -1,12 +1,12 @@
 # Copyright 2025-2026 Trufo, Inc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-"""Quickstart: redact an assertion from a media file's existing C2PA manifest.
+"""Quickstart: redact an assertion from an ingredient's C2PA manifest.
 
 Removes c2pa.metadata from wherever it lives in the input's provenance
 history (the immediate parent, or any earlier generation).
 
-See docs/quickstart/5_redaction.md for details.
+See docs/quickstart/5_ingredients.md for details.
 Requires a c2pa-sign-prod API key — set TRUFO_C2PA_SIGN_PROD_API_KEY
 or save it to ~/.trufo/credentials/c2pa_sign_prod_api_key.
 Requires INPUT_FILE to already have a C2PA manifest.
@@ -32,7 +32,9 @@ assert api_key, (
 signed_bytes = sign_c2pa(
     api_key,
     INPUT_FILE.read_bytes(),
-    redactions=["c2pa.metadata"],
+    actions=[
+        ["redact", {"label": "c2pa.metadata", "reason": "c2pa.PII.present"}],
+    ],
 )
 
 OUTPUT_FILE.write_bytes(signed_bytes)

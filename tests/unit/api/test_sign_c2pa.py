@@ -19,10 +19,10 @@ from trufo.api.endpoints import (
 from trufo.api.tps.sign_c2pa import (
     C2PAS3SignedOutput,
     C2PAS3Upload,
+    _reject_redact_action,
     _validate_actions,
     _validate_assertions,
-    _validate_redaction_reason,
-    _validate_redactions,
+    _validate_redact_action,
     get_c2pa_s3_upload_url,
     sign_c2pa,
     sign_c2pa_distributed,
@@ -103,10 +103,11 @@ class TestDirectC2PASigning:
         result = sign_c2pa(
             "prod-key",
             b"input-media",
-            actions=[["publish", {}]],
+            actions=[
+                ["publish", {}],
+                ["redact", {"label": "c2pa.metadata", "reason": "c2pa.PII.present"}],
+            ],
             assertions=[["cawg_identity", {"cawg_identity_id": "org_interim"}]],
-            redactions=["c2pa.metadata"],
-            redaction_reason="c2pa.PII.present",
         )
 
         assert result == signed
@@ -114,10 +115,11 @@ class TestDirectC2PASigning:
             TRUFO_API_URL + TPS_C2PA_SIGN,
             json={
                 "media_input": base64.b64encode(b"input-media").decode(),
-                "actions": [["publish", {}]],
+                "actions": [
+                    ["publish", {}],
+                    ["redact", {"label": "c2pa.metadata", "reason": "c2pa.PII.present"}],
+                ],
                 "assertions": [["cawg_identity", {"cawg_identity_id": "org_interim"}]],
-                "redactions": ["c2pa.metadata"],
-                "redaction_reason": "c2pa.PII.present",
             },
             headers={"X-API-Key": "prod-key"},
             timeout=60,
@@ -140,7 +142,6 @@ class TestDirectC2PASigning:
                 "media_input": base64.b64encode(b"input-media").decode(),
                 "actions": [],
                 "assertions": [],
-                "redactions": [],
             },
             headers={"X-API-Key": "test-key"},
             timeout=60,
@@ -349,10 +350,11 @@ class TestS3C2PASigning:
         result = sign_c2pa_s3(
             "prod-key",
             "signed-input-reference",
-            actions=[["publish", {}]],
+            actions=[
+                ["publish", {}],
+                ["redact", {"label": "c2pa.metadata", "reason": "c2pa.PII.present"}],
+            ],
             assertions=[["cawg_identity", {"cawg_identity_id": "org_interim"}]],
-            redactions=["c2pa.metadata"],
-            redaction_reason="c2pa.PII.present",
         )
 
         assert result == C2PAS3SignedOutput(media_output_s3="https://download.example")
@@ -360,10 +362,11 @@ class TestS3C2PASigning:
             TRUFO_API_URL + TPS_C2PA_SIGN,
             json={
                 "media_input_s3": "signed-input-reference",
-                "actions": [["publish", {}]],
+                "actions": [
+                    ["publish", {}],
+                    ["redact", {"label": "c2pa.metadata", "reason": "c2pa.PII.present"}],
+                ],
                 "assertions": [["cawg_identity", {"cawg_identity_id": "org_interim"}]],
-                "redactions": ["c2pa.metadata"],
-                "redaction_reason": "c2pa.PII.present",
             },
             headers={"X-API-Key": "prod-key"},
             timeout=60,
@@ -382,7 +385,6 @@ class TestS3C2PASigning:
                 "media_input_s3": "signed-input-reference",
                 "actions": [],
                 "assertions": [],
-                "redactions": [],
             },
             headers={"X-API-Key": "test-key"},
             timeout=60,
@@ -412,10 +414,11 @@ class TestS3C2PASigning:
             "prod-key",
             b"input-media",
             "image/jpeg",
-            actions=[["publish", {}]],
+            actions=[
+                ["publish", {}],
+                ["redact", {"label": "c2pa.metadata", "reason": "c2pa.PII.present"}],
+            ],
             assertions=[["cawg_identity", {"cawg_identity_id": "org_interim"}]],
-            redactions=["c2pa.metadata"],
-            redaction_reason="c2pa.PII.present",
             duration="5m",
         )
 
@@ -436,10 +439,11 @@ class TestS3C2PASigning:
         mock_sign_s3.assert_called_once_with(
             "prod-key",
             "signed-input-reference",
-            actions=[["publish", {}]],
+            actions=[
+                ["publish", {}],
+                ["redact", {"label": "c2pa.metadata", "reason": "c2pa.PII.present"}],
+            ],
             assertions=[["cawg_identity", {"cawg_identity_id": "org_interim"}]],
-            redactions=["c2pa.metadata"],
-            redaction_reason="c2pa.PII.present",
             manifest_title=None,
             ingredient_title=None,
             trufo_api_url=TRUFO_API_URL,
@@ -525,8 +529,6 @@ class TestS3C2PASigning:
             "signed-input-reference",
             actions=None,
             assertions=None,
-            redactions=None,
-            redaction_reason=None,
             manifest_title=None,
             ingredient_title=None,
             trufo_api_url=TRUFO_API_URL,
@@ -576,11 +578,36 @@ class TestRequestValidation:
                 _validate_assertions,
                 [["cawg_identity", {"cawg_identity_id": "ica:future-id"}]],
             ),
-            (_validate_redactions, None),
-            (_validate_redactions, []),
-            (_validate_redactions, ["c2pa.metadata"]),
-            (_validate_redactions, ["c2pa.metadata__1"]),
-            (_validate_redactions, ["c2pa.metadata", "c2pa.metadata__1"]),
+            # redaction is expressed as a redact action within the actions list
+            (
+                _validate_actions,
+                [["redact", {"label": "c2pa.metadata", "reason": "c2pa.PII.present"}]],
+            ),
+            (
+                _validate_actions,
+                [["redact", {"label": "c2pa.metadata__1", "reason": "c2pa.invalid.data"}]],
+            ),
+            # several assertions: repeat the entry, each with its own reason
+            (
+                _validate_actions,
+                [
+                    ["redact", {"label": "c2pa.metadata", "reason": "c2pa.PII.present"}],
+                    ["redact", {"label": "cawg.metadata", "reason": "c2pa.trade-secret.present"}],
+                ],
+            ),
+            # a custom entity-namespaced reason passes client-side (server checks DV)
+            (
+                _validate_actions,
+                [["redact", {"label": "c2pa.metadata", "reason": "com.acme.gdpr-request"}]],
+            ),
+            # redact coexists with other actions
+            (
+                _validate_actions,
+                [
+                    ["publish", {}],
+                    ["redact", {"label": "c2pa.metadata", "reason": "c2pa.PII.present"}],
+                ],
+            ),
         ],
     )
     def test_valid_inputs_pass(self, validator, value):
@@ -618,45 +645,137 @@ class TestRequestValidation:
         with pytest.raises(ValueError, match=f"Invalid {entry_type} entry"):
             validator(bad)
 
+    def _redact_actions(self, label, reason="c2pa.PII.present"):
+        """An actions list holding a single redact entry."""
+        params = {"label": label}
+        if reason is not None:
+            params["reason"] = reason
+        return [["redact", params]]
+
+    @pytest.mark.parametrize(
+        "label",
+        [
+            "c2pa.metadata",
+            "cawg.metadata",
+            "cawg.training-mining",
+            "cawg.identity",
+            "cawg.metadata__2",
+        ],
+    )
+    def test_each_redactable_label_accepted(self, label):
+        _validate_actions(self._redact_actions(label))  # must not raise
+
     @pytest.mark.parametrize(
         "bad",
         [
-            ["c2pa.hash.data"],
-            ["c2pa.actions.v2"],
-            ["c2pa.metadata__abc"],
-            ["c2pa.metadata__0"],
-            ["c2pa.metadata__00"],
-            ["c2pa.metadata__01"],
-            ["c2pa.metadata__-1"],
-            [""],
-            [123],
+            "c2pa.hash.data",
+            "c2pa.actions.v2",
+            # the allowlist is enumerated, not a namespace prefix
+            "cawg.something-new",
+            "c2pa.ai-disclosure",
+            "ai.trufo.identity",
+            "c2pa.metadata__abc",
+            "c2pa.metadata__0",
+            "c2pa.metadata__00",
+            "c2pa.metadata__01",
+            "c2pa.metadata__-1",
         ],
     )
-    def test_invalid_redactions_rejected(self, bad):
+    def test_invalid_redaction_labels_rejected(self, bad):
         with pytest.raises(ValueError, match="Invalid redaction entry"):
-            _validate_redactions(bad)
+            _validate_actions(self._redact_actions(bad))
 
-    def test_non_list_redactions_rejected_with_clear_type_error(self):
-        with pytest.raises(ValueError, match="redactions must be a list"):
-            _validate_redactions("c2pa.metadata")
+    @pytest.mark.parametrize("label", ["", None, 123, ["c2pa.metadata"]])
+    def test_missing_or_non_string_label_rejected(self, label):
+        with pytest.raises(ValueError, match="non-empty 'label'"):
+            _validate_actions(self._redact_actions(label))
 
-    def test_duplicate_redactions_pass_client_side_validation(self):
-        """Client-side validation checks names only; dedup happens server-side."""
-        _validate_redactions(["c2pa.metadata", "c2pa.metadata"])  # must not raise
+    def test_repeated_target_rejected(self):
+        """The same assertion may not be targeted twice in one call."""
+        actions = self._redact_actions("c2pa.metadata") + self._redact_actions(
+            "c2pa.metadata", reason="c2pa.invalid.data"
+        )
+        with pytest.raises(ValueError, match="Duplicate redaction target"):
+            _validate_actions(actions)
 
     @pytest.mark.parametrize(
         "reason",
         [
-            None,
             "c2pa.PII.present",
             "c2pa.invalid.data",
             "c2pa.trade-secret.present",
             "c2pa.government.confidential",
+            "com.acme.gdpr-request",  # custom entity-namespaced value
         ],
     )
-    def test_valid_redaction_reason_accepted(self, reason):
-        _validate_redaction_reason(reason)  # must not raise
+    def test_valid_redact_reason_accepted(self, reason):
+        _validate_actions(self._redact_actions("c2pa.metadata", reason=reason))  # must not raise
 
-    def test_invalid_redaction_reason_rejected(self):
-        with pytest.raises(ValueError, match="Invalid redaction_reason"):
-            _validate_redaction_reason("not-a-real-reason")
+    def test_reason_is_required(self):
+        with pytest.raises(ValueError, match="non-empty 'reason'"):
+            _validate_actions(self._redact_actions("c2pa.metadata", reason=None))
+
+    def test_non_preset_c2pa_reason_rejected(self):
+        with pytest.raises(ValueError, match="Invalid redaction reason"):
+            _validate_actions(
+                self._redact_actions("c2pa.metadata", reason="c2pa.not-a-real-reason")
+            )
+
+    def test_redact_via_validate_redact_action_directly(self):
+        _validate_redact_action(
+            ["redact", {"label": "c2pa.metadata", "reason": "c2pa.PII.present"}]
+        )  # must not raise
+
+    @pytest.mark.parametrize(
+        "entry",
+        [
+            ["redact"],  # missing params
+            ["redact", {"label": "c2pa.metadata", "reason": "c2pa.PII.present"}, "extra"],
+        ],
+    )
+    def test_malformed_redact_entry_shape_rejected(self, entry):
+        """A redact entry must be exactly [name, params]."""
+        with pytest.raises(ValueError, match="Invalid redact action entry"):
+            _validate_actions([entry])
+
+    def test_several_redact_entries_allowed_each_with_its_own_reason(self):
+        """One entry per assertion, each carrying its own reason."""
+        actions = [
+            ["redact", {"label": "c2pa.metadata", "reason": "c2pa.PII.present"}],
+            ["redact", {"label": "cawg.metadata", "reason": "c2pa.trade-secret.present"}],
+            ["redact", {"label": "cawg.training-mining", "reason": "com.acme.policy"}],
+        ]
+        _validate_actions(actions)  # must not raise
+
+
+class TestRedactRejectedOnDistributedSigners:
+    """Redaction is a fully-server feature, so the distributed signers reject it."""
+
+    _REDACT = ["redact", {"label": "c2pa.metadata", "reason": "c2pa.PII.present"}]
+
+    @pytest.mark.parametrize("signer", [sign_c2pa_distributed, sign_c2pa_distributed_test])
+    def test_distributed_signers_reject_redact(self, signer):
+        with pytest.raises(ValueError, match="not supported on the distributed signers"):
+            signer("key", b"media", actions=[self._REDACT], tsa_api_key="tsa-key")
+
+    @pytest.mark.parametrize("signer", [sign_c2pa_distributed, sign_c2pa_distributed_test])
+    def test_malformed_redact_reports_unsupported_not_shape(self, signer):
+        """A malformed redact entry still reports that redaction is unsupported."""
+        with pytest.raises(ValueError, match="not supported on the distributed signers"):
+            signer("key", b"media", actions=[["redact"]], tsa_api_key="tsa-key")
+
+    @pytest.mark.parametrize(
+        "entry",
+        [
+            ["redact"],  # no params
+            ["redact", {}, "extra"],  # unexpected shape
+            ("redact", {}),  # tuple
+        ],
+    )
+    def test_rejection_matching_is_permissive(self, entry):
+        """Rejection matches any entry shape, not only the well-formed one."""
+        with pytest.raises(ValueError, match="not supported on the distributed signers"):
+            _reject_redact_action([entry])
+
+    def test_non_redact_actions_not_rejected(self):
+        _reject_redact_action([["publish", {}], ["transcode", {"target_mime_type": "image/png"}]])

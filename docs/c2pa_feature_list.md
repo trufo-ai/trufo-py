@@ -16,6 +16,7 @@ Three signing modes are available. Support varies by mode.
 |---|---|---|---|---|
 | `publish` | | ✅ | ✅ | ❌ |
 | `transcode` | | ✅ | ❌ | ❌ |
+| `redact` | | ✅ | ❌ | ❌ |
 
 ## Assertions
 
@@ -28,12 +29,6 @@ Three signing modes are available. Support varies by mode.
 | `cawg_metadata` | | ✅ | ✅ | ❌ |
 | `cawg_training` | | ✅ | ✅ | ❌ |
 | `ai.trufo.identity` | automatic, server-injected | ✅ | ✅ | N/A |
-
-## Redactions
-
-| redaction | notes | fully-server | distributed | fully-local |
-|---|---|---|---|---|
-| `c2pa.metadata` | searches full manifest history | ✅ | ❌ | ❌ |
 
 ## C2PA Claim Signing
 

@@ -26,6 +26,7 @@ There are a number of documents to get you started quickly with specific use cas
 | AI Labeling                        | [C2PA & CAWG Signing API](https://app.trufo.ai/prov/apis/c2pa-signing) | [docs/quickstart/2_ai_labeling.md](docs/quickstart/2_ai_labeling.md)   |
 | Organization Stamping & Assertions | [C2PA & CAWG Signing API](https://app.trufo.ai/prov/apis/c2pa-signing) | [docs/quickstart/3_cawg_publish.md](docs/quickstart/3_cawg_publish.md) |
 | Distributed Signing               | [C2PA & CAWG Signing API](https://app.trufo.ai/prov/apis/c2pa-signing) | [docs/quickstart/4_distributed_signing.md](docs/quickstart/4_distributed_signing.md) |
+| Ingredients (e.g. Redaction)        | [C2PA & CAWG Signing API](https://app.trufo.ai/prov/apis/c2pa-signing) | [docs/quickstart/5_ingredients.md](docs/quickstart/5_ingredients.md)   |
 
 
 ## Reference Documentation

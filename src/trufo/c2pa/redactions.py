@@ -1,28 +1,22 @@
 # Copyright 2025-2026 Trufo, Inc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-"""User-facing C2PA assertion labels that may be redacted."""
+"""User-facing C2PA redaction types supported by Trufo."""
 
 from enum import Enum
 
 
 class RedactableAssertion(str, Enum):
-    """User-facing assertion label supported for redaction.
-
-    A small, deliberately closed set — start with what's tested, extend as
-    more labels are verified safe to redact. Each entry may be suffixed with
-    ``__N`` (e.g. ``"c2pa.metadata__1"``) to target one specific
-    disambiguated instance when a manifest carries more than one assertion
-    under the same base label.
-    """
+    """User-facing C2PA assertion label that may be redacted."""
 
     METADATA = "c2pa.metadata"
+    CAWG_METADATA = "cawg.metadata"
+    CAWG_TRAINING_MINING = "cawg.training-mining"
+    CAWG_IDENTITY = "cawg.identity"
 
 
 class RedactionReason(str, Enum):
-    """Rationale for a redaction, recorded on the resulting ``c2pa.redacted``
-    action (C2PA spec §18.15.4.2). Applies to every label in a given
-    ``redactions`` list."""
+    """User-facing rationale recorded on the resulting c2pa.redacted action."""
 
     PII_PRESENT = "c2pa.PII.present"
     INVALID_DATA = "c2pa.invalid.data"
