@@ -170,11 +170,11 @@ Ordered list of `[action_name, params]` pairs. Each element of the `actions` lis
 
 ##### `redact`
 
-Remove one assertion from the input's existing manifest history (C2PA §6.8).
+Remove one named assertion from the input's existing manifest history, wherever it occurs in that history (C2PA §6.8).
 
 | Param    | Type   | Required | Description |
 | -------- | ------ | -------- | ----------- |
-| `label`  | string | Yes      | Assertion label to redact, from the supported labels below. May be suffixed with `__N` to target one disambiguated instance, e.g. `c2pa.metadata__1`; matching is exact, so a bare label does not also match its numbered instances. |
+| `label`  | string | Yes      | Assertion label to redact, from the supported labels below. May be suffixed with `__N` to target one disambiguated instance, e.g. `c2pa.metadata__1`, where `N` is a positive integer with no leading zero (instance 0 is the bare label). Matching is exact, so a bare label does not also match its numbered instances. |
 | `reason` | string | Yes      | Rationale, recorded on the resulting `c2pa.redacted` action. A preset value below, or a custom reverse-DNS value, e.g. `com.example.internal-policy`. |
 
 The labels supported for redaction are listed below; more will be added over time (upon request).

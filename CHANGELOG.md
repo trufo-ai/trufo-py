@@ -9,25 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- `redact` action for the fully-server signers (`sign_c2pa`, `sign_c2pa_test`, `sign_c2pa_s3`,
-  `sign_c2pa_s3_test`, `sign_c2pa_via_s3`, `sign_c2pa_via_s3_test`). A
-  `["redact", {"label": ..., "reason": ...}]` entry in `actions` removes one assertion from the
-  input's existing C2PA manifest history, wherever it occurs in that history (not just the
-  immediate parent). Repeat the entry to redact several assertions, each with its own reason; the
-  same assertion may not be targeted twice. Entries take effect in list order, which determines
-  where each `c2pa.redacted` action appears in the recorded edit history. Not available on the
-  distributed signers, which reject the action. See `docs/quickstart/5_ingredients.md`.
-- `RedactableAssertion` and `RedactionReason` enums in `trufo.c2pa`. `label` comes from the set of
-  supported labels — `c2pa.metadata`, `cawg.metadata`, `cawg.training-mining`, `cawg.identity` —
-  and may be suffixed with `__N` to target one specific disambiguated instance. Removing a
-  contributor from an asset generally takes both `cawg.metadata` and `cawg.identity`: the byline
-  lives in the first, the certificate naming the signer in the second.
-- `reason` is required on every `redact` entry and is recorded on that entry's `c2pa.redacted`
-  action, alongside a reference to the assertion removed. It is either a `RedactionReason` preset
-  or a custom entity-namespaced (reverse-DNS) value; custom values require completed domain
-  validation for that domain.
+- `redact` action for the fully-server signers. A `["redact", {"label": ..., "reason": ...}]`
+  entry in `actions` removes one assertion from the input's existing C2PA manifest history,
+  wherever it occurs in that history. Repeat the entry to redact several, each with its own
+  reason. Not available on the distributed signers, which reject the action. See
+  `docs/quickstart/5_ingredients.md`.
+- `RedactableAssertion` and `RedactionReason` enums in `trufo.c2pa`, holding the labels
+  supported for redaction and the preset rationale values.
 - A redaction the input cannot satisfy — no existing C2PA manifest, or a label absent from its
   manifest history — returns `400`.
+
 
 ## [0.5.2] — 2026-07-26
 

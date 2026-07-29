@@ -47,7 +47,7 @@ A `redact` entry has the shape `["redact", {"label": ..., "reason": ...}]`:
 - **`label`** — the one assertion to remove.
 - **`reason`** — **required** rationale, recorded on the resulting `c2pa.redacted` action.
 
-Repeat the entry to redact several assertions. Each produces its own `c2pa.redacted` action, so each can carry a different reason:
+Repeat the entry to redact several assertions. Each entry carries its own reason:
 
 ```python
 actions=[
@@ -60,7 +60,7 @@ The same assertion may not be targeted twice in one call.
 
 #### Supported Labels
 
-The labels supported for redaction are listed below; more will be added over time (upon request). These cover the fields most often removed to protect sources and contributors:
+The labels supported for redaction are listed below; more will be added over time (upon request).
 
 | Label                    | Carries                                                             |
 | ------------------------ | ------------------------------------------------------------------- |
@@ -69,7 +69,7 @@ The labels supported for redaction are listed below; more will be added over tim
 | `"cawg.training-mining"` | AI-training and data-mining permissions and opt-outs                 |
 | `"cawg.identity"`        | the identity binding a named signer to that manifest's assertions    |
 
-Each label is enumerated individually rather than by namespace, so any label not listed — including other `cawg.*` labels and `c2pa.ai-disclosure` — is rejected. Redacting a protected label (`c2pa.actions.v2`, hash bindings) is never permitted.
+Each label is enumerated individually rather than by namespace, so any label not listed — including other `cawg.*` labels and `c2pa.ai-disclosure` — is rejected.
 
 Removing a contributor from an asset generally takes both `"cawg.metadata"` and `"cawg.identity"`: the first carries the byline, the second carries the identity certificate that names the signer. Redacting either one alone leaves the other in place.
 
@@ -94,7 +94,7 @@ You may also supply a **custom** reverse-DNS reason (e.g. `"com.example.internal
 
 ### Targeting One Specific Instance
 
-If a single manifest carries more than one assertion under the same base label (disambiguated as `label__1`, `label__2`, ...), a bare label only matches the *unnumbered* instance — it does not also redact the numbered ones. To redact a specific numbered instance, suffix the label directly:
+If a single manifest carries more than one assertion under the same base label (disambiguated as `label__1`, `label__2`, ..., numbered from 1), a bare label only matches the *unnumbered* instance — it does not also redact the numbered ones. To redact a specific numbered instance, suffix the label directly:
 
 ```python
 actions=[["redact", {"label": "c2pa.metadata__1", "reason": "c2pa.PII.present"}]]

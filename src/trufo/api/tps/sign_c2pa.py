@@ -25,6 +25,7 @@ will silently pick the wrong title.
 
 import base64
 from dataclasses import dataclass
+from typing import Any
 
 import requests
 
@@ -82,8 +83,15 @@ def _validate_assertions(assertions: list | None) -> None:
 REDACT_ACTION = "redact"
 
 
-def _validate_actions(actions: list | None) -> None:
-    """Validate client-side action requirements shared by C2PA helpers."""
+def _validate_actions(actions: list | None, *, allow_redact: bool = True) -> None:
+    """Validate client-side action requirements shared by C2PA helpers.
+
+    Pass ``allow_redact=False`` for the distributed signers, which do not
+    support the redact action.
+    """
+    if actions is not None and not isinstance(actions, list):
+        raise ValueError(f"actions must be a list, got {type(actions).__name__}.")
+
     seen_redact_labels: set[str] = set()
     for entry in actions or []:
         try:
@@ -91,6 +99,11 @@ def _validate_actions(actions: list | None) -> None:
         except (IndexError, KeyError, TypeError) as exc:
             raise ValueError(f"Invalid action entry: {entry!r}") from exc
         if name == REDACT_ACTION:
+            if not allow_redact:
+                raise ValueError(
+                    "The 'redact' action is not supported on the distributed signers; "
+                    "use sign_c2pa (or another fully-server signer) instead."
+                )
             label = _validate_redact_action(entry)
             if label in seen_redact_labels:
                 raise ValueError(f"Duplicate redaction target: {label!r}")
@@ -102,17 +115,7 @@ def _validate_actions(actions: list | None) -> None:
             raise ValueError(f"Invalid action entry: {entry!r}") from exc
 
 
-def _reject_redact_action(actions: list | None) -> None:
-    """Reject the redact action, which the distributed signers do not support."""
-    for entry in actions or []:
-        if isinstance(entry, (list, tuple)) and len(entry) >= 1 and entry[0] == REDACT_ACTION:
-            raise ValueError(
-                "The 'redact' action is not supported on the distributed signers; "
-                "use sign_c2pa (or another fully-server signer) instead."
-            )
-
-
-def _validate_redact_action(entry) -> str:
+def _validate_redact_action(entry: Any) -> str:
     """Validate a redact action entry and return its assertion label."""
     if not isinstance(entry, (list, tuple)) or len(entry) != 2:
         raise ValueError(f"Invalid redact action entry: {entry!r}")
@@ -125,7 +128,7 @@ def _validate_redact_action(entry) -> str:
         raise ValueError("The redact action requires a non-empty 'label'.")
     # an instance suffix is an ascii positive integer with no leading zero
     base, sep, suffix = label.rpartition("__")
-    valid_suffix = sep and suffix.isascii() and suffix.isdigit() and suffix[0] != "0"
+    valid_suffix = bool(sep) and suffix.isascii() and suffix.isdigit() and suffix[0] != "0"
     base_label = base if valid_suffix else label
     try:
         RedactableAssertion(base_label)
@@ -133,10 +136,12 @@ def _validate_redact_action(entry) -> str:
         raise ValueError(f"Invalid redaction entry: {label!r}") from exc
 
     reason = params.get("reason")
-    if not isinstance(reason, str) or not reason:
+    if not isinstance(reason, str) or not reason.strip():
         raise ValueError("The redact action requires a non-empty 'reason'.")
-    # the c2pa namespace is reserved, so such a reason must be a defined preset
-    if reason == "c2pa" or reason.startswith("c2pa."):
+    # the c2pa namespace is reserved, so such a reason must be a defined preset;
+    # matched case-insensitively so a miscased namespace is not read as custom
+    lowered = reason.lower()
+    if lowered == "c2pa" or lowered.startswith("c2pa."):
         try:
             RedactionReason(reason)
         except ValueError as exc:
@@ -626,8 +631,7 @@ def sign_c2pa_distributed_test(
     Returns:
         Signed media bytes.
     """
-    _reject_redact_action(actions)
-    _validate_actions(actions)
+    _validate_actions(actions, allow_redact=False)
     _validate_assertions(assertions)
 
     resolved_tsa_api_key = _resolve_tsa_api_key(tsa_api_key)
@@ -690,8 +694,7 @@ def sign_c2pa_distributed(
     Returns:
         Signed media bytes.
     """
-    _reject_redact_action(actions)
-    _validate_actions(actions)
+    _validate_actions(actions, allow_redact=False)
     _validate_assertions(assertions)
 
     resolved_tsa_api_key = _resolve_tsa_api_key(tsa_api_key)
