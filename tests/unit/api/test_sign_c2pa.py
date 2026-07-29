@@ -349,10 +349,7 @@ class TestS3C2PASigning:
         result = sign_c2pa_s3(
             "prod-key",
             "signed-input-reference",
-            actions=[
-                ["publish", {}],
-                ["redact", {"label": "c2pa.metadata", "reason": "c2pa.PII.present"}],
-            ],
+            actions=[["publish", {}]],
             assertions=[["cawg_identity", {"cawg_identity_id": "org_interim"}]],
         )
 
@@ -361,10 +358,7 @@ class TestS3C2PASigning:
             TRUFO_API_URL + TPS_C2PA_SIGN,
             json={
                 "media_input_s3": "signed-input-reference",
-                "actions": [
-                    ["publish", {}],
-                    ["redact", {"label": "c2pa.metadata", "reason": "c2pa.PII.present"}],
-                ],
+                "actions": [["publish", {}]],
                 "assertions": [["cawg_identity", {"cawg_identity_id": "org_interim"}]],
             },
             headers={"X-API-Key": "prod-key"},
@@ -413,10 +407,7 @@ class TestS3C2PASigning:
             "prod-key",
             b"input-media",
             "image/jpeg",
-            actions=[
-                ["publish", {}],
-                ["redact", {"label": "c2pa.metadata", "reason": "c2pa.PII.present"}],
-            ],
+            actions=[["publish", {}]],
             assertions=[["cawg_identity", {"cawg_identity_id": "org_interim"}]],
             duration="5m",
         )
@@ -438,10 +429,7 @@ class TestS3C2PASigning:
         mock_sign_s3.assert_called_once_with(
             "prod-key",
             "signed-input-reference",
-            actions=[
-                ["publish", {}],
-                ["redact", {"label": "c2pa.metadata", "reason": "c2pa.PII.present"}],
-            ],
+            actions=[["publish", {}]],
             assertions=[["cawg_identity", {"cawg_identity_id": "org_interim"}]],
             manifest_title=None,
             ingredient_title=None,
