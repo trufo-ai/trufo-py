@@ -11,14 +11,18 @@ Certificate enrollment, revocation checking, and timestamping via the Trufo Cert
 
 | Leaf Type | Value | Description | Max Validity |
 |-----------|-------|-------------|--------------|
-| C2PA Level 1 | `c2pa-l1` | Production C2PA signing | 398 days |
-| C2PA Level 2 | `c2pa-l2` | Production C2PA signing (extended) | 398 days |
-| C2PA Level 1 Test | `c2pa-l1-test` | Test C2PA signing | 90 days |
+| C2PA Level 1 | `c2pa-l1` | Production C2PA signing | 366 days |
+| C2PA Level 2 | `c2pa-l2` | Production C2PA signing (extended) | 90 days |
+| C2PA Level 1 Test | `c2pa-l1-test` | Test C2PA signing | 366 days |
 | C2PA Level 2 Test | `c2pa-l2-test` | Test C2PA signing | 90 days |
-| CAWG Interim | `cawg-interim` | Production CAWG identity signing | 398 days |
-| CAWG Interim Test | `cawg-interim-test` | Test CAWG identity signing | 90 days |
-| TSA | `ctsa` | Production timestamping | 398 days |
-| TSA Test | `ctsa-test` | Test timestamping | 90 days |
+| CAWG Interim | `cawg-interim` | Production CAWG identity signing | 366 days |
+| CAWG Interim Test | `cawg-interim-test` | Test CAWG identity signing | 366 days |
+| TSA | `ctsa` | Production timestamping | 4110 days |
+| TSA Test | `ctsa-test` | Test timestamping | 4110 days |
+
+Maximum validity follows C2PA Certificate Policy v0.1 §7.1.2. A test leaf type
+carries the same cap as the production type it mirrors. A shorter validity may
+be requested when the certificate is enrolled.
 
 These values are defined in `trufo.crypt.tca_certs.LeafType`.
 

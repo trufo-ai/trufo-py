@@ -35,8 +35,8 @@ The full reference documentation is spread across the following files:
 
 | Service | Document                                     | Description                                                  |
 | ------- | -------------------------------------------- | ------------------------------------------------------------ |
-| Auth    | [docs/api/api_auth.md](docs/api/api_auth.md) | Headers, access tokens, sessions, regional TPS endpoints     |
-| TPS     | [docs/api/api_c2pa.md](docs/api/api_c2pa.md) | C2PA signing endpoints and regional API selection            |
+| Auth    | [docs/api/api_auth.md](docs/api/api_auth.md) | Headers, access tokens, sessions                             |
+| TPS     | [docs/api/api_c2pa.md](docs/api/api_c2pa.md) | C2PA signing endpoints                                       |
 | TCA     | [docs/api/tca_ca.md](docs/api/tca_ca.md)     | Certificate Authority — enrollment, revocation, timestamping |
 | TCA     | [docs/api/tca_ra.md](docs/api/tca_ra.md)     | Registration Authority — instances, credentials, CSR JWTs   |
 | CLI     | [docs/cli.md](docs/cli.md)                   | Credential management (dev tool; use the Python API in prod) |
