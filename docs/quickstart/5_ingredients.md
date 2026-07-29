@@ -127,7 +127,7 @@ signed_bytes = sign_c2pa(
 )
 ```
 
-What gets redacted does not depend on where the entry sits in the list: redaction always targets the input's *existing* manifest history, never the output of a transform in the same call.
+Where you place an entry sets where its `c2pa.redacted` action appears in the recorded history, but never what gets redacted: redaction always targets the input's *existing* manifest history, never the output of a transform in the same call.
 
 ### When Redaction Fails
 

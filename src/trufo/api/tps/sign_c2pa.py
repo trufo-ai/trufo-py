@@ -83,11 +83,12 @@ def _validate_assertions(assertions: list | None) -> None:
 REDACT_ACTION = "redact"
 
 
-def _validate_actions(actions: list | None, *, allow_redact: bool = True) -> None:
+def _validate_actions(actions: list | None, *, allow_redact: bool = False) -> None:
     """Validate client-side action requirements shared by C2PA helpers.
 
-    Pass ``allow_redact=False`` for the distributed signers, which do not
-    support the redact action.
+    Redaction is opt-in: pass ``allow_redact=True`` from the fully-server
+    signers that support it, so a signer added later rejects it by default
+    rather than forwarding it to a path that cannot honour it.
     """
     if actions is not None and not isinstance(actions, list):
         raise ValueError(f"actions must be a list, got {type(actions).__name__}.")
@@ -175,7 +176,7 @@ def _sign_c2pa_direct(
     trufo_api_url: str = TRUFO_API_URL,
 ) -> bytes:
     """Sign media bytes through a C2PA signing endpoint."""
-    _validate_actions(actions)
+    _validate_actions(actions, allow_redact=True)
     _validate_assertions(assertions)
 
     body = {
@@ -257,7 +258,7 @@ def _sign_c2pa_s3(
     trufo_api_url: str = TRUFO_API_URL,
 ) -> C2PAS3SignedOutput:
     """Sign an uploaded ephemeral S3 object through a C2PA signing endpoint."""
-    _validate_actions(actions)
+    _validate_actions(actions, allow_redact=True)
     _validate_assertions(assertions)
 
     body = {
@@ -635,7 +636,7 @@ def sign_c2pa_distributed_test(
     Returns:
         Signed media bytes.
     """
-    _validate_actions(actions, allow_redact=False)
+    _validate_actions(actions)
     _validate_assertions(assertions)
 
     resolved_tsa_api_key = _resolve_tsa_api_key(tsa_api_key)
@@ -698,7 +699,7 @@ def sign_c2pa_distributed(
     Returns:
         Signed media bytes.
     """
-    _validate_actions(actions, allow_redact=False)
+    _validate_actions(actions)
     _validate_assertions(assertions)
 
     resolved_tsa_api_key = _resolve_tsa_api_key(tsa_api_key)
