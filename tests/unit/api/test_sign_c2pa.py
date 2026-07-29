@@ -712,6 +712,15 @@ class TestRequestValidation:
         with pytest.raises(ValueError, match="non-empty 'reason'"):
             _validate_actions([["redact", {"label": "c2pa.metadata", "reason": reason}]])
 
+    @pytest.mark.parametrize(
+        "reason", [" c2pa.PII.present", "c2pa.PII.present ", "\tc2pa.PII.present"]
+    )
+    def test_padded_reason_rejected(self, reason):
+        """Surrounding whitespace would miss the preset check and be forwarded as a
+        custom value, failing server-side as an unregistered domain."""
+        with pytest.raises(ValueError, match="Invalid redaction reason"):
+            _validate_actions(self._redact_actions("c2pa.metadata", reason=reason))
+
     @pytest.mark.parametrize("reason", ["C2PA.PII.present", "C2pa.invalid.data", "c2PA"])
     def test_miscased_c2pa_namespace_rejected(self, reason):
         """The c2pa namespace is reserved, so a miscased preset is a bad reason

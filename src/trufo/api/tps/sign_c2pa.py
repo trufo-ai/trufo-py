@@ -138,6 +138,10 @@ def _validate_redact_action(entry: Any) -> str:
     reason = params.get("reason")
     if not isinstance(reason, str) or not reason.strip():
         raise ValueError("The redact action requires a non-empty 'reason'.")
+    # surrounding whitespace would miss the preset check below and be forwarded
+    # as a custom value, which fails server-side as an unregistered domain
+    if reason != reason.strip():
+        raise ValueError(f"Invalid redaction reason: {reason!r}")
     # the c2pa namespace is reserved, so such a reason must be a defined preset;
     # matched case-insensitively so a miscased namespace is not read as custom
     lowered = reason.lower()
