@@ -727,8 +727,9 @@ class TestRequestValidation:
         ],
     )
     def test_malformed_redact_entry_shape_rejected(self, entry):
-        """A redact entry must be exactly [name, params]."""
-        with pytest.raises(ValueError, match="Invalid redact action entry"):
+        """Every action entry must be exactly [name, params]; the generic
+        shape check rejects malformed redact entries before name dispatch."""
+        with pytest.raises(ValueError, match="Invalid action entry"):
             _validate_actions([entry])
 
     def test_several_redact_entries_allowed_each_with_its_own_reason(self):

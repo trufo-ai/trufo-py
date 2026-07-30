@@ -87,10 +87,10 @@ def _validate_actions(actions: list | None) -> None:
 
     seen_redact_labels: set[str] = set()
     for entry in actions or []:
-        try:
-            name = entry[0]
-        except (IndexError, KeyError, TypeError) as exc:
-            raise ValueError(f"Invalid action entry: {entry!r}") from exc
+        # exactly [name, params]; a longer entry is malformed, not truncated
+        if not isinstance(entry, (list, tuple)) or len(entry) != 2:
+            raise ValueError(f"Invalid action entry: {entry!r}")
+        name = entry[0]
         if name == TrufoAction.REDACT:
             label = _validate_redact_action(entry)
             if label in seen_redact_labels:
@@ -143,11 +143,14 @@ def _validate_redact_action(entry: Any) -> str:
 
 
 def _validate_entry_names(entries: list | None, enum_type: type, entry_type: str) -> None:
-    """Validate the name field of request entries against a public enum."""
+    """Validate the shape and name field of request entries against a public enum."""
     for entry in entries or []:
+        # exactly [name, params]; a longer entry is malformed, not truncated
+        if not isinstance(entry, (list, tuple)) or len(entry) != 2:
+            raise ValueError(f"Invalid {entry_type} entry: {entry!r}")
         try:
             enum_type(entry[0])
-        except (IndexError, KeyError, TypeError, ValueError) as exc:
+        except (TypeError, ValueError) as exc:
             raise ValueError(f"Invalid {entry_type} entry: {entry!r}") from exc
 
 

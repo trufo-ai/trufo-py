@@ -23,6 +23,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `TrufoAction.REDACT`, so the `redact` action is discoverable alongside the other action
   names accepted by `actions`.
 
+### Changed
+
+- Every `[name, params]` entry in `actions` and `assertions` must be exactly two elements;
+  longer entries are rejected client-side as malformed rather than partially read.
+
 ### Removed
 
 - `TrufoAction.REPACKAGE`. The action was a placeholder, no longer needed.
