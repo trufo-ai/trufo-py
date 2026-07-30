@@ -25,6 +25,7 @@ will silently pick the wrong title.
 
 import base64
 from dataclasses import dataclass
+from typing import Any
 
 import requests
 
@@ -37,6 +38,7 @@ from trufo.api.endpoints import (
 )
 from trufo.c2pa.actions import TrufoAction
 from trufo.c2pa.assertions import UserAssertion
+from trufo.c2pa.redactions import RedactableAssertion, RedactionReason
 from trufo.util.credentials import TrufoApiKey, load_api_key
 from trufo.util.optional_imports import require_provenance_module
 
@@ -78,9 +80,79 @@ def _validate_assertions(assertions: list | None) -> None:
                 pass
 
 
-def _validate_actions(actions: list | None) -> None:
-    """Validate client-side action requirements shared by C2PA helpers."""
-    _validate_entry_names(actions, TrufoAction, "action")
+REDACT_ACTION = "redact"
+
+
+def _validate_actions(actions: list | None, *, allow_redact: bool = False) -> None:
+    """Validate client-side action requirements shared by C2PA helpers.
+
+    Redaction is opt-in: pass ``allow_redact=True`` from the fully-server
+    signers that support it, so a signer added later rejects it by default
+    rather than forwarding it to a path that cannot honour it.
+    """
+    if actions is not None and not isinstance(actions, list):
+        raise ValueError(f"actions must be a list, got {type(actions).__name__}.")
+
+    seen_redact_labels: set[str] = set()
+    for entry in actions or []:
+        try:
+            name = entry[0]
+        except (IndexError, KeyError, TypeError) as exc:
+            raise ValueError(f"Invalid action entry: {entry!r}") from exc
+        if name == REDACT_ACTION:
+            if not allow_redact:
+                raise ValueError(
+                    "The 'redact' action is not supported on the distributed signers; "
+                    "use sign_c2pa (or another fully-server signer) instead."
+                )
+            label = _validate_redact_action(entry)
+            if label in seen_redact_labels:
+                raise ValueError(f"Duplicate redaction target: {label!r}")
+            seen_redact_labels.add(label)
+            continue
+        try:
+            TrufoAction(name)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"Invalid action entry: {entry!r}") from exc
+
+
+def _validate_redact_action(entry: Any) -> str:
+    """Validate a redact action entry and return its assertion label."""
+    if not isinstance(entry, (list, tuple)) or len(entry) != 2:
+        raise ValueError(f"Invalid redact action entry: {entry!r}")
+    params = entry[1]
+    if not isinstance(params, dict):
+        raise ValueError(f"Invalid redact action parameters: {entry!r}")
+
+    label = params.get("label")
+    if not isinstance(label, str) or not label:
+        raise ValueError("The redact action requires a non-empty 'label'.")
+    # an instance suffix is an ascii positive integer with no leading zero
+    base, sep, suffix = label.rpartition("__")
+    valid_suffix = bool(sep) and suffix.isascii() and suffix.isdigit() and suffix[0] != "0"
+    base_label = base if valid_suffix else label
+    try:
+        RedactableAssertion(base_label)
+    except ValueError as exc:
+        raise ValueError(f"Invalid redaction entry: {label!r}") from exc
+
+    reason = params.get("reason")
+    if not isinstance(reason, str) or not reason.strip():
+        raise ValueError("The redact action requires a non-empty 'reason'.")
+    # surrounding whitespace would miss the preset check below and be forwarded
+    # as a custom value, which fails server-side as an unregistered domain
+    if reason != reason.strip():
+        raise ValueError(f"Invalid redaction reason: {reason!r}")
+    # the c2pa namespace is reserved, so such a reason must be a defined preset;
+    # matched case-insensitively so a miscased namespace is not read as custom
+    lowered = reason.lower()
+    if lowered == "c2pa" or lowered.startswith("c2pa."):
+        try:
+            RedactionReason(reason)
+        except ValueError as exc:
+            raise ValueError(f"Invalid redaction reason: {reason!r}") from exc
+
+    return label
 
 
 def _validate_entry_names(entries: list | None, enum_type: type, entry_type: str) -> None:
@@ -104,7 +176,7 @@ def _sign_c2pa_direct(
     trufo_api_url: str = TRUFO_API_URL,
 ) -> bytes:
     """Sign media bytes through a C2PA signing endpoint."""
-    _validate_actions(actions)
+    _validate_actions(actions, allow_redact=True)
     _validate_assertions(assertions)
 
     body = {
@@ -186,7 +258,7 @@ def _sign_c2pa_s3(
     trufo_api_url: str = TRUFO_API_URL,
 ) -> C2PAS3SignedOutput:
     """Sign an uploaded ephemeral S3 object through a C2PA signing endpoint."""
-    _validate_actions(actions)
+    _validate_actions(actions, allow_redact=True)
     _validate_assertions(assertions)
 
     body = {

@@ -16,6 +16,7 @@ Three signing modes are available. Support varies by mode.
 |---|---|---|---|---|
 | `publish` | | ✅ | ✅ | ❌ |
 | `transcode` | | ✅ | ❌ | ❌ |
+| `redact` | | ✅ | ❌ | ❌ |
 
 ## Assertions
 

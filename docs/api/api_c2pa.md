@@ -128,7 +128,7 @@ Both endpoints share the same request/response schema. The production signer pro
 | ---------------- | ------ | -------- | ---------------------------------------------------------------------- |
 | `media_input`    | string | Yes*     | base64-encoded input media data                                        |
 | `media_input_s3` | string | Yes*     | server-signed ephemeral S3 input reference from `/c2pa/io/get-s3-url`  |
-| `actions`        | list   | No       | media processing instructions for the TPS to apply                     |
+| `actions`        | list   | No       | instructions for the TPS to apply, in order                            |
 | `assertions`     | list   | No       | gathered assertions to include in the manifest                         |
 | `manifest_title` | string | No       | active-manifest title (the manifest's `dc:title`); signer default if omitted |
 
@@ -162,10 +162,47 @@ The Python SDK provides low-level helpers for each step and high-level helpers (
 
 Ordered list of `[action_name, params]` pairs. Each element of the `actions` list is a two-element array, and will be executed by the TPS in order.
 
-| Action        | Params                           | Description                 |
-| ------------- | -------------------------------- | --------------------------- |
-| `"transcode"` | `{"target_mime_type": "<mime>"}` | transcode to target format  |
-| `"publish"`   | `{}`                             | mark for final distribution |
+| Action        | Params                                              | Description                                      |
+| ------------- | --------------------------------------------------- | ------------------------------------------------ |
+| `"transcode"` | `{"target_mime_type": "<mime>"}`                    | transcode to target format                       |
+| `"publish"`   | `{}`                                                | mark for final distribution                      |
+| `"redact"`    | `{"label": "<label>", "reason": "<reason>"}`         | remove an assertion from the input's history     |
+
+##### `redact`
+
+Remove one named assertion from the input's existing manifest history, wherever it occurs in that history (C2PA §6.8).
+
+| Param    | Type   | Required | Description |
+| -------- | ------ | -------- | ----------- |
+| `label`  | string | Yes      | Assertion label to redact, from the supported labels below. May be suffixed with `__N` to target one disambiguated instance, e.g. `c2pa.metadata__1`, where `N` is a positive integer with no leading zero (instance 0 is the bare label). Matching is exact, so a bare label does not also match its numbered instances. |
+| `reason` | string | Yes      | Rationale, recorded on the resulting `c2pa.redacted` action. A preset value below, or a custom reverse-DNS value, e.g. `com.example.internal-policy`. |
+
+The labels supported for redaction are listed below; more will be added over time (upon request).
+
+| Label                    | Carries |
+| ------------------------ | ------- |
+| `c2pa.metadata`          | capture date/time, location, GPS, device |
+| `cawg.metadata`          | byline/creator, people depicted, credit, rights |
+| `cawg.training-mining`   | AI-training and data-mining permissions |
+| `cawg.identity`          | the identity assertion binding a named signer to that manifest's assertions, including its X.509 certificate |
+
+The preset `reason` values are listed below. A `reason` may also be a custom entity-namespaced (reverse-DNS) value, e.g. `com.example.internal-policy`.
+
+| Preset                         | Redacted because the assertion contains |
+| ------------------------------ | --------------------------------------- |
+| `c2pa.PII.present`             | personally identifiable information |
+| `c2pa.invalid.data`            | incorrect data |
+| `c2pa.trade-secret.present`    | commercially sensitive information |
+| `c2pa.government.confidential` | information restricted by a government |
+
+A custom reason requires an active domain-validation (DV) record for its base domain (scope `c2pa-custom-assertion`, the same record used for custom assertions); without one the request returns `403 InvalidC2PACustomDomain`.
+
+The search covers the full ingredient history, not just the immediate parent, so one entry produces one `c2pa.redacted` action per matching manifest. Repeat the entry to redact several assertions, each with its own `reason`; the same label may not be targeted twice in one request. Redaction requires the input to already have a C2PA manifest — that, or a label absent from its history, returns `400`. An entry's position sets where its `c2pa.redacted` action appears in the recorded history, but never what gets redacted: redaction always targets the input's existing manifest history, not the output of a transform in the same call. Not available on the distributed signers.
+
+```json
+["redact", {"label": "c2pa.metadata", "reason": "c2pa.PII.present"}],
+["redact", {"label": "cawg.metadata", "reason": "c2pa.trade-secret.present"}]
+```
 
 #### `assertions`
 

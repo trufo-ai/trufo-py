@@ -21,6 +21,7 @@ from trufo.api.tps.sign_c2pa import (
     C2PAS3Upload,
     _validate_actions,
     _validate_assertions,
+    _validate_redact_action,
     get_c2pa_s3_upload_url,
     sign_c2pa,
     sign_c2pa_distributed,
@@ -101,7 +102,10 @@ class TestDirectC2PASigning:
         result = sign_c2pa(
             "prod-key",
             b"input-media",
-            actions=[["publish", {}]],
+            actions=[
+                ["publish", {}],
+                ["redact", {"label": "c2pa.metadata", "reason": "c2pa.PII.present"}],
+            ],
             assertions=[["cawg_identity", {"cawg_identity_id": "org_interim"}]],
         )
 
@@ -110,7 +114,10 @@ class TestDirectC2PASigning:
             TRUFO_API_URL + TPS_C2PA_SIGN,
             json={
                 "media_input": base64.b64encode(b"input-media").decode(),
-                "actions": [["publish", {}]],
+                "actions": [
+                    ["publish", {}],
+                    ["redact", {"label": "c2pa.metadata", "reason": "c2pa.PII.present"}],
+                ],
                 "assertions": [["cawg_identity", {"cawg_identity_id": "org_interim"}]],
             },
             headers={"X-API-Key": "prod-key"},
@@ -594,3 +601,188 @@ class TestRequestValidation:
     def test_invalid_entries_rejected(self, validator, entry_type, bad):
         with pytest.raises(ValueError, match=f"Invalid {entry_type} entry"):
             validator(bad)
+
+    def _redact_actions(self, label, reason="c2pa.PII.present"):
+        """An actions list holding a single redact entry."""
+        params = {"label": label}
+        if reason is not None:
+            params["reason"] = reason
+        return [["redact", params]]
+
+    @pytest.mark.parametrize(
+        "label",
+        [
+            "c2pa.metadata",
+            "cawg.metadata",
+            "cawg.training-mining",
+            "cawg.identity",
+            "cawg.metadata__2",
+        ],
+    )
+    def test_each_redactable_label_accepted(self, label):
+        _validate_actions(self._redact_actions(label), allow_redact=True)  # must not raise
+
+    @pytest.mark.parametrize(
+        "bad",
+        [
+            "c2pa.hash.data",
+            "c2pa.actions.v2",
+            # the allowlist is enumerated, not a namespace prefix
+            "cawg.something-new",
+            "c2pa.ai-disclosure",
+            "ai.trufo.identity",
+            "c2pa.metadata__abc",
+            "c2pa.metadata__0",
+            "c2pa.metadata__00",
+            "c2pa.metadata__01",
+            "c2pa.metadata__-1",
+        ],
+    )
+    def test_invalid_redaction_labels_rejected(self, bad):
+        with pytest.raises(ValueError, match="Invalid redaction entry"):
+            _validate_actions(self._redact_actions(bad), allow_redact=True)
+
+    def test_redaction_is_opt_in(self):
+        """A caller that does not opt in rejects redact, so a signer added later
+        fails closed rather than forwarding it to a path that cannot honour it."""
+        with pytest.raises(ValueError, match="not supported"):
+            _validate_actions(self._redact_actions("c2pa.metadata"))
+
+    @pytest.mark.parametrize("label", ["", None, 123, ["c2pa.metadata"]])
+    def test_missing_or_non_string_label_rejected(self, label):
+        with pytest.raises(ValueError, match="non-empty 'label'"):
+            _validate_actions(self._redact_actions(label), allow_redact=True)
+
+    def test_repeated_target_rejected(self):
+        """The same assertion may not be targeted twice in one call."""
+        actions = self._redact_actions("c2pa.metadata") + self._redact_actions(
+            "c2pa.metadata", reason="c2pa.invalid.data"
+        )
+        with pytest.raises(ValueError, match="Duplicate redaction target"):
+            _validate_actions(actions, allow_redact=True)
+
+    def test_base_label_and_numbered_instance_are_distinct_targets(self):
+        """The documented way to redact every instance of a repeated label."""
+        actions = self._redact_actions("c2pa.metadata") + self._redact_actions("c2pa.metadata__1")
+        _validate_actions(actions, allow_redact=True)  # must not raise
+
+    @pytest.mark.parametrize("params", ["c2pa.metadata", None, 123, ["c2pa.metadata"]])
+    def test_non_dict_params_rejected(self, params):
+        with pytest.raises(ValueError, match="Invalid redact action parameters"):
+            _validate_actions([["redact", params]], allow_redact=True)
+
+    @pytest.mark.parametrize("reason", ["", "   ", None, 123, ["c2pa.PII.present"]])
+    def test_missing_or_non_string_reason_rejected(self, reason):
+        with pytest.raises(ValueError, match="non-empty 'reason'"):
+            _validate_actions(
+                [["redact", {"label": "c2pa.metadata", "reason": reason}]], allow_redact=True
+            )
+
+    @pytest.mark.parametrize(
+        "reason", [" c2pa.PII.present", "c2pa.PII.present ", "\tc2pa.PII.present"]
+    )
+    def test_padded_reason_rejected(self, reason):
+        """Surrounding whitespace would miss the preset check and be forwarded as a
+        custom value, failing server-side as an unregistered domain."""
+        with pytest.raises(ValueError, match="Invalid redaction reason"):
+            _validate_actions(
+                self._redact_actions("c2pa.metadata", reason=reason), allow_redact=True
+            )
+
+    @pytest.mark.parametrize("reason", ["C2PA.PII.present", "C2pa.invalid.data", "c2PA"])
+    def test_miscased_c2pa_namespace_rejected(self, reason):
+        """The c2pa namespace is reserved, so a miscased preset is a bad reason
+        rather than a custom value needing domain validation."""
+        with pytest.raises(ValueError, match="Invalid redaction reason"):
+            _validate_actions(
+                self._redact_actions("c2pa.metadata", reason=reason), allow_redact=True
+            )
+
+    @pytest.mark.parametrize("actions", [5, "redact", {"redact": {}}])
+    def test_non_list_actions_rejected(self, actions):
+        with pytest.raises(ValueError, match="actions must be a list"):
+            _validate_actions(actions, allow_redact=True)
+
+    @pytest.mark.parametrize(
+        "reason",
+        [
+            "c2pa.PII.present",
+            "c2pa.invalid.data",
+            "c2pa.trade-secret.present",
+            "c2pa.government.confidential",
+            "com.acme.gdpr-request",  # custom entity-namespaced value
+        ],
+    )
+    def test_valid_redact_reason_accepted(self, reason):
+        _validate_actions(
+            self._redact_actions("c2pa.metadata", reason=reason), allow_redact=True
+        )  # must not raise
+
+    def test_reason_is_required(self):
+        with pytest.raises(ValueError, match="non-empty 'reason'"):
+            _validate_actions(self._redact_actions("c2pa.metadata", reason=None), allow_redact=True)
+
+    def test_non_preset_c2pa_reason_rejected(self):
+        with pytest.raises(ValueError, match="Invalid redaction reason"):
+            _validate_actions(
+                self._redact_actions("c2pa.metadata", reason="c2pa.not-a-real-reason"),
+                allow_redact=True,
+            )
+
+    def test_redact_via_validate_redact_action_directly(self):
+        _validate_redact_action(
+            ["redact", {"label": "c2pa.metadata", "reason": "c2pa.PII.present"}]
+        )  # must not raise
+
+    @pytest.mark.parametrize(
+        "entry",
+        [
+            ["redact"],  # missing params
+            ["redact", {"label": "c2pa.metadata", "reason": "c2pa.PII.present"}, "extra"],
+        ],
+    )
+    def test_malformed_redact_entry_shape_rejected(self, entry):
+        """A redact entry must be exactly [name, params]."""
+        with pytest.raises(ValueError, match="Invalid redact action entry"):
+            _validate_actions([entry], allow_redact=True)
+
+    def test_several_redact_entries_allowed_each_with_its_own_reason(self):
+        """One entry per assertion, each carrying its own reason."""
+        actions = [
+            ["redact", {"label": "c2pa.metadata", "reason": "c2pa.PII.present"}],
+            ["redact", {"label": "cawg.metadata", "reason": "c2pa.trade-secret.present"}],
+            ["redact", {"label": "cawg.training-mining", "reason": "com.acme.policy"}],
+        ]
+        _validate_actions(actions, allow_redact=True)  # must not raise
+
+
+class TestRedactRejectedOnDistributedSigners:
+    """Redaction is a fully-server feature, so the distributed signers reject it."""
+
+    _REDACT = ["redact", {"label": "c2pa.metadata", "reason": "c2pa.PII.present"}]
+
+    @pytest.mark.parametrize("signer", [sign_c2pa_distributed, sign_c2pa_distributed_test])
+    def test_distributed_signers_reject_redact(self, signer):
+        with pytest.raises(ValueError, match="not supported on the distributed signers"):
+            signer("key", b"media", actions=[self._REDACT], tsa_api_key="tsa-key")
+
+    @pytest.mark.parametrize(
+        "entry",
+        [
+            ["redact"],  # no params
+            ["redact", {}, "extra"],  # unexpected shape
+            ("redact", {}),  # tuple
+            {0: "redact", 1: {}},  # not a sequence at all
+        ],
+    )
+    def test_unsupported_is_reported_before_entry_shape(self, entry):
+        """Any entry the signer reads as a redact reports that redaction is
+        unavailable, rather than complaining about the entry's shape."""
+        with pytest.raises(ValueError, match="not supported on the distributed signers"):
+            _validate_actions([entry], allow_redact=False)
+
+    def test_non_redact_actions_not_rejected(self):
+        _validate_actions(
+            [["publish", {}], ["transcode", {"target_mime_type": "image/png"}]],
+            allow_redact=False,
+        )
