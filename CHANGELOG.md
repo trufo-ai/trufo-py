@@ -31,6 +31,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `componentOf` requires it.
   See `docs/quickstart/5_ingredients.md`.
 
+- `POST /c2pa/software-agent/add` and `/c2pa/software-agent/list`: register reusable
+  softwareAgent generator-info maps, referenced from ingredient `action_history` entries
+  via `{"softwareAgent": {"software_agent_id": ...}}` and resolved server-side. Inline
+  agent bodies are rejected with a register-first error; `ai_disclosure` inline bodies
+  now fail fast the same way instead of being silently discarded.
+
 ### Changed
 
 - Every `[name, params]` entry in `actions` and `assertions` must be exactly two elements;
