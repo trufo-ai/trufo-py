@@ -26,9 +26,9 @@ STR_ENUMS = {
     },
     TrufoAction: {
         "TRANSCODE": "transcode",
-        "REPACKAGE": "repackage",
         "WATERMARK": "watermark",
         "PUBLISH": "publish",
+        "REDACT": "redact",
     },
     LeafType: {
         "C2PA_L1": "c2pa-l1",

@@ -174,7 +174,7 @@ Remove one named assertion from the input's existing manifest history, wherever 
 
 | Param    | Type   | Required | Description |
 | -------- | ------ | -------- | ----------- |
-| `label`  | string | Yes      | Assertion label to redact, from the supported labels below. May be suffixed with `__N` to target one disambiguated instance, e.g. `c2pa.metadata__1`, where `N` is a positive integer with no leading zero (instance 0 is the bare label). Matching is exact, so a bare label does not also match its numbered instances. |
+| `label`  | string | Yes      | Assertion label to redact, from the supported labels below. May be suffixed with `__N` to target one disambiguated instance, e.g. `c2pa.metadata__1`, where `N` is a positive integer with no leading zero. |
 | `reason` | string | Yes      | Rationale, recorded on the resulting `c2pa.redacted` action. A preset value below, or a custom reverse-DNS value, e.g. `com.example.internal-policy`. |
 
 The labels supported for redaction are listed below; more will be added over time (upon request).

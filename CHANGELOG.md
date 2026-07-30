@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+#### Redaction
+
 - `redact` action for the fully-server signers. A `["redact", {"label": ..., "reason": ...}]`
   entry in `actions` removes one assertion from the input's existing C2PA manifest history,
   wherever it occurs in that history. Repeat the entry to redact several, each with its own
@@ -18,6 +20,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   supported for redaction and the preset rationale values.
 - A redaction the input cannot satisfy — no existing C2PA manifest, or a label absent from its
   manifest history — returns `400`.
+- `TrufoAction.REDACT`, so the `redact` action is discoverable alongside the other action
+  names accepted by `actions`.
+
+### Removed
+
+- `TrufoAction.REPACKAGE`. The action was a placeholder, no longer needed.
 
 
 ## [0.5.2] — 2026-07-26

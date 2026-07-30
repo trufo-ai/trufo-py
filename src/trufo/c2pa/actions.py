@@ -10,6 +10,6 @@ class TrufoAction(str, Enum):
     """User-facing C2PA action type."""
 
     TRANSCODE = "transcode"
-    REPACKAGE = "repackage"
     WATERMARK = "watermark"
     PUBLISH = "publish"
+    REDACT = "redact"

@@ -80,9 +80,6 @@ def _validate_assertions(assertions: list | None) -> None:
                 pass
 
 
-REDACT_ACTION = "redact"
-
-
 def _validate_actions(actions: list | None, *, allow_redact: bool = False) -> None:
     """Validate client-side action requirements shared by C2PA helpers.
 
@@ -99,7 +96,7 @@ def _validate_actions(actions: list | None, *, allow_redact: bool = False) -> No
             name = entry[0]
         except (IndexError, KeyError, TypeError) as exc:
             raise ValueError(f"Invalid action entry: {entry!r}") from exc
-        if name == REDACT_ACTION:
+        if name == TrufoAction.REDACT:
             if not allow_redact:
                 raise ValueError(
                     "The 'redact' action is not supported on the distributed signers; "
