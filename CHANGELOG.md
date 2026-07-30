@@ -23,10 +23,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `TrufoAction.REDACT`, so the `redact` action is discoverable alongside the other action
   names accepted by `actions`.
 
-- `ingredient` assertion entries (metadata-only): declare `inputTo` inputs (prompt, model,
+- `ingredient` assertion entries: declare `inputTo` inputs (prompt, model,
   dataset — with `c2pa.types.*` data types and IPTC AI-disclosure digitalSourceType) and one
   `parentOf` upstream asset with its `action_history` of prior descriptive actions. All
   user ingredients are gathered; `allActionsIncluded` is `false` whenever any are present.
+  Entries may carry base64 `media` (hashed, thumbnailed, validated when manifest-bearing);
+  `componentOf` requires it.
   See `docs/quickstart/5_ingredients.md`.
 
 ### Changed

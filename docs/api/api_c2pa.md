@@ -320,10 +320,11 @@ Declares a prior or contributing asset as a metadata-only ingredient. All user i
 
 | Param                 | Type   | Required | Description |
 | --------------------- | ------ | -------- | ----------- |
-| `relationship`        | string | Yes      | `inputTo` (an input to a computational process — prompt, model, dataset) or `parentOf` (the upstream asset this content was derived from). `componentOf` arrives with ingredient media support. |
+| `relationship`        | string | Yes      | `inputTo` (an input to a computational process — prompt, model, dataset), `parentOf` (the upstream asset this content was derived from), or `componentOf` (a placed component; requires `media`). |
 | `title`               | string | No       | Display name (`dc:title`), e.g. `prompt.txt`. |
 | `data_types`          | list   | No       | `[{"type": "c2pa.types.<kind>", "version": "…"}]` — the asset's role, e.g. `c2pa.types.prompt`, `c2pa.types.model`, `c2pa.types.dataset`. |
 | `digital_source_type` | string | No       | IPTC AI-disclosure values only: `trainedAlgorithmicMedia` or `compositeWithTrainedAlgorithmicMedia` (full IPTC URIs). |
+| `media`               | string | No       | base64 file bytes. The file is hashed and thumbnailed; a detected C2PA manifest brings validation references (and excludes `digital_source_type`). Required for `componentOf`. |
 | `action_history`      | list   | No       | `parentOf` only: prior descriptive actions applied to the parent before signing, e.g. `[{"action": "c2pa.color_adjustments"}]`. Each entry takes `action` plus optional `digitalSourceType`, `softwareAgent` (`{"name", "version", "operating_system"}`), and RFC 3339 `when`. Recorded as a second, gathered actions assertion. `c2pa.created`/`c2pa.opened` and ingredient-referencing actions are rejected. |
 
 A `parentOf` entry may only be supplied when the input has no existing C2PA manifest (a signed input is its own parent), replaces the default input-derived parent (so it conflicts with `ingredient_title`), and conflicts with `ai_disclosure.set_source_type`. At most one `parentOf` entry per request.
