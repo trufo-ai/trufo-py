@@ -215,6 +215,7 @@ Ordered list of `[assertion_name, params]` pairs. Each assertion is treated as a
 | `"cawg_training"` | `{"assertion": {…}}`           | `cawg.training-mining` |
 | `"cawg_identity"` | `{"cawg_identity_id": "<id>"}` | `cawg.identity`        |
 | `"custom"`        | `{"label": "<reverse-dns-label>", "assertion": {…}}` | entity-specific label  |
+| `"ingredient"`    | `{"relationship": "<rel>", …}` | `c2pa.ingredient.v3`   |
 
 ##### `ai_disclosure`
 
@@ -312,6 +313,27 @@ Attach a CAWG identity assertion.
 | ------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------ |
 | `"test"`      | Test            | Signs with a shared Trufo test certificate. Outputs are not recognized by C2PA validators. |
 | `"org_interim"` | Test, Prod    | Signs with a Trufo-hosted org-specific CAWG interim certificate. Requires the `cawg_cert_organization` billing plan. If your org has the plan but signing fails, contact support. |
+
+##### `ingredient`
+
+Declares a prior or contributing asset as a metadata-only ingredient. All user ingredients are gathered assertions: the relationship and description are your workflow's account, not attributed to the Trufo signer. Whenever one or more `ingredient` entries are present, the manifest's `allActionsIncluded` is set to `false`.
+
+| Param                 | Type   | Required | Description |
+| --------------------- | ------ | -------- | ----------- |
+| `relationship`        | string | Yes      | `inputTo` (an input to a computational process — prompt, model, dataset) or `parentOf` (the upstream asset this content was derived from). `componentOf` arrives with ingredient media support. |
+| `title`               | string | No       | Display name (`dc:title`), e.g. `prompt.txt`. |
+| `data_types`          | list   | No       | `[{"type": "c2pa.types.<kind>", "version": "…"}]` — the asset's role, e.g. `c2pa.types.prompt`, `c2pa.types.model`, `c2pa.types.dataset`. |
+| `digital_source_type` | string | No       | AI-disclosure subset only: `trainedAlgorithmicMedia`, `compositeWithTrainedAlgorithmicMedia`, or `trainedAlgorithmicData` (full IPTC/C2PA URIs). |
+| `action_history`      | list   | No       | `parentOf` only: prior descriptive actions applied to the parent before signing, e.g. `[{"action": "c2pa.color_adjustments"}]`. Recorded as a second, gathered actions assertion. `c2pa.created`/`c2pa.opened` and ingredient-referencing actions are rejected. |
+
+A `parentOf` entry may only be supplied when the input has no existing C2PA manifest (a signed input is its own parent), replaces the default input-derived parent (so it conflicts with `ingredient_title`), and conflicts with `ai_disclosure.set_source_type`. At most one `parentOf` entry per request.
+
+```json
+["ingredient", {"relationship": "inputTo", "title": "prompt.txt",
+                "data_types": [{"type": "c2pa.types.prompt"}]}],
+["ingredient", {"relationship": "parentOf", "title": "upstream.jpg",
+                "action_history": [{"action": "c2pa.color_adjustments"}]}]
+```
 
 ##### `custom`
 

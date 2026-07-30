@@ -2,6 +2,30 @@
 
 Manage the ingredients of a signed asset — the prior assets carried into its manifest.
 
+## Declaring Ingredients
+
+Describe prior or contributing assets in the manifest without uploading them. Each `["ingredient", {...}]` entry in `assertions` becomes a gathered `c2pa.ingredient.v3` assertion — your workflow's account of the asset, not a claim attributed to the Trufo signer. Whenever any ingredient entries are present, the manifest's `allActionsIncluded` is set to `false`.
+
+Two relationships are available today (metadata-only; ingredient media support is coming):
+
+- **`inputTo`** — an input to a computational process: a prompt, model, or dataset. Use `data_types` to say which (`c2pa.types.prompt`, `c2pa.types.model`, `c2pa.types.dataset`, ...).
+- **`parentOf`** — the upstream asset this content was derived from. Only for inputs without an existing C2PA manifest (a signed input is its own parent). May carry `action_history`: the descriptive actions your system applied to the parent before signing.
+
+```python
+signed_bytes = sign_c2pa(
+    api_key,
+    media_bytes,
+    assertions=[
+        ["ingredient", {"relationship": "inputTo", "title": "prompt.txt",
+                        "data_types": [{"type": "c2pa.types.prompt"}]}],
+        ["ingredient", {"relationship": "parentOf", "title": "upstream.jpg",
+                        "action_history": [{"action": "c2pa.color_adjustments"}]}],
+    ],
+)
+```
+
+See [api_c2pa.md](../api/api_c2pa.md) for the full parameter reference and conflict rules.
+
 ## Redaction
 
 Remove specific assertions from a media file's existing C2PA manifest history.
