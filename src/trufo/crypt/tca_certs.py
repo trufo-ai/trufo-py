@@ -85,21 +85,15 @@ def build_csr(
     if isinstance(private_key_signer, Path):
         private_key_signer = private_key_signer.read_bytes()
     if isinstance(private_key_signer, bytes):
-        private_key = serialization.load_pem_private_key(
-            private_key_signer, password=None
-        )
+        private_key = serialization.load_pem_private_key(private_key_signer, password=None)
     if isinstance(private_key_signer, ec.EllipticCurvePrivateKey):
         private_key = private_key_signer
     if private_key is None:
-        raise TypeError(
-            f"Unsupported private_key_signer type: {type(private_key_signer)!r}"
-        )
+        raise TypeError(f"Unsupported private_key_signer type: {type(private_key_signer)!r}")
 
     csr = (
         x509.CertificateSigningRequestBuilder()
-        .subject_name(
-            x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "placeholder")])
-        )
+        .subject_name(x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "placeholder")]))
         .sign(private_key, _infer_hash_from_ec_key(private_key))
     )
     return csr.public_bytes(serialization.Encoding.DER)

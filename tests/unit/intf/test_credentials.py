@@ -36,10 +36,10 @@ def _patch_config_paths(tmp_path, monkeypatch):
     monkeypatch.setattr(
         "trufo.util.credentials._API_KEY_FILES",
         {
-            TrufoApiKey.TRUFO_API:      creds_dir / "trufo_api_key",
+            TrufoApiKey.TRUFO_API: creds_dir / "trufo_api_key",
             TrufoApiKey.C2PA_SIGN_PROD: creds_dir / "c2pa_sign_prod_api_key",
             TrufoApiKey.C2PA_SIGN_TEST: creds_dir / "c2pa_sign_test_api_key",
-            TrufoApiKey.TSA:            creds_dir / "tsa_api_key",
+            TrufoApiKey.TSA: creds_dir / "tsa_api_key",
         },
     )
     # clear any real env vars so they don't leak into tests
@@ -56,13 +56,12 @@ from trufo.util.credentials import (
     save_session,
 )
 
-
 # (enum, env var, credential file name) — the full scope matrix
 _ALL_SCOPES = [
-    (TrufoApiKey.TRUFO_API,      "TRUFO_API_KEY",                "trufo_api_key"),
+    (TrufoApiKey.TRUFO_API, "TRUFO_API_KEY", "trufo_api_key"),
     (TrufoApiKey.C2PA_SIGN_PROD, "TRUFO_C2PA_SIGN_PROD_API_KEY", "c2pa_sign_prod_api_key"),
     (TrufoApiKey.C2PA_SIGN_TEST, "TRUFO_C2PA_SIGN_TEST_API_KEY", "c2pa_sign_test_api_key"),
-    (TrufoApiKey.TSA,            "TRUFO_TSA_API_KEY",            "tsa_api_key"),
+    (TrufoApiKey.TSA, "TRUFO_TSA_API_KEY", "tsa_api_key"),
 ]
 
 

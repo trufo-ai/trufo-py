@@ -62,16 +62,16 @@ _SESSION_REFRESH_TOKEN_ENV_VAR = "TRUFO_REFRESH_TOKEN"
 
 # "trufo-api" uses a short env var to avoid the awkward TRUFO_TRUFO_API_API_KEY
 _API_KEY_ENV_VARS = {
-    TrufoApiKey.TRUFO_API:      "TRUFO_API_KEY",
+    TrufoApiKey.TRUFO_API: "TRUFO_API_KEY",
     TrufoApiKey.C2PA_SIGN_PROD: "TRUFO_C2PA_SIGN_PROD_API_KEY",
     TrufoApiKey.C2PA_SIGN_TEST: "TRUFO_C2PA_SIGN_TEST_API_KEY",
-    TrufoApiKey.TSA:            "TRUFO_TSA_API_KEY",
+    TrufoApiKey.TSA: "TRUFO_TSA_API_KEY",
 }
 _API_KEY_FILES = {
-    TrufoApiKey.TRUFO_API:      CREDENTIALS_DIR / "trufo_api_key",
+    TrufoApiKey.TRUFO_API: CREDENTIALS_DIR / "trufo_api_key",
     TrufoApiKey.C2PA_SIGN_PROD: CREDENTIALS_DIR / "c2pa_sign_prod_api_key",
     TrufoApiKey.C2PA_SIGN_TEST: CREDENTIALS_DIR / "c2pa_sign_test_api_key",
-    TrufoApiKey.TSA:            CREDENTIALS_DIR / "tsa_api_key",
+    TrufoApiKey.TSA: CREDENTIALS_DIR / "tsa_api_key",
 }
 
 
@@ -175,9 +175,7 @@ def load_session() -> TrufoSession:
                 refresh_token=data["refresh_token"],
             )
         except KeyError as exc:
-            raise RuntimeError(
-                f"Session file ({SESSION_FILE}) missing key: {exc}"
-            ) from exc
+            raise RuntimeError(f"Session file ({SESSION_FILE}) missing key: {exc}") from exc
 
     raise RuntimeError(
         f"No session found. Run 'trufo login' or set {_SESSION_ACCESS_TOKEN_ENV_VAR} + {_SESSION_REFRESH_TOKEN_ENV_VAR}."

@@ -138,7 +138,9 @@ class TestRequestC2paCert:
     @patch(f"{_MODULE}.est_enroll")
     @patch(f"{_MODULE}.build_csr")
     @patch(f"{_MODULE}._request_c2pa_csr_jwt")
-    def test_csr_jwt_threaded_through_to_est(self, mock_csr_jwt, mock_build_csr, mock_enroll, mock_extract):
+    def test_csr_jwt_threaded_through_to_est(
+        self, mock_csr_jwt, mock_build_csr, mock_enroll, mock_extract
+    ):
         """The CSR JWT from the RA must be the auth token passed to EST."""
         mock_csr_jwt.return_value = "RA-issued-csr-jwt"
         mock_build_csr.return_value = b"csr-der"

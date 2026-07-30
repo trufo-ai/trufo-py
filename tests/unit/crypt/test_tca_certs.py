@@ -189,8 +189,7 @@ class TestExtractCertChain:
         chain_pem = extract_cert_chain(pkcs7_b64)
 
         first_pem = (
-            chain_pem.split(b"-----END CERTIFICATE-----\n", 1)[0]
-            + b"-----END CERTIFICATE-----\n"
+            chain_pem.split(b"-----END CERTIFICATE-----\n", 1)[0] + b"-----END CERTIFICATE-----\n"
         )
         parsed = x509.load_pem_x509_certificate(first_pem)
         assert parsed.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value == "test-leaf"
