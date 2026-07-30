@@ -80,13 +80,8 @@ def _validate_assertions(assertions: list | None) -> None:
                 pass
 
 
-def _validate_actions(actions: list | None, *, allow_redact: bool = False) -> None:
-    """Validate client-side action requirements shared by C2PA helpers.
-
-    Redaction is opt-in: pass ``allow_redact=True`` from the fully-server
-    signers that support it, so a signer added later rejects it by default
-    rather than forwarding it to a path that cannot honour it.
-    """
+def _validate_actions(actions: list | None) -> None:
+    """Validate client-side action requirements shared by C2PA helpers."""
     if actions is not None and not isinstance(actions, list):
         raise ValueError(f"actions must be a list, got {type(actions).__name__}.")
 
@@ -97,11 +92,6 @@ def _validate_actions(actions: list | None, *, allow_redact: bool = False) -> No
         except (IndexError, KeyError, TypeError) as exc:
             raise ValueError(f"Invalid action entry: {entry!r}") from exc
         if name == TrufoAction.REDACT:
-            if not allow_redact:
-                raise ValueError(
-                    "The 'redact' action is not supported on the distributed signers; "
-                    "use sign_c2pa (or another fully-server signer) instead."
-                )
             label = _validate_redact_action(entry)
             if label in seen_redact_labels:
                 raise ValueError(f"Duplicate redaction target: {label!r}")
@@ -173,7 +163,7 @@ def _sign_c2pa_direct(
     trufo_api_url: str = TRUFO_API_URL,
 ) -> bytes:
     """Sign media bytes through a C2PA signing endpoint."""
-    _validate_actions(actions, allow_redact=True)
+    _validate_actions(actions)
     _validate_assertions(assertions)
 
     body = {
@@ -255,7 +245,7 @@ def _sign_c2pa_s3(
     trufo_api_url: str = TRUFO_API_URL,
 ) -> C2PAS3SignedOutput:
     """Sign an uploaded ephemeral S3 object through a C2PA signing endpoint."""
-    _validate_actions(actions, allow_redact=True)
+    _validate_actions(actions)
     _validate_assertions(assertions)
 
     body = {
