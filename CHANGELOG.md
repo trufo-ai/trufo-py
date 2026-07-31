@@ -23,19 +23,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `TrufoAction.REDACT`, so the `redact` action is discoverable alongside the other action
   names accepted by `actions`.
 
-- `ingredient` assertion entries: declare `inputTo` inputs (prompt, model,
-  dataset — with `c2pa.types.*` data types and IPTC AI-disclosure digitalSourceType) and one
-  `parentOf` upstream asset with its `action_history` of prior descriptive actions. All
-  user ingredients are gathered; `allActionsIncluded` is `false` whenever any are present.
-  Entries may carry base64 `media` (hashed, thumbnailed, validated when manifest-bearing);
-  `componentOf` requires it.
+- `ingredient` assertion entries: declare `inputTo` inputs (prompt, model, dataset — with
+  `c2pa.types.*` data types and IPTC AI-disclosure digitalSourceType) and `componentOf`
+  placed components. All user ingredients are gathered; `allActionsIncluded` is `false`
+  whenever any are present. Entries may carry base64 `media` (hashed, thumbnailed,
+  validated when manifest-bearing); `componentOf` requires it.
   See `docs/quickstart/5_ingredients.md`.
 
-- `POST /c2pa/software-agent/add` and `/c2pa/software-agent/list`: register reusable
-  softwareAgent generator-info maps, referenced from ingredient `action_history` entries
-  via `{"softwareAgent": {"software_agent_id": ...}}` and resolved server-side. Inline
-  agent bodies are rejected with a register-first error; `ai_disclosure` inline bodies
-  now fail fast the same way instead of being silently discarded.
+- `ai_disclosure` inline assertion bodies now fail fast with a register-first error
+  instead of being silently discarded.
 
 ### Changed
 

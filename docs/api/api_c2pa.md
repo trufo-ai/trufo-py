@@ -30,8 +30,6 @@ Authentication is per-endpoint. The table below summarizes each endpoint; legend
 | **Assertion records**               |             |                                  |
 | `POST /c2pa/ai-disclosure/add`      | prod / test | —                                |
 | `POST /c2pa/ai-disclosure/list`     | prod / test | —                                |
-| `POST /c2pa/software-agent/add`     | prod / test | —                                |
-| `POST /c2pa/software-agent/list`    | prod / test | —                                |
 
 The owning organization is inferred from the credential itself (the API key is bound to its org; an access token resolves to the caller's single org membership). Request bodies for c2pa endpoints do not take an `oid` field.
 
@@ -115,20 +113,6 @@ signed_bytes = sign_c2pa_via_s3(
   ],
 )
 ```
-
----
-
-# Software Agent Records
-
-## `POST /c2pa/software-agent/add`
-
-Register a softwareAgent generator-info map for reuse in ingredient `action_history` entries. Request: `{"agent": {"name": "<required>", "version": "<opt>", "operating_system": "<opt>"}, "nickname": "<opt>"}`. Response `201`: `{"software_agent_id": "swagent_<uuidv7>"}`.
-
-## `POST /c2pa/software-agent/list`
-
-List the organization's registered agents. Request: `{}`. Response: `{"items": [{"software_agent_id", "nickname", "agent"}, ...]}`.
-
-Reference a registered agent from an `action_history` entry as `{"softwareAgent": {"software_agent_id": "<id>"}}`; the server replaces the reference with the stored map at signing time. Inline agent bodies, and unknown or cross-organization ids, fail with a register-first error.
 
 ---
 
@@ -336,20 +320,18 @@ Declares a prior or contributing asset as a metadata-only ingredient. All user i
 
 | Param                 | Type   | Required | Description |
 | --------------------- | ------ | -------- | ----------- |
-| `relationship`        | string | Yes      | `inputTo` (an input to a computational process — prompt, model, dataset), `parentOf` (the upstream asset this content was derived from), or `componentOf` (a placed component; requires `media`). |
+| `relationship`        | string | Yes      | `inputTo` (an input to a computational process — prompt, model, dataset) or `componentOf` (a placed component; requires `media`). |
 | `title`               | string | No       | Display name (`dc:title`), e.g. `prompt.txt`. |
 | `data_types`          | list   | No       | `[{"type": "c2pa.types.<kind>", "version": "…"}]` — the asset's role, e.g. `c2pa.types.prompt`, `c2pa.types.model`, `c2pa.types.dataset`. |
 | `digital_source_type` | string | No       | IPTC AI-disclosure values only: `trainedAlgorithmicMedia` or `compositeWithTrainedAlgorithmicMedia` (full IPTC URIs). |
 | `media`               | string | No       | base64 file bytes. The file is hashed and thumbnailed; a detected C2PA manifest brings validation references (and excludes `digital_source_type`). Required for `componentOf`. |
-| `action_history`      | list   | No       | `parentOf` only: prior descriptive actions applied to the parent before signing, e.g. `[{"action": "c2pa.color_adjustments"}]`. Each entry takes `action` plus optional `digitalSourceType`, `softwareAgent` (`{"software_agent_id": "<id>"}` — a reference to a registered agent, resolved server-side; inline bodies are rejected), and RFC 3339 UTC `when`. Recorded as a second, gathered actions assertion. `c2pa.created`/`c2pa.opened` and ingredient-referencing actions are rejected. |
 
-A `parentOf` entry may only be supplied when the input has no existing C2PA manifest (a signed input is its own parent), replaces the default input-derived parent (so it conflicts with `ingredient_title`), and conflicts with `ai_disclosure.set_source_type`. At most one `parentOf` entry per request.
 
 ```json
 ["ingredient", {"relationship": "inputTo", "title": "prompt.txt",
                 "data_types": [{"type": "c2pa.types.prompt"}]}],
-["ingredient", {"relationship": "parentOf", "title": "upstream.jpg",
-                "action_history": [{"action": "c2pa.color_adjustments"}]}]
+["ingredient", {"relationship": "componentOf", "title": "overlay.png",
+                "media": "<base64>"}]
 ```
 
 ##### `custom`
