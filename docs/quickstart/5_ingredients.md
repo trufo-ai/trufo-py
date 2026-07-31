@@ -6,10 +6,10 @@ Manage the ingredients of a signed asset — the prior assets carried into its m
 
 Describe prior or contributing assets in the manifest without uploading them. Each `["ingredient", {...}]` entry in `assertions` becomes a gathered `c2pa.ingredient.v3` assertion — your workflow's account of the asset, not a claim attributed to the Trufo signer. Whenever any ingredient entries are present, the manifest's `allActionsIncluded` is set to `false`.
 
-Two relationships are available today; entries may optionally carry base64 `media`, which is hashed and thumbnailed (and validated when it carries its own C2PA manifest):
+Two relationships are available today; entries may optionally carry base64 `media`, which is thumbnailed (and validated when it carries its own C2PA manifest; manifest-free media is a visual record, not a cryptographic binding):
 
 - **`inputTo`** — an input to a computational process: a prompt, model, or dataset. Use `data_types` to say which (`c2pa.types.prompt`, `c2pa.types.model`, `c2pa.types.dataset`, ...).
-- **`componentOf`** — a placed component of a composition; requires `media`.
+- **`componentOf`** — a placed component of a composition; requires `media` in a thumbnail-capable image format.
 
 ```python
 signed_bytes = sign_c2pa(

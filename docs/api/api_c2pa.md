@@ -324,7 +324,7 @@ Declares a prior or contributing asset as a metadata-only ingredient. All user i
 | `title`               | string | No       | Display name (`dc:title`), e.g. `prompt.txt`. |
 | `data_types`          | list   | No       | `[{"type": "c2pa.types.<kind>", "version": "…"}]` — the asset's role, e.g. `c2pa.types.prompt`, `c2pa.types.model`, `c2pa.types.dataset`. |
 | `digital_source_type` | string | No       | IPTC AI-disclosure values only: `trainedAlgorithmicMedia` or `compositeWithTrainedAlgorithmicMedia` (full IPTC URIs). |
-| `media`               | string | No       | base64 file bytes. The file is hashed and thumbnailed; a detected C2PA manifest brings validation references (and excludes `digital_source_type`). Required for `componentOf`. |
+| `media`               | string | No       | base64 file bytes. A C2PA manifest in the file brings validation references (and excludes `digital_source_type`); manifest-free media is thumbnailed as a described visual record, not cryptographically bound. Required for `componentOf`, in a thumbnail-capable image format (JPEG, PNG, WebP, GIF, TIFF). |
 
 
 ```json
