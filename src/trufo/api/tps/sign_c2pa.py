@@ -617,8 +617,8 @@ def sign_c2pa_distributed_test(
             environment variable or the SDK configured key.
         trufo_tsa_url: Trufo TSA URL. Defaults to ``TRUFO_TSA_URL``.
         trufo_api_url: Base URL for the Trufo API. Controls the preprocess,
-            claim-sign, and CAWG identity-sign endpoints. Defaults to production
-            (distributed test signing is not yet on the test host).
+            claim-sign, and CAWG identity-sign endpoints. Defaults to the Trufo
+            test host (``test.api.trufo.ai``).
         manifest_title: Optional active-manifest title (``dc:title``); see the
             module docstring for when to set this explicitly.
         ingredient_title: Optional ``parentOf`` ingredient title (``dc:title``);
