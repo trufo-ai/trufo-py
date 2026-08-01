@@ -12,8 +12,8 @@ import pytest
 from trufo.api.endpoints import (
     TPS_C2PA_GET_S3_URL,
     TPS_C2PA_SIGN,
-    TPS_C2PA_SIGN_TEST,
     TRUFO_API_URL,
+    TRUFO_API_URL_TEST,
     TRUFO_TSA_URL,
 )
 from trufo.api.tps.sign_c2pa import (
@@ -136,7 +136,7 @@ class TestDirectC2PASigning:
 
         assert result == signed
         mock_post.assert_called_once_with(
-            TRUFO_API_URL + TPS_C2PA_SIGN_TEST,
+            TRUFO_API_URL_TEST + TPS_C2PA_SIGN,
             json={
                 "media_input": base64.b64encode(b"input-media").decode(),
                 "actions": [],
@@ -373,7 +373,7 @@ class TestS3C2PASigning:
 
         assert result == C2PAS3SignedOutput(media_output_s3="https://download.example")
         mock_post.assert_called_once_with(
-            TRUFO_API_URL + TPS_C2PA_SIGN_TEST,
+            TRUFO_API_URL_TEST + TPS_C2PA_SIGN,
             json={
                 "media_input_s3": "signed-input-reference",
                 "actions": [],
@@ -518,7 +518,7 @@ class TestS3C2PASigning:
             assertions=None,
             manifest_title=None,
             ingredient_title=None,
-            trufo_api_url=TRUFO_API_URL,
+            trufo_api_url=TRUFO_API_URL_TEST,
         )
 
     @pytest.mark.parametrize("signer", [sign_c2pa_s3, sign_c2pa_s3_test])

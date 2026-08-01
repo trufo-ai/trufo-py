@@ -32,8 +32,8 @@ import requests
 from trufo.api.endpoints import (
     TPS_C2PA_GET_S3_URL,
     TPS_C2PA_SIGN,
-    TPS_C2PA_SIGN_TEST,
     TRUFO_API_URL,
+    TRUFO_API_URL_TEST,
     TRUFO_TSA_URL,
 )
 from trufo.c2pa.actions import TrufoAction
@@ -324,7 +324,7 @@ def sign_c2pa_s3_test(
     manifest_title: str | None = None,
     ingredient_title: str | None = None,
     *,
-    trufo_api_url: str = TRUFO_API_URL,
+    trufo_api_url: str = TRUFO_API_URL_TEST,
 ) -> C2PAS3SignedOutput:
     """Sign an uploaded ephemeral S3 object with test C2PA via the TPS.
 
@@ -337,7 +337,7 @@ def sign_c2pa_s3_test(
             module docstring for when to set this explicitly.
         ingredient_title: Optional ``parentOf`` ingredient title (``dc:title``);
             see the module docstring for when to set this explicitly.
-        trufo_api_url: Freeform Trufo API base URL. Defaults to production.
+        trufo_api_url: Trufo API base URL. Defaults to the Trufo test host (test.api.trufo.ai).
 
     Returns:
         Presigned S3 download URL for the signed output media.
@@ -346,7 +346,7 @@ def sign_c2pa_s3_test(
         requests.HTTPError: If the API returns a non-2xx response.
     """
     return _sign_c2pa_s3(
-        TPS_C2PA_SIGN_TEST,
+        TPS_C2PA_SIGN,
         api_key,
         media_input_s3,
         actions=actions,
@@ -425,7 +425,7 @@ def sign_c2pa_via_s3_test(
     manifest_title: str | None = None,
     ingredient_title: str | None = None,
     *,
-    trufo_api_url: str = TRUFO_API_URL,
+    trufo_api_url: str = TRUFO_API_URL_TEST,
 ) -> bytes:
     """Upload, test-sign, and download media through the ephemeral S3 flow.
 
@@ -443,7 +443,7 @@ def sign_c2pa_via_s3_test(
             module docstring for when to set this explicitly.
         ingredient_title: Optional ``parentOf`` ingredient title (``dc:title``);
             see the module docstring for when to set this explicitly.
-        trufo_api_url: Freeform Trufo API base URL. Defaults to production.
+        trufo_api_url: Trufo API base URL. Defaults to the Trufo test host (test.api.trufo.ai).
 
     Returns:
         Signed media bytes downloaded from the returned S3 output URL.
@@ -540,7 +540,7 @@ def sign_c2pa_test(
     manifest_title: str | None = None,
     ingredient_title: str | None = None,
     *,
-    trufo_api_url: str = TRUFO_API_URL,
+    trufo_api_url: str = TRUFO_API_URL_TEST,
 ) -> bytes:
     """Sign a media file with C2PA via the TPS test endpoint.
 
@@ -553,7 +553,7 @@ def sign_c2pa_test(
             module docstring for when to set this explicitly.
         ingredient_title: Optional ``parentOf`` ingredient title (``dc:title``);
             see the module docstring for when to set this explicitly.
-        trufo_api_url: Freeform Trufo API base URL. Defaults to production.
+        trufo_api_url: Trufo API base URL. Defaults to the Trufo test host (test.api.trufo.ai).
 
     Returns:
         Signed media bytes.
@@ -562,7 +562,7 @@ def sign_c2pa_test(
         requests.HTTPError: If the API returns a non-2xx response.
     """
     return _sign_c2pa_direct(
-        TPS_C2PA_SIGN_TEST,
+        TPS_C2PA_SIGN,
         api_key,
         media_bytes,
         actions=actions,
@@ -617,7 +617,8 @@ def sign_c2pa_distributed_test(
             environment variable or the SDK configured key.
         trufo_tsa_url: Trufo TSA URL. Defaults to ``TRUFO_TSA_URL``.
         trufo_api_url: Base URL for the Trufo API. Controls the preprocess,
-            claim-sign, and CAWG identity-sign endpoints.
+            claim-sign, and CAWG identity-sign endpoints. Defaults to production
+            (distributed test signing is not yet on the test host).
         manifest_title: Optional active-manifest title (``dc:title``); see the
             module docstring for when to set this explicitly.
         ingredient_title: Optional ``parentOf`` ingredient title (``dc:title``);
