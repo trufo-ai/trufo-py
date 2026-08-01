@@ -196,7 +196,7 @@ class TestRemoteC2PASigning:
         assert kwargs["actions"] == [["publish", {}]]
         assert kwargs["assertions"] == [["cawg_identity", {"cawg_identity_id": "test"}]]
         assert kwargs["test"] is True
-        assert kwargs["trufo_api_url"] == TRUFO_API_URL
+        assert kwargs["trufo_api_url"] == TRUFO_API_URL_TEST
         assert kwargs["ocsp_stapler"] is calls["ocsp_stapler"]
 
         # a single timestamper is built with the resolved key and SDK TSA default

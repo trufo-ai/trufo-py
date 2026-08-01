@@ -598,7 +598,7 @@ def sign_c2pa_distributed_test(
     assertions: list | None = None,
     tsa_api_key: str | None = None,
     trufo_tsa_url: str = TRUFO_TSA_URL,
-    trufo_api_url: str = TRUFO_API_URL,
+    trufo_api_url: str = TRUFO_API_URL_TEST,
     manifest_title: str | None = None,
     ingredient_title: str | None = None,
 ) -> bytes:
