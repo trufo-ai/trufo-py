@@ -10,6 +10,7 @@ Build the C2PA manifest locally while keeping the C2PA signing key in Trufo's in
 
 - Install the optional provenance engine: `pip install "trufo[provenance]"`.
 - A `tsa` API key for RFC 3161 timestamping. Configure it with `trufo set-api-key tsa <your-api-key>` or `TRUFO_TSA_API_KEY`.
+  (To try the timestamping flow before you have a key, the free test endpoint `https://tsa.test.trufo.ai/` accepts keyless requests; its tokens are not production-trusted.)
 - For test signing, a `c2pa-sign-test` API key. For production signing, a `c2pa-sign-prod` API key and completed Organization Validation (OV) for your organization. See [0_auth.md](0_auth.md).
 
 Every signed manifest automatically carries an `ai.trufo.identity` assertion with your organization id and (with active OV) your RA-validated legal name — see [Automatic assertions](../api/api_c2pa.md#automatic-assertions).

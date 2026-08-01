@@ -188,6 +188,17 @@ stripped server-side, so both `tsa:<key>` and the bare `<key>` are accepted.
 
 ---
 
+### Test endpoint
+
+`POST https://tsa.test.trufo.ai/`
+
+A free, keyless test endpoint speaking the same RFC 3161 protocol: no `X-API-Key`
+header, no signup. Responses are signed with a self-signed test certificate and
+always carry the Trufo test policy OID (`1.3.6.1.4.1.62524.2.1`), so tokens
+verify protocol-mechanically but are deliberately **not** trusted for production
+or C2PA use. No availability SLA. Use it to exercise your integration before
+requesting a `tsa` API key.
+
 ## Python SDK
 
 | Function | Location | Description |

@@ -11,6 +11,7 @@ Documentation for programmatic access to Trufo Provenance Service (TPS) API endp
 | TPS API (Europe-only)       | `https://eu.api.trufo.ai`  | Europe processing server      |
 | Certificate Authority       | `https://ca.trufo.ai`      | CA, EST enrollment (RFC 7030) |
 | Timestamp Authority         | `https://tsa.trufo.ai`     | CA, timestamping (RFC 3161)   |
+| Timestamp Authority (test)  | `https://tsa.test.trufo.ai` | Free test timestamping, no key (tokens not production-trusted) |
 | OCSP Responder              | `https://ocsp.trufo.ai`    | CA, OCSP stapling             |
 
 
