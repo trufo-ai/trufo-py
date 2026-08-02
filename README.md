@@ -4,15 +4,28 @@ Open-source library to simplify interactions with the Trufo Provenance Service (
 
 The Trufo Provenance Platform is under active development, with new provenance features and product workflows being added regularly. If you are building against the platform and have questions about the right integration path, please contact [support@trufo.ai](mailto:support@trufo.ai). We are happy to help.
 
-## Optional Provenance Engine
+## Optional Local Engine
 
-When using the standard C2PA Signing API, the raw digital media content is sent to the Trufo server for processing. In cases where data privacy is important or where the content file is large, a distributed API is available where most media processing is local (and signing is remote, on Trufo servers). To enable this functionality, please install the `provenance` extra:
+When using the standard C2PA Signing API, the raw digital media content is sent to the Trufo server for processing. In cases where data privacy is important or where the content file is large, a distributed API is available where media processing — including watermark embedding — is local (and signing is remote, on Trufo servers). To enable this functionality, please install the `local` extra:
 
 ```bash
-pip install "trufo[provenance]"
+pip install "trufo[local]"
 ```
 
-*Note: Currently, the `provenance` installation is only supported on Linux machines.*
+This installs Trufo's provenance engine (`trufo-provenance`) and watermarking engine (`trufo-pawprint`). The legacy `provenance` extra remains available and installs the provenance engine only (distributed signing without local watermarking).
+
+*Note: Currently, the local-engine installation is only supported on Linux machines.*
+
+### Private Package Index
+
+New releases of `trufo-provenance` and `trufo-pawprint` are distributed through Trufo's private package index rather than public PyPI. Installing the `local` (or `provenance`) extra requires the package token issued to your organization during onboarding — contact [support@trufo.ai](mailto:support@trufo.ai) if you do not have one. Configure the index alongside PyPI, then install normally:
+
+```bash
+export PIP_EXTRA_INDEX_URL="https://<your-package-token>@<trufo-package-index>/simple/"
+pip install "trufo[local]"
+```
+
+The `trufo` package itself resolves from public PyPI; only the engine packages come from the private index. Treat the package token like any other credential: keep it out of committed lockfiles and logs, and contact support to rotate it if it is exposed.
 
 ## Workflow Examples (Quickstart)
 
@@ -27,6 +40,7 @@ There are a number of documents to get you started quickly with specific use cas
 | Organization Stamping & Assertions | [C2PA & CAWG Signing API](https://app.trufo.ai/prov/apis/c2pa-signing) | [docs/quickstart/3_cawg_publish.md](docs/quickstart/3_cawg_publish.md) |
 | Distributed Signing               | [C2PA & CAWG Signing API](https://app.trufo.ai/prov/apis/c2pa-signing) | [docs/quickstart/4_distributed_signing.md](docs/quickstart/4_distributed_signing.md) |
 | Ingredients (e.g. Redaction)        | [C2PA & CAWG Signing API](https://app.trufo.ai/prov/apis/c2pa-signing) | [docs/quickstart/5_ingredients.md](docs/quickstart/5_ingredients.md)   |
+| Watermarking                       | [C2PA & CAWG Signing API](https://app.trufo.ai/prov/apis/c2pa-signing) | [docs/quickstart/6_watermarking.md](docs/quickstart/6_watermarking.md) |
 
 
 ## Reference Documentation

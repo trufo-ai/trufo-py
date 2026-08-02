@@ -14,7 +14,7 @@ There are a number of API keys you will want to set up (see [api/api_auth.md](ap
 ```bash
 trufo set-api-key trufo-api      [KEY] # device authorization flow
 trufo set-api-key c2pa-sign-prod [KEY] # POST /c2pa/sign
-trufo set-api-key c2pa-sign-test [KEY] # POST /test/c2pa/sign
+trufo set-api-key c2pa-sign-test [KEY] # POST /c2pa/sign (test host)
 trufo set-api-key tsa            [KEY] # tsa.trufo.ai
 ```
 

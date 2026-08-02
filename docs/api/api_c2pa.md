@@ -4,8 +4,8 @@ Endpoints for C2PA manifest generation and management of reusable assertion reco
 
 - **Trufo Global API URL:** `https://api.trufo.ai`
 - **Trufo Europe API URL:** `https://eu.api.trufo.ai`
-- **Test paths:** `/test/<route>` — signed with a test certificate; outputs may not be recognized by C2PA validators
-- **Production paths:** `/<route>` — signed with a proper certificate; outputs are recognized by conformant C2PA validators; same schema as test
+- **Trufo Test API URL:** `https://test.api.trufo.ai` — same routes and schemas as production, signed with a test certificate; outputs may not be recognized by C2PA validators. (The legacy `/test/c2pa/sign` path on the main hosts remains available during deprecation.)
+- **Production hosts** sign with a proper certificate; outputs are recognized by conformant C2PA validators.
 
 **Default Headers** (unless overridden by a specific endpoint):
 
@@ -16,7 +16,7 @@ Endpoints for C2PA manifest generation and management of reusable assertion reco
 
 Authentication is per-endpoint. The table below summarizes each endpoint; legends follow.
 
-**Scope** — the API-key scope required when authenticating with a key: `prod` = `c2pa-sign-prod`, `test` = `c2pa-sign-test`. An account access token may be used in place of an API key on any of these endpoints (it requires the `c2pa_sign` permission and is scope-independent).
+**Scope** — the API-key scope required when authenticating with a key: `prod` = `c2pa-sign-prod`, `test` = `c2pa-sign-test`, `decode` = `c2pa-decode`. An account access token may be used in place of an API key on the signing and assertion-record endpoints (it requires the `c2pa_sign` permission and is scope-independent); `/content/recover` requires an API key.
 
 **Billing Product** — the required plan entitlement, or `—` if none. Gated endpoints return `403` when the caller's org lacks the plan.
 
@@ -24,16 +24,33 @@ Authentication is per-endpoint. The table below summarizes each endpoint; legend
 | Endpoint                            | Scope       | Billing Product                  |
 | ----------------------------------- | ----------- | -------------------------------- |
 | **Signing**                         |             |                                  |
-| `POST /c2pa/sign`                   | prod        | `c2pa_signing_api`               |
-| `POST /test/c2pa/sign`              | test        | —                                |
+| `POST /c2pa/sign` (production hosts) | prod       | `c2pa_signing_api`               |
+| `POST /c2pa/sign` (test host)       | test        | —                                |
 | `POST /c2pa/io/get-s3-url`          | prod / test | `c2pa_signing_api` (prod only)   |
 | **Assertion records**               |             |                                  |
 | `POST /c2pa/ai-disclosure/add`      | prod / test | —                                |
 | `POST /c2pa/ai-disclosure/list`     | prod / test | —                                |
+| **Watermark recovery**              |             |                                  |
+| `POST /content/recover`             | decode      | —                                |
 
 The owning organization is inferred from the credential itself (the API key is bound to its org; an access token resolves to the caller's single org membership). Request bodies for c2pa endpoints do not take an `oid` field.
 
 See [api_auth.md](api_auth.md) for full header conventions and the complete scope list, or the [Auth Quickstart](../quickstart/0_auth.md) for a setup guide.
+
+---
+
+## Signing Flows
+
+Four signing flows exist: hosted or distributed, against the production or test hosts. All four accept the same `actions`/`assertions` request shape.
+
+|                | Hosted production | Hosted test | Distributed production | Distributed test |
+| -------------- | ----------------- | ----------- | ---------------------- | ---------------- |
+| Entry          | `POST /c2pa/sign` on `api.trufo.ai` / `eu.api.trufo.ai` | `POST /c2pa/sign` on `test.api.trufo.ai` | `/c2pa/remote-preprocess` + `/c2pa/remote-sign` via `sign_c2pa_distributed()` | same routes on `test.api.trufo.ai` via `sign_c2pa_distributed_test()` |
+| Auth           | `c2pa-sign-prod` key + completed OV | `c2pa-sign-test` key | `c2pa-sign-prod` key + completed OV, plus a `tsa` key | `c2pa-sign-test` key, plus a `tsa` key |
+| Signing record | Permanent signing record | None (ephemeral) | Permanent signing record | None (ephemeral) |
+| Billing        | Metered per sign  | Free        | Metered per sign (at signature issuance) | Free |
+
+Test outputs are signed with a test certificate and are intended for integration development, not production credentials.
 
 ---
 
@@ -118,9 +135,9 @@ signed_bytes = sign_c2pa_via_s3(
 
 # Standard Signing
 
-## `POST /c2pa/sign`, `POST /test/c2pa/sign`
+## `POST /c2pa/sign`
 
-Both endpoints share the same request/response schema. The production signer produces manifests recognized by conformant C2PA validators; the test signer produces manifests that are not.
+The production hosts and the test host share the same route and request/response schema. The production signer produces manifests recognized by conformant C2PA validators; the test signer produces manifests that are not.
 
 ### Request Body
 
@@ -153,7 +170,7 @@ The flow is:
 
 1. Call `POST /c2pa/io/get-s3-url` with the source media MIME type.
 2. Upload the source media bytes to the returned `upload_url` with `Content-Type` set to the same MIME type.
-3. Call `POST /c2pa/sign` or `POST /test/c2pa/sign` with `media_input_s3`.
+3. Call `POST /c2pa/sign` (on a production host or the test host) with `media_input_s3`.
 4. Download the signed output from the returned `media_output_s3` URL.
 
 The Python SDK provides low-level helpers for each step and high-level helpers (`sign_c2pa_via_s3()` and `sign_c2pa_via_s3_test()`) that perform the full upload/sign/download sequence.
@@ -165,8 +182,24 @@ Ordered list of `[action_name, params]` pairs. Each element of the `actions` lis
 | Action        | Params                                              | Description                                      |
 | ------------- | --------------------------------------------------- | ------------------------------------------------ |
 | `"transcode"` | `{"target_mime_type": "<mime>"}`                    | transcode to target format                       |
+| `"watermark"` | `{"effort": "<effort>"}`                            | embed the Trufo watermark (off by default)       |
 | `"publish"`   | `{}`                                                | mark for final distribution                      |
 | `"redact"`    | `{"label": "<label>", "reason": "<reason>"}`         | remove an assertion from the input's history     |
+
+##### `watermark`
+
+Request the imperceptible Trufo Pawprint watermark during signing. **Watermarking is off by default** — it runs only when this action is present. See the [Watermarking Quickstart](../quickstart/6_watermarking.md) for supported formats and examples.
+
+| Param    | Type   | Required | Description |
+| -------- | ------ | -------- | ----------- |
+| `effort` | string | No       | Failure tolerance: `"require"` (any failure fails the sign), `"require_if_supported"` (an unsupported format signs unwatermarked with a warning; a runtime failure fails the sign), or `"best_effort"` (any failure signs unwatermarked with a warning). A bare watermark action defaults to `"require"`. |
+
+At most one watermark action is allowed per request. A watermarked manifest carries a `c2pa.watermarked.bound` action and a `c2pa.soft-binding` assertion with algorithm `ai.trufo.pawprint.watermark`.
+
+```json
+["watermark", {}],
+["watermark", {"effort": "best_effort"}]
+```
 
 ##### `redact`
 
@@ -366,7 +399,7 @@ Production signing requires completed Organization Validation (OV) for the calle
 403 MissingOrganizationValidation: Use of C2PA API Signing Service requires completed Organization Validation.
 ```
 
-Test signing (`POST /test/c2pa/sign`) does not require OV; the injected assertion then contains `oid` only.
+Test signing (`POST /c2pa/sign` on the test host) does not require OV; the injected assertion then contains `oid` only.
 
 ### Response (200)
 
@@ -390,7 +423,7 @@ S3 media response:
 
 ## `POST /c2pa/io/get-s3-url`
 
-Mint an ephemeral presigned S3 upload URL for C2PA signing. The returned `media_input_s3` reference is passed to `/c2pa/sign` or `/test/c2pa/sign` after upload.
+Mint an ephemeral presigned S3 upload URL for C2PA signing. The returned `media_input_s3` reference is passed to `/c2pa/sign` after upload.
 
 ### Request Body
 
@@ -426,10 +459,53 @@ Mint an ephemeral presigned S3 upload URL for C2PA signing. The returned `media_
 
 # Remote (Distributed) Signing
 
-In the case where the media content cannot be sent over an API call (e.g. due to file size or privacy concerns), use distributed signing: the C2PA manifest is assembled and hashed locally, and the resulting hash is sent to Trufo for signing. To remain conformant with the C2PA specification, currently the only way to do so is via the `trufo[provenance]` optional installation and using the `sign_c2pa_distributed()` Python function. See [4_distributed_signing.md](../quickstart/4_distributed_signing.md) for an end-to-end guide.
+In the case where the media content cannot be sent over an API call (e.g. due to file size or privacy concerns), use distributed signing: the C2PA manifest is assembled and hashed locally, and the resulting hash is sent to Trufo for signing. To remain conformant with the C2PA specification, currently the only way to do so is via the `trufo[local]` optional installation and using the `sign_c2pa_distributed()` Python function. See [4_distributed_signing.md](../quickstart/4_distributed_signing.md) for an end-to-end guide.
 
 - `sign_c2pa_distributed()` uses the production `/c2pa/remote-sign` endpoint and requires a `c2pa-sign-prod` key, a TSA key, and completed Organization Validation (OV).
-- `sign_c2pa_distributed_test()` uses `/test/c2pa/remote-sign` with a `c2pa-sign-test` key and a TSA key. It is intended for integration development, not production credentials.
+- `sign_c2pa_distributed_test()` uses the same routes on the test host (`test.api.trufo.ai`) with a `c2pa-sign-test` key and a TSA key. It is intended for integration development, not production credentials.
+
+---
+
+# Watermark Recovery
+
+## `POST /content/recover`
+
+Decode a Trufo Pawprint watermark from uploaded media and return its provenance. Use this to identify content signed through Trufo after its C2PA manifest has been stripped (see the [Watermarking Quickstart](../quickstart/6_watermarking.md)).
+
+### Request Body
+
+**Auth:** API key (`X-API-Key`) with scope `c2pa-decode`.
+
+| Field         | Type   | Required | Description                     |
+| ------------- | ------ | -------- | ------------------------------- |
+| `media_input` | string | Yes      | base64-encoded input media data |
+
+Any parseable image or audio input may be submitted; decoding is read-only and is not limited to the formats supported for watermark *encoding*.
+
+### Response (200)
+
+| Field        | Type           | Description                                                                 |
+| ------------ | -------------- | --------------------------------------------------------------------------- |
+| `detected`   | bool           | Whether a Trufo watermark was found.                                        |
+| `wid`        | string or null | Decoded watermark ID, if detected.                                          |
+| `confidence` | float or null  | Detection confidence in `(0, 1]`.                                           |
+| `manifest`   | object or null | Stored C2PA manifest, when one is available for the record. |
+
+```json
+{
+  "detected": true,
+  "wid": "<watermark id>",
+  "confidence": 0.98,
+  "manifest": null
+}
+```
+
+When no watermark is found, the response is `{"detected": false}` with the remaining fields `null`. Watermarks embedded by test signing decode to their (ephemeral, non-unique) test-space ID but are not linked to a signing record.
+
+### Errors
+
+- **401** — missing or invalid credential.
+- **403** — API-key scope not allowed (requires `c2pa-decode`).
 
 ---
 
@@ -437,7 +513,7 @@ In the case where the media content cannot be sent over an API call (e.g. due to
 
 ## `POST /c2pa/ai-disclosure/add`
 
-Register a custom `c2pa.ai-disclosure` assertion body for the calling organization. Returns an opaque identifier that can be passed as the `ai_disclosure_id` param on the `ai_disclosure` assertion when calling `/c2pa/sign` or `/test/c2pa/sign`.
+Register a custom `c2pa.ai-disclosure` assertion body for the calling organization. Returns an opaque identifier that can be passed as the `ai_disclosure_id` param on the `ai_disclosure` assertion when calling `/c2pa/sign`.
 
 ### Request Body
 

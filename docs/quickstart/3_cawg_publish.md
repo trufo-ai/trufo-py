@@ -15,7 +15,7 @@ The CAWG (Creator Assertions Working Group) assertions add attribution and right
 ## Requirements
 
 - For production signing: a `c2pa-sign-prod` API key (scope required by `/c2pa/sign`). See [0_auth.md](0_auth.md). Production signing also requires completed Organization Validation (OV) for your organization.
-- For test signing: a `c2pa-sign-test` API key (scope required by `/test/c2pa/sign`).
+- For test signing: a `c2pa-sign-test` API key (scope required by the test host).
 - Production examples that use `cawg_identity_id="org_interim"` require your organization to have CAWG organization identity signing enabled.
 
 All CAWG assertions are optional. When a `cawg_identity` entry is present, it binds the verified identity to all gathered assertions in the manifest. Every signed manifest also automatically carries an `ai.trufo.identity` assertion with your organization id and (with active OV) your RA-validated legal name — see [Automatic assertions](../api/api_c2pa.md#automatic-assertions).

@@ -87,8 +87,9 @@ Every API key is issued with a single scope. The scope determines which endpoint
 | ---------------- | ------------------------------------------------------ |
 | `trufo-api`      | Device authorization flow (`/account/device/*`)        |
 | `c2pa-sign-prod` | `POST /c2pa/sign` (production signer)                  |
-| `c2pa-sign-test` | `POST /test/c2pa/sign` (test signer)                   |
+| `c2pa-sign-test` | `POST /c2pa/sign` on the test host `test.api.trufo.ai` (test signer; legacy `/test/c2pa/sign` during deprecation) |
 | `tsa`            | Timestamp Authority requests to `tsa.trufo.ai`         |
+| `c2pa-decode`    | `POST /content/recover` (watermark decode)             |
 
 
 Create keys at [app.trufo.ai/settings/org](https://app.trufo.ai/settings/org) under *API Keys*. Note that the keys will be of the form `{scope}:{key}` for readability.

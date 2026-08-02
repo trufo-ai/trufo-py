@@ -602,6 +602,31 @@ class TestRequestValidation:
         with pytest.raises(ValueError, match=f"Invalid {entry_type} entry"):
             validator(bad)
 
+    @pytest.mark.parametrize(
+        "params",
+        [{}, {"effort": "require"}, {"effort": "require_if_supported"}, {"effort": "best_effort"}],
+    )
+    def test_valid_watermark_action_accepted(self, params):
+        _validate_actions([["watermark", params]])  # must not raise
+
+    @pytest.mark.parametrize(
+        "params, match",
+        [
+            ({"effort": "maybe"}, "effort"),
+            ({"effort": True}, "effort"),
+            ({"apply": True}, "replaced by 'effort'"),
+            ({"wid_package": {"wid": "x"}}, "client-managed watermark ID reservations"),
+            (None, "parameter object"),
+        ],
+    )
+    def test_invalid_watermark_params_rejected(self, params, match):
+        with pytest.raises(ValueError, match=match):
+            _validate_actions([["watermark", params]])
+
+    def test_duplicate_watermark_action_rejected(self):
+        with pytest.raises(ValueError, match="At most one watermark action"):
+            _validate_actions([["watermark", {}], ["watermark", {}]])
+
     def _redact_actions(self, label, reason="c2pa.PII.present"):
         """An actions list holding a single redact entry."""
         params = {"label": label}

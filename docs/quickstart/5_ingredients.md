@@ -44,7 +44,7 @@ provenance history fails.
 `sign_c2pa_test`, `sign_c2pa_s3`, `sign_c2pa_s3_test`, `sign_c2pa_via_s3`, `sign_c2pa_via_s3_test`)
 and the distributed signers (`sign_c2pa_distributed`, `sign_c2pa_distributed_test`), which
 redact locally without sending media to Trufo. Distributed redaction requires the
-`trufo[provenance]` optional installation, same as any distributed signing.
+`trufo[local]` optional installation, same as any distributed signing.
 
 ### Minimal Example
 

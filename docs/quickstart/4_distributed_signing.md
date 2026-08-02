@@ -8,7 +8,7 @@ Build the C2PA manifest locally while keeping the C2PA signing key in Trufo's in
 
 ## Requirements
 
-- Install the optional provenance engine: `pip install "trufo[provenance]"`.
+- Install the optional local engine: `pip install "trufo[local]"` (see the [README](../../README.md#optional-local-engine) for the private-index setup). The legacy `provenance` extra also works, but signs without local watermark embedding.
 - A `tsa` API key for RFC 3161 timestamping. Configure it with `trufo set-api-key tsa <your-api-key>` or `TRUFO_TSA_API_KEY`.
   (To try the timestamping flow before you have a key, the free test endpoint `https://tsa.test.trufo.ai/` accepts keyless requests; its tokens are not production-trusted.)
 - For test signing, a `c2pa-sign-test` API key. For production signing, a `c2pa-sign-prod` API key and completed Organization Validation (OV) for your organization. See [0_auth.md](0_auth.md).
@@ -147,10 +147,10 @@ Use hosted signing when you want the simplest flow. Use distributed signing when
 
 **`ImportError: The optional trufo-provenance dependency is required`**
 
-Install the provenance extra:
+Install the local engine extra:
 
 ```bash
-pip install "trufo[provenance]"
+pip install "trufo[local]"
 ```
 
 **`A TSA API key is required for remote C2PA signing`**

@@ -39,6 +39,7 @@ from trufo.api.endpoints import (
 from trufo.c2pa.actions import TrufoAction
 from trufo.c2pa.assertions import UserAssertion
 from trufo.c2pa.redactions import RedactableAssertion, RedactionReason
+from trufo.c2pa.watermark import WatermarkEffort
 from trufo.util.credentials import TrufoApiKey, load_api_key
 from trufo.util.optional_imports import require_provenance_module
 
@@ -86,6 +87,7 @@ def _validate_actions(actions: list | None) -> None:
         raise ValueError(f"actions must be a list, got {type(actions).__name__}.")
 
     seen_redact_labels: set[str] = set()
+    seen_watermark = False
     for entry in actions or []:
         # exactly [name, params]; a longer entry is malformed, not truncated
         if not isinstance(entry, (list, tuple)) or len(entry) != 2:
@@ -97,10 +99,38 @@ def _validate_actions(actions: list | None) -> None:
                 raise ValueError(f"Duplicate redaction target: {label!r}")
             seen_redact_labels.add(label)
             continue
+        if name == TrufoAction.WATERMARK:
+            if seen_watermark:
+                raise ValueError("At most one watermark action is allowed per request.")
+            seen_watermark = True
+            _validate_watermark_action(entry)
+            continue
         try:
             TrufoAction(name)
         except (TypeError, ValueError) as exc:
             raise ValueError(f"Invalid action entry: {entry!r}") from exc
+
+
+def _validate_watermark_action(entry: Any) -> None:
+    """Validate a watermark action entry against the server contract."""
+    params = entry[1]
+    if not isinstance(params, dict):
+        raise ValueError("The watermark action requires a parameter object.")
+    if "wid_package" in params:
+        raise ValueError(
+            "The SDK does not yet support client-managed watermark ID reservations."
+        )
+    if "apply" in params:
+        raise ValueError("The watermark 'apply' parameter has been replaced by 'effort'.")
+    effort = params.get("effort")
+    if effort is not None:
+        try:
+            WatermarkEffort(effort)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(
+                "The watermark 'effort' parameter must be one of 'require', "
+                "'require_if_supported', or 'best_effort'."
+            ) from exc
 
 
 def _validate_redact_action(entry: Any) -> str:
@@ -605,7 +635,7 @@ def sign_c2pa_distributed_test(
     """Sign media locally using the Trufo test remote-signing endpoint.
 
     The media claim is built on the client while the C2PA claim-signing key
-    stays server-side. This helper requires the optional ``trufo[provenance]``
+    stays server-side. This helper requires the optional ``trufo[local]``
     dependency group.
 
     Args:
@@ -668,7 +698,7 @@ def sign_c2pa_distributed(
     """Sign media locally using the Trufo production remote-signing endpoint.
 
     The media claim is built on the client while the C2PA claim-signing key
-    stays server-side. This helper requires the optional ``trufo[provenance]``
+    stays server-side. This helper requires the optional ``trufo[local]``
     dependency group. Requires completed Organization Validation for the
     caller's org; the API returns 403 otherwise.
 

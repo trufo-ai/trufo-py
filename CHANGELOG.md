@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+#### Watermarking
+
+- `watermark` action: `["watermark", {...}]` in `actions` embeds an imperceptible Trufo
+  Pawprint watermark during C2PA signing, in supported image and audio formats (JPEG, PNG,
+  WebP, TIFF; WAV, FLAC, MP3, M4A), hosted and distributed. Watermarking is off unless the
+  action is present. The manifest declares it via a `c2pa.watermarked.bound` action and a
+  `c2pa.soft-binding` assertion (algorithm `ai.trufo.pawprint.watermark`). See
+  `docs/quickstart/6_watermarking.md`.
+- `effort` parameter and `WatermarkEffort` enum: `"require"` (any failure fails the sign;
+  the default for a bare action), `"require_if_supported"` (unsupported formats sign
+  unwatermarked with a warning; runtime failures fail the sign), `"best_effort"` (any
+  failure signs unwatermarked with a warning). At most one watermark action per request;
+  client-side validation mirrors the server contract.
+- `local` optional extra: `pip install "trufo[local]"` installs the provenance engine plus
+  the watermarking engine (`trufo-pawprint`) for distributed signing with local watermark
+  embedding. The `provenance` extra remains as a provenance-only alias.
+
 #### Redaction
 
 - `redact` action for all signers, hosted and distributed. A
@@ -35,6 +52,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Test signing moved to its own host: the test helpers (`sign_c2pa_test`, the S3 test
+  variants, and `sign_c2pa_distributed_test`) now default to `https://test.api.trufo.ai`
+  with the same routes as production (`TRUFO_API_URL_TEST`). The legacy `/test/c2pa/sign`
+  path on the main hosts remains available during deprecation.
 - Every `[name, params]` entry in `actions` and `assertions` must be exactly two elements;
   longer entries are rejected client-side as malformed rather than partially read.
 

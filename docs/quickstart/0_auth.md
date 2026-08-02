@@ -13,9 +13,10 @@ Step-by-step guide for getting programmatic access to the Trufo Provenance Servi
 Depending on what you need, set up the corresponding API key:
 
 - **Development / interactive access** — create a `trufo-api` key, then run `trufo login` to exchange it for an access token via the device-authorization flow.
-- **Calling `/c2pa/sign` or `/test/c2pa/sign` in deployment** — create a `c2pa-sign-prod` key (for `/c2pa/sign`) or a `c2pa-sign-test` key (for `/test/c2pa/sign`).
+- **Calling `/c2pa/sign` in deployment** — create a `c2pa-sign-prod` key (for the production hosts) or a `c2pa-sign-test` key (for the test host `test.api.trufo.ai`).
 - **Calling `sign_c2pa_distributed_test()` or `sign_c2pa_distributed()`** — create a `c2pa-sign-test` or `c2pa-sign-prod` key (same as above) **plus** a `tsa` key for the RFC 3161 timestamping step.
 - **Calling `tsa.trufo.ai`** — create a `tsa` key.
+- **Calling `/content/recover` (watermark decode)** — create a `c2pa-decode` key.
 
 See [../api/api_auth.md](../api/api_auth.md) for the full scope reference.
 
@@ -31,8 +32,8 @@ To use the API key within this library, save it to a file (directly or via the C
 
 ```bash
 trufo set-api-key trufo-api      <your-api-key>  # for `trufo login`
-trufo set-api-key c2pa-sign-prod <your-api-key>  # for /c2pa/sign
-trufo set-api-key c2pa-sign-test <your-api-key>  # for /test/c2pa/sign
+trufo set-api-key c2pa-sign-prod <your-api-key>  # for /c2pa/sign (production hosts)
+trufo set-api-key c2pa-sign-test <your-api-key>  # for /c2pa/sign (test host)
 trufo set-api-key tsa            <your-api-key>  # for tsa.trufo.ai
 # Saved to ~/.trufo/credentials/<scope>_api_key (mode 0600)
 ```
@@ -123,10 +124,10 @@ For endpoints that accept an API key directly (e.g. the TPS signing endpoints), 
 import requests
 from trufo.util.credentials import TrufoApiKey, load_api_key
 
-# /test/c2pa/sign requires a c2pa-sign-test key
+# the test host requires a c2pa-sign-test key
 test_key = load_api_key(TrufoApiKey.C2PA_SIGN_TEST)
 resp = requests.post(
-    "https://api.trufo.ai/test/c2pa/sign",
+    "https://test.api.trufo.ai/c2pa/sign",
     json={"media_input": "...", "actions": [], "assertions": []},
     headers={"X-API-Key": test_key},
 )

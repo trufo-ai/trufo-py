@@ -7,12 +7,19 @@ certificate enrollment.
 ## Key facts for AI assistants
 
 - Current version: see `pyproject.toml` (`version = "X.Y.Z"`).
-- The `trufo[provenance]` optional dependency is **Linux-only**. macOS/Windows
-  wheels are not published.
+- The local-engine extras (`trufo[local]`, legacy `trufo[provenance]`) are **Linux-only**.
+  macOS/Windows wheels are not published. `local` adds the watermarking engine
+  (`trufo-pawprint`); `provenance` is the provenance-only alias.
+- Watermarking is **off by default**; a `["watermark", {...}]` action requests it, with
+  `effort` = `require` (bare default) / `require_if_supported` / `best_effort` setting
+  failure tolerance (`WatermarkEffort` enum). Supported: JPEG/PNG/WebP/TIFF,
+  WAV/FLAC/MP3/M4A.
 - `sign_c2pa_distributed()` uses the production remote signing endpoint and requires
   completed Organization Validation plus `c2pa-sign-prod` and `tsa` API keys.
 - `sign_c2pa_distributed_test()` uses the test remote signing endpoint and requires
   `c2pa-sign-test` and `tsa` API keys.
+- Test signing runs on its own host (`test.api.trufo.ai`, `TRUFO_API_URL_TEST`) with the
+  same routes as production; the legacy `/test/c2pa/sign` path remains during deprecation.
 
 ## Documentation map
 
@@ -25,6 +32,7 @@ certificate enrollment.
 | CAWG publish (org stamping) | `docs/quickstart/3_cawg_publish.md` |
 | Distributed signing | `docs/quickstart/4_distributed_signing.md` |
 | Ingredients (incl. redaction) | `docs/quickstart/5_ingredients.md` |
+| Watermarking | `docs/quickstart/6_watermarking.md` |
 | C2PA API reference | `docs/api/api_c2pa.md` |
 | Auth API reference | `docs/api/api_auth.md` |
 | TCA CA reference | `docs/api/tca_ca.md` |
@@ -38,8 +46,8 @@ certificate enrollment.
 
 Three modes exist; see `docs/c2pa_feature_list.md` for the full feature matrix.
 
-| Mode | Function | Requires `trufo[provenance]` | Media sent to server |
+| Mode | Function | Requires local engine extra | Media sent to server |
 |---|---|---|---|
 | Hosted (server) | `sign_c2pa`, `sign_c2pa_test` | No | Yes |
-| Distributed | `sign_c2pa_distributed`, `sign_c2pa_distributed_test` | Yes | No |
+| Distributed | `sign_c2pa_distributed`, `sign_c2pa_distributed_test` | Yes (`trufo[local]`, or `trufo[provenance]` without watermarking) | No |
 | Fully local | (not exposed via trufo-py) | Yes | No |
