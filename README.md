@@ -14,7 +14,7 @@ pip install "trufo[local]"
 
 This installs Trufo's provenance engine (`trufo-provenance`) and watermarking engine (`trufo-pawprint`). The legacy `provenance` extra remains available and installs the provenance engine only (distributed signing without local watermarking).
 
-*Note: Currently, the local-engine installation is only supported on Linux machines.*
+*Note: the local-engine installation currently requires Linux on x86_64 (glibc 2.28+) with CPython 3.12 — the `trufo-provenance` native wheel is published only as `cp312-manylinux_2_28_x86_64`. The base `trufo` package is pure Python and runs on any platform with Python 3.10+.*
 
 ### Private Package Index
 

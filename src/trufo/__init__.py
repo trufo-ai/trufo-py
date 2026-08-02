@@ -4,6 +4,7 @@
 from trufo.api.tca.certs_c2pa import create_instance, register_credential, request_c2pa_cert
 from trufo.api.tca.certs_cawg_interim import request_cawg_interim_cert
 from trufo.api.tca.certs_test import request_c2pa_test_cert, request_cawg_test_cert
+from trufo.api.tps.recover import recover_content
 from trufo.api.tps.sign_c2pa import (
     sign_c2pa,
     sign_c2pa_distributed,
@@ -22,6 +23,7 @@ __all__ = [
     "create_instance",
     "generate_keypair",
     "load_api_key",
+    "recover_content",
     "register_credential",
     "request_c2pa_cert",
     "request_c2pa_test_cert",

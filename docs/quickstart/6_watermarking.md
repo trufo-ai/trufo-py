@@ -95,20 +95,17 @@ See [api_c2pa.md](../api/api_c2pa.md#signing-flows) for the full flow comparison
 
 ## Reading Watermarks
 
-`POST /content/recover` decodes a watermark from uploaded media and returns the watermark ID with a detection confidence — even after the C2PA manifest has been stripped. It requires an API key with the `c2pa-decode` scope:
+`recover_content()` decodes a watermark from media and returns the watermark ID with a detection confidence — even after the C2PA manifest has been stripped. It requires an API key with the `c2pa-decode` scope:
 
 ```python
-import base64
-import requests
+from trufo import recover_content
+from trufo.util.credentials import TrufoApiKey, load_api_key
 
-resp = requests.post(
-    "https://api.trufo.ai/content/recover",
-    json={"media_input": base64.b64encode(media_bytes).decode()},
-    headers={"X-API-Key": decode_key},
-)
-result = resp.json()
-if result["detected"]:
-    print(result["wid"], result["confidence"])
+decode_key = load_api_key(TrufoApiKey.C2PA_DECODE)
+
+result = recover_content(decode_key, media_bytes)
+if result.detected:
+    print(result.wid, result.confidence)
 ```
 
 Decoding is read-only and accepts any parseable image or audio input, not just the encode-supported formats. See [api_c2pa.md](../api/api_c2pa.md#post-contentrecover) for the full schema.

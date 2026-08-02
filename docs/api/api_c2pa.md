@@ -470,7 +470,7 @@ In the case where the media content cannot be sent over an API call (e.g. due to
 
 ## `POST /content/recover`
 
-Decode a Trufo Pawprint watermark from uploaded media and return its provenance. Use this to identify content signed through Trufo after its C2PA manifest has been stripped (see the [Watermarking Quickstart](../quickstart/6_watermarking.md)).
+Decode a Trufo Pawprint watermark from uploaded media and return its provenance. Use this to identify content signed through Trufo after its C2PA manifest has been stripped (see the [Watermarking Quickstart](../quickstart/6_watermarking.md)). The Python SDK wraps this endpoint as `recover_content()`.
 
 ### Request Body
 

@@ -25,6 +25,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `local` optional extra: `pip install "trufo[local]"` installs the provenance engine plus
   the watermarking engine (`trufo-pawprint`) for distributed signing with local watermark
   embedding. The `provenance` extra remains as a provenance-only alias.
+- `recover_content()` and the `c2pa-decode` API key scope (`TrufoApiKey.C2PA_DECODE`,
+  `TRUFO_C2PA_DECODE_API_KEY`, `trufo set-api-key c2pa-decode`): decode a Trufo watermark
+  from media via `POST /content/recover` and return the watermark ID with a detection
+  confidence. See `docs/quickstart/6_watermarking.md`.
 
 #### Redaction
 

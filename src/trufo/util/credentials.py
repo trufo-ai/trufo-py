@@ -12,7 +12,8 @@ File layout (CLI — ``trufo set-api-key``, ``trufo login``):
     ├── credentials/
     │   ├── trufo_api_key           # trufo-api key (device flow)
     │   ├── c2pa_sign_prod_api_key  # c2pa-sign-prod key (/c2pa/sign)
-    │   ├── c2pa_sign_test_api_key  # c2pa-sign-test key (/test/c2pa/sign)
+    │   ├── c2pa_sign_test_api_key  # c2pa-sign-test key (test host)
+    │   ├── c2pa_decode_api_key     # c2pa-decode key (/content/recover)
     │   └── tsa_api_key             # tsa key (tsa.trufo.ai)
     └── session                     # access + refresh tokens (JSON)
 
@@ -53,6 +54,7 @@ class TrufoApiKey(str, Enum):
     TRUFO_API = "trufo-api"
     C2PA_SIGN_PROD = "c2pa-sign-prod"
     C2PA_SIGN_TEST = "c2pa-sign-test"
+    C2PA_DECODE = "c2pa-decode"
     TSA = "tsa"
 
 
@@ -65,12 +67,14 @@ _API_KEY_ENV_VARS = {
     TrufoApiKey.TRUFO_API: "TRUFO_API_KEY",
     TrufoApiKey.C2PA_SIGN_PROD: "TRUFO_C2PA_SIGN_PROD_API_KEY",
     TrufoApiKey.C2PA_SIGN_TEST: "TRUFO_C2PA_SIGN_TEST_API_KEY",
+    TrufoApiKey.C2PA_DECODE: "TRUFO_C2PA_DECODE_API_KEY",
     TrufoApiKey.TSA: "TRUFO_TSA_API_KEY",
 }
 _API_KEY_FILES = {
     TrufoApiKey.TRUFO_API: CREDENTIALS_DIR / "trufo_api_key",
     TrufoApiKey.C2PA_SIGN_PROD: CREDENTIALS_DIR / "c2pa_sign_prod_api_key",
     TrufoApiKey.C2PA_SIGN_TEST: CREDENTIALS_DIR / "c2pa_sign_test_api_key",
+    TrufoApiKey.C2PA_DECODE: CREDENTIALS_DIR / "c2pa_decode_api_key",
     TrufoApiKey.TSA: CREDENTIALS_DIR / "tsa_api_key",
 }
 

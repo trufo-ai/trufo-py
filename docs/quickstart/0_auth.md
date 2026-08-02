@@ -34,6 +34,7 @@ To use the API key within this library, save it to a file (directly or via the C
 trufo set-api-key trufo-api      <your-api-key>  # for `trufo login`
 trufo set-api-key c2pa-sign-prod <your-api-key>  # for /c2pa/sign (production hosts)
 trufo set-api-key c2pa-sign-test <your-api-key>  # for /c2pa/sign (test host)
+trufo set-api-key c2pa-decode    <your-api-key>  # for /content/recover
 trufo set-api-key tsa            <your-api-key>  # for tsa.trufo.ai
 # Saved to ~/.trufo/credentials/<scope>_api_key (mode 0600)
 ```
@@ -44,6 +45,7 @@ trufo set-api-key tsa            <your-api-key>  # for tsa.trufo.ai
 export TRUFO_API_KEY=<your-api-key>                # trufo-api
 export TRUFO_C2PA_SIGN_PROD_API_KEY=<your-api-key>
 export TRUFO_C2PA_SIGN_TEST_API_KEY=<your-api-key>
+export TRUFO_C2PA_DECODE_API_KEY=<your-api-key>
 export TRUFO_TSA_API_KEY=<your-api-key>
 ```
 

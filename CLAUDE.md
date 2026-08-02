@@ -7,9 +7,11 @@ certificate enrollment.
 ## Key facts for AI assistants
 
 - Current version: see `pyproject.toml` (`version = "X.Y.Z"`).
-- The local-engine extras (`trufo[local]`, legacy `trufo[provenance]`) are **Linux-only**.
-  macOS/Windows wheels are not published. `local` adds the watermarking engine
-  (`trufo-pawprint`); `provenance` is the provenance-only alias.
+- The local-engine extras (`trufo[local]`, legacy `trufo[provenance]`) require
+  **Linux x86_64 (glibc 2.28+) + CPython 3.12** — the trufo-provenance native wheel is
+  published only as `cp312-manylinux_2_28_x86_64`. The base `trufo` package is pure
+  Python (3.10+, any platform). `local` adds the watermarking engine
+  (`trufo-pawprint`, universal wheel); `provenance` is the provenance-only alias.
 - Watermarking is **off by default**; a `["watermark", {...}]` action requests it, with
   `effort` = `require` (bare default) / `require_if_supported` / `best_effort` setting
   failure tolerance (`WatermarkEffort` enum). Supported: JPEG/PNG/WebP/TIFF,
