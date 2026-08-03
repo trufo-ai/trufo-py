@@ -14,7 +14,7 @@ The CAWG (Creator Assertions Working Group) assertions add attribution and right
 
 ## Requirements
 
-- For production signing: a `c2pa-sign-prod` API key (scope required by `/c2pa/sign`). See [0_auth.md](0_auth.md). Production signing also requires completed Organization Validation (OV) for your organization.
+- For production signing: a `c2pa-sign-prod` API key (scope required by `/c2pa/sign`). See [0_setup.md](0_setup.md). Production signing also requires completed Organization Validation (OV) for your organization.
 - For test signing: a `c2pa-sign-test` API key (scope required by the test host).
 - Production examples that use `cawg_identity_id="org_interim"` require your organization to have CAWG organization identity signing enabled.
 
@@ -91,7 +91,7 @@ For more details, see [cawg.io/training-and-data-mining/1.1](https://cawg.io/tra
 ## Reference
 
 - `assertions` and `actions` field reference: [../api/api_c2pa.md](../api/api_c2pa.md)
-- Complete runnable example: [3_cawg_publish.py](3_cawg_publish.py)
+- Complete runnable example: [4_cawg_publish.py](4_cawg_publish.py)
 
 ---
 

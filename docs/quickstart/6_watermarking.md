@@ -138,6 +138,6 @@ Distributed watermarking requires the full local engine. Install `trufo[local-fu
 
 ## Reference
 
-- Authentication setup: [0_auth.md](0_auth.md)
+- Authentication setup: [0_setup.md](0_setup.md)
 - C2PA signing API reference: [../api/api_c2pa.md](../api/api_c2pa.md)
-- Distributed signing quickstart: [4_distributed_signing.md](4_distributed_signing.md)
+- Distributed signing quickstart: [2_c2pa_signing.md](2_c2pa_signing.md)

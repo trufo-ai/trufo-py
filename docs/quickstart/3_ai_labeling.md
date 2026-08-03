@@ -10,7 +10,7 @@ Additionally, the `{"set_source_type": True}` flag sets `digitalSourceType = tra
 
 ## Requirements
 
-- For production signing: a `c2pa-sign-prod` API key (scope required by `/c2pa/sign`). See [0_auth.md](0_auth.md). Production signing also requires completed Organization Validation (OV) for your organization.
+- For production signing: a `c2pa-sign-prod` API key (scope required by `/c2pa/sign`). See [0_setup.md](0_setup.md). Production signing also requires completed Organization Validation (OV) for your organization.
 - For test signing: a `c2pa-sign-test` API key (scope required by the test host).
 - Optional: examples that use `cawg_identity_id="org_interim"` require your organization to have CAWG organization identity signing enabled.
 
@@ -35,7 +35,7 @@ signed_bytes = sign_c2pa(
 )
 ```
 
-To additionally stamp the manifest with a CAWG organization identity, add a `cawg_identity` entry — see [3_cawg_publish.md](3_cawg_publish.md).
+To additionally stamp the manifest with a CAWG organization identity, add a `cawg_identity` entry — see [3_cawg_publish.md](4_cawg_publish.md).
 
 For development-only test signing, use `sign_c2pa_test()` with a `c2pa-sign-test` API key and `cawg_identity_id="test"`. Test-signed outputs are useful for integration development but are not intended to be accepted as production C2PA credentials by conformant validators.
 
@@ -86,4 +86,4 @@ See the full [C2PA API reference](../api/api_c2pa.md#post-c2paai-disclosureadd) 
 ## Reference
 
 - `assertions` field reference: [../api/api_c2pa.md](../api/api_c2pa.md)
-- Complete runnable example: [2_ai_labeling.py](2_ai_labeling.py)
+- Complete runnable example: [3_ai_labeling.py](3_ai_labeling.py)

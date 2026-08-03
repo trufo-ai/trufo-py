@@ -10,7 +10,7 @@ A C2PA Signing Certificate identifies the signing entity (software or hardware) 
 
 > **Note:** You do not need a C2PA Signing Certificate to use the Trufo C2PA signing endpoints (`POST /c2pa/sign`) — that endpoint uses Trufo's own C2PA signer. A C2PA Signing Certificate is only required if you are operating your own conformant C2PA Generator Product. See the [C2PA Signing Certificate product page](https://app.trufo.ai/tca/certs/c2pa) for more details.
 
-See [7_c2pa_cert.py](7_c2pa_cert.py) for a runnable example of both tracks.
+See [1_certs.py](1_certs.py) for a runnable example of both tracks.
 
 ---
 
@@ -115,8 +115,72 @@ cert_chain_pem = request_c2pa_cert(
 
 ---
 
+## Timestamping
+
+C2PA signatures should carry an RFC 3161 timestamp so they remain verifiable after
+the signing certificate expires. Trufo's TSA is at `https://tsa.trufo.ai/` and
+authenticates with a `tsa`-scoped API key in the `X-API-Key` header.
+
+**With trufo-py**, timestamping is automatic — the signing helpers fetch the key
+from your stored credentials.
+
+**With c2patool or another C2PA implementation**, point the tool at a TSA URL. Tools
+built on older c2pa-rs releases send no custom headers, so they cannot present an
+`X-API-Key`. Two options:
+
+- **Use the keyless test endpoint** while developing:
+  `https://test.tsa.trufo.ai/`. It speaks the same protocol with no credential, but
+  its tokens carry the Trufo test policy and are deliberately untrusted — never use
+  them for production content.
+- **Front the production TSA with a small proxy** that adds the header, and point
+  the tool at your proxy:
+
+  ```nginx
+  location /tsa {
+      proxy_pass https://tsa.trufo.ai/;
+      proxy_set_header X-API-Key "tsa:<your-api-key>";
+  }
+  ```
+
+  Keep the proxy inside your own network — it holds a credential.
+
+Organizations with a dedicated endpoint use `https://{your-host}.tsa.trufo.ai/`,
+which takes the same key.
+
+Verify a timestamp response with OpenSSL:
+
+```bash
+openssl ts -query -data file.jpg -sha256 -cert -out request.tsq
+curl -s -H "Content-Type: application/timestamp-query" \
+     -H "X-API-Key: tsa:<your-api-key>" \
+     --data-binary @request.tsq https://tsa.trufo.ai/ -o response.tsr
+openssl ts -reply -in response.tsr -text
+```
+
+## Revocation and Rotation
+
+Certificates are issued for at most a year (90 days at assurance level 2), so plan
+renewal rather than treating enrollment as one-time. Because an instance may hold
+two active credentials at once, rotation is non-disruptive: register the new
+credential, move signing to it, then revoke the old one.
+
+Revoke a certificate when a key is compromised or a deployment is retired — from
+the dashboard, or `POST /cert/revoke` with the serial number and a reason. Revocation
+is permanent and publishes through OCSP; content signed *before* revocation remains
+valid if it carries a trusted timestamp, which is the practical reason to timestamp
+everything.
+
+Validators check status through Trufo's OCSP responder at `https://ocsp.trufo.ai`.
+Certificates carry that URL in their AIA extension, so standard tooling finds it
+automatically. For high-volume verification, staple an OCSP response into the
+manifest at signing time rather than making validators fetch it — trufo-py does this
+for you; other implementations should fetch a response for the signing certificate
+and include it in the C2PA signature.
+
+---
+
 ## Reference
 
-- RA endpoint reference: [../api/tca_ra.md](../api/tca_ra.md)
-- TCA enrollment reference: [../api/tca_ca.md](../api/tca_ca.md)
+- Certificate, OCSP, and TSA reference: [api_certs.md](../api/api_certs.md)
+- Complete runnable example: [1_certs.py](1_certs.py)
 

@@ -1,6 +1,35 @@
-# Quickstart: Authentication
+# Quickstart: Setup
 
-Step-by-step guide for getting programmatic access to the Trufo Provenance Service (TPS).
+Install the SDK and set up the credentials you will need.
+
+## Install
+
+```bash
+pip install trufo
+```
+
+That covers hosted signing, watermark recovery, and certificate enrollment —
+everything except distributed signing, which additionally needs a local engine:
+
+```bash
+# distributed C2PA signing, without the watermark engine
+pip install "trufo[local-sign-only]"
+
+# adds local watermark embedding (heavier: pulls in PyTorch)
+pip install "trufo[local-full]"
+```
+
+The local-engine packages come from Trufo's private package index and need an
+`sdk-download` key — see the [README](../../README.md#private-package-index).
+They require Linux x86_64 with CPython 3.12; the base package is pure Python and
+runs anywhere with Python 3.10+.
+
+Verify the install:
+
+```bash
+trufo --help
+python -c "import trufo; print(trufo.__version__)"
+```
 
 ## Prerequisites
 
@@ -18,7 +47,7 @@ Depending on what you need, set up the corresponding API key:
 - **Calling `tsa.trufo.ai`** — create a `tsa` key.
 - **Calling `/content/recover` (watermark decode)** — create a `c2pa-decode` key.
 
-See [../api/api_auth.md](../api/api_auth.md) for the full scope reference.
+See [../api/api_trufo.md](../api/api_trufo.md) for the full scope reference.
 
 ---
 
@@ -150,12 +179,12 @@ from trufo.api.session import TrufoSession
 session = TrufoSession(base_api_url=TRUFO_API_URL_EUROPE)
 ```
 
-See [what is region-scoped](../api/api_auth.md#what-is-region-scoped) for which data crosses regions.
+See [what is region-scoped](../api/api_trufo.md#what-is-region-scoped) for which data crosses regions.
 
 ---
 
 ## Reference
 
-- Endpoint reference: [../api/api_auth.md](../api/api_auth.md)
-- Complete runnable example: [0_auth.py](0_auth.py)
+- Endpoint reference: [../api/api_trufo.md](../api/api_trufo.md)
+- Complete runnable example: [0_setup.py](0_setup.py)
 

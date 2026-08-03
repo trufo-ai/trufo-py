@@ -29,26 +29,23 @@ certificate enrollment.
 | Topic | File |
 |---|---|
 | Getting started | `README.md` |
-| Auth setup (API keys, device flow) | `docs/quickstart/0_auth.md` |
-| Signing (hosted) | `docs/quickstart/1_signing.md` |
-| C2PA certificate CSRs | `docs/quickstart/7_c2pa_cert.md` |
-| AI labeling (AIGC disclosure) | `docs/quickstart/2_ai_labeling.md` |
-| CAWG publish (org stamping) | `docs/quickstart/3_cawg_publish.md` |
-| Distributed signing | `docs/quickstart/4_distributed_signing.md` |
-| Ingredients (incl. redaction) | `docs/quickstart/5_ingredients.md` |
+| Setup — install, credentials | `docs/quickstart/0_setup.md` |
+| Certificates (own signer) | `docs/quickstart/1_certs.md` |
+| C2PA signing (hosted/S3/distributed) | `docs/quickstart/2_c2pa_signing.md` |
+| AI labeling | `docs/quickstart/3_ai_labeling.md` |
+| CAWG publish | `docs/quickstart/4_cawg_publish.md` |
+| Ingredients & redaction | `docs/quickstart/5_ingredients.md` |
 | Watermarking | `docs/quickstart/6_watermarking.md` |
+| Platform API reference | `docs/api/api_trufo.md` |
 | C2PA API reference | `docs/api/api_c2pa.md` |
-| Auth API reference | `docs/api/api_auth.md` |
-| TCA CA reference | `docs/api/tca_ca.md` |
-| TCA RA reference | `docs/api/tca_ra.md` |
+| Certificate API reference | `docs/api/api_certs.md` |
 | CLI reference | `docs/cli.md` |
-| Feature support matrix | `docs/c2pa_feature_list.md` |
 | Changelog | `CHANGELOG.md` |
 | Contribution policy | `CONTRIBUTING.md` |
 
 ## Signing modes
 
-Two modes exist; see `docs/c2pa_feature_list.md` for the full feature matrix.
+Two modes exist; see `docs/api/api_c2pa.md` for the full comparison.
 
 | Mode | Function | Requires local engine extra | Media sent to server |
 |---|---|---|---|

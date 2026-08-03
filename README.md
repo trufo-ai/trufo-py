@@ -12,7 +12,7 @@ pip install trufo
 
 ## Sign a File
 
-With a `c2pa-sign-test` API key from [app.trufo.ai](https://app.trufo.ai) (see the [Auth Quickstart](docs/quickstart/0_auth.md)):
+With a `c2pa-sign-test` API key from [app.trufo.ai](https://app.trufo.ai) (see the [Auth Quickstart](docs/quickstart/0_setup.md)):
 
 ```python
 from pathlib import Path
@@ -26,18 +26,16 @@ signed_bytes = sign_c2pa_test(api_key, Path("input.jpg").read_bytes())
 Path("signed.jpg").write_bytes(signed_bytes)
 ```
 
-That is a complete C2PA signature — Trufo assembles and signs the manifest, so you need no certificate of your own. Swap in `sign_c2pa()` with a `c2pa-sign-prod` key for production-trusted output. See the [Signing Quickstart](docs/quickstart/1_signing.md).
+That is a complete C2PA signature — Trufo assembles and signs the manifest, so you need no certificate of your own. Swap in `sign_c2pa()` with a `c2pa-sign-prod` key for production-trusted output. See the [Signing Quickstart](docs/quickstart/2_c2pa_signing.md).
 
 ## What You Can Do
 
-- **Sign C2PA manifests** — hosted, or [distributed](docs/quickstart/4_distributed_signing.md) so media never leaves your machine
-- **Label AI-generated content** with [C2PA AI disclosures](docs/quickstart/2_ai_labeling.md)
-- **Stamp organization identity and metadata** via [CAWG](docs/quickstart/3_cawg_publish.md)
+- **Sign C2PA manifests** — hosted, or [distributed](docs/quickstart/2_c2pa_signing.md) so media never leaves your machine
+- **Label AI-generated content** with [C2PA AI disclosures](docs/quickstart/3_ai_labeling.md)
+- **Stamp organization identity and metadata** via [CAWG](docs/quickstart/4_cawg_publish.md)
 - **Embed and recover watermarks** that [survive manifest stripping](docs/quickstart/6_watermarking.md)
 - **Declare source assets, or redact** from provenance history ([ingredients](docs/quickstart/5_ingredients.md))
-- **Enrol your own C2PA certificates** for a generator product ([CSRs](docs/quickstart/7_c2pa_cert.md))
-
-The [feature support matrix](docs/c2pa_feature_list.md) shows what each signing mode supports.
+- **Enrol your own C2PA certificates** for a generator product ([CSRs](docs/quickstart/1_certs.md))
 
 ## Optional Local Engine
 
@@ -72,31 +70,26 @@ The `trufo` package itself resolves from public PyPI; only the engine packages c
 There are a number of documents to get you started quickly with specific use cases:
 
 
-| # | Use case                       | Quickstart                                                             |
-| - | ------------------------------ | ---------------------------------------------------------------------- |
-| 0 | Auth setup                     | [0_auth.md](docs/quickstart/0_auth.md)                                 |
-| 1 | Signing (hosted, test & prod)  | [1_signing.md](docs/quickstart/1_signing.md)                           |
-| 2 | AI labeling                    | [2_ai_labeling.md](docs/quickstart/2_ai_labeling.md)                   |
-| 3 | Organization stamping (CAWG)   | [3_cawg_publish.md](docs/quickstart/3_cawg_publish.md)                 |
-| 4 | Distributed signing            | [4_distributed_signing.md](docs/quickstart/4_distributed_signing.md)   |
-| 5 | Ingredients & redaction        | [5_ingredients.md](docs/quickstart/5_ingredients.md)                   |
-| 6 | Watermarking & recovery        | [6_watermarking.md](docs/quickstart/6_watermarking.md)                 |
-| 7 | C2PA signing certificate CSRs  | [7_c2pa_cert.md](docs/quickstart/7_c2pa_cert.md)                       |
+| # | Use case                        | Quickstart                                                           |
+| - | ------------------------------- | -------------------------------------------------------------------- |
+| 0 | Setup — install and credentials | [0_setup.md](docs/quickstart/0_setup.md)                             |
+| 1 | Certificates (your own signer)  | [1_certs.md](docs/quickstart/1_certs.md)                             |
+| 2 | C2PA signing                    | [2_c2pa_signing.md](docs/quickstart/2_c2pa_signing.md)               |
+| 3 | AI labeling                     | [3_ai_labeling.md](docs/quickstart/3_ai_labeling.md)                 |
+| 4 | Organization stamping (CAWG)    | [4_cawg_publish.md](docs/quickstart/4_cawg_publish.md)               |
+| 5 | Ingredients & redaction         | [5_ingredients.md](docs/quickstart/5_ingredients.md)                 |
+| 6 | Watermarking & recovery         | [6_watermarking.md](docs/quickstart/6_watermarking.md)               |
 
-Quickstarts 1–6 use Trufo's signing service; quickstart 7 is for teams enrolling their own certificates. All are reachable from the [C2PA & CAWG Signing API](https://app.trufo.ai/prov/apis/c2pa-signing) product page.
+Most integrations need only 0 and 2; quickstart 1 is for teams that operate their own C2PA generator product and sign with their own certificates.
 
 
 ## Reference Documentation
 
 The full reference documentation is spread across the following files:
 
-| Service | Document                                     | Description                                                  |
-| ------- | -------------------------------------------- | ------------------------------------------------------------ |
-| Auth    | [docs/api/api_auth.md](docs/api/api_auth.md) | Headers, access tokens, sessions                             |
-| TPS     | [docs/api/api_c2pa.md](docs/api/api_c2pa.md) | C2PA signing endpoints                                       |
-| TCA     | [docs/api/tca_ca.md](docs/api/tca_ca.md)     | Certificate Authority — enrollment, revocation, timestamping |
-| TCA     | [docs/api/tca_ra.md](docs/api/tca_ra.md)     | Registration Authority — instances, credentials, CSR JWTs   |
-| CLI     | [docs/cli.md](docs/cli.md)                   | Credential management (dev tool; use the Python API in prod) |
-| —       | [docs/c2pa_feature_list.md](docs/c2pa_feature_list.md) | Feature support matrix by signing mode              |
-
-
+| Document                                       | Covers                                                                    |
+| ---------------------------------------------- | ------------------------------------------------------------------------- |
+| [docs/api/api_trufo.md](docs/api/api_trufo.md) | Accounts, organizations, MFA, API keys and scopes, Organization Validation, errors, regions |
+| [docs/api/api_c2pa.md](docs/api/api_c2pa.md)   | C2PA signing (hosted, S3, distributed), actions and assertions, watermark recovery, assertion records |
+| [docs/api/api_certs.md](docs/api/api_certs.md) | Certificate enrollment (EST), OCSP, timestamping, and the Registration Authority |
+| [docs/cli.md](docs/cli.md)                     | CLI credential management                                                 |

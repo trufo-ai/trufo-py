@@ -37,7 +37,7 @@ Redaction removes whole assertions; individual fields within an assertion cannot
 ### Requirements
 
 - A `c2pa-sign-prod` or `c2pa-sign-test` API key, same as any other signing call. See
-[0_auth.md](0_auth.md).
+[0_setup.md](0_setup.md).
 - The input file must already have a C2PA manifest — redacting a file with no existing
 provenance history fails.
 - The `redact` action is available on all signers: the fully-server signers (`sign_c2pa`,

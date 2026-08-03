@@ -9,7 +9,7 @@ pip install trufo
 trufo --help
 ```
 
-There are a number of API keys you will want to set up (see [api/api_auth.md](api/api_auth.md) for more details):
+There are a number of API keys you will want to set up (see [api_trufo.md](api/api_trufo.md) for more details):
 
 ```bash
 trufo set-api-key trufo-api      [KEY] # device authorization flow

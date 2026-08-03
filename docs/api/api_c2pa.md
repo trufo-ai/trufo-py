@@ -1,431 +1,55 @@
-# C2PA Signing API
+# Trufo C2PA Signing API
 
-Endpoints for C2PA manifest generation and management of reusable assertion records.
+C2PA manifest generation: hosted signing (direct or via S3), distributed signing
+that keeps media on your machine, watermark recovery, and the assertion records
+reused across signing requests.
 
-- **Trufo Global API URL:** `https://api.trufo.ai`
-- **Trufo Europe API URL:** `https://eu.api.trufo.ai`
-- **Trufo Test API URL:** `https://test.api.trufo.ai` — same routes and schemas as production, signed with a test certificate; outputs may not be recognized by C2PA validators. (The legacy `/test/c2pa/sign` path on the main hosts remains available during deprecation.)
-- **Production hosts** sign with a proper certificate; outputs are recognized by conformant C2PA validators.
+- **Global API:** `https://api.trufo.ai`
+- **Europe API:** `https://eu.api.trufo.ai`
+- **Test API:** `https://test.api.trufo.ai` — same routes, signed with a test certificate
 
-**Default Headers** (unless overridden by a specific endpoint):
-
-- **Auth:** API key (`X-API-Key`) or access token (`Authorization: Bearer`)
-- **Content type:** `application/json`
-
-## Endpoints
-
-Authentication is per-endpoint. The table below summarizes each endpoint; legends follow.
-
-**Scope** — the API-key scope required when authenticating with a key: `prod` = `c2pa-sign-prod`, `test` = `c2pa-sign-test`, `decode` = `c2pa-decode`. An account access token may be used in place of an API key on the signing and assertion-record endpoints (it requires the `c2pa_sign` permission and is scope-independent); `/content/recover` requires an API key.
-
-**Plan** — whether the endpoint requires an active plan. Gated endpoints return `403` when the caller's org lacks one.
-
-
-| Endpoint                            | Scope       | Plan                             |
-| ----------------------------------- | ----------- | -------------------------------- |
-| **Signing**                         |             |                                  |
-| `POST /c2pa/sign` (production hosts) | prod       | C2PA Signing                     |
-| `POST /c2pa/sign` (test host)       | test        | —                                |
-| `POST /c2pa/io/get-s3-url`          | prod / test | C2PA Signing (production only)   |
-| **Assertion records**               |             |                                  |
-| `POST /c2pa/ai-disclosure/add`      | prod / test | —                                |
-| `POST /c2pa/ai-disclosure/list`     | prod / test | —                                |
-| **Watermark recovery**              |             |                                  |
-| `POST /content/recover`             | decode      | —                                |
-
-The owning organization is inferred from the credential itself (the API key is bound to its org; an access token resolves to the caller's single org membership). Request bodies for c2pa endpoints do not take an `oid` field.
-
-See [api_auth.md](api_auth.md) for full header conventions and the complete scope list, or the [Auth Quickstart](../quickstart/0_auth.md) for a setup guide.
+See [api_trufo.md](api_trufo.md) for authentication, error conventions, and regions.
 
 ---
 
-## Signing Flows
+## Common Declarations
 
-Four signing flows exist: hosted or distributed, against the production or test hosts. All four accept the same `actions`/`assertions` request shape.
+### Endpoints
 
-|                | Hosted production | Hosted test | Distributed production | Distributed test |
-| -------------- | ----------------- | ----------- | ---------------------- | ---------------- |
-| Entry          | `POST /c2pa/sign` on `api.trufo.ai` / `eu.api.trufo.ai` | `POST /c2pa/sign` on `test.api.trufo.ai` | `/c2pa/remote-preprocess` + `/c2pa/remote-sign` via `sign_c2pa_distributed()` | same routes on `test.api.trufo.ai` via `sign_c2pa_distributed_test()` |
-| Auth           | `c2pa-sign-prod` key + completed OV | `c2pa-sign-test` key | `c2pa-sign-prod` key + completed OV, plus a `tsa` key | `c2pa-sign-test` key, plus a `tsa` key |
-| Signing record | Permanent signing record | None (ephemeral) | Permanent signing record | None (ephemeral) |
-| Billing        | Metered per sign  | Free        | Metered per sign | Free |
+| Endpoint | Scope | Plan |
+| -------- | ----- | ---- |
+| `POST /c2pa/sign` | `c2pa-sign-prod` (test host: `c2pa-sign-test`) | C2PA Signing |
+| `POST /c2pa/io/get-s3-url` | `c2pa-sign-prod` or `c2pa-sign-test` | C2PA Signing (production keys) |
+| `POST /c2pa/ai-disclosure/add`, `/list` | `c2pa-sign-prod` or `c2pa-sign-test` | — |
+| `POST /c2pa/software-agent/add`, `/list` | `c2pa-sign-prod` or `c2pa-sign-test` | — |
+| `POST /content/recover` | `c2pa-decode` | — |
 
-Test outputs are signed with a test certificate and are intended for integration development, not production credentials.
+An account access token with the `c2pa_sign` permission may be used instead of an
+API key on the signing and assertion-record endpoints; `/content/recover` requires
+an API key.
 
----
+Distributed signing is performed by the SDK over a dedicated protocol whose
+endpoints are an internal detail of that protocol, not a public interface. Use
+`sign_c2pa_distributed()` — see [Signing modes](#signing-modes).
 
-## Server Selection
+Production signing additionally requires completed Organization Validation —
+without it, production signing returns `403 MissingOrganizationValidation`.
 
-The SDK defaults to the Global API endpoint. To instead use the Europe API endpoint, specify:
+### Automatic assertions
 
-```python
-from trufo.api.endpoints import TRUFO_API_URL_EUROPE
-from trufo.api.tps.sign_c2pa import sign_c2pa
+Every manifest signed through Trufo carries an `ai.trufo.identity` assertion,
+injected server-side and not suppressible by the caller:
 
-signed_bytes = sign_c2pa(
-  api_key,
-  media_bytes,
-  trufo_api_url=TRUFO_API_URL_EUROPE,
-)
-```
+| Field | Presence | Description |
+| ----- | -------- | ----------- |
+| `oid` | Always | Organization id of the signing credential |
+| `orgName` | With active OV | The organization's validated legal name |
 
-Organizations provisioned with a dedicated API or TSA can set them explicitly:
+### Response warnings
 
-```python
-signed_bytes = sign_c2pa(
-    api_key,
-    media_bytes,
-    trufo_api_url="https://<your-dedicated-host>.api.trufo.ai",
-    trufo_tsa_url="https://<your-dedicated-host>.tsa.trufo.ai",
-)
-```
-
-See [what is region-scoped](api_auth.md#what-is-region-scoped) for which data crosses regions.
-
----
-
-## Common Workflows
-
-### AIGC Labeling
-
-See [2_ai_labeling.md](../quickstart/2_ai_labeling.md) for a quickstart guide for this use case.
-
-### CAWG Publishing
-
-See [3_cawg_publish.md](../quickstart/3_cawg_publish.md) for a quickstart guide for this use case.
-
-### Distributed Signing
-
-See [4_distributed_signing.md](../quickstart/4_distributed_signing.md) for a quickstart guide for this use case.
-
-### Python SDK helpers
-
-For direct byte uploads, use `sign_c2pa()` for production signing and `sign_c2pa_test()` for the test signer:
-
-```python
-from trufo.api.tps.sign_c2pa import sign_c2pa
-from trufo.util.credentials import TrufoApiKey, load_api_key
-
-api_key = load_api_key(TrufoApiKey.C2PA_SIGN_PROD)
-signed_bytes = sign_c2pa(
-  api_key,
-  media_bytes,
-  assertions=[
-    ["cawg_identity", {"cawg_identity_id": "org_interim"}],
-  ],
-)
-```
-
-For larger media, use the S3 convenience helper:
-
-```python
-from trufo.api.tps.sign_c2pa import sign_c2pa_via_s3
-
-signed_bytes = sign_c2pa_via_s3(
-  api_key,
-  media_bytes,
-  mime_type="image/jpeg",
-  assertions=[
-    ["cawg_identity", {"cawg_identity_id": "org_interim"}],
-  ],
-)
-```
-
----
-
-# Standard Signing
-
-## `POST /c2pa/sign`
-
-The production hosts and the test host share the same route and request/response schema. The production signer produces manifests recognized by conformant C2PA validators; the test signer produces manifests that are not.
-
-### Request Body
-
-| Field            | Type   | Required | Description                                                            |
-| ---------------- | ------ | -------- | ---------------------------------------------------------------------- |
-| `media_input`    | string | Yes*     | base64-encoded input media data                                        |
-| `media_input_s3` | string | Yes*     | server-signed ephemeral S3 input reference from `/c2pa/io/get-s3-url`  |
-| `actions`        | list   | No       | instructions for the TPS to apply, in order                            |
-| `assertions`     | list   | No       | gathered assertions to include in the manifest                         |
-| `manifest_title` | string | No       | active-manifest title (the manifest's `dc:title`); signer default if omitted |
-
-\* Provide exactly one of `media_input` or `media_input_s3`.
-
-#### `media_input`
-
-Base64-encoded bytes of the input file. The supported MIME types are listed below; more will be added over time (upon request).
-
-| Category | MIME types                                                                                                                              |
-| -------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| Image    | `image/jpeg`, `image/png`, `image/tiff`, `image/webp`, `image/avif`, `image/jxl`, `image/gif`, `image/x-adobe-dng`, `image/svg+xml`     |
-| Video    | `video/mp4`, `video/quicktime`                                                                                                          |
-| Audio    | `audio/mpeg`, `audio/flac`, `audio/wav`, `audio/mp4`                                                                                    |
-| Document | `application/pdf`                                                                                                                        |
-
-#### `media_input_s3`
-
-Opaque server-signed input reference returned by [`POST /c2pa/io/get-s3-url`](#post-c2paioget-s3-url). Use this mode for larger media or workflows that should avoid sending base64 media through the JSON request body.
-
-The flow is:
-
-1. Call `POST /c2pa/io/get-s3-url` with the source media MIME type.
-2. Upload the source media bytes to the returned `upload_url` with `Content-Type` set to the same MIME type.
-3. Call `POST /c2pa/sign` (on a production host or the test host) with `media_input_s3`.
-4. Download the signed output from the returned `media_output_s3` URL.
-
-The Python SDK provides low-level helpers for each step and high-level helpers (`sign_c2pa_via_s3()` and `sign_c2pa_via_s3_test()`) that perform the full upload/sign/download sequence.
-
-#### `actions`
-
-Ordered list of `[action_name, params]` pairs. Each element of the `actions` list is a two-element array, and will be executed by the TPS in order.
-
-| Action        | Params                                              | Description                                      |
-| ------------- | --------------------------------------------------- | ------------------------------------------------ |
-| `"transcode"` | `{"target_mime_type": "<mime>"}`                    | transcode to target format                       |
-| `"watermark"` | `{"effort": "<effort>"}`                            | embed the Trufo watermark (off by default)       |
-| `"publish"`   | `{}`                                                | mark for final distribution                      |
-| `"redact"`    | `{"label": "<label>", "reason": "<reason>"}`         | remove an assertion from the input's history     |
-
-##### `watermark`
-
-Request the imperceptible Trufo Pawprint watermark during signing. **Watermarking is off by default** — it runs only when this action is present. See the [Watermarking Quickstart](../quickstart/6_watermarking.md) for supported formats and examples.
-
-| Param    | Type   | Required | Description |
-| -------- | ------ | -------- | ----------- |
-| `effort` | string | No       | Failure tolerance: `"require"` (any failure fails the sign), `"require_if_supported"` (an unsupported format signs unwatermarked with a warning; a runtime failure fails the sign), or `"best_effort"` (any failure signs unwatermarked with a warning). A bare watermark action defaults to `"require"`. |
-
-At most one watermark action is allowed per request. A watermarked manifest carries a `c2pa.watermarked.bound` action and a `c2pa.soft-binding` assertion with algorithm `ai.trufo.pawprint.watermark`.
-
-```json
-["watermark", {}],
-["watermark", {"effort": "best_effort"}]
-```
-
-##### `redact`
-
-Remove one named assertion from the input's existing manifest history, wherever it occurs in that history (C2PA §6.8).
-
-| Param    | Type   | Required | Description |
-| -------- | ------ | -------- | ----------- |
-| `label`  | string | Yes      | Assertion label to redact, from the supported labels below. May be suffixed with `__N` to target one disambiguated instance, e.g. `c2pa.metadata__1`, where `N` is a positive integer with no leading zero. |
-| `reason` | string | Yes      | Rationale, recorded on the resulting `c2pa.redacted` action. A preset value below, or a custom reverse-DNS value, e.g. `com.example.internal-policy`. |
-
-The labels supported for redaction are listed below; more will be added over time (upon request).
-
-| Label                    | Carries |
-| ------------------------ | ------- |
-| `c2pa.metadata`          | capture date/time, location, GPS, device |
-| `cawg.metadata`          | byline/creator, people depicted, credit, rights |
-| `cawg.training-mining`   | AI-training and data-mining permissions |
-| `cawg.identity`          | the identity assertion binding a named signer to that manifest's assertions, including its X.509 certificate |
-
-The preset `reason` values are listed below. A `reason` may also be a custom entity-namespaced (reverse-DNS) value, e.g. `com.example.internal-policy`.
-
-| Preset                         | Redacted because the assertion contains |
-| ------------------------------ | --------------------------------------- |
-| `c2pa.PII.present`             | personally identifiable information |
-| `c2pa.invalid.data`            | incorrect data |
-| `c2pa.trade-secret.present`    | commercially sensitive information |
-| `c2pa.government.confidential` | information restricted by a government |
-
-A custom reason requires an active domain-validation (DV) record for its base domain (scope `c2pa-custom-assertion`, the same record used for custom assertions); without one the request returns `403 InvalidC2PACustomDomain`.
-
-The search covers the full ingredient history, not just the immediate parent, so one entry produces one `c2pa.redacted` action per matching manifest. Repeat the entry to redact several assertions, each with its own `reason`; the same label may not be targeted twice in one request. Redaction requires the input to already have a C2PA manifest — that, or a label absent from its history, returns `400`. An entry's position sets where its `c2pa.redacted` action appears in the recorded history, but never what gets redacted: redaction always targets the input's existing manifest history, not the output of a transform in the same call. Available on the hosted and distributed signers alike; in the distributed flow the media (and the redaction itself) stays local, while the `reason` is still authorized server-side during preprocessing.
-
-```json
-["redact", {"label": "c2pa.metadata", "reason": "c2pa.PII.present"}],
-["redact", {"label": "cawg.metadata", "reason": "c2pa.trade-secret.present"}]
-```
-
-#### `assertions`
-
-Ordered list of `[assertion_name, params]` pairs. Each assertion is treated as a gathered assertion when signing the manifest. All entries are optional — in particular, a `"cawg_identity"` entry is not required. When one or more `"cawg_identity"` entries are present, the signer automatically references all gathered assertions through the identity assertion.
-
-| Assertion         | Params                         | C2PA label             |
-| ----------------- | ------------------------------ | ---------------------- |
-| `"ai_disclosure"` | `{"ai_disclosure_id": "<id>", "set_source_type": false}` | `c2pa.ai-disclosure`   |
-| `"cawg_metadata"` | `{"assertion": {…}}`           | `cawg.metadata`        |
-| `"cawg_training"` | `{"assertion": {…}}`           | `cawg.training-mining` |
-| `"cawg_identity"` | `{"cawg_identity_id": "<id>"}` | `cawg.identity`        |
-| `"custom"`        | `{"label": "<reverse-dns-label>", "assertion": {…}}` | entity-specific label  |
-| `"ingredient"`    | `{"relationship": "<rel>", …}` | `c2pa.ingredient.v3`   |
-
-##### `ai_disclosure`
-
-Marks the content as AI-generated via a `c2pa.ai-disclosure` assertion. By default, the minimal assertion body `{"modelType": "c2pa.types.model"}` is used; to attach a richer pre-registered assertion (e.g. identifying a specific model, dataset, or content profile), first register it via [`POST /c2pa/ai-disclosure/add`](#post-c2paai-disclosureadd) and pass the returned `ai_disclosure_id`.
-
-| Param               | Type   | Default        | Description                                                                                                                                          |
-| ------------------- | ------ | -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ai_disclosure_id`  | string | `null`         | When omitted, the default body `{"modelType": "c2pa.types.model"}` is used. When set, must be the `ai_disclosure_id` of a previously stored assertion — form: `aidisc_<uuidv7>`. The stored body replaces the default. |
-| `set_source_type`   | bool   | `false`        | When `true` and the input has no existing C2PA manifest, sets `digitalSourceType = trainedAlgorithmicMedia` on the ingredient. Also, see note below. |
-
-> **Note on `set_source_type`:** Setting `digitalSourceType` within C2PA ingredients is new to C2PA v2.4 (§18.16.12.3) and is not yet supported by most existing validators today (e.g. having this field may make the manifest show up as "invalid"). The `c2pa.ai-disclosure` assertion alone suffices for AI labeling purposes, though for forwards-compatibility purposes you may want to set both. If your use case allows for validators to temporarily display "invalid" messaging, we recommend setting both. If not, then include only the ai_disclosure.
-
-Default disclosure (no digitalSourceType):
-
-```json
-["ai_disclosure", {}]
-```
-
-Default disclosure with digitalSourceType:
-
-```json
-["ai_disclosure", {"set_source_type": true}]
-```
-
-Reference a pre-stored disclosure:
-
-```json
-["ai_disclosure", {"ai_disclosure_id": "aidisc_0193f7e0abcd7a11bcde01234567890a"}]
-```
-
-##### `cawg_metadata`
-
-Embed CAWG creator metadata (JSON-LD). The `assertion` param is required and must include an `@context` mapping with allowed namespace prefixes.
-
-```json
-["cawg_metadata", {
-  "assertion": {
-    "@context": {
-      "dc": "http://purl.org/dc/elements/1.1/"
-    },
-    "dc:creator": ["[CREATOR NAME]"]
-  }
-}]
-```
-
-Allowed namespace prefixes and their required URIs:
-
-| Prefix         | URI                                           |
-| -------------- | --------------------------------------------- |
-| `Iptc4xmpCore` | `http://iptc.org/std/Iptc4xmpCore/1.0/xmlns/` |
-| `Iptc4xmpExt`  | `http://iptc.org/std/Iptc4xmpExt/2008-02-29/` |
-| `dc`           | `http://purl.org/dc/elements/1.1/`            |
-| `exif`         | `http://ns.adobe.com/exif/1.0/`               |
-| `exifEX`       | `http://cipa.jp/exif/2.32/`                   |
-| `pdf`          | `http://ns.adobe.com/pdf/1.3/`                |
-| `pdfx`         | `http://ns.adobe.com/pdfx/1.3/`               |
-| `photoshop`    | `http://ns.adobe.com/photoshop/1.0/`          |
-| `tiff`         | `http://ns.adobe.com/tiff/1.0/`               |
-| `xmp`          | `http://ns.adobe.com/xap/1.0/`                |
-
-Any prefix not in this list, or a URI that doesn't match exactly, is rejected.
-
-##### `cawg_training`
-
-Declare AI training and data-mining permissions per CAWG spec. The `assertion` param must contain an `entries` dict (no other top-level keys).
-
-```json
-["cawg_training", {
-  "assertion": {
-    "entries": {
-      "cawg.ai_training": { "use": "notAllowed" },
-      "cawg.ai_inference": { "use": "allowed" },
-      "cawg.data_mining": { "use": "constrained", "constraint_info": "See license terms." }
-    }
-  }
-}]
-```
-
-Each entry must have:
-
-- `use` — **required**, one of `"allowed"`, `"notAllowed"`, `"constrained"`.
-- `constraint_info` — optional, non-empty string (typically provided when `use` is `"constrained"`).
-
-##### `cawg_identity`
-
-Attach a CAWG identity assertion.
-
-| Param              | Type   | Required | Description                   |
-| ------------------ | ------ | -------- | ----------------------------- |
-| `cawg_identity_id` | string | Yes      | Identity provider identifier. |
-
-`cawg_identity_id` is an opaque identifier validated server-side; unrecognized values are rejected with `400 InvalidCawgIdentityId`. The set of supported identifiers will grow as the CAWG trust model matures. Currently available:
-
-| Value         | Endpoint        | Description                                                                                                              |
-| ------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `"test"`      | Test            | Signs with a shared Trufo test certificate. Outputs are not recognized by C2PA validators. |
-| `"org_interim"` | Test, Prod    | Signs with a Trufo-hosted org-specific CAWG interim certificate. Requires the CAWG Organization Certificate plan. |
-
-##### `ingredient`
-
-Declares a prior or contributing asset as a metadata-only ingredient. All user ingredients are gathered assertions: the relationship and description are your workflow's account, not attributed to the Trufo signer. Whenever one or more `ingredient` entries are present, the manifest's `allActionsIncluded` is set to `false`.
-
-| Param                 | Type   | Required | Description |
-| --------------------- | ------ | -------- | ----------- |
-| `relationship`        | string | Yes      | `inputTo` (an input to a computational process — prompt, model, dataset) or `componentOf` (a placed component; requires `media`). |
-| `title`               | string | No       | Display name (`dc:title`), e.g. `prompt.txt`. |
-| `data_types`          | list   | No       | `[{"type": "c2pa.types.<kind>", "version": "…"}]` — the asset's role, e.g. `c2pa.types.prompt`, `c2pa.types.model`, `c2pa.types.dataset`. |
-| `digital_source_type` | string | No       | IPTC AI-disclosure values only: `trainedAlgorithmicMedia` or `compositeWithTrainedAlgorithmicMedia` (full IPTC URIs). |
-| `media`               | string | No       | base64 file bytes. A C2PA manifest in the file brings validation references (and excludes `digital_source_type`); manifest-free media is thumbnailed as a described visual record, not cryptographically bound. Required for `componentOf`, in a thumbnail-capable image format (JPEG, PNG, WebP, GIF, TIFF). |
-
-
-```json
-["ingredient", {"relationship": "inputTo", "title": "prompt.txt",
-                "data_types": [{"type": "c2pa.types.prompt"}]}],
-["ingredient", {"relationship": "componentOf", "title": "overlay.png",
-                "media": "<base64>"}]
-```
-
-##### `custom`
-
-Embed a custom assertion using a validated domain (C2PA §6.2).
-
-| Param       | Type   | Required | Description |
-| ----------- | ------ | -------- | ----------- |
-| `label`     | string | Yes      | Reverse-DNS assertion label, e.g. `com.example.custom-metadata`. The `c2pa.*` namespace and labels containing `__` are reserved and rejected. |
-| `assertion` | object | Yes      | Assertion data (arbitrary JSON object). |
-
-Requires the C2PA Custom Domain plan and an active domain-validation (DV) record for the base domain of the label (scope `c2pa-custom-assertion`). For example, to use the label `com.example.custom-metadata`, the org must have a DV record for `example.com`.
-
-Multiple `"custom"` entries may be included in a single request; each is validated independently against the org's DV records.
-
-```json
-["custom", {"label": "com.example.custom-metadata", "assertion": {"internalId": 1234}}]
-```
-
-#### Automatic assertions
-
-Every manifest signed through Trufo endpoints additionally carries an `ai.trufo.identity` assertion, injected server-side as a created assertion. It cannot be supplied, altered, or suppressed by the caller.
-
-| Field      | Presence                     | Description                                                        |
-| ---------- | ---------------------------- | ------------------------------------------------------------------ |
-| `oid`      | Always                       | Organization id of the signing credential.                          |
-| `orgName`  | With active OV               | The org's RA-validated legal name from Organization Validation.     |
-
-Production signing requires completed Organization Validation (OV) for the caller's org. Without it, `POST /c2pa/sign` returns:
-
-```
-403 MissingOrganizationValidation: Use of C2PA API Signing Service requires completed Organization Validation.
-```
-
-Test signing (`POST /c2pa/sign` on the test host) does not require OV; the injected assertion then contains `oid` only.
-
-### Response (200)
-
-Direct media response:
-
-```json
-{
-  "media_output": "<base64-encoded signed media>",
-  "warnings": []
-}
-```
-
-S3 media response:
-
-```json
-{
-  "media_output_s3": "<presigned download URL for signed media>",
-  "warnings": []
-}
-```
-
-#### `warnings`
-
-Non-fatal notices about work the server skipped while still completing the sign — most importantly a watermark that a lenient `effort` could not embed, which is otherwise indistinguishable from a watermarked result. Empty when nothing was skipped.
-
-The Python SDK re-emits each notice as a `TrufoServerWarning` (a `UserWarning` subclass, exported as `trufo.TrufoServerWarning`), in both the hosted and distributed flows:
+Sign responses include a `warnings` list of non-fatal notices — work the server
+completed differently than requested. The Python SDK re-emits each as a
+`TrufoServerWarning`:
 
 ```python
 import warnings
@@ -441,212 +65,372 @@ if caught:  # signed, but something was skipped — e.g. no watermark embedded
         log.warning("Trufo notice: %s", w.message)
 ```
 
-Because the notices have their own category, `warnings.simplefilter("ignore", TrufoServerWarning)` silences only Trufo's messages, `"error"` turns them into exceptions (useful in CI), and `logging.captureWarnings(True)` routes them to the `py.warnings` logger.
+`warnings.simplefilter("ignore", TrufoServerWarning)` silences only Trufo's
+notices, `"error"` turns them into exceptions, and `logging.captureWarnings(True)`
+routes them to the `py.warnings` logger.
+
+Messages you may see: a declined watermark
+(`Watermarking is not supported for '<mime>' media…`), a best-effort watermark
+failure (`Watermarking failed: …`), and SDK-version deprecation notices.
 
 ### Errors
 
-| Status | `detail` | Retry? |
-| ------ | -------- | ------ |
-| 400 | Request validation failures — malformed `actions`/`assertions`, an unsatisfiable `redact`, an unsupported media type, or a strict `watermark` the input cannot satisfy | No — fix the request |
-| 401 | `MissingAuthentication`, `InvalidAPIKey` | No |
-| 403 | `MissingOrganizationValidation` (production signing before OV completes), `APIKeyScopeNotAllowed`, or a missing plan | No |
-| 5xx | Server-side failure | Yes, with backoff |
+Beyond the platform-wide codes in [api_trufo.md](api_trufo.md):
 
-The SDK helpers call `raise_for_status()`, so non-2xx responses surface as `requests.HTTPError`; read `exc.response.status_code` and the JSON `detail`.
+| Status | `detail` | Meaning |
+| ------ | -------- | ------- |
+| 400 | *(message)* | Request validation — malformed `actions`/`assertions`, watermark contract violations, an unsatisfiable redaction |
+| 400 | `InvalidCawgIdentityId` | Unknown `cawg_identity_id` |
+| 400 | `MissingC2PACustomDomain` | A `custom` assertion without a label |
+| 403 | `MissingOrganizationValidation` | Production signing before OV completes |
+| 403 | `InvalidC2PACustomDomain` | The label's domain is not domain-validated for your organization |
+| 403 | `NoEligiblePlan` | The organization lacks the required plan |
+| 404 | *(message)* | Unknown `ai_disclosure_id` or `software_agent_id` |
 
-**Retries and billing.** A sign is metered when it completes, so a request that fails never bills. A retry after a timeout or a 5xx is safe in the sense that no partial state is left behind, but it is *not* deduplicated: if the original request actually completed and only the response was lost, the retry produces a second signed output and a second billed sign. For high-volume pipelines, prefer a generous client timeout over aggressive retries.
-
----
-
-## `POST /c2pa/io/get-s3-url`
-
-Mint an ephemeral presigned S3 upload URL for C2PA signing. The returned `media_input_s3` reference is passed to `/c2pa/sign` after upload.
-
-### Request Body
-
-| Field       | Type   | Required | Description                                                |
-| ----------- | ------ | -------- | ---------------------------------------------------------- |
-| `mime_type` | string | Yes      | MIME type of the object the caller will upload             |
-| `duration`  | string | No       | Ephemeral duration. Currently supported value: `"5m"`.     |
-
-### Response (200)
-
-| Field            | Type    | Description                                                   |
-| ---------------- | ------- | ------------------------------------------------------------- |
-| `media_input_s3` | string  | Opaque server-signed S3 input reference for signing           |
-| `upload_url`     | string  | Presigned PUT URL for uploading input media                   |
-| `expires_at`     | integer | Unix timestamp when the signed reference expires              |
-| `duration`       | string  | Duration value used for object keys and expiry                |
-
-```json
-{
-  "media_input_s3": "<opaque signed reference>",
-  "upload_url": "https://...",
-  "expires_at": 1770000000,
-  "duration": "5m"
-}
-```
-
-### Errors
-
-- **401** — missing or invalid credential.
-- **403** — API-key scope not allowed, access-token caller lacks the `c2pa_sign` permission, or production signing access is not active for the caller's organization.
+**Retries and billing.** A sign is metered when it completes, so a failed request
+never bills. Retries are not deduplicated: if a request completed but its response
+was lost, retrying produces a second signed output and a second billed sign. Prefer
+a generous client timeout over aggressive retries.
 
 ---
 
-# Distributed Signing
+## Signing Modes
 
-In the case where the media content cannot be sent over an API call (e.g. due to file size or privacy concerns), use distributed signing: the C2PA manifest is assembled and hashed locally, and the resulting hash is sent to Trufo for signing. To remain conformant with the C2PA specification, currently the only way to do so is via a `trufo[local-sign-only]` (or `local-full`) optional installation and using the `sign_c2pa_distributed()` Python function. See [4_distributed_signing.md](../quickstart/4_distributed_signing.md) for an end-to-end guide.
+Four flows, one request shape. `actions` and `assertions` behave identically in all
+of them.
 
-- `sign_c2pa_distributed()` uses the production `/c2pa/remote-sign` endpoint and requires a `c2pa-sign-prod` key, a TSA key, and completed Organization Validation (OV).
-- `sign_c2pa_distributed_test()` uses the same routes on the test host (`test.api.trufo.ai`) with a `c2pa-sign-test` key and a TSA key. It is intended for integration development, not production credentials.
+| | Hosted | Hosted (S3) | Distributed |
+| --- | --- | --- | --- |
+| Entry | `POST /c2pa/sign` | `get-s3-url` → upload → `POST /c2pa/sign` | `sign_c2pa_distributed()` (SDK only) |
+| Media reaches Trufo | Yes, in the body | Yes, via ephemeral S3 | **No** — only the claim hash |
+| Manifest assembled by | Trufo | Trufo | Your process (`trufo-provenance`) |
+| Signing key | Trufo | Trufo | Trufo |
+| Extra requirements | — | — | Local engine extra, `tsa` key, Linux x86_64 + CPython 3.12 |
+
+Each mode has a test variant: use a `c2pa-sign-test` key against
+`test.api.trufo.ai`. Test signing skips OV and billing, produces manifests signed by
+the test certificate (not accepted by conformant validators), and creates no
+permanent signing record.
+
+### `POST /c2pa/sign`
+
+| Field | Type | Required | Description |
+| ----- | ---- | -------- | ----------- |
+| `media_input` | string | Yes\* | base64-encoded input media |
+| `media_input_s3` | string | Yes\* | Opaque reference from `/c2pa/io/get-s3-url` |
+| `actions` | list | Yes | `[name, params]` pairs, applied in order |
+| `assertions` | list | No | `[name, params]` pairs recorded in the manifest |
+| `manifest_title` | string | No | Active manifest `dc:title` |
+| `ingredient_title` | string | No | Title of the input-derived `parentOf` ingredient |
+
+\* Provide exactly one.
+
+**Response (200):** `media_output` (base64) or `media_output_s3` (presigned download
+URL), plus `warnings`.
+
+When titles are omitted the engine derives them by sniffing the media, which cannot
+distinguish formats sharing a container (TIFF/DNG, HEIC/HEIF/AVIF). Pass them
+explicitly when you know the intended filename.
+
+### `POST /c2pa/io/get-s3-url`
+
+| Field | Type | Required | Description |
+| ----- | ---- | -------- | ----------- |
+| `mime_type` | string | Yes | MIME type of the object you will upload |
+| `duration` | string | No | Currently `"5m"` |
+
+**Response (200):** `media_input_s3` (opaque reference), `upload_url` (presigned PUT
+— send the same `Content-Type`), `expires_at`, `duration`.
+
+Upload, then call `/c2pa/sign` with `media_input_s3`. Trufo re-probes the uploaded
+bytes rather than trusting the declared type. The signed output is returned as a
+presigned download URL valid for the remainder of the reference's lifetime.
+
+### Distributed signing
+
+Distributed signing keeps media entirely on your machine: `trufo-provenance`
+assembles and hashes the C2PA claim locally, and only the claim hash is sent to
+Trufo to be signed.
+
+This flow is available **exclusively through the SDK**. It is a multi-step protocol
+in which the client and server exchange state that must stay consistent for the
+resulting manifest to be valid, so the individual calls are not a supported public
+interface and are not documented here — driving them directly produces invalid
+manifests and unusable signing records.
+
+```python
+from trufo import sign_c2pa_distributed
+
+signed_bytes = sign_c2pa_distributed(api_key, media_bytes, actions=actions)
+```
+
+Requirements: a local engine extra (`trufo[local-sign-only]` or
+`trufo[local-full]`), a `tsa` key for timestamping, a `c2pa-sign-prod` key, and
+completed OV. See the [signing quickstart](../quickstart/2_c2pa_signing.md).
 
 ---
 
-# Watermark Recovery
+## Request Schema
 
-## `POST /content/recover`
+### Server selection
 
-Decode a Trufo Pawprint watermark from uploaded media and return its provenance. Use this to identify content signed through Trufo after its C2PA manifest has been stripped (see the [Watermarking Quickstart](../quickstart/6_watermarking.md)). The Python SDK wraps this endpoint as `recover_content()`.
+Call the endpoint for the region you want; there is no routing parameter. See
+[Regions](api_trufo.md#regions).
 
-### Request Body
+```python
+from trufo.api.endpoints import TRUFO_API_URL_EUROPE
 
-**Auth:** API key (`X-API-Key`) with scope `c2pa-decode`.
-
-| Field         | Type   | Required | Description                     |
-| ------------- | ------ | -------- | ------------------------------- |
-| `media_input` | string | Yes      | base64-encoded input media data |
-
-Any parseable image or audio input may be submitted; decoding is read-only and is not limited to the formats supported for watermark *encoding*.
-
-### Response (200)
-
-| Field        | Type           | Description                                                                 |
-| ------------ | -------------- | --------------------------------------------------------------------------- |
-| `detected`   | bool           | Whether a Trufo watermark was found.                                        |
-| `wid`        | string or null | Decoded watermark ID, if detected.                                          |
-| `confidence` | float or null  | Detection confidence in `(0, 1]`.                                           |
-| `manifest`   | object or null | Stored C2PA manifest, when one is available for the record. |
-
-```json
-{
-  "detected": true,
-  "wid": "<watermark id>",
-  "confidence": 0.98,
-  "manifest": null
-}
+signed_bytes = sign_c2pa(api_key, media_bytes, trufo_api_url=TRUFO_API_URL_EUROPE)
 ```
 
-When no watermark is found, the response is `{"detected": false}` with the remaining fields `null`. Watermarks embedded by test signing decode to their (ephemeral, non-unique) test-space ID but are not linked to a signing record.
+Organizations with a dedicated API or TSA pass those hosts explicitly via
+`trufo_api_url` and `trufo_tsa_url`.
 
-### Errors
+### Supported media types
 
-- **401** — missing or invalid credential.
-- **403** — API-key scope not allowed (requires `c2pa-decode`).
+| Category | MIME types |
+| -------- | ---------- |
+| Image | `image/jpeg`, `image/png`, `image/gif`, `image/webp`, `image/avif`, `image/tiff`, `image/jxl`, `image/x-adobe-dng`, `image/svg+xml` |
+| Audio | `audio/mpeg`, `audio/flac`, `audio/wav`, `audio/mp4` |
+| Video | `video/mp4`, `video/quicktime` |
+| Document | `application/pdf` |
+
+The type is detected from the bytes, not from any declared value. Common aliases
+resolve automatically (`audio/x-wav` → `audio/wav`, `audio/x-m4a` → `audio/mp4`);
+an MP4 with no video stream is treated as `audio/mp4`. More formats are added on
+request.
+
+### `actions`
+
+Ordered `[name, params]` pairs. Each media-transforming action feeds the next.
+
+| Action | Params | Description |
+| ------ | ------ | ----------- |
+| `"transcode"` | `{"target_mime_type": "<mime>"}` | Convert to another format in the same media class |
+| `"watermark"` | `{"effort": "<effort>"}` | Embed a Trufo watermark (off by default) |
+| `"publish"` | `{}` | Mark for final distribution |
+| `"redact"` | `{"label": "<label>", "reason": "<reason>"}` | Remove an assertion from the input's history |
+
+#### `transcode`
+
+Converts within a media class; cross-class conversion is rejected. The input must
+already carry a C2PA manifest. Targets: `image/jpeg`, `image/png`, `image/webp`,
+`image/avif`, `image/tiff`, `image/gif`, `audio/flac`, `audio/wav`, `audio/mp4`,
+`audio/mpeg`, `video/mp4`, `video/quicktime`. Not available in distributed signing.
+
+#### `watermark`
+
+Embeds an imperceptible Trufo Pawprint watermark, declared in the manifest by a
+`c2pa.watermarked.bound` action and a `c2pa.soft-binding` assertion with algorithm
+`ai.trufo.pawprint.watermark`. **Off unless requested.** At most one watermark
+action per request.
+
+| `effort` | Unsupported format | Runtime failure |
+| -------- | ------------------ | --------------- |
+| `"require"` (default for a bare action) | Error | Error |
+| `"require_if_supported"` | Signs unwatermarked, with a warning | Error |
+| `"best_effort"` | Signs unwatermarked, with a warning | Signs unwatermarked, with a warning |
+
+Watermarkable formats: JPEG, PNG, WebP, TIFF, WAV, FLAC, MP3, M4A. See the
+[watermarking quickstart](../quickstart/6_watermarking.md).
+
+#### `redact`
+
+Removes one named assertion from the input's existing manifest history, wherever it
+occurs (C2PA §6.8). Repeat the entry for several labels; the same label may not be
+targeted twice.
+
+| Label | Carries |
+| ----- | ------- |
+| `c2pa.metadata` | Capture date/time, location, GPS, device |
+| `cawg.metadata` | Byline/creator, people depicted, credit, rights |
+| `cawg.training-mining` | AI-training and data-mining permissions |
+| `cawg.identity` | The identity assertion binding a signer to that manifest |
+
+Append `__N` (e.g. `c2pa.metadata__1`) to target one disambiguated instance; a bare
+label matches only the unnumbered one.
+
+`reason` is required — a preset, or a custom reverse-DNS value whose domain your
+organization has domain-validated:
+
+| Preset | Redacted because the assertion contains |
+| ------ | --------------------------------------- |
+| `c2pa.PII.present` | Personally identifiable information |
+| `c2pa.invalid.data` | Incorrect data |
+| `c2pa.trade-secret.present` | Commercially sensitive information |
+| `c2pa.government.confidential` | Government-restricted information |
+
+Redaction requires the input to have a manifest, and every label must resolve —
+otherwise the request fails and nothing is signed. An entry's position sets where
+its `c2pa.redacted` action appears, but redaction always targets the input's
+existing history, never the output of a transform in the same call.
+
+### `assertions`
+
+Ordered `[name, params]` pairs, recorded as gathered assertions.
+
+| Assertion | Params | C2PA label |
+| --------- | ------ | ---------- |
+| `"ai_disclosure"` | `{"ai_disclosure_id": "<id>", "set_source_type": false}` | `c2pa.ai-disclosure` |
+| `"cawg_metadata"` | `{"assertion": {…}}` | `cawg.metadata` |
+| `"cawg_training"` | `{"assertion": {…}}` | `cawg.training-mining` |
+| `"cawg_identity"` | `{"cawg_identity_id": "<id>"}` | `cawg.identity` |
+| `"custom"` | `{"label": "<reverse-dns>", "assertion": {…}}` | Your label |
+| `"ingredient"` | `{"relationship": "<rel>", …}` | `c2pa.ingredient.v3` |
+
+#### `ai_disclosure`
+
+Marks content as AI-generated. With no parameters, the minimal body
+`{"modelType": "c2pa.types.model"}` is used. To describe a specific model, register
+the body first (below) and pass the returned `ai_disclosure_id` — inline bodies are
+rejected.
+
+`set_source_type: true` additionally sets `digitalSourceType` to
+`trainedAlgorithmicMedia` on the parent ingredient, but only when the input has no
+existing manifest. This field is new in C2PA 2.4 and many validators still flag
+manifests carrying it, so leave it off unless you can tolerate that.
+
+#### `cawg_metadata`
+
+JSON-LD creator metadata. `assertion` must include an `@context` whose prefixes are
+allowlisted and whose URIs match exactly:
+
+| Prefix | URI |
+| ------ | --- |
+| `Iptc4xmpCore` | `http://iptc.org/std/Iptc4xmpCore/1.0/xmlns/` |
+| `Iptc4xmpExt` | `http://iptc.org/std/Iptc4xmpExt/2008-02-29/` |
+| `dc` | `http://purl.org/dc/elements/1.1/` |
+| `exif` | `http://ns.adobe.com/exif/1.0/` |
+| `exifEX` | `http://cipa.jp/exif/2.32/` |
+| `pdf` | `http://ns.adobe.com/pdf/1.3/` |
+| `pdfx` | `http://ns.adobe.com/pdfx/1.3/` |
+| `photoshop` | `http://ns.adobe.com/photoshop/1.0/` |
+| `tiff` | `http://ns.adobe.com/tiff/1.0/` |
+| `xmp` | `http://ns.adobe.com/xap/1.0/` |
+
+#### `cawg_training`
+
+Declares AI training and data-mining permissions. `assertion` must contain exactly
+one key, `entries`, mapping entry names to `{"use": …, "constraint_info"?: …}`.
+`use` is `allowed`, `notAllowed`, or `constrained`. Standard entry names include
+`cawg.ai_training`, `cawg.ai_generative_training`, `cawg.ai_inference`, and
+`cawg.data_mining`.
+
+#### `cawg_identity`
+
+| Value | Environment | Description |
+| ----- | ----------- | ----------- |
+| `"test"` | Test | Shared Trufo test certificate; not recognized by validators |
+| `"org_interim"` | Test, production | Your organization's CAWG interim certificate; requires the CAWG Organization Certificate plan |
+
+#### `custom`
+
+Embeds an assertion under your own reverse-DNS label (C2PA §6.2). The label must be
+dot-separated reverse-DNS, may not use the `c2pa` namespace, and may not contain
+`__`. Your organization must hold an active domain validation for the corresponding
+domain — `com.example.metadata` requires `example.com`.
+
+#### `ingredient`
+
+Declares a prior or contributing asset. Ingredients are your workflow's account of
+the asset, not a Trufo attestation; whenever any are present the manifest's
+`allActionsIncluded` becomes `false`.
+
+| Param | Type | Required | Description |
+| ----- | ---- | -------- | ----------- |
+| `relationship` | string | Yes | `inputTo` (a prompt, model, or dataset) or `componentOf` (a placed component) |
+| `title` | string | No | Display name (`dc:title`) |
+| `data_types` | list | No | `[{"type": "c2pa.types.<kind>", "version": "…"}]` |
+| `digital_source_type` | string | No | The IPTC `trainedAlgorithmicMedia` or `compositeWithTrainedAlgorithmicMedia` URI |
+| `media` | string | For `componentOf` | base64 bytes; must be a thumbnail-capable image (JPEG, PNG, WebP, GIF, TIFF) |
+
+Media carrying its own C2PA manifest is validated and referenced; manifest-free
+media is thumbnailed as a described visual record, not a cryptographic binding, and
+cannot also declare `digital_source_type`.
 
 ---
 
-# Auxiliary APIs
+## Watermark Recovery
 
-## `POST /c2pa/ai-disclosure/add`
+### `POST /content/recover`
 
-Register a custom `c2pa.ai-disclosure` assertion body for the calling organization. Returns an opaque identifier that can be passed as the `ai_disclosure_id` param on the `ai_disclosure` assertion when calling `/c2pa/sign`.
+Decode a Trufo watermark and return its provenance — useful after a manifest has
+been stripped.
 
-### Request Body
+**Auth:** API key with the `c2pa-decode` scope.
 
-| Field       | Type   | Required | Description                                                                                    |
-| ----------- | ------ | -------- | ---------------------------------------------------------------------------------------------- |
-| `nickname`  | string | No       | Human-readable display label for the stored disclosure (e.g. `"Llama 2 70B — autonomous"`). Shown in `/c2pa/ai-disclosure/list` to help identify entries. Not included in the signed assertion. |
-| `assertion` | object | Yes      | A `c2pa.ai-disclosure` assertion body conforming to the `ai-model-disclosure-map` CDDL schema in C2PA 2.4 §18.29.1. See schema below. |
+| Field | Type | Required |
+| ----- | ---- | -------- |
+| `media_input` | string | Yes — base64-encoded media |
 
-The owning org is inferred from the caller's credential — no `oid` field.
+**Response (200):**
 
-#### `assertion` schema
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `detected` | bool | Whether a Trufo watermark was found |
+| `wid` | string or null | The decoded watermark id |
+| `confidence` | float or null | Detection strength in (0, 1] — how strongly the signal was recovered, not a probability of correctness |
+| `manifest` | object or null | The stored manifest, when available for that record |
 
-The request-side validator rejects bodies that don't match the C2PA 2.4 `ai-model-disclosure-map` shape. Field summary:
-
-| Field                            | Type                   | Required | Notes                                                                                                |
-| -------------------------------- | ---------------------- | -------- | ---------------------------------------------------------------------------------------------------- |
-| `modelType`                      | string                 | Yes      | One of the 23 permitted C2PA model-type values (see C2PA 2.4 Table 12). Unknown values are rejected. |
-| `modelName`                      | string                 | No       | Non-empty human-readable model name.                                                                 |
-| `modelIdentifier`                | string                 | No       | Non-empty machine-readable identifier (e.g. a `pkg:huggingface/…` PURL).                             |
-| `contentProfile`                 | object                 | No       | See sub-fields below.                                                                                |
-| `contentProfile.humanOversightLevel` | string             | No       | One of `"fully_autonomous"`, `"prompt_guided"`, `"human_validated"`.                                 |
-| `contentProfile.scientificDomain` | string or list[string] | No       | Each value must match `^[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)+$` (e.g. `biology.genomics`).                 |
-| `metadata`                       | object                 | No       | Free-form assertion metadata.                                                                        |
-
-Any top-level key outside the above list is rejected. Fields introduced in draft/pending additions to the C2PA 2.4 spec are not accepted until finalized.
-
-### Example
-
-```json
-{
-  "nickname": "Llama 2 70B — autonomous",
-  "assertion": {
-    "modelType": "c2pa.types.model.huggingface.transformers",
-    "modelIdentifier": "pkg:huggingface/meta-llama/Llama-2-70b-chat-hf@main",
-    "contentProfile": { "humanOversightLevel": "fully_autonomous" }
-  }
-}
-```
-
-### Response (201)
-
-| Field              | Type   | Description                                               |
-| ------------------ | ------ | --------------------------------------------------------- |
-| `ai_disclosure_id` | string | Stored disclosure identifier, shape `aidisc_<uuidv7>`.    |
-
-```json
-{ "ai_disclosure_id": "aidisc_0193f7e0abcd7a11bcde01234567890a" }
-```
-
-### Errors
-
-- **400** — `assertion` fails the C2PA 2.4 schema check (e.g. unknown `modelType`, bad `humanOversightLevel`).
-- **401** — missing or invalid credential.
-- **403** — API-key scope not allowed, or access-token caller lacks the `c2pa_sign` permission.
+Decoding accepts any parseable image or audio input, not only the formats supported
+for embedding. Watermark ids and confidence are returned for content your own
+organization signed; watermarks belonging to other organizations report `detected`
+without further detail.
 
 ---
 
-## `POST /c2pa/ai-disclosure/list`
+## Assertion Records
 
-List the `c2pa.ai-disclosure` assertions stored for the caller's organization.
+Reusable bodies registered once and referenced by id when signing. Both groups
+accept a `c2pa-sign-prod` or `c2pa-sign-test` key and infer the owning organization
+from the credential.
 
-### Request Body
+### `POST /c2pa/ai-disclosure/add`
 
-Empty. Send `{}`. The owning org is inferred from the caller's credential.
+| Field | Type | Required | Description |
+| ----- | ---- | -------- | ----------- |
+| `assertion` | object | Yes | A `c2pa.ai-disclosure` body (C2PA 2.4 §18.29.1) |
+| `nickname` | string | No | Display label; never signed |
 
-### Response (200)
+**Response (201):** `ai_disclosure_id`, shaped `aidisc_<uuid>`.
 
-| Field   | Type  | Description                                                                      |
-| ------- | ----- | -------------------------------------------------------------------------------- |
-| `items` | list  | Zero or more `{ ai_disclosure_id, nickname, assertion }` entries for this org.   |
+`assertion` fields:
 
-Each entry:
+| Field | Type | Required | Notes |
+| ----- | ---- | -------- | ----- |
+| `modelType` | string | Yes | One of the permitted C2PA model-type values, e.g. `c2pa.types.model`, `c2pa.types.model.pytorch`, `c2pa.types.model.huggingface.transformers` |
+| `modelName` | string | No | Human-readable model name |
+| `modelIdentifier` | string | No | Machine-readable identifier (e.g. a PURL) |
+| `contentProfile` | object | No | Only `humanOversightLevel`: `fully_autonomous`, `prompt_guided`, or `human_validated` |
+| `scientificDomain` | string or list | No | Dotted domain codes, e.g. `cs.AI` |
+| `metadata` | object | No | Free-form |
 
-| Field              | Type           | Description                                                                   |
-| ------------------ | -------------- | ----------------------------------------------------------------------------- |
-| `ai_disclosure_id` | string         | Stored disclosure identifier, shape `aidisc_<uuidv7>`.                        |
-| `nickname`         | string or null | Display label supplied when the disclosure was added, or `null` if none.      |
-| `assertion`        | object         | The stored `c2pa.ai-disclosure` assertion body, as submitted.                 |
+### `POST /c2pa/ai-disclosure/list`
 
-```json
-{
-  "items": [
-    {
-      "ai_disclosure_id": "aidisc_0193f7e0abcd7a11bcde01234567890a",
-      "nickname": "Llama 2 70B — autonomous",
-      "assertion": {
-        "modelType": "c2pa.types.model.huggingface.transformers",
-        "modelIdentifier": "pkg:huggingface/meta-llama/Llama-2-70b-chat-hf@main",
-        "contentProfile": { "humanOversightLevel": "fully_autonomous" }
-      }
-    }
-  ]
-}
-```
+**Request:** `{}`. **Response (200):** `items[]` of
+`{ai_disclosure_id, nickname, assertion}`.
 
-### Errors
+### `POST /c2pa/software-agent/add`
 
-- **401** — missing or invalid credential.
-- **403** — API-key scope not allowed, or access-token caller lacks the `c2pa_sign` permission.
+Register the software agent that produced or edited content, so it can be
+referenced by id rather than repeated inline.
+
+| Field | Type | Required | Description |
+| ----- | ---- | -------- | ----------- |
+| `agent` | object | Yes | Generator-info map: `name` (required), `version`, `operating_system` |
+| `nickname` | string | No | Display label; never signed |
+
+**Response (201):** `software_agent_id`, shaped `swagent_<uuid>`.
+
+### `POST /c2pa/software-agent/list`
+
+**Request:** `{}`. **Response (200):** `items[]` of
+`{software_agent_id, nickname, agent}`.
+
+---
+
+## Reference
+
+- Signing quickstart: [../quickstart/2_c2pa_signing.md](../quickstart/2_c2pa_signing.md)
+- Platform conventions and API keys: [api_trufo.md](api_trufo.md)
+- Certificates, OCSP, and TSA: [api_certs.md](api_certs.md)
