@@ -103,8 +103,8 @@ Organizations provisioned with a dedicated API or TSA can set them explicitly:
 signed_bytes = sign_c2pa_distributed(
     api_key,
     media_bytes,
-    trufo_api_url="https://company.api.trufo.ai",
-    trufo_tsa_url="https://company.tsa.trufo.ai",
+    trufo_api_url="https://<your-dedicated-host>.api.trufo.ai",
+    trufo_tsa_url="https://<your-dedicated-host>.tsa.trufo.ai",
 )
 ```
 

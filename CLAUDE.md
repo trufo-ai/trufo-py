@@ -43,7 +43,7 @@ certificate enrollment.
 | CLI reference | `docs/cli.md` |
 | Feature support matrix | `docs/c2pa_feature_list.md` |
 | Changelog | `CHANGELOG.md` |
-| Release process | `CONTRIBUTING.md` |
+| Contribution policy | `CONTRIBUTING.md` |
 
 ## Signing modes
 

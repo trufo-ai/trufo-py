@@ -42,6 +42,7 @@ from trufo.c2pa.redactions import RedactableAssertion, RedactionReason
 from trufo.c2pa.watermark import WatermarkEffort
 from trufo.util.credentials import TrufoApiKey, load_api_key
 from trufo.util.optional_imports import require_provenance_module
+from trufo.util.warnings import emit_server_warnings
 
 
 @dataclass(frozen=True)
@@ -116,12 +117,13 @@ def _validate_watermark_action(entry: Any) -> None:
     params = entry[1]
     if not isinstance(params, dict):
         raise ValueError("The watermark action requires a parameter object.")
-    if "wid_package" in params:
-        raise ValueError(
-            "The SDK does not yet support client-managed watermark ID reservations."
-        )
     if "apply" in params:
         raise ValueError("The watermark 'apply' parameter has been replaced by 'effort'.")
+    unsupported = set(params) - {"effort"}
+    if unsupported:
+        raise ValueError(
+            f"Unsupported watermark parameter(s): {', '.join(sorted(unsupported))}."
+        )
     effort = params.get("effort")
     if effort is not None:
         try:
@@ -217,7 +219,9 @@ def _sign_c2pa_direct(
     )
     resp.raise_for_status()
 
-    return base64.b64decode(resp.json()["media_output"])
+    payload = resp.json()
+    emit_server_warnings(payload)
+    return base64.b64decode(payload["media_output"])
 
 
 def get_c2pa_s3_upload_url(
@@ -299,7 +303,9 @@ def _sign_c2pa_s3(
     )
     resp.raise_for_status()
 
-    return C2PAS3SignedOutput(media_output_s3=resp.json()["media_output_s3"])
+    payload = resp.json()
+    emit_server_warnings(payload)
+    return C2PAS3SignedOutput(media_output_s3=payload["media_output_s3"])
 
 
 def sign_c2pa_s3(

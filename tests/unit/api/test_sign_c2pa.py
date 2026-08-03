@@ -89,6 +89,46 @@ def _install_fake_remote_stack(
     return calls
 
 
+class TestServerWarnings:
+    """Server-side notices surface as catchable TrufoServerWarning."""
+
+    @patch("trufo.api.tps.sign_c2pa.requests.post")
+    def test_response_warnings_are_emitted(self, mock_post):
+        import warnings as _warnings
+
+        from trufo.util.warnings import TrufoServerWarning
+
+        mock_post.return_value = _mock_response(
+            {
+                "media_output": base64.b64encode(b"signed").decode("utf-8"),
+                "warnings": ["Watermarking is not supported for 'application/pdf' media."],
+            }
+        )
+
+        with _warnings.catch_warnings(record=True) as caught:
+            _warnings.simplefilter("always", TrufoServerWarning)
+            result = sign_c2pa("prod-key", b"input-media")
+
+        assert result == b"signed"
+        assert len(caught) == 1
+        assert issubclass(caught[0].category, TrufoServerWarning)
+        assert "not supported" in str(caught[0].message)
+
+    @patch("trufo.api.tps.sign_c2pa.requests.post")
+    def test_no_warnings_when_absent(self, mock_post):
+        import warnings as _warnings
+
+        mock_post.return_value = _mock_response(
+            {"media_output": base64.b64encode(b"signed").decode("utf-8")}
+        )
+
+        with _warnings.catch_warnings(record=True) as caught:
+            _warnings.simplefilter("always")
+            sign_c2pa("prod-key", b"input-media")
+
+        assert caught == []
+
+
 class TestDirectC2PASigning:
     """Direct media-byte C2PA signing helpers."""
 
@@ -615,7 +655,8 @@ class TestRequestValidation:
             ({"effort": "maybe"}, "effort"),
             ({"effort": True}, "effort"),
             ({"apply": True}, "replaced by 'effort'"),
-            ({"wid_package": {"wid": "x"}}, "client-managed watermark ID reservations"),
+            ({"wid_package": {"wid": "x"}}, "Unsupported watermark parameter"),
+            ({"effort": "require", "nonsense": 1}, "Unsupported watermark parameter"),
             (None, "parameter object"),
         ],
     )

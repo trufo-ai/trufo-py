@@ -18,15 +18,15 @@ Authentication is per-endpoint. The table below summarizes each endpoint; legend
 
 **Scope** — the API-key scope required when authenticating with a key: `prod` = `c2pa-sign-prod`, `test` = `c2pa-sign-test`, `decode` = `c2pa-decode`. An account access token may be used in place of an API key on the signing and assertion-record endpoints (it requires the `c2pa_sign` permission and is scope-independent); `/content/recover` requires an API key.
 
-**Billing Product** — the required plan entitlement, or `—` if none. Gated endpoints return `403` when the caller's org lacks the plan.
+**Plan** — whether the endpoint requires an active plan. Gated endpoints return `403` when the caller's org lacks one.
 
 
-| Endpoint                            | Scope       | Billing Product                  |
+| Endpoint                            | Scope       | Plan                             |
 | ----------------------------------- | ----------- | -------------------------------- |
 | **Signing**                         |             |                                  |
-| `POST /c2pa/sign` (production hosts) | prod       | `c2pa_signing_api`               |
+| `POST /c2pa/sign` (production hosts) | prod       | C2PA Signing                     |
 | `POST /c2pa/sign` (test host)       | test        | —                                |
-| `POST /c2pa/io/get-s3-url`          | prod / test | `c2pa_signing_api` (prod only)   |
+| `POST /c2pa/io/get-s3-url`          | prod / test | C2PA Signing (production only)   |
 | **Assertion records**               |             |                                  |
 | `POST /c2pa/ai-disclosure/add`      | prod / test | —                                |
 | `POST /c2pa/ai-disclosure/list`     | prod / test | —                                |
@@ -48,7 +48,7 @@ Four signing flows exist: hosted or distributed, against the production or test 
 | Entry          | `POST /c2pa/sign` on `api.trufo.ai` / `eu.api.trufo.ai` | `POST /c2pa/sign` on `test.api.trufo.ai` | `/c2pa/remote-preprocess` + `/c2pa/remote-sign` via `sign_c2pa_distributed()` | same routes on `test.api.trufo.ai` via `sign_c2pa_distributed_test()` |
 | Auth           | `c2pa-sign-prod` key + completed OV | `c2pa-sign-test` key | `c2pa-sign-prod` key + completed OV, plus a `tsa` key | `c2pa-sign-test` key, plus a `tsa` key |
 | Signing record | Permanent signing record | None (ephemeral) | Permanent signing record | None (ephemeral) |
-| Billing        | Metered per sign  | Free        | Metered per sign (at signature issuance) | Free |
+| Billing        | Metered per sign  | Free        | Metered per sign | Free |
 
 Test outputs are signed with a test certificate and are intended for integration development, not production credentials.
 
@@ -75,8 +75,8 @@ Organizations provisioned with a dedicated API or TSA can set them explicitly:
 signed_bytes = sign_c2pa(
     api_key,
     media_bytes,
-    trufo_api_url="https://company.api.trufo.ai",
-    trufo_tsa_url="https://company.tsa.trufo.ai",
+    trufo_api_url="https://<your-dedicated-host>.api.trufo.ai",
+    trufo_tsa_url="https://<your-dedicated-host>.tsa.trufo.ai",
 )
 ```
 
@@ -345,7 +345,7 @@ Attach a CAWG identity assertion.
 | Value         | Endpoint        | Description                                                                                                              |
 | ------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------ |
 | `"test"`      | Test            | Signs with a shared Trufo test certificate. Outputs are not recognized by C2PA validators. |
-| `"org_interim"` | Test, Prod    | Signs with a Trufo-hosted org-specific CAWG interim certificate. Requires the `cawg_cert_organization` billing plan. If your org has the plan but signing fails, contact support. |
+| `"org_interim"` | Test, Prod    | Signs with a Trufo-hosted org-specific CAWG interim certificate. Requires the CAWG Organization Certificate plan. |
 
 ##### `ingredient`
 
@@ -376,7 +376,7 @@ Embed a custom assertion using a validated domain (C2PA §6.2).
 | `label`     | string | Yes      | Reverse-DNS assertion label, e.g. `com.example.custom-metadata`. The `c2pa.*` namespace and labels containing `__` are reserved and rejected. |
 | `assertion` | object | Yes      | Assertion data (arbitrary JSON object). |
 
-Requires the `c2pa_custom_domain` billing plan and an active domain-validation (DV) record for the base domain of the label (scope `c2pa-custom-assertion`). For example, to use the label `com.example.custom-metadata`, the org must have a DV record for `example.com`.
+Requires the C2PA Custom Domain plan and an active domain-validation (DV) record for the base domain of the label (scope `c2pa-custom-assertion`). For example, to use the label `com.example.custom-metadata`, the org must have a DV record for `example.com`.
 
 Multiple `"custom"` entries may be included in a single request; each is validated independently against the org's DV records.
 
