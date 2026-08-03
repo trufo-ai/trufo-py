@@ -4,20 +4,22 @@ Documentation for programmatic access to Trufo Provenance Service (TPS) API endp
 
 ## Base URLs
 
+| Service                    | URL                          | Description                     |
+| -------------------------- | ---------------------------- | ------------------------------- |
+| TPS API (Global-sync)      | `https://api.trufo.ai`       | Trufo API                       |
+| TPS API (Europe-only)      | `https://eu.api.trufo.ai`    | Trufo API (Europe)              |
+| TPS API (test)             | `https://test.api.trufo.ai`  | [test] Trufo API                |
+| Certificate Authority      | `https://ca.trufo.ai`        | [CA] EST enrollment (RFC 7030)  |
+| Timestamp Authority        | `https://tsa.trufo.ai`       | [CA] Timestamping (RFC 3161)    |
+| Timestamp Authority (test) | `https://test.tsa.trufo.ai`  | [test] Timestamping (RFC 3161)  |
+| OCSP Responder             | `https://ocsp.trufo.ai`      | [CA] OCSP stapling              |
+| Package Index              | `https://packages.trufo.ai`  | [SDK] Private wheel index       |
 
-| Service                     | URL                        | Description                   |
-| --------------------------- | -------------------------- | ----------------------------- |
-| TPS API (Global-sync)       | `https://api.trufo.ai`     | Trufo Provenance Service      |
-| TPS API (Europe-only)       | `https://eu.api.trufo.ai`  | Europe processing server      |
-| Certificate Authority       | `https://ca.trufo.ai`      | CA, EST enrollment (RFC 7030) |
-| Timestamp Authority         | `https://tsa.trufo.ai`     | CA, timestamping (RFC 3161)   |
-| Timestamp Authority (test)  | `https://tsa.test.trufo.ai` | Free test timestamping, no key (tokens not production-trusted) |
-| OCSP Responder              | `https://ocsp.trufo.ai`    | CA, OCSP stapling             |
-
+Test and regional variants follow one convention: `{qualifier}.{service}.trufo.ai` (e.g. `test.api`, `eu.api`, `test.tsa`). The legacy test-TSA name `tsa.test.trufo.ai` remains available during deprecation.
 
 ## Regional Endpoints
 
-The SDK defaults to `https://api.trufo.ai`. To restrict processing to the dedicated EU server, please call `https://eu.api.trufo.ai`. When using the dedicated EU server, sensitive content data will be stored in deducated EU clusters per our DPA and TIA. Other endpoints will route to the nearest server. Users have the option to select, per API request, which endpoint to hit; please note that certain types of data will or will not be available cross-region.
+The SDK defaults to `https://api.trufo.ai`. To restrict processing to the dedicated EU server, please call `https://eu.api.trufo.ai`. When using the dedicated EU server, sensitive content data will be stored in dedicated EU clusters per our DPA and TIA. Other endpoints will route to the nearest server. Users have the option to select, per API request, which endpoint to hit; please note that certain types of data will or will not be available cross-region.
 
 The recommended method to target the dedicated EU server for a login session is:
 
@@ -82,15 +84,14 @@ The main exceptions to the standard `Authorization: Bearer` auth are:
 
 Every API key is issued with a single scope. The scope determines which endpoints the key can call.
 
-
-| Scope            | Used for                                               |
-| ---------------- | ------------------------------------------------------ |
-| `trufo-api`      | Device authorization flow (`/account/device/*`)        |
-| `c2pa-sign-prod` | `POST /c2pa/sign` (production signer)                  |
-| `c2pa-sign-test` | `POST /c2pa/sign` on the test host `test.api.trufo.ai` (test signer; legacy `/test/c2pa/sign` during deprecation) |
-| `tsa`            | Timestamp Authority requests to `tsa.trufo.ai`         |
-| `c2pa-decode`    | `POST /content/recover` (watermark decode)             |
-
+| Scope            | Used for                                                            |
+| ---------------- | ------------------------------------------------------------------- |
+| `trufo-api`      | Device authorization flow & administrative actions                  |
+| `c2pa-sign-prod` | C2PA & CAWG signing (production hosts)                              |
+| `c2pa-sign-test` | C2PA & CAWG signing (test host `test.api.trufo.ai`)                 |
+| `tsa`            | RFC 3161 timestamping (`tsa.trufo.ai`)                              |
+| `c2pa-decode`    | Watermark decoding & recovery of provenance (`/content/recover`)    |
+| `sdk-download`   | Private package index downloads (the `PIP_EXTRA_INDEX_URL` credential for `packages.trufo.ai`) |
 
 Create keys at [app.trufo.ai/settings/org](https://app.trufo.ai/settings/org) under *API Keys*. Note that the keys will be of the form `{scope}:{key}` for readability.
 
@@ -158,14 +159,12 @@ Poll for tokens. The device polls until the user approves or the code expires.
 
 **Errors:**
 
-
 | Code | Detail                  | Description               |
 | ---- | ----------------------- | ------------------------- |
 | 400  | `authorization_pending` | User has not yet approved |
 | 400  | `expired_token`         | Device code expired       |
 | 400  | `access_denied`         | User denied the request   |
 | 404  | `DeviceCodeNotFound`    | Invalid device code       |
-
 
 ### Python SDK
 
@@ -202,13 +201,11 @@ Exchange a refresh token for a new access + refresh token pair. Each refresh tok
 
 **Errors:**
 
-
 | Code | Detail                | Description        |
 | ---- | --------------------- | ------------------ |
 | 401  | `InvalidRefreshToken` | Token is malformed |
 | 401  | `TokenExpired`        | Token has expired  |
 | 401  | `TokenRevoked`        | Token was revoked  |
-
 
 ## TrufoSession
 
@@ -249,6 +246,9 @@ test_key = load_api_key(TrufoApiKey.C2PA_SIGN_TEST)
 
 # Load a tsa key
 tsa_key = load_api_key(TrufoApiKey.TSA)
+
+# Load a c2pa-decode key
+decode_key = load_api_key(TrufoApiKey.C2PA_DECODE)
 
 # Load saved session (env vars or ~/.trufo/session)
 # Raises RuntimeError if no session is configured

@@ -10,7 +10,7 @@ Build the C2PA manifest locally while keeping the C2PA signing key in Trufo's in
 
 - Install the optional local engine: `pip install "trufo[local-sign-only]"` — or `"trufo[local-full]"` if you also want local watermark embedding (substantially heavier; adds the ML dependencies). See the [README](../../README.md#optional-local-engine) for the private-index setup. The legacy `provenance` extra is an alias of `local-sign-only`.
 - A `tsa` API key for RFC 3161 timestamping. Configure it with `trufo set-api-key tsa <your-api-key>` or `TRUFO_TSA_API_KEY`.
-  (To try the timestamping flow before you have a key, the free test endpoint `https://tsa.test.trufo.ai/` accepts keyless requests; its tokens are not production-trusted.)
+  (To try the timestamping flow before you have a key, the free test endpoint `https://test.tsa.trufo.ai/` accepts keyless requests; its tokens are not production-trusted. The legacy name `tsa.test.trufo.ai` remains during deprecation.)
 - For test signing, a `c2pa-sign-test` API key. For production signing, a `c2pa-sign-prod` API key and completed Organization Validation (OV) for your organization. See [0_auth.md](0_auth.md).
 
 Every signed manifest automatically carries an `ai.trufo.identity` assertion with your organization id and (with active OV) your RA-validated legal name — see [Automatic assertions](../api/api_c2pa.md#automatic-assertions).
