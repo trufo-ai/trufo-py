@@ -1,24 +1,34 @@
 # Quickstart: AI Labeling
 
-Label media content as AI-generated using the C2PA `c2pa.ai-disclosure` assertion and more.
+Disclose that content was generated or assisted by AI, in a way validators and
+platforms recognize.
 
 ## What This Does
 
-The `ai_disclosure` assertion inserts a `c2pa.ai-disclosure` entry into the C2PA manifest. Validators (e.g. [Content Credentials](https://contentcredentials.org)) and content platforms parse this as an "AI generated" signal.
+C2PA carries AI disclosure in two independent places, and they answer different
+questions:
 
-Additionally, the `{"set_source_type": True}` flag sets `digitalSourceType = trainedAlgorithmicMedia` on the ingredient. This only takes effect when the input media has no existing C2PA manifest.
+| Signal | Question it answers | Where it lives |
+| ------ | ------------------- | -------------- |
+| `c2pa.ai-disclosure` assertion | *What model made this, and with how much human oversight?* | An assertion in your manifest |
+| `digitalSourceType` | *Is this asset itself AI-generated?* | A field on the ingredient |
+
+The assertion is what validators such as
+[Content Credentials](https://contentcredentials.org) read as an "AI generated"
+signal. `digitalSourceType` is newer and less widely supported — see the caveat
+below.
 
 ## Requirements
 
-- For production signing: a `c2pa-sign-prod` API key (scope required by `/c2pa/sign`). See [0_setup.md](0_setup.md). Production signing also requires completed Organization Validation (OV) for your organization.
-- For test signing: a `c2pa-sign-test` API key (scope required by the test host).
-- Optional: examples that use `cawg_identity_id="org_interim"` require your organization to have CAWG organization identity signing enabled.
-
-Every signed manifest automatically carries an `ai.trufo.identity` assertion with your organization id and (with active OV) your RA-validated legal name — see [Automatic assertions](../api/api_c2pa.md#automatic-assertions).
+- A `c2pa-sign-test` or `c2pa-sign-prod` API key. See [0_setup.md](0_setup.md).
+- Nothing else — AI labeling adds no plan requirement.
 
 ---
 
-## Minimal Example
+## Minimal Disclosure
+
+One entry marks content as AI-generated, using the default disclosure body
+`{"modelType": "c2pa.types.model"}`:
 
 ```python
 from trufo import sign_c2pa
@@ -35,15 +45,19 @@ signed_bytes = sign_c2pa(
 )
 ```
 
-To additionally stamp the manifest with a CAWG organization identity, add a `cawg_identity` entry — see [3_cawg_publish.md](4_cawg_publish.md).
+This satisfies most AI-labeling requirements. Use it when you do not want to
+publish details about the model.
 
-For development-only test signing, use `sign_c2pa_test()` with a `c2pa-sign-test` API key and `cawg_identity_id="test"`. Test-signed outputs are useful for integration development but are not intended to be accepted as production C2PA credentials by conformant validators.
+---
 
-> **Note on `set_source_type`:** For the most proper behavior, you should pass `"set_source_type": True` in the `ai_disclosure` params. However, because `digitalSourceType` within C2PA ingredients is new to C2PA v2.4 (§18.16.12.3) and is not yet supported by most existing validators today (e.g. having this field may make the manifest show up as "invalid"), we do not recommend passing it in yet. The `c2pa.ai-disclosure` assertion alone suffices for AI labeling purposes, though for forwards-compatibility purposes you may want to set both. If your use case allows for validators to temporarily display "invalid" messaging, we recommend setting both. If not, then include only the ai_disclosure (by deleting `{"set_source_type": True}` from the example above).
+## Detailed Disclosure
 
-## Using a Custom AI Disclosure
+To name the model, its framework, or the level of human oversight, register the
+disclosure once and reference it by id. Inline bodies are rejected at signing time —
+registering keeps the disclosure consistent across every asset you sign and lets you
+update the description in one place.
 
-By default, `"ai_disclosure"` uses the minimal disclosure body `{"modelType": "c2pa.types.model"}`. If you would like to disclose specific details about the AI model being used, then you need to first register the profile via `POST /c2pa/ai-disclosure/add`.
+### Register it
 
 ```python
 import requests
@@ -54,36 +68,99 @@ resp = requests.post(
     TRUFO_API_URL + TPS_C2PA_AI_DISCLOSURE_ADD,
     headers={"X-API-Key": api_key},
     json={
-        "nickname": "image model v3.2, 2026-03-11",
+        "nickname": "image model v3.2",
         "assertion": {
             "modelType": "c2pa.types.model.huggingface.transformers",
             "modelName": "ImageGen Pro v3.2",
+            "modelIdentifier": "pkg:huggingface/acme/imagegen-pro@v3.2",
+            "contentProfile": {"humanOversightLevel": "prompt_guided"},
         },
     },
     timeout=60,
 )
 resp.raise_for_status()
-
 ai_disclosure_id = resp.json()["ai_disclosure_id"]
 ```
 
-The API returns an `ai_disclosure_id`, which can then be passed in the `ai_disclosure` assertion:
+`humanOversightLevel` is worth setting deliberately — it distinguishes fully
+automated generation from human-directed or human-reviewed work:
+
+| Value | Meaning |
+| ----- | ------- |
+| `fully_autonomous` | The model produced the asset without human direction |
+| `prompt_guided` | A human directed the model but did not review the output |
+| `human_validated` | A human reviewed and accepted the output |
+
+See [api_c2pa.md](../api/api_c2pa.md#post-c2paai-disclosureadd) for the complete
+schema, and `POST /c2pa/ai-disclosure/list` to enumerate what you have registered.
+
+### Use it
 
 ```python
 signed_bytes = sign_c2pa(
     api_key,
     media_bytes,
     assertions=[
-        ["ai_disclosure", {"ai_disclosure_id": "aidisc_0193f7e0abcd7a11bcde01234567890a"}],
+        ["ai_disclosure", {"ai_disclosure_id": ai_disclosure_id}],
     ],
 )
 ```
 
-See the full [C2PA API reference](../api/api_c2pa.md#post-c2paai-disclosureadd) for the add/list endpoints and the accepted disclosure schema.
+---
+
+## Marking the Source Type
+
+`set_source_type` additionally records `digitalSourceType = trainedAlgorithmicMedia`
+on the asset's ingredient — the C2PA field stating that the asset itself is
+AI-generated, rather than merely disclosing which model was involved.
+
+```python
+signed_bytes = sign_c2pa(
+    api_key,
+    media_bytes,
+    assertions=[
+        ["ai_disclosure", {"ai_disclosure_id": ai_disclosure_id, "set_source_type": True}],
+    ],
+)
+```
+
+It applies only when the input has no existing C2PA manifest — content you are
+signing for the first time.
+
+> **Caveat.** Setting `digitalSourceType` on an ingredient is new in C2PA 2.4
+> (§18.16.12.3) and most deployed validators do not yet support it; a manifest
+> carrying it may display as "invalid" in those tools. The `c2pa.ai-disclosure`
+> assertion alone satisfies AI-labeling requirements, so enable `set_source_type`
+> only if you want forward compatibility and can tolerate that display today.
+
+If the input already carries a manifest, or you are declaring an AI-generated asset
+as an input to something else, express it as an ingredient instead — see
+[5_ingredients.md](5_ingredients.md).
+
+---
+
+## Combining With Identity
+
+AI disclosure says what made the content; a CAWG identity assertion says who
+published it. They are complementary and commonly used together:
+
+```python
+signed_bytes = sign_c2pa(
+    api_key,
+    media_bytes,
+    assertions=[
+        ["ai_disclosure", {"ai_disclosure_id": ai_disclosure_id}],
+        ["cawg_identity", {"cawg_identity_id": "org_interim"}],
+    ],
+)
+```
+
+See [4_cawg_publish.md](4_cawg_publish.md). For test signing use `sign_c2pa_test()`
+with a `c2pa-sign-test` key and `cawg_identity_id="test"`.
 
 ---
 
 ## Reference
 
-- `assertions` field reference: [../api/api_c2pa.md](../api/api_c2pa.md)
+- Assertion reference: [../api/api_c2pa.md](../api/api_c2pa.md#assertions)
 - Complete runnable example: [3_ai_labeling.py](3_ai_labeling.py)
