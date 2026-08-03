@@ -137,9 +137,10 @@ If the input already carries a manifest, or you are declaring an AI-generated as
 as an input to something else, express it as an ingredient instead — see
 [5_ingredients.md](5_ingredients.md).
 
-Products with richer provenance requirements — recording the editing history of a
-parent asset, or the software agents that acted on it — should contact
-[support@trufo.ai](mailto:support@trufo.ai) to discuss the right configuration.
+Recording richer provenance — the editing history of a parent asset, and the
+software agents that acted on it — is available on the **Business tier**. Contact
+[support@trufo.ai](mailto:support@trufo.ai) to discuss the right configuration for
+your product.
 
 ---
 
