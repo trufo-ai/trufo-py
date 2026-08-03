@@ -79,7 +79,7 @@ signed_bytes = sign_c2pa(
 )
 ```
 
-See the full [C2PA API reference](../api/api_c2pa.md#api-reference-post-c2paai-disclosureadd) for the add/list endpoints and the accepted disclosure schema.
+See the full [C2PA API reference](../api/api_c2pa.md#post-c2paai-disclosureadd) for the add/list endpoints and the accepted disclosure schema.
 
 ---
 

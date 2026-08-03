@@ -4,6 +4,41 @@ Open-source library to simplify interactions with the Trufo Provenance Service (
 
 The Trufo Provenance Platform is under active development, with new provenance features and product workflows being added regularly. If you are building against the platform and have questions about the right integration path, please contact [support@trufo.ai](mailto:support@trufo.ai). We are happy to help.
 
+## Install
+
+```bash
+pip install trufo
+```
+
+## Sign a File
+
+With a `c2pa-sign-test` API key from [app.trufo.ai](https://app.trufo.ai) (see the [Auth Quickstart](docs/quickstart/0_auth.md)):
+
+```python
+from pathlib import Path
+
+from trufo import sign_c2pa_test
+from trufo.util.credentials import TrufoApiKey, load_api_key
+
+api_key = load_api_key(TrufoApiKey.C2PA_SIGN_TEST)
+
+signed_bytes = sign_c2pa_test(api_key, Path("input.jpg").read_bytes())
+Path("signed.jpg").write_bytes(signed_bytes)
+```
+
+That is a complete C2PA signature — Trufo assembles and signs the manifest, so you need no certificate of your own. Swap in `sign_c2pa()` with a `c2pa-sign-prod` key for production-trusted output. See the [Signing Quickstart](docs/quickstart/1_signing.md).
+
+## What You Can Do
+
+- **Sign C2PA manifests** — hosted, or [distributed](docs/quickstart/4_distributed_signing.md) so media never leaves your machine
+- **Label AI-generated content** with [C2PA AI disclosures](docs/quickstart/2_ai_labeling.md)
+- **Stamp organization identity and metadata** via [CAWG](docs/quickstart/3_cawg_publish.md)
+- **Embed and recover watermarks** that [survive manifest stripping](docs/quickstart/6_watermarking.md)
+- **Declare source assets, or redact** from provenance history ([ingredients](docs/quickstart/5_ingredients.md))
+- **Enrol your own C2PA certificates** for a generator product ([CSRs](docs/quickstart/7_c2pa_cert.md))
+
+The [feature support matrix](docs/c2pa_feature_list.md) shows what each signing mode supports.
+
 ## Optional Local Engine
 
 When using the standard C2PA Signing API, the raw digital media content is sent to the Trufo server for processing. In cases where data privacy is important or where the content file is large, a distributed API is available where media processing — including watermark embedding — is local (and signing is remote, on Trufo servers). Two local-engine tiers are available:
@@ -37,15 +72,18 @@ The `trufo` package itself resolves from public PyPI; only the engine packages c
 There are a number of documents to get you started quickly with specific use cases:
 
 
-| Use case                           | Trufo Product                                                          | Quickstart                                                             |
-| ---------------------------------- | ---------------------------------------------------------------------- | ---------------------------------------------------------------------- |
-| Auth Setup                         | —                                                                      | [docs/quickstart/0_auth.md](docs/quickstart/0_auth.md)                 |
-| C2PA Signing Certificate CSRs      | [C2PA Signing Certificates](https://app.trufo.ai/tca/certs/c2pa)       | [docs/quickstart/1_c2pa_cert.md](docs/quickstart/1_c2pa_cert.md)       |
-| AI Labeling                        | [C2PA & CAWG Signing API](https://app.trufo.ai/prov/apis/c2pa-signing) | [docs/quickstart/2_ai_labeling.md](docs/quickstart/2_ai_labeling.md)   |
-| Organization Stamping & Assertions | [C2PA & CAWG Signing API](https://app.trufo.ai/prov/apis/c2pa-signing) | [docs/quickstart/3_cawg_publish.md](docs/quickstart/3_cawg_publish.md) |
-| Distributed Signing               | [C2PA & CAWG Signing API](https://app.trufo.ai/prov/apis/c2pa-signing) | [docs/quickstart/4_distributed_signing.md](docs/quickstart/4_distributed_signing.md) |
-| Ingredients (e.g. Redaction)        | [C2PA & CAWG Signing API](https://app.trufo.ai/prov/apis/c2pa-signing) | [docs/quickstart/5_ingredients.md](docs/quickstart/5_ingredients.md)   |
-| Watermarking                       | [C2PA & CAWG Signing API](https://app.trufo.ai/prov/apis/c2pa-signing) | [docs/quickstart/6_watermarking.md](docs/quickstart/6_watermarking.md) |
+| # | Use case                       | Quickstart                                                             |
+| - | ------------------------------ | ---------------------------------------------------------------------- |
+| 0 | Auth setup                     | [0_auth.md](docs/quickstart/0_auth.md)                                 |
+| 1 | Signing (hosted, test & prod)  | [1_signing.md](docs/quickstart/1_signing.md)                           |
+| 2 | AI labeling                    | [2_ai_labeling.md](docs/quickstart/2_ai_labeling.md)                   |
+| 3 | Organization stamping (CAWG)   | [3_cawg_publish.md](docs/quickstart/3_cawg_publish.md)                 |
+| 4 | Distributed signing            | [4_distributed_signing.md](docs/quickstart/4_distributed_signing.md)   |
+| 5 | Ingredients & redaction        | [5_ingredients.md](docs/quickstart/5_ingredients.md)                   |
+| 6 | Watermarking & recovery        | [6_watermarking.md](docs/quickstart/6_watermarking.md)                 |
+| 7 | C2PA signing certificate CSRs  | [7_c2pa_cert.md](docs/quickstart/7_c2pa_cert.md)                       |
+
+Quickstarts 1–6 use Trufo's signing service; quickstart 7 is for teams enrolling their own certificates. All are reachable from the [C2PA & CAWG Signing API](https://app.trufo.ai/prov/apis/c2pa-signing) product page.
 
 
 ## Reference Documentation
@@ -59,6 +97,6 @@ The full reference documentation is spread across the following files:
 | TCA     | [docs/api/tca_ca.md](docs/api/tca_ca.md)     | Certificate Authority — enrollment, revocation, timestamping |
 | TCA     | [docs/api/tca_ra.md](docs/api/tca_ra.md)     | Registration Authority — instances, credentials, CSR JWTs   |
 | CLI     | [docs/cli.md](docs/cli.md)                   | Credential management (dev tool; use the Python API in prod) |
-| SDK     | [docs/errors_and_warnings.md](docs/errors_and_warnings.md) | Errors, warnings, and what to handle in production |
+| —       | [docs/c2pa_feature_list.md](docs/c2pa_feature_list.md) | Feature support matrix by signing mode              |
 
 

@@ -4,7 +4,7 @@ Three signing modes are available. Support varies by mode.
 
 | mode | who assembles the manifest | who holds the signing key |
 |---|---|---|
-| fully-server | Trufo server | Trufo KMS |
+| hosted | Trufo server | Trufo KMS |
 | distributed | client (via `trufo-provenance`) | Trufo KMS (server provides signature only) |
 | fully-local | client (via `trufo-provenance`) | client (own cert + key) |
 
@@ -12,7 +12,7 @@ Three signing modes are available. Support varies by mode.
 
 ## Actions
 
-| action | notes | fully-server | distributed | fully-local |
+| action | notes | hosted | distributed | fully-local |
 |---|---|---|---|---|
 | `publish` | | ✅ | ✅ | ❌ |
 | `transcode` | | ✅ | ❌ | ❌ |
@@ -21,7 +21,7 @@ Three signing modes are available. Support varies by mode.
 
 ## Assertions
 
-| assertion | notes | fully-server | distributed | fully-local |
+| assertion | notes | hosted | distributed | fully-local |
 |---|---|---|---|---|
 | `ai_disclosure` | default | ✅ | ✅ | ❌ |
 | `ai_disclosure` | registered | ✅ | ✅ | ❌ |
@@ -33,14 +33,14 @@ Three signing modes are available. Support varies by mode.
 
 ## C2PA Claim Signing
 
-| | notes | fully-server | distributed | fully-local |
+| | notes | hosted | distributed | fully-local |
 |---|---|---|---|---|
 | claim signing | test | ✅ | ✅ | ❌ |
 | claim signing | prod | ✅ | ✅ | ❌ |
 
 ## Infrastructure
 
-| | notes | fully-server | distributed | fully-local |
+| | notes | hosted | distributed | fully-local |
 |---|---|---|---|---|
 | RFC 3161 timestamping | | ✅ | ✅ | ❌ |
 | OCSP stapling | | ✅ | ✅ | ❌ |

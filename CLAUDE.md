@@ -30,13 +30,13 @@ certificate enrollment.
 |---|---|
 | Getting started | `README.md` |
 | Auth setup (API keys, device flow) | `docs/quickstart/0_auth.md` |
-| C2PA certificate CSRs | `docs/quickstart/1_c2pa_cert.md` |
+| Signing (hosted) | `docs/quickstart/1_signing.md` |
+| C2PA certificate CSRs | `docs/quickstart/7_c2pa_cert.md` |
 | AI labeling (AIGC disclosure) | `docs/quickstart/2_ai_labeling.md` |
 | CAWG publish (org stamping) | `docs/quickstart/3_cawg_publish.md` |
 | Distributed signing | `docs/quickstart/4_distributed_signing.md` |
 | Ingredients (incl. redaction) | `docs/quickstart/5_ingredients.md` |
 | Watermarking | `docs/quickstart/6_watermarking.md` |
-| Errors & warnings | `docs/errors_and_warnings.md` |
 | C2PA API reference | `docs/api/api_c2pa.md` |
 | Auth API reference | `docs/api/api_auth.md` |
 | TCA CA reference | `docs/api/tca_ca.md` |

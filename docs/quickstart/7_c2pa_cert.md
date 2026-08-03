@@ -10,7 +10,7 @@ A C2PA Signing Certificate identifies the signing entity (software or hardware) 
 
 > **Note:** You do not need a C2PA Signing Certificate to use the Trufo C2PA signing endpoints (`POST /c2pa/sign`) — that endpoint uses Trufo's own C2PA signer. A C2PA Signing Certificate is only required if you are operating your own conformant C2PA Generator Product. See the [C2PA Signing Certificate product page](https://app.trufo.ai/tca/certs/c2pa) for more details.
 
-See [1_c2pa_cert.py](1_c2pa_cert.py) for a runnable example of both tracks.
+See [7_c2pa_cert.py](7_c2pa_cert.py) for a runnable example of both tracks.
 
 ---
 

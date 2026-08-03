@@ -80,7 +80,7 @@ signed_bytes = sign_c2pa(
 )
 ```
 
-Please note that certain types of data will or will not be available cross-region.
+See [what is region-scoped](api_auth.md#what-is-region-scoped) for which data crosses regions.
 
 ---
 
@@ -94,7 +94,7 @@ See [2_ai_labeling.md](../quickstart/2_ai_labeling.md) for a quickstart guide fo
 
 See [3_cawg_publish.md](../quickstart/3_cawg_publish.md) for a quickstart guide for this use case.
 
-### Remote (Distributed) Signing
+### Distributed Signing
 
 See [4_distributed_signing.md](../quickstart/4_distributed_signing.md) for a quickstart guide for this use case.
 
@@ -407,7 +407,8 @@ Direct media response:
 
 ```json
 {
-  "media_output": "<base64-encoded signed media>"
+  "media_output": "<base64-encoded signed media>",
+  "warnings": []
 }
 ```
 
@@ -415,9 +416,45 @@ S3 media response:
 
 ```json
 {
-  "media_output_s3": "<presigned download URL for signed media>"
+  "media_output_s3": "<presigned download URL for signed media>",
+  "warnings": []
 }
 ```
+
+#### `warnings`
+
+Non-fatal notices about work the server skipped while still completing the sign — most importantly a watermark that a lenient `effort` could not embed, which is otherwise indistinguishable from a watermarked result. Empty when nothing was skipped.
+
+The Python SDK re-emits each notice as a `TrufoServerWarning` (a `UserWarning` subclass, exported as `trufo.TrufoServerWarning`), in both the hosted and distributed flows:
+
+```python
+import warnings
+
+from trufo import TrufoServerWarning, sign_c2pa
+
+with warnings.catch_warnings(record=True) as caught:
+    warnings.simplefilter("always", TrufoServerWarning)
+    signed = sign_c2pa(api_key, media_bytes, actions=actions)
+
+if caught:  # signed, but something was skipped — e.g. no watermark embedded
+    for w in caught:
+        log.warning("Trufo notice: %s", w.message)
+```
+
+Because the notices have their own category, `warnings.simplefilter("ignore", TrufoServerWarning)` silences only Trufo's messages, `"error"` turns them into exceptions (useful in CI), and `logging.captureWarnings(True)` routes them to the `py.warnings` logger.
+
+### Errors
+
+| Status | `detail` | Retry? |
+| ------ | -------- | ------ |
+| 400 | Request validation failures — malformed `actions`/`assertions`, an unsatisfiable `redact`, an unsupported media type, or a strict `watermark` the input cannot satisfy | No — fix the request |
+| 401 | `MissingAuthentication`, `InvalidAPIKey` | No |
+| 403 | `MissingOrganizationValidation` (production signing before OV completes), `APIKeyScopeNotAllowed`, or a missing plan | No |
+| 5xx | Server-side failure | Yes, with backoff |
+
+The SDK helpers call `raise_for_status()`, so non-2xx responses surface as `requests.HTTPError`; read `exc.response.status_code` and the JSON `detail`.
+
+**Retries and billing.** A sign is metered when it completes, so a request that fails never bills. A retry after a timeout or a 5xx is safe in the sense that no partial state is left behind, but it is *not* deduplicated: if the original request actually completed and only the response was lost, the retry produces a second signed output and a second billed sign. For high-volume pipelines, prefer a generous client timeout over aggressive retries.
 
 ---
 
@@ -457,7 +494,7 @@ Mint an ephemeral presigned S3 upload URL for C2PA signing. The returned `media_
 
 ---
 
-# Remote (Distributed) Signing
+# Distributed Signing
 
 In the case where the media content cannot be sent over an API call (e.g. due to file size or privacy concerns), use distributed signing: the C2PA manifest is assembled and hashed locally, and the resulting hash is sent to Trufo for signing. To remain conformant with the C2PA specification, currently the only way to do so is via a `trufo[local-sign-only]` (or `local-full`) optional installation and using the `sign_c2pa_distributed()` Python function. See [4_distributed_signing.md](../quickstart/4_distributed_signing.md) for an end-to-end guide.
 

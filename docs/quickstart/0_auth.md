@@ -150,7 +150,7 @@ from trufo.api.session import TrufoSession
 session = TrufoSession(base_api_url=TRUFO_API_URL_EUROPE)
 ```
 
-Please note that certain types of data will or will not be available cross-region.
+See [what is region-scoped](../api/api_auth.md#what-is-region-scoped) for which data crosses regions.
 
 ---
 

@@ -19,7 +19,7 @@ Test and regional variants follow one convention: `{qualifier}.{service}.trufo.a
 
 ## Regional Endpoints
 
-The SDK defaults to `https://api.trufo.ai`. To restrict processing to the dedicated EU server, please call `https://eu.api.trufo.ai`. When using the dedicated EU server, sensitive content data will be stored in dedicated EU clusters per our DPA and TIA. Other endpoints will route to the nearest server. Users have the option to select, per API request, which endpoint to hit; please note that certain types of data will or will not be available cross-region.
+The SDK defaults to `https://api.trufo.ai`. To restrict processing to the dedicated EU server, please call `https://eu.api.trufo.ai`. When using the dedicated EU server, sensitive content data will be stored in dedicated EU clusters per our DPA and TIA. Other endpoints route to the nearest server. You choose the endpoint per API request; what that means for your data is below.
 
 The recommended method to target the dedicated EU server for a login session is:
 
@@ -44,6 +44,17 @@ signed_bytes = sign_c2pa(
 ```
 
 Direct API calls should also use the corresponding URL.
+
+### What is region-scoped
+
+| Data | Scope |
+| ---- | ----- |
+| Account, organization, and API keys | Global — the same credentials authenticate on either host |
+| Media processed for hosted signing | Handled by the host you call; EU calls stay in EU infrastructure |
+| Signing records and watermark IDs | Global — content signed via either host is recoverable from either host |
+| Stored assertion records (e.g. AI disclosures) | Regional — a disclosure registered via one host is not visible from the other |
+
+In short: credentials and provenance lookups work everywhere; assertion records you register are tied to the host you registered them on. Register them on the host you sign with.
 
 ## API Headers
 

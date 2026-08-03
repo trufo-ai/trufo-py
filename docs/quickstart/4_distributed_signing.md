@@ -108,7 +108,7 @@ signed_bytes = sign_c2pa_distributed(
 )
 ```
 
-Please note that certain types of data will or will not be available cross-region.
+See [what is region-scoped](../api/api_auth.md#what-is-region-scoped) for which data crosses regions.
 
 ---
 

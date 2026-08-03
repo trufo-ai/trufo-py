@@ -124,7 +124,7 @@ The embed step failed at runtime. Under `require` and `require_if_supported` thi
 
 **A sign succeeded — was it actually watermarked?**
 
-Under `require_if_supported` and `best_effort`, a skipped watermark is reported as a `TrufoServerWarning` rather than an error. Catch it to detect unwatermarked output — see [errors_and_warnings.md](../errors_and_warnings.md#trufoserverwarning).
+Under `require_if_supported` and `best_effort` a skipped watermark is a warning, not an error. Catch `TrufoServerWarning` to detect it — see [`warnings`](../api/api_c2pa.md#warnings) in the response reference.
 
 **`At most one watermark action is allowed per request.`**
 
