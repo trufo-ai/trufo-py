@@ -20,9 +20,9 @@ dependencies = [
 # local-sign-only: distributed C2PA signing without the watermark engine
 # (no torch); local-full adds trufo-pawprint for local watermark embedding.
 # provenance is the legacy alias of local-sign-only.
-local-sign-only = ["trufo-provenance[c2pa]>=0.3.1,<0.4"]
-local-full = ["trufo-provenance[c2pa,pawprint]>=0.3.1,<0.4"]
-provenance = ["trufo-provenance[c2pa]>=0.3.1,<0.4"]
+local-sign-only = ["trufo-provenance[c2pa]>=1.0.0,<1.1.0"]
+local-full = ["trufo-provenance[c2pa,pawprint]>=1.0.0,<1.1.0"]
+provenance = ["trufo-provenance[c2pa]>=1.0.0,<1.1.0"]
 test = ["pytest>=7.0"]
 
 [project.scripts]
