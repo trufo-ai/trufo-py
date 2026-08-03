@@ -31,7 +31,7 @@ def test_require_provenance_module_raises_clear_install_error(monkeypatch):
 
     monkeypatch.setattr("trufo.util.optional_imports.import_module", fake_import_module)
 
-    with pytest.raises(ImportError, match=r"trufo\[local\]"):
+    with pytest.raises(ImportError, match=r"trufo\[local-sign-only\]"):
         require_provenance_module()
 
 

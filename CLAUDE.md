@@ -7,11 +7,12 @@ certificate enrollment.
 ## Key facts for AI assistants
 
 - Current version: see `pyproject.toml` (`version = "X.Y.Z"`).
-- The local-engine extras (`trufo[local]`, legacy `trufo[provenance]`) require
-  **Linux x86_64 (glibc 2.28+) + CPython 3.12** — the trufo-provenance native wheel is
-  published only as `cp312-manylinux_2_28_x86_64`. The base `trufo` package is pure
-  Python (3.10+, any platform). `local` adds the watermarking engine
-  (`trufo-pawprint`, universal wheel); `provenance` is the provenance-only alias.
+- The local-engine extras require **Linux x86_64 (glibc 2.28+) + CPython 3.12** — the
+  trufo-provenance native wheel is published only as `cp312-manylinux_2_28_x86_64`. The
+  base `trufo` package is pure Python (3.10+, any platform). Two tiers:
+  `local-sign-only` (distributed signing, no watermark engine, no torch) and
+  `local-full` (adds `trufo-pawprint` + torch for local watermark embedding);
+  `provenance` is the legacy alias of `local-sign-only`.
 - Watermarking is **off by default**; a `["watermark", {...}]` action requests it, with
   `effort` = `require` (bare default) / `require_if_supported` / `best_effort` setting
   failure tolerance (`WatermarkEffort` enum). Supported: JPEG/PNG/WebP/TIFF,
@@ -46,10 +47,9 @@ certificate enrollment.
 
 ## Signing modes
 
-Three modes exist; see `docs/c2pa_feature_list.md` for the full feature matrix.
+Two modes exist; see `docs/c2pa_feature_list.md` for the full feature matrix.
 
 | Mode | Function | Requires local engine extra | Media sent to server |
 |---|---|---|---|
 | Hosted (server) | `sign_c2pa`, `sign_c2pa_test` | No | Yes |
-| Distributed | `sign_c2pa_distributed`, `sign_c2pa_distributed_test` | Yes (`trufo[local]`, or `trufo[provenance]` without watermarking) | No |
-| Fully local | (not exposed via trufo-py) | Yes | No |
+| Distributed | `sign_c2pa_distributed`, `sign_c2pa_distributed_test` | Yes (`trufo[local-sign-only]`; `trufo[local-full]` for watermarking) | No |

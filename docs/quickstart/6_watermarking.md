@@ -79,7 +79,9 @@ The `trufo.c2pa.WatermarkEffort` enum holds the three values.
 Watermarking works in both signing modes with the same request shape:
 
 - **Hosted** (`sign_c2pa`, `sign_c2pa_test`, and the S3 variants) — the watermark is embedded on Trufo servers. No extra installation is required.
-- **Distributed** (`sign_c2pa_distributed`, `sign_c2pa_distributed_test`) — the watermark is embedded locally by the Trufo engine, so your media never leaves your machine. The watermark ID is issued by the Trufo server during the preprocessing round-trip. Requires the `trufo[local]` optional installation (see [README](../../README.md#optional-local-engine)); a `provenance`-only installation can still sign, but a watermark request fails with an install hint (or a warning, under `best_effort`).
+- **Distributed** (`sign_c2pa_distributed`, `sign_c2pa_distributed_test`) — the watermark is embedded locally by the Trufo engine, so your media never leaves your machine. The watermark ID is issued by the Trufo server during the preprocessing round-trip. Requires the `trufo[local-full]` optional installation (see [README](../../README.md#optional-local-engine)).
+
+**Without the watermark engine** (a `local-sign-only` or legacy `provenance` installation), distributed signing works normally — but a watermark request **always fails immediately** with an install hint (`ImportError`: the trufo-pawprint dependency is required), regardless of `effort`, before anything is sent to the server. The `effort` levels govern what happens when the *installed* engine cannot watermark a particular input; requesting a watermark without the engine installed is refused outright.
 
 Additional notes for distributed (local) watermarking:
 
@@ -124,9 +126,9 @@ The embed step failed at runtime. Under `require` and `require_if_supported` thi
 
 Combine your watermark preferences into a single `["watermark", {...}]` entry.
 
-**`ImportError` mentioning the local engine**
+**`ImportError` mentioning trufo-pawprint or the local engine**
 
-Distributed watermarking requires the local engine. Install `trufo[local]` (see [README](../../README.md#optional-local-engine)).
+Distributed watermarking requires the full local engine. Install `trufo[local-full]` (see [README](../../README.md#optional-local-engine)).
 
 ---
 

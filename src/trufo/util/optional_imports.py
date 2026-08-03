@@ -21,6 +21,7 @@ def require_provenance_module(module_name: str = "tfprov") -> ModuleType:
         if exc.name == root_module:
             raise ImportError(
                 "The optional trufo-provenance dependency is required. "
-                'Install it with: pip install "trufo[local]".'
+                'Install it with: pip install "trufo[local-sign-only]" '
+                '(or "trufo[local-full]" for local watermark embedding).'
             ) from exc
         raise

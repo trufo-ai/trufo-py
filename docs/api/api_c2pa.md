@@ -459,7 +459,7 @@ Mint an ephemeral presigned S3 upload URL for C2PA signing. The returned `media_
 
 # Remote (Distributed) Signing
 
-In the case where the media content cannot be sent over an API call (e.g. due to file size or privacy concerns), use distributed signing: the C2PA manifest is assembled and hashed locally, and the resulting hash is sent to Trufo for signing. To remain conformant with the C2PA specification, currently the only way to do so is via the `trufo[local]` optional installation and using the `sign_c2pa_distributed()` Python function. See [4_distributed_signing.md](../quickstart/4_distributed_signing.md) for an end-to-end guide.
+In the case where the media content cannot be sent over an API call (e.g. due to file size or privacy concerns), use distributed signing: the C2PA manifest is assembled and hashed locally, and the resulting hash is sent to Trufo for signing. To remain conformant with the C2PA specification, currently the only way to do so is via a `trufo[local-sign-only]` (or `local-full`) optional installation and using the `sign_c2pa_distributed()` Python function. See [4_distributed_signing.md](../quickstart/4_distributed_signing.md) for an end-to-end guide.
 
 - `sign_c2pa_distributed()` uses the production `/c2pa/remote-sign` endpoint and requires a `c2pa-sign-prod` key, a TSA key, and completed Organization Validation (OV).
 - `sign_c2pa_distributed_test()` uses the same routes on the test host (`test.api.trufo.ai`) with a `c2pa-sign-test` key and a TSA key. It is intended for integration development, not production credentials.

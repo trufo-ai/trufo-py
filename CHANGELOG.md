@@ -22,15 +22,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   unwatermarked with a warning; runtime failures fail the sign), `"best_effort"` (any
   failure signs unwatermarked with a warning). At most one watermark action per request;
   client-side validation mirrors the server contract.
-- `local` optional extra: `pip install "trufo[local]"` installs the provenance engine plus
-  the watermarking engine (`trufo-pawprint`) for distributed signing with local watermark
-  embedding. The `provenance` extra remains as a provenance-only alias.
+- Local-engine extras in two tiers: `pip install "trufo[local-sign-only]"` for distributed
+  signing without the watermark engine (lightweight — no torch), and
+  `pip install "trufo[local-full]"` to add `trufo-pawprint` for local watermark embedding.
+  The `provenance` extra remains as the legacy alias of `local-sign-only`. A distributed
+  watermark request without `local-full` always fails immediately with an install hint,
+  regardless of `effort` — the effort levels govern failures of the installed engine, not
+  a missing one.
 - `recover_content()` and the `c2pa-decode` API key scope (`TrufoApiKey.C2PA_DECODE`,
   `TRUFO_C2PA_DECODE_API_KEY`, `trufo set-api-key c2pa-decode`): decode a Trufo watermark
   from media via `POST /content/recover` and return the watermark ID with a detection
   confidence. See `docs/quickstart/6_watermarking.md`.
 
-#### Redaction
+#### Ingredients
 
 - `redact` action for all signers, hosted and distributed. A
   `["redact", {"label": ..., "reason": ...}]` entry in `actions` removes one assertion from
@@ -62,6 +66,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   path on the main hosts remains available during deprecation.
 - Every `[name, params]` entry in `actions` and `assertions` must be exactly two elements;
   longer entries are rejected client-side as malformed rather than partially read.
+- New dependency wheel for watermarking.
+- Installation of dependency wheels (for local provenance & watermarking components) now
+  require an API key.
 
 ### Removed
 

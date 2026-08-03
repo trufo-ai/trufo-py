@@ -635,8 +635,8 @@ def sign_c2pa_distributed_test(
     """Sign media locally using the Trufo test remote-signing endpoint.
 
     The media claim is built on the client while the C2PA claim-signing key
-    stays server-side. This helper requires the optional ``trufo[local]``
-    dependency group.
+    stays server-side. This helper requires the optional ``trufo[local-sign-only]``
+    dependency group (``trufo[local-full]`` when watermarking locally).
 
     Args:
         api_key: API key with scope ``c2pa-sign-test``.
@@ -698,9 +698,10 @@ def sign_c2pa_distributed(
     """Sign media locally using the Trufo production remote-signing endpoint.
 
     The media claim is built on the client while the C2PA claim-signing key
-    stays server-side. This helper requires the optional ``trufo[local]``
-    dependency group. Requires completed Organization Validation for the
-    caller's org; the API returns 403 otherwise.
+    stays server-side. This helper requires the optional ``trufo[local-sign-only]``
+    dependency group (``trufo[local-full]`` when watermarking locally).
+    Requires completed Organization Validation for the caller's org; the API
+    returns 403 otherwise.
 
     Args:
         api_key: API key with scope ``c2pa-sign-prod``.

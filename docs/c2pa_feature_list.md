@@ -17,7 +17,7 @@ Three signing modes are available. Support varies by mode.
 | `publish` | | ✅ | ✅ | ❌ |
 | `transcode` | | ✅ | ❌ | ❌ |
 | `redact` | | ✅ | ✅ | ❌ |
-| `watermark` | off by default; supported image/audio formats; distributed embedding requires `trufo[local]` | ✅ | ✅ | ❌ |
+| `watermark` | off by default; supported image/audio formats; distributed embedding requires `trufo[local-full]` | ✅ | ✅ | ❌ |
 
 ## Assertions
 
