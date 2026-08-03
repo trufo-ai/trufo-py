@@ -100,37 +100,27 @@ class TestInferSigningAlgorithm:
 
     def test_infer_es256(self):
         key = ec.generate_private_key(ec.SECP256R1())
-        pub_pem = key.public_key().public_bytes(
-            Encoding.PEM, PublicFormat.SubjectPublicKeyInfo
-        )
+        pub_pem = key.public_key().public_bytes(Encoding.PEM, PublicFormat.SubjectPublicKeyInfo)
         assert infer_signing_algorithm(pub_pem) == SigningAlgorithm.ES256
 
     def test_infer_es384(self):
         key = ec.generate_private_key(ec.SECP384R1())
-        pub_pem = key.public_key().public_bytes(
-            Encoding.PEM, PublicFormat.SubjectPublicKeyInfo
-        )
+        pub_pem = key.public_key().public_bytes(Encoding.PEM, PublicFormat.SubjectPublicKeyInfo)
         assert infer_signing_algorithm(pub_pem) == SigningAlgorithm.ES384
 
     def test_infer_es512(self):
         key = ec.generate_private_key(ec.SECP521R1())
-        pub_pem = key.public_key().public_bytes(
-            Encoding.PEM, PublicFormat.SubjectPublicKeyInfo
-        )
+        pub_pem = key.public_key().public_bytes(Encoding.PEM, PublicFormat.SubjectPublicKeyInfo)
         assert infer_signing_algorithm(pub_pem) == SigningAlgorithm.ES512
 
     def test_infer_eddsa(self):
         key = ed25519.Ed25519PrivateKey.generate()
-        pub_pem = key.public_key().public_bytes(
-            Encoding.PEM, PublicFormat.SubjectPublicKeyInfo
-        )
+        pub_pem = key.public_key().public_bytes(Encoding.PEM, PublicFormat.SubjectPublicKeyInfo)
         assert infer_signing_algorithm(pub_pem) == SigningAlgorithm.EDDSA
 
     def test_invalid_key_type_raises(self):
         key = rsa.generate_private_key(65537, 2048)
-        pub_pem = key.public_key().public_bytes(
-            Encoding.PEM, PublicFormat.SubjectPublicKeyInfo
-        )
+        pub_pem = key.public_key().public_bytes(Encoding.PEM, PublicFormat.SubjectPublicKeyInfo)
         with pytest.raises(ValueError, match="Unsupported key type"):
             infer_signing_algorithm(pub_pem)
 

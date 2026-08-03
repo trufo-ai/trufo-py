@@ -12,8 +12,8 @@ import pytest
 from trufo.api.endpoints import (
     TPS_C2PA_GET_S3_URL,
     TPS_C2PA_SIGN,
-    TPS_C2PA_SIGN_TEST,
     TRUFO_API_URL,
+    TRUFO_API_URL_TEST,
     TRUFO_TSA_URL,
 )
 from trufo.api.tps.sign_c2pa import (
@@ -21,6 +21,7 @@ from trufo.api.tps.sign_c2pa import (
     C2PAS3Upload,
     _validate_actions,
     _validate_assertions,
+    _validate_redact_action,
     get_c2pa_s3_upload_url,
     sign_c2pa,
     sign_c2pa_distributed,
@@ -88,6 +89,46 @@ def _install_fake_remote_stack(
     return calls
 
 
+class TestServerWarnings:
+    """Server-side notices surface as catchable TrufoServerWarning."""
+
+    @patch("trufo.api.tps.sign_c2pa.requests.post")
+    def test_response_warnings_are_emitted(self, mock_post):
+        import warnings as _warnings
+
+        from trufo.util.warnings import TrufoServerWarning
+
+        mock_post.return_value = _mock_response(
+            {
+                "media_output": base64.b64encode(b"signed").decode("utf-8"),
+                "warnings": ["Watermarking is not supported for 'application/pdf' media."],
+            }
+        )
+
+        with _warnings.catch_warnings(record=True) as caught:
+            _warnings.simplefilter("always", TrufoServerWarning)
+            result = sign_c2pa("prod-key", b"input-media")
+
+        assert result == b"signed"
+        assert len(caught) == 1
+        assert issubclass(caught[0].category, TrufoServerWarning)
+        assert "not supported" in str(caught[0].message)
+
+    @patch("trufo.api.tps.sign_c2pa.requests.post")
+    def test_no_warnings_when_absent(self, mock_post):
+        import warnings as _warnings
+
+        mock_post.return_value = _mock_response(
+            {"media_output": base64.b64encode(b"signed").decode("utf-8")}
+        )
+
+        with _warnings.catch_warnings(record=True) as caught:
+            _warnings.simplefilter("always")
+            sign_c2pa("prod-key", b"input-media")
+
+        assert caught == []
+
+
 class TestDirectC2PASigning:
     """Direct media-byte C2PA signing helpers."""
 
@@ -101,7 +142,10 @@ class TestDirectC2PASigning:
         result = sign_c2pa(
             "prod-key",
             b"input-media",
-            actions=[["publish", {}]],
+            actions=[
+                ["publish", {}],
+                ["redact", {"label": "c2pa.metadata", "reason": "c2pa.PII.present"}],
+            ],
             assertions=[["cawg_identity", {"cawg_identity_id": "org_interim"}]],
         )
 
@@ -110,7 +154,10 @@ class TestDirectC2PASigning:
             TRUFO_API_URL + TPS_C2PA_SIGN,
             json={
                 "media_input": base64.b64encode(b"input-media").decode(),
-                "actions": [["publish", {}]],
+                "actions": [
+                    ["publish", {}],
+                    ["redact", {"label": "c2pa.metadata", "reason": "c2pa.PII.present"}],
+                ],
                 "assertions": [["cawg_identity", {"cawg_identity_id": "org_interim"}]],
             },
             headers={"X-API-Key": "prod-key"},
@@ -129,7 +176,7 @@ class TestDirectC2PASigning:
 
         assert result == signed
         mock_post.assert_called_once_with(
-            TRUFO_API_URL + TPS_C2PA_SIGN_TEST,
+            TRUFO_API_URL_TEST + TPS_C2PA_SIGN,
             json={
                 "media_input": base64.b64encode(b"input-media").decode(),
                 "actions": [],
@@ -189,7 +236,7 @@ class TestRemoteC2PASigning:
         assert kwargs["actions"] == [["publish", {}]]
         assert kwargs["assertions"] == [["cawg_identity", {"cawg_identity_id": "test"}]]
         assert kwargs["test"] is True
-        assert kwargs["trufo_api_url"] == TRUFO_API_URL
+        assert kwargs["trufo_api_url"] == TRUFO_API_URL_TEST
         assert kwargs["ocsp_stapler"] is calls["ocsp_stapler"]
 
         # a single timestamper is built with the resolved key and SDK TSA default
@@ -366,7 +413,7 @@ class TestS3C2PASigning:
 
         assert result == C2PAS3SignedOutput(media_output_s3="https://download.example")
         mock_post.assert_called_once_with(
-            TRUFO_API_URL + TPS_C2PA_SIGN_TEST,
+            TRUFO_API_URL_TEST + TPS_C2PA_SIGN,
             json={
                 "media_input_s3": "signed-input-reference",
                 "actions": [],
@@ -511,7 +558,7 @@ class TestS3C2PASigning:
             assertions=None,
             manifest_title=None,
             ingredient_title=None,
-            trufo_api_url=TRUFO_API_URL,
+            trufo_api_url=TRUFO_API_URL_TEST,
         )
 
     @pytest.mark.parametrize("signer", [sign_c2pa_s3, sign_c2pa_s3_test])
@@ -594,3 +641,168 @@ class TestRequestValidation:
     def test_invalid_entries_rejected(self, validator, entry_type, bad):
         with pytest.raises(ValueError, match=f"Invalid {entry_type} entry"):
             validator(bad)
+
+    @pytest.mark.parametrize(
+        "params",
+        [{}, {"effort": "require"}, {"effort": "require_if_supported"}, {"effort": "best_effort"}],
+    )
+    def test_valid_watermark_action_accepted(self, params):
+        _validate_actions([["watermark", params]])  # must not raise
+
+    @pytest.mark.parametrize(
+        "params, match",
+        [
+            ({"effort": "maybe"}, "effort"),
+            ({"effort": True}, "effort"),
+            ({"apply": True}, "replaced by 'effort'"),
+            ({"wid_package": {"wid": "x"}}, "Unsupported watermark parameter"),
+            ({"effort": "require", "nonsense": 1}, "Unsupported watermark parameter"),
+            (None, "parameter object"),
+        ],
+    )
+    def test_invalid_watermark_params_rejected(self, params, match):
+        with pytest.raises(ValueError, match=match):
+            _validate_actions([["watermark", params]])
+
+    def test_duplicate_watermark_action_rejected(self):
+        with pytest.raises(ValueError, match="At most one watermark action"):
+            _validate_actions([["watermark", {}], ["watermark", {}]])
+
+    def _redact_actions(self, label, reason="c2pa.PII.present"):
+        """An actions list holding a single redact entry."""
+        params = {"label": label}
+        if reason is not None:
+            params["reason"] = reason
+        return [["redact", params]]
+
+    @pytest.mark.parametrize(
+        "label",
+        [
+            "c2pa.metadata",
+            "cawg.metadata",
+            "cawg.training-mining",
+            "cawg.identity",
+            "cawg.metadata__2",
+        ],
+    )
+    def test_each_redactable_label_accepted(self, label):
+        _validate_actions(self._redact_actions(label))  # must not raise
+
+    @pytest.mark.parametrize(
+        "bad",
+        [
+            "c2pa.hash.data",
+            "c2pa.actions.v2",
+            # the allowlist is enumerated, not a namespace prefix
+            "cawg.something-new",
+            "c2pa.ai-disclosure",
+            "ai.trufo.identity",
+            "c2pa.metadata__abc",
+            "c2pa.metadata__0",
+            "c2pa.metadata__00",
+            "c2pa.metadata__01",
+            "c2pa.metadata__-1",
+        ],
+    )
+    def test_invalid_redaction_labels_rejected(self, bad):
+        with pytest.raises(ValueError, match="Invalid redaction entry"):
+            _validate_actions(self._redact_actions(bad))
+
+    @pytest.mark.parametrize("label", ["", None, 123, ["c2pa.metadata"]])
+    def test_missing_or_non_string_label_rejected(self, label):
+        with pytest.raises(ValueError, match="non-empty 'label'"):
+            _validate_actions(self._redact_actions(label))
+
+    def test_repeated_target_rejected(self):
+        """The same assertion may not be targeted twice in one call."""
+        actions = self._redact_actions("c2pa.metadata") + self._redact_actions(
+            "c2pa.metadata", reason="c2pa.invalid.data"
+        )
+        with pytest.raises(ValueError, match="Duplicate redaction target"):
+            _validate_actions(actions)
+
+    def test_base_label_and_numbered_instance_are_distinct_targets(self):
+        """The documented way to redact every instance of a repeated label."""
+        actions = self._redact_actions("c2pa.metadata") + self._redact_actions("c2pa.metadata__1")
+        _validate_actions(actions)  # must not raise
+
+    @pytest.mark.parametrize("params", ["c2pa.metadata", None, 123, ["c2pa.metadata"]])
+    def test_non_dict_params_rejected(self, params):
+        with pytest.raises(ValueError, match="Invalid redact action parameters"):
+            _validate_actions([["redact", params]])
+
+    @pytest.mark.parametrize("reason", ["", "   ", None, 123, ["c2pa.PII.present"]])
+    def test_missing_or_non_string_reason_rejected(self, reason):
+        with pytest.raises(ValueError, match="non-empty 'reason'"):
+            _validate_actions([["redact", {"label": "c2pa.metadata", "reason": reason}]])
+
+    @pytest.mark.parametrize(
+        "reason", [" c2pa.PII.present", "c2pa.PII.present ", "\tc2pa.PII.present"]
+    )
+    def test_padded_reason_rejected(self, reason):
+        """Surrounding whitespace would miss the preset check and be forwarded as a
+        custom value, failing server-side as an unregistered domain."""
+        with pytest.raises(ValueError, match="Invalid redaction reason"):
+            _validate_actions(self._redact_actions("c2pa.metadata", reason=reason))
+
+    @pytest.mark.parametrize("reason", ["C2PA.PII.present", "C2pa.invalid.data", "c2PA"])
+    def test_miscased_c2pa_namespace_rejected(self, reason):
+        """The c2pa namespace is reserved, so a miscased preset is a bad reason
+        rather than a custom value needing domain validation."""
+        with pytest.raises(ValueError, match="Invalid redaction reason"):
+            _validate_actions(self._redact_actions("c2pa.metadata", reason=reason))
+
+    @pytest.mark.parametrize("actions", [5, "redact", {"redact": {}}])
+    def test_non_list_actions_rejected(self, actions):
+        with pytest.raises(ValueError, match="actions must be a list"):
+            _validate_actions(actions)
+
+    @pytest.mark.parametrize(
+        "reason",
+        [
+            "c2pa.PII.present",
+            "c2pa.invalid.data",
+            "c2pa.trade-secret.present",
+            "c2pa.government.confidential",
+            "com.acme.gdpr-request",  # custom entity-namespaced value
+        ],
+    )
+    def test_valid_redact_reason_accepted(self, reason):
+        _validate_actions(self._redact_actions("c2pa.metadata", reason=reason))  # must not raise
+
+    def test_reason_is_required(self):
+        with pytest.raises(ValueError, match="non-empty 'reason'"):
+            _validate_actions(self._redact_actions("c2pa.metadata", reason=None))
+
+    def test_non_preset_c2pa_reason_rejected(self):
+        with pytest.raises(ValueError, match="Invalid redaction reason"):
+            _validate_actions(
+                self._redact_actions("c2pa.metadata", reason="c2pa.not-a-real-reason"),
+            )
+
+    def test_redact_via_validate_redact_action_directly(self):
+        _validate_redact_action(
+            ["redact", {"label": "c2pa.metadata", "reason": "c2pa.PII.present"}]
+        )  # must not raise
+
+    @pytest.mark.parametrize(
+        "entry",
+        [
+            ["redact"],  # missing params
+            ["redact", {"label": "c2pa.metadata", "reason": "c2pa.PII.present"}, "extra"],
+        ],
+    )
+    def test_malformed_redact_entry_shape_rejected(self, entry):
+        """Every action entry must be exactly [name, params]; the generic
+        shape check rejects malformed redact entries before name dispatch."""
+        with pytest.raises(ValueError, match="Invalid action entry"):
+            _validate_actions([entry])
+
+    def test_several_redact_entries_allowed_each_with_its_own_reason(self):
+        """One entry per assertion, each carrying its own reason."""
+        actions = [
+            ["redact", {"label": "c2pa.metadata", "reason": "c2pa.PII.present"}],
+            ["redact", {"label": "cawg.metadata", "reason": "c2pa.trade-secret.present"}],
+            ["redact", {"label": "cawg.training-mining", "reason": "com.acme.policy"}],
+        ]
+        _validate_actions(actions)  # must not raise

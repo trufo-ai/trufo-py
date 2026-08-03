@@ -25,20 +25,24 @@ will silently pick the wrong title.
 
 import base64
 from dataclasses import dataclass
+from typing import Any
 
 import requests
 
 from trufo.api.endpoints import (
     TPS_C2PA_GET_S3_URL,
     TPS_C2PA_SIGN,
-    TPS_C2PA_SIGN_TEST,
     TRUFO_API_URL,
+    TRUFO_API_URL_TEST,
     TRUFO_TSA_URL,
 )
 from trufo.c2pa.actions import TrufoAction
 from trufo.c2pa.assertions import UserAssertion
+from trufo.c2pa.redactions import RedactableAssertion, RedactionReason
+from trufo.c2pa.watermark import WatermarkEffort
 from trufo.util.credentials import TrufoApiKey, load_api_key
 from trufo.util.optional_imports import require_provenance_module
+from trufo.util.warnings import emit_server_warnings
 
 
 @dataclass(frozen=True)
@@ -80,15 +84,105 @@ def _validate_assertions(assertions: list | None) -> None:
 
 def _validate_actions(actions: list | None) -> None:
     """Validate client-side action requirements shared by C2PA helpers."""
-    _validate_entry_names(actions, TrufoAction, "action")
+    if actions is not None and not isinstance(actions, list):
+        raise ValueError(f"actions must be a list, got {type(actions).__name__}.")
+
+    seen_redact_labels: set[str] = set()
+    seen_watermark = False
+    for entry in actions or []:
+        # exactly [name, params]; a longer entry is malformed, not truncated
+        if not isinstance(entry, (list, tuple)) or len(entry) != 2:
+            raise ValueError(f"Invalid action entry: {entry!r}")
+        name = entry[0]
+        if name == TrufoAction.REDACT:
+            label = _validate_redact_action(entry)
+            if label in seen_redact_labels:
+                raise ValueError(f"Duplicate redaction target: {label!r}")
+            seen_redact_labels.add(label)
+            continue
+        if name == TrufoAction.WATERMARK:
+            if seen_watermark:
+                raise ValueError("At most one watermark action is allowed per request.")
+            seen_watermark = True
+            _validate_watermark_action(entry)
+            continue
+        try:
+            TrufoAction(name)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"Invalid action entry: {entry!r}") from exc
+
+
+def _validate_watermark_action(entry: Any) -> None:
+    """Validate a watermark action entry against the server contract."""
+    params = entry[1]
+    if not isinstance(params, dict):
+        raise ValueError("The watermark action requires a parameter object.")
+    if "apply" in params:
+        raise ValueError("The watermark 'apply' parameter has been replaced by 'effort'.")
+    unsupported = set(params) - {"effort"}
+    if unsupported:
+        raise ValueError(
+            f"Unsupported watermark parameter(s): {', '.join(sorted(unsupported))}."
+        )
+    effort = params.get("effort")
+    if effort is not None:
+        try:
+            WatermarkEffort(effort)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(
+                "The watermark 'effort' parameter must be one of 'require', "
+                "'require_if_supported', or 'best_effort'."
+            ) from exc
+
+
+def _validate_redact_action(entry: Any) -> str:
+    """Validate a redact action entry and return its assertion label."""
+    if not isinstance(entry, (list, tuple)) or len(entry) != 2:
+        raise ValueError(f"Invalid redact action entry: {entry!r}")
+    params = entry[1]
+    if not isinstance(params, dict):
+        raise ValueError(f"Invalid redact action parameters: {entry!r}")
+
+    label = params.get("label")
+    if not isinstance(label, str) or not label:
+        raise ValueError("The redact action requires a non-empty 'label'.")
+    # an instance suffix is an ascii positive integer with no leading zero
+    base, sep, suffix = label.rpartition("__")
+    valid_suffix = bool(sep) and suffix.isascii() and suffix.isdigit() and suffix[0] != "0"
+    base_label = base if valid_suffix else label
+    try:
+        RedactableAssertion(base_label)
+    except ValueError as exc:
+        raise ValueError(f"Invalid redaction entry: {label!r}") from exc
+
+    reason = params.get("reason")
+    if not isinstance(reason, str) or not reason.strip():
+        raise ValueError("The redact action requires a non-empty 'reason'.")
+    # surrounding whitespace would miss the preset check below and be forwarded
+    # as a custom value, which fails server-side as an unregistered domain
+    if reason != reason.strip():
+        raise ValueError(f"Invalid redaction reason: {reason!r}")
+    # the c2pa namespace is reserved, so such a reason must be a defined preset;
+    # matched case-insensitively so a miscased namespace is not read as custom
+    lowered = reason.lower()
+    if lowered == "c2pa" or lowered.startswith("c2pa."):
+        try:
+            RedactionReason(reason)
+        except ValueError as exc:
+            raise ValueError(f"Invalid redaction reason: {reason!r}") from exc
+
+    return label
 
 
 def _validate_entry_names(entries: list | None, enum_type: type, entry_type: str) -> None:
-    """Validate the name field of request entries against a public enum."""
+    """Validate the shape and name field of request entries against a public enum."""
     for entry in entries or []:
+        # exactly [name, params]; a longer entry is malformed, not truncated
+        if not isinstance(entry, (list, tuple)) or len(entry) != 2:
+            raise ValueError(f"Invalid {entry_type} entry: {entry!r}")
         try:
             enum_type(entry[0])
-        except (IndexError, KeyError, TypeError, ValueError) as exc:
+        except (TypeError, ValueError) as exc:
             raise ValueError(f"Invalid {entry_type} entry: {entry!r}") from exc
 
 
@@ -125,7 +219,9 @@ def _sign_c2pa_direct(
     )
     resp.raise_for_status()
 
-    return base64.b64decode(resp.json()["media_output"])
+    payload = resp.json()
+    emit_server_warnings(payload)
+    return base64.b64decode(payload["media_output"])
 
 
 def get_c2pa_s3_upload_url(
@@ -207,7 +303,9 @@ def _sign_c2pa_s3(
     )
     resp.raise_for_status()
 
-    return C2PAS3SignedOutput(media_output_s3=resp.json()["media_output_s3"])
+    payload = resp.json()
+    emit_server_warnings(payload)
+    return C2PAS3SignedOutput(media_output_s3=payload["media_output_s3"])
 
 
 def sign_c2pa_s3(
@@ -262,7 +360,7 @@ def sign_c2pa_s3_test(
     manifest_title: str | None = None,
     ingredient_title: str | None = None,
     *,
-    trufo_api_url: str = TRUFO_API_URL,
+    trufo_api_url: str = TRUFO_API_URL_TEST,
 ) -> C2PAS3SignedOutput:
     """Sign an uploaded ephemeral S3 object with test C2PA via the TPS.
 
@@ -275,7 +373,7 @@ def sign_c2pa_s3_test(
             module docstring for when to set this explicitly.
         ingredient_title: Optional ``parentOf`` ingredient title (``dc:title``);
             see the module docstring for when to set this explicitly.
-        trufo_api_url: Freeform Trufo API base URL. Defaults to production.
+        trufo_api_url: Trufo API base URL. Defaults to the Trufo test host (test.api.trufo.ai).
 
     Returns:
         Presigned S3 download URL for the signed output media.
@@ -284,7 +382,7 @@ def sign_c2pa_s3_test(
         requests.HTTPError: If the API returns a non-2xx response.
     """
     return _sign_c2pa_s3(
-        TPS_C2PA_SIGN_TEST,
+        TPS_C2PA_SIGN,
         api_key,
         media_input_s3,
         actions=actions,
@@ -363,7 +461,7 @@ def sign_c2pa_via_s3_test(
     manifest_title: str | None = None,
     ingredient_title: str | None = None,
     *,
-    trufo_api_url: str = TRUFO_API_URL,
+    trufo_api_url: str = TRUFO_API_URL_TEST,
 ) -> bytes:
     """Upload, test-sign, and download media through the ephemeral S3 flow.
 
@@ -381,7 +479,7 @@ def sign_c2pa_via_s3_test(
             module docstring for when to set this explicitly.
         ingredient_title: Optional ``parentOf`` ingredient title (``dc:title``);
             see the module docstring for when to set this explicitly.
-        trufo_api_url: Freeform Trufo API base URL. Defaults to production.
+        trufo_api_url: Trufo API base URL. Defaults to the Trufo test host (test.api.trufo.ai).
 
     Returns:
         Signed media bytes downloaded from the returned S3 output URL.
@@ -478,7 +576,7 @@ def sign_c2pa_test(
     manifest_title: str | None = None,
     ingredient_title: str | None = None,
     *,
-    trufo_api_url: str = TRUFO_API_URL,
+    trufo_api_url: str = TRUFO_API_URL_TEST,
 ) -> bytes:
     """Sign a media file with C2PA via the TPS test endpoint.
 
@@ -491,7 +589,7 @@ def sign_c2pa_test(
             module docstring for when to set this explicitly.
         ingredient_title: Optional ``parentOf`` ingredient title (``dc:title``);
             see the module docstring for when to set this explicitly.
-        trufo_api_url: Freeform Trufo API base URL. Defaults to production.
+        trufo_api_url: Trufo API base URL. Defaults to the Trufo test host (test.api.trufo.ai).
 
     Returns:
         Signed media bytes.
@@ -500,7 +598,7 @@ def sign_c2pa_test(
         requests.HTTPError: If the API returns a non-2xx response.
     """
     return _sign_c2pa_direct(
-        TPS_C2PA_SIGN_TEST,
+        TPS_C2PA_SIGN,
         api_key,
         media_bytes,
         actions=actions,
@@ -536,15 +634,15 @@ def sign_c2pa_distributed_test(
     assertions: list | None = None,
     tsa_api_key: str | None = None,
     trufo_tsa_url: str = TRUFO_TSA_URL,
-    trufo_api_url: str = TRUFO_API_URL,
+    trufo_api_url: str = TRUFO_API_URL_TEST,
     manifest_title: str | None = None,
     ingredient_title: str | None = None,
 ) -> bytes:
     """Sign media locally using the Trufo test remote-signing endpoint.
 
     The media claim is built on the client while the C2PA claim-signing key
-    stays server-side. This helper requires the optional ``trufo[provenance]``
-    dependency group.
+    stays server-side. This helper requires the optional ``trufo[local-sign-only]``
+    dependency group (``trufo[local-full]`` when watermarking locally).
 
     Args:
         api_key: API key with scope ``c2pa-sign-test``.
@@ -555,7 +653,8 @@ def sign_c2pa_distributed_test(
             environment variable or the SDK configured key.
         trufo_tsa_url: Trufo TSA URL. Defaults to ``TRUFO_TSA_URL``.
         trufo_api_url: Base URL for the Trufo API. Controls the preprocess,
-            claim-sign, and CAWG identity-sign endpoints.
+            claim-sign, and CAWG identity-sign endpoints. Defaults to the Trufo
+            test host (``test.api.trufo.ai``).
         manifest_title: Optional active-manifest title (``dc:title``); see the
             module docstring for when to set this explicitly.
         ingredient_title: Optional ``parentOf`` ingredient title (``dc:title``);
@@ -605,9 +704,10 @@ def sign_c2pa_distributed(
     """Sign media locally using the Trufo production remote-signing endpoint.
 
     The media claim is built on the client while the C2PA claim-signing key
-    stays server-side. This helper requires the optional ``trufo[provenance]``
-    dependency group. Requires completed Organization Validation for the
-    caller's org; the API returns 403 otherwise.
+    stays server-side. This helper requires the optional ``trufo[local-sign-only]``
+    dependency group (``trufo[local-full]`` when watermarking locally).
+    Requires completed Organization Validation for the caller's org; the API
+    returns 403 otherwise.
 
     Args:
         api_key: API key with scope ``c2pa-sign-prod``.

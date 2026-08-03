@@ -1,6 +1,35 @@
-# Quickstart: Authentication
+# Quickstart: Setup
 
-Step-by-step guide for getting programmatic access to the Trufo Provenance Service (TPS).
+Install the SDK and set up the credentials you will need.
+
+## Install
+
+```bash
+pip install trufo
+```
+
+That covers hosted signing, watermark recovery, and certificate enrollment —
+everything except distributed signing, which additionally needs a local engine:
+
+```bash
+# distributed C2PA signing, without the watermark engine
+pip install "trufo[local-sign-only]"
+
+# adds local watermark embedding (heavier: pulls in PyTorch)
+pip install "trufo[local-full]"
+```
+
+The local-engine packages come from Trufo's private package index and need an
+`sdk-download` key — see the [README](../../README.md#private-package-index).
+They require Linux x86_64 with CPython 3.12; the base package is pure Python and
+runs anywhere with Python 3.10+.
+
+Verify the install:
+
+```bash
+trufo --help
+python -c "import trufo; print(trufo.__version__)"
+```
 
 ## Prerequisites
 
@@ -13,11 +42,12 @@ Step-by-step guide for getting programmatic access to the Trufo Provenance Servi
 Depending on what you need, set up the corresponding API key:
 
 - **Development / interactive access** — create a `trufo-api` key, then run `trufo login` to exchange it for an access token via the device-authorization flow.
-- **Calling `/c2pa/sign` or `/test/c2pa/sign` in deployment** — create a `c2pa-sign-prod` key (for `/c2pa/sign`) or a `c2pa-sign-test` key (for `/test/c2pa/sign`).
+- **Calling `/c2pa/sign` in deployment** — create a `c2pa-sign-prod` key (for the production hosts) or a `c2pa-sign-test` key (for the test host `test.api.trufo.ai`).
 - **Calling `sign_c2pa_distributed_test()` or `sign_c2pa_distributed()`** — create a `c2pa-sign-test` or `c2pa-sign-prod` key (same as above) **plus** a `tsa` key for the RFC 3161 timestamping step.
 - **Calling `tsa.trufo.ai`** — create a `tsa` key.
+- **Calling `/content/recover` (watermark decode)** — create a `c2pa-decode` key.
 
-See [../api/api_auth.md](../api/api_auth.md) for the full scope reference.
+See [../api/api_trufo.md](../api/api_trufo.md) for the full scope reference.
 
 ---
 
@@ -31,8 +61,9 @@ To use the API key within this library, save it to a file (directly or via the C
 
 ```bash
 trufo set-api-key trufo-api      <your-api-key>  # for `trufo login`
-trufo set-api-key c2pa-sign-prod <your-api-key>  # for /c2pa/sign
-trufo set-api-key c2pa-sign-test <your-api-key>  # for /test/c2pa/sign
+trufo set-api-key c2pa-sign-prod <your-api-key>  # for /c2pa/sign (production hosts)
+trufo set-api-key c2pa-sign-test <your-api-key>  # for /c2pa/sign (test host)
+trufo set-api-key c2pa-decode    <your-api-key>  # for /content/recover
 trufo set-api-key tsa            <your-api-key>  # for tsa.trufo.ai
 # Saved to ~/.trufo/credentials/<scope>_api_key (mode 0600)
 ```
@@ -43,6 +74,7 @@ trufo set-api-key tsa            <your-api-key>  # for tsa.trufo.ai
 export TRUFO_API_KEY=<your-api-key>                # trufo-api
 export TRUFO_C2PA_SIGN_PROD_API_KEY=<your-api-key>
 export TRUFO_C2PA_SIGN_TEST_API_KEY=<your-api-key>
+export TRUFO_C2PA_DECODE_API_KEY=<your-api-key>
 export TRUFO_TSA_API_KEY=<your-api-key>
 ```
 
@@ -123,10 +155,10 @@ For endpoints that accept an API key directly (e.g. the TPS signing endpoints), 
 import requests
 from trufo.util.credentials import TrufoApiKey, load_api_key
 
-# /test/c2pa/sign requires a c2pa-sign-test key
+# the test host requires a c2pa-sign-test key
 test_key = load_api_key(TrufoApiKey.C2PA_SIGN_TEST)
 resp = requests.post(
-    "https://api.trufo.ai/test/c2pa/sign",
+    "https://test.api.trufo.ai/c2pa/sign",
     json={"media_input": "...", "actions": [], "assertions": []},
     headers={"X-API-Key": test_key},
 )
@@ -147,12 +179,12 @@ from trufo.api.session import TrufoSession
 session = TrufoSession(base_api_url=TRUFO_API_URL_EUROPE)
 ```
 
-Please note that certain types of data will or will not be available cross-region.
+See [what is region-scoped](../api/api_trufo.md#regions) for which data crosses regions.
 
 ---
 
 ## Reference
 
-- Endpoint reference: [../api/api_auth.md](../api/api_auth.md)
-- Complete runnable example: [0_auth.py](0_auth.py)
+- Endpoint reference: [../api/api_trufo.md](../api/api_trufo.md)
+- Complete runnable example: [0_setup.py](0_setup.py)
 

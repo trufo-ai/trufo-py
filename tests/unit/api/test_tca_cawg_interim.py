@@ -12,8 +12,10 @@ from cryptography.hazmat.primitives.serialization import (
     PrivateFormat,
 )
 
-from trufo.api.tca.certs_cawg_interim import _request_cawg_interim_csr_jwt, request_cawg_interim_cert
-
+from trufo.api.tca.certs_cawg_interim import (
+    _request_cawg_interim_csr_jwt,
+    request_cawg_interim_cert,
+)
 
 _MODULE = "trufo.api.tca.certs_cawg_interim"
 

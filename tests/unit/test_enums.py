@@ -12,6 +12,7 @@ import pytest
 
 from trufo.c2pa.actions import TrufoAction
 from trufo.c2pa.assertions import UserAssertion
+from trufo.c2pa.watermark import WatermarkEffort
 from trufo.crypt.algorithms import LeafType, SigningAlgorithm
 
 # String-keyed public enums: the member value IS the wire/API string, so each
@@ -23,12 +24,18 @@ STR_ENUMS = {
         "CAWG_METADATA": "cawg_metadata",
         "CAWG_TRAINING": "cawg_training",
         "CUSTOM": "custom",
+        "INGREDIENT": "ingredient",
     },
     TrufoAction: {
         "TRANSCODE": "transcode",
-        "REPACKAGE": "repackage",
         "WATERMARK": "watermark",
         "PUBLISH": "publish",
+        "REDACT": "redact",
+    },
+    WatermarkEffort: {
+        "REQUIRE": "require",
+        "REQUIRE_IF_SUPPORTED": "require_if_supported",
+        "BEST_EFFORT": "best_effort",
     },
     LeafType: {
         "C2PA_L1": "c2pa-l1",

@@ -24,14 +24,14 @@ def test_require_provenance_module_returns_imported_module(monkeypatch):
 
 
 def test_require_provenance_module_raises_clear_install_error(monkeypatch):
-    """Missing tfprov raises an install hint for the provenance extra."""
+    """Missing tfprov raises an install hint for the local engine extra."""
 
     def fake_import_module(module_name):
         raise ModuleNotFoundError(name="tfprov")
 
     monkeypatch.setattr("trufo.util.optional_imports.import_module", fake_import_module)
 
-    with pytest.raises(ImportError, match=r"trufo\[provenance\]"):
+    with pytest.raises(ImportError, match=r"trufo\[local-sign-only\]"):
         require_provenance_module()
 
 

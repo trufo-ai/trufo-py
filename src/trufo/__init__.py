@@ -4,6 +4,7 @@
 from trufo.api.tca.certs_c2pa import create_instance, register_credential, request_c2pa_cert
 from trufo.api.tca.certs_cawg_interim import request_cawg_interim_cert
 from trufo.api.tca.certs_test import request_c2pa_test_cert, request_cawg_test_cert
+from trufo.api.tps.recover import recover_content
 from trufo.api.tps.sign_c2pa import (
     sign_c2pa,
     sign_c2pa_distributed,
@@ -14,6 +15,7 @@ from trufo.api.tps.sign_c2pa import (
 )
 from trufo.crypt.keygen import generate_keypair
 from trufo.util.credentials import load_api_key, save_api_key
+from trufo.util.warnings import TrufoServerWarning
 
 __version__ = "0.5.2"
 
@@ -22,6 +24,7 @@ __all__ = [
     "create_instance",
     "generate_keypair",
     "load_api_key",
+    "recover_content",
     "register_credential",
     "request_c2pa_cert",
     "request_c2pa_test_cert",
@@ -34,6 +37,7 @@ __all__ = [
     "sign_c2pa_test",
     "sign_c2pa_via_s3",
     "sign_c2pa_via_s3_test",
+    "TrufoServerWarning",
 ]
 
 # register the trufo-py version with tfprov so X-TF-Version is sent on all

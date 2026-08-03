@@ -9,12 +9,11 @@ import sys
 from trufo.api.session import TrufoSession
 from trufo.util.credentials import (
     TrufoApiKey,
+    clear_session,
     load_api_key,
     save_api_key,
     save_session,
-    clear_session,
 )
-
 
 # --- CLI commands ---
 

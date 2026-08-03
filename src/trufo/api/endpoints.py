@@ -7,6 +7,10 @@ Trufo API endpoint definitions.
 
 TRUFO_API_URL = "https://api.trufo.ai"
 TRUFO_API_URL_EUROPE = "https://eu.api.trufo.ai"
+# test signing runs on its own host; unlike the main API there is no dedicated
+# per-user test endpoint yet (dedicated test sandboxes may come later, which
+# would require a package update to configure)
+TRUFO_API_URL_TEST = "https://test.api.trufo.ai"
 TRUFO_CA_URL = "https://ca.trufo.ai"
 TRUFO_TSA_URL = "https://tsa.trufo.ai"
 TRUFO_OCSP_URL = "https://ocsp.trufo.ai"
@@ -26,7 +30,10 @@ GP_CREDENTIAL_REGISTER = "/gproduct/instance/credential/register"
 
 # TPS content endpoints
 TPS_C2PA_SIGN = "/c2pa/sign"
+# legacy hosted test path on the main host; superseded by TRUFO_API_URL_TEST +
+# TPS_C2PA_SIGN, kept live during deprecation
 TPS_C2PA_SIGN_TEST = "/test/c2pa/sign"
 TPS_C2PA_GET_S3_URL = "/c2pa/io/get-s3-url"
+TPS_CONTENT_RECOVER = "/content/recover"
 TPS_C2PA_AI_DISCLOSURE_ADD = "/c2pa/ai-disclosure/add"
 TPS_C2PA_AI_DISCLOSURE_LIST = "/c2pa/ai-disclosure/list"

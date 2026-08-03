@@ -1,0 +1,62 @@
+# Copyright 2025-2026 Trufo, Inc. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+"""Unit tests for the watermark recovery helper."""
+
+import base64
+from unittest.mock import MagicMock, patch
+
+import pytest
+import requests
+
+from trufo.api.endpoints import TRUFO_API_URL
+from trufo.api.tps.recover import recover_content
+
+_M = "trufo.api.tps.recover"
+
+
+def _response(payload, status=200):
+    resp = MagicMock()
+    resp.status_code = status
+    resp.json.return_value = payload
+    if status >= 400:
+        resp.raise_for_status.side_effect = requests.HTTPError(response=resp)
+    return resp
+
+
+class TestRecoverContent:
+    @patch(f"{_M}.requests.post")
+    def test_posts_media_and_parses_detection(self, mock_post):
+        mock_post.return_value = _response(
+            {"detected": True, "wid": "image.001a1b2c3d4", "confidence": 0.98, "manifest": None}
+        )
+
+        result = recover_content("key", b"media-bytes")
+
+        assert result.detected is True
+        assert result.wid == "image.001a1b2c3d4"
+        assert result.confidence == 0.98
+        assert result.manifest is None
+        call = mock_post.call_args
+        assert call.args[0] == f"{TRUFO_API_URL}/content/recover"
+        assert call.kwargs["headers"] == {"X-API-Key": "key"}
+        assert call.kwargs["json"] == {
+            "media_input": base64.b64encode(b"media-bytes").decode()
+        }
+
+    @patch(f"{_M}.requests.post")
+    def test_not_detected_returns_bare_result(self, mock_post):
+        mock_post.return_value = _response({"detected": False})
+
+        result = recover_content("key", b"media-bytes")
+
+        assert result.detected is False
+        assert result.wid is None
+        assert result.confidence is None
+
+    @patch(f"{_M}.requests.post")
+    def test_http_error_raises(self, mock_post):
+        mock_post.return_value = _response({"detail": "Forbidden"}, status=403)
+
+        with pytest.raises(requests.HTTPError):
+            recover_content("key", b"media-bytes")

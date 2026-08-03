@@ -15,8 +15,8 @@ import os
 import sys
 from pathlib import Path
 
-from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import ec
 
 from trufo.api.tca.certs_c2pa import create_instance, register_credential, request_c2pa_cert
 from trufo.crypt.algorithms import LeafType
@@ -121,8 +121,18 @@ def register_subcommands(sub: argparse._SubParsersAction) -> None:
     p.add_argument("--gpi", required=True, help="Instance ID (gpi_...).")
     p.add_argument("--gpic", required=True, help="Credential ID (gpic_...).")
     p.add_argument("--instance-key", required=True, help="Path to instance private key PEM.")
-    p.add_argument("--leaf-type", default="c2pa-l1", choices=leaf_type_choices, help="Certificate type (default: c2pa-l1).")
-    p.add_argument("--validity-days", type=int, default=None, help="Requested validity in days (server default if omitted).")
+    p.add_argument(
+        "--leaf-type",
+        default="c2pa-l1",
+        choices=leaf_type_choices,
+        help="Certificate type (default: c2pa-l1).",
+    )
+    p.add_argument(
+        "--validity-days",
+        type=int,
+        default=None,
+        help="Requested validity in days (server default if omitted).",
+    )
     p.add_argument("--out-dir", default=".", help="Output directory (default: current directory).")
     p.add_argument("--overwrite", action="store_true", help="Overwrite existing output files.")
     p.set_defaults(func=cmd_get_c2pa_cert)

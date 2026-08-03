@@ -7,6 +7,79 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+#### Watermarking
+
+- `watermark` action: `["watermark", {...}]` in `actions` embeds an imperceptible Trufo
+  Pawprint watermark during C2PA signing, in supported image and audio formats (JPEG, PNG,
+  WebP, TIFF; WAV, FLAC, MP3, M4A), hosted and distributed. Watermarking is off unless the
+  action is present. The manifest declares it via a `c2pa.watermarked.bound` action and a
+  `c2pa.soft-binding` assertion (algorithm `ai.trufo.pawprint.watermark`). See
+  `docs/quickstart/6_watermarking.md`.
+- `effort` parameter and `WatermarkEffort` enum: `"require"` (any failure fails the sign;
+  the default for a bare action), `"require_if_supported"` (unsupported formats sign
+  unwatermarked with a warning; runtime failures fail the sign), `"best_effort"` (any
+  failure signs unwatermarked with a warning). At most one watermark action per request;
+  client-side validation mirrors the server contract.
+- Local-engine extras in two tiers: `pip install "trufo[local-sign-only]"` for distributed
+  signing without the watermark engine (lightweight — no torch), and
+  `pip install "trufo[local-full]"` to add `trufo-pawprint` for local watermark embedding.
+  The `provenance` extra remains as the legacy alias of `local-sign-only`. A distributed
+  watermark request without `local-full` always fails immediately with an install hint,
+  regardless of `effort` — the effort levels govern failures of the installed engine, not
+  a missing one.
+- `TrufoServerWarning`: non-fatal notices returned by Trufo endpoints are re-emitted
+  through Python's `warnings` machinery in both signing flows (previously the hosted
+  helpers discarded them). Catch this category to detect a sign that completed without
+  the watermark it requested under a lenient `effort`. See the `warnings` field in
+  `docs/api/api_c2pa.md`.
+- `recover_content()` and the `c2pa-decode` API key scope (`TrufoApiKey.C2PA_DECODE`,
+  `TRUFO_C2PA_DECODE_API_KEY`, `trufo set-api-key c2pa-decode`): decode a Trufo watermark
+  from media via `POST /content/recover` and return the watermark ID with a detection
+  confidence. See `docs/quickstart/6_watermarking.md`.
+
+#### Ingredients
+
+- `redact` action for all signers, hosted and distributed. A
+  `["redact", {"label": ..., "reason": ...}]` entry in `actions` removes one assertion from
+  the input's existing C2PA manifest history, wherever it occurs in that history. Repeat the
+  entry to redact several, each with its own reason. Distributed signing redacts locally
+  without sending media to Trufo. See `docs/quickstart/5_ingredients.md`.
+- `RedactableAssertion` and `RedactionReason` enums in `trufo.c2pa`, holding the labels
+  supported for redaction and the preset rationale values.
+- A redaction the input cannot satisfy — no existing C2PA manifest, or a label absent from its
+  manifest history — returns `400`.
+- `TrufoAction.REDACT`, so the `redact` action is discoverable alongside the other action
+  names accepted by `actions`.
+
+- `ingredient` assertion entries: declare `inputTo` inputs (prompt, model, dataset — with
+  `c2pa.types.*` data types and IPTC AI-disclosure digitalSourceType) and `componentOf`
+  placed components. All user ingredients are gathered; `allActionsIncluded` is `false`
+  whenever any are present. Entries may carry base64 `media` (hashed, thumbnailed,
+  validated when manifest-bearing); `componentOf` requires it.
+  See `docs/quickstart/5_ingredients.md`.
+
+- `ai_disclosure` inline assertion bodies now fail fast with a register-first error
+  instead of being silently discarded.
+
+### Changed
+
+- Test signing moved to its own host: the test helpers (`sign_c2pa_test`, the S3 test
+  variants, and `sign_c2pa_distributed_test`) now default to `https://test.api.trufo.ai`
+  with the same routes as production (`TRUFO_API_URL_TEST`). The legacy `/test/c2pa/sign`
+  path on the main hosts remains available during deprecation.
+- Every `[name, params]` entry in `actions` and `assertions` must be exactly two elements;
+  longer entries are rejected client-side as malformed rather than partially read.
+- New dependency wheel for watermarking.
+- Installation of dependency wheels (for local provenance & watermarking components) now
+  require an API key.
+
+### Removed
+
+- `TrufoAction.REPACKAGE`. The action was a placeholder, no longer needed.
+
+
 ## [0.5.2] — 2026-07-26
 
 ### Added
@@ -183,11 +256,13 @@ Minor-version bump marks the general availability of the production C2PA signing
 - `trufo.intf`: credential storage and loading (env vars + file), CLI entry point.
 - PyPI trusted publishing via GitHub Actions (OIDC, no API tokens required).
 
-[Unreleased]: https://github.com/trufo-ai/trufo-py/compare/v0.5.1...HEAD
+[Unreleased]: https://github.com/trufo-ai/trufo-py/compare/v0.5.2...HEAD
+[0.5.2]: https://github.com/trufo-ai/trufo-py/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/trufo-ai/trufo-py/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/trufo-ai/trufo-py/compare/v0.4.2...v0.5.0
-[0.4.0]: https://github.com/trufo-ai/trufo-py/compare/v0.3.3...v0.4.0
-[0.3.3]: https://github.com/trufo-ai/trufo-py/compare/v0.3.2...v0.3.3
+[0.4.2]: https://github.com/trufo-ai/trufo-py/compare/v0.4.1...v0.4.2
+[0.4.1]: https://github.com/trufo-ai/trufo-py/compare/v0.4.0...v0.4.1
+[0.4.0]: https://github.com/trufo-ai/trufo-py/compare/v0.3.2...v0.4.0
 [0.3.2]: https://github.com/trufo-ai/trufo-py/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/trufo-ai/trufo-py/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/trufo-ai/trufo-py/compare/v0.2.0...v0.3.0

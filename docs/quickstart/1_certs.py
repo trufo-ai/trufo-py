@@ -6,7 +6,7 @@
 Part 1 — Test certificate (no account required).
 Part 2 — Production certificate (requires account, OV, PV, subscription).
 
-See docs/quickstart/1_c2pa_cert.md for prerequisites and explanations.
+See docs/quickstart/1_certs.md for prerequisites and explanations.
 """
 
 from pathlib import Path
