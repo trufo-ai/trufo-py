@@ -36,6 +36,7 @@ certificate enrollment.
 | Distributed signing | `docs/quickstart/4_distributed_signing.md` |
 | Ingredients (incl. redaction) | `docs/quickstart/5_ingredients.md` |
 | Watermarking | `docs/quickstart/6_watermarking.md` |
+| Errors & warnings | `docs/errors_and_warnings.md` |
 | C2PA API reference | `docs/api/api_c2pa.md` |
 | Auth API reference | `docs/api/api_auth.md` |
 | TCA CA reference | `docs/api/tca_ca.md` |

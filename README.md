@@ -59,5 +59,6 @@ The full reference documentation is spread across the following files:
 | TCA     | [docs/api/tca_ca.md](docs/api/tca_ca.md)     | Certificate Authority — enrollment, revocation, timestamping |
 | TCA     | [docs/api/tca_ra.md](docs/api/tca_ra.md)     | Registration Authority — instances, credentials, CSR JWTs   |
 | CLI     | [docs/cli.md](docs/cli.md)                   | Credential management (dev tool; use the Python API in prod) |
+| SDK     | [docs/errors_and_warnings.md](docs/errors_and_warnings.md) | Errors, warnings, and what to handle in production |
 
 

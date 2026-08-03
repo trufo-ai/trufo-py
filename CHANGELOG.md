@@ -29,6 +29,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   watermark request without `local-full` always fails immediately with an install hint,
   regardless of `effort` — the effort levels govern failures of the installed engine, not
   a missing one.
+- `TrufoServerWarning`: non-fatal notices returned by Trufo endpoints are re-emitted
+  through Python's `warnings` machinery in both signing flows (previously the hosted
+  helpers discarded them). Catch this category to detect a sign that completed without
+  the watermark it requested under a lenient `effort`. See `docs/errors_and_warnings.md`.
 - `recover_content()` and the `c2pa-decode` API key scope (`TrufoApiKey.C2PA_DECODE`,
   `TRUFO_C2PA_DECODE_API_KEY`, `trufo set-api-key c2pa-decode`): decode a Trufo watermark
   from media via `POST /content/recover` and return the watermark ID with a detection

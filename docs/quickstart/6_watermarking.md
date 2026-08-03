@@ -122,6 +122,10 @@ You requested a watermark with `effort: require` on a format outside the support
 
 The embed step failed at runtime. Under `require` and `require_if_supported` this fails the sign; under `best_effort` it is reported as a warning and the content is signed without a watermark.
 
+**A sign succeeded — was it actually watermarked?**
+
+Under `require_if_supported` and `best_effort`, a skipped watermark is reported as a `TrufoServerWarning` rather than an error. Catch it to detect unwatermarked output — see [errors_and_warnings.md](../errors_and_warnings.md#trufoserverwarning).
+
 **`At most one watermark action is allowed per request.`**
 
 Combine your watermark preferences into a single `["watermark", {...}]` entry.
