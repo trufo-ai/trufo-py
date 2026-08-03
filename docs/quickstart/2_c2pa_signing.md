@@ -129,7 +129,7 @@ signed_bytes = sign_c2pa(api_key, media_bytes, trufo_api_url=TRUFO_API_URL_EUROP
 
 Organizations with a dedicated API or TSA can set them explicitly via
 `trufo_api_url` / `trufo_tsa_url`. See
-[what is region-scoped](../api/api_trufo.md#what-is-region-scoped).
+[what is region-scoped](../api/api_trufo.md#regions).
 
 ---
 
@@ -173,7 +173,7 @@ for production, `c2pa-sign-test` for test.
 
 **The sign succeeded but something was skipped** — check the response `warnings`;
 the SDK re-emits them as `TrufoServerWarning`. See
-[`warnings`](../api/api_c2pa.md#warnings).
+[`warnings`](../api/api_c2pa.md#response-warnings).
 
 ---
 
@@ -181,3 +181,4 @@ the SDK re-emits them as `TrufoServerWarning`. See
 
 - Setup and credentials: [0_setup.md](0_setup.md)
 - C2PA signing API reference: [../api/api_c2pa.md](../api/api_c2pa.md)
+- Complete runnable example: [2_c2pa_signing.py](2_c2pa_signing.py)

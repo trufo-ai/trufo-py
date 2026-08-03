@@ -55,22 +55,35 @@ For development-only test signing, use `sign_c2pa_test()` with a `c2pa-sign-test
 
 ## `cawg_metadata` Namespaces
 
-The `assertion` dict must include an `@context` mapping. Only the following namespace prefixes and their exact URIs are accepted:
+The `assertion` dict must include an `@context` mapping. Trufo accepts the standard
+CAWG namespaces — `dc`, `exif`, `exifEX`, `tiff`, `photoshop`, `xmp`, `pdf`, `pdfx`,
+`Iptc4xmpCore`, and `Iptc4xmpExt` — each with its exact canonical URI; see the
+[full table](../api/api_c2pa.md#cawg_metadata). A richer example:
 
-| Prefix | URI |
-|--------|-----|
-| `Iptc4xmpCore` | `http://iptc.org/std/Iptc4xmpCore/1.0/xmlns/` |
-| `Iptc4xmpExt` | `http://iptc.org/std/Iptc4xmpExt/2008-02-29/` |
-| `dc` | `http://purl.org/dc/elements/1.1/` |
-| `exif` | `http://ns.adobe.com/exif/1.0/` |
-| `exifEX` | `http://cipa.jp/exif/2.32/` |
-| `pdf` | `http://ns.adobe.com/pdf/1.3/` |
-| `pdfx` | `http://ns.adobe.com/pdfx/1.3/` |
-| `photoshop` | `http://ns.adobe.com/photoshop/1.0/` |
-| `tiff` | `http://ns.adobe.com/tiff/1.0/` |
-| `xmp` | `http://ns.adobe.com/xap/1.0/` |
+```python
+["cawg_metadata", {
+    "assertion": {
+        "@context": {
+            "dc": "http://purl.org/dc/elements/1.1/",
+            "photoshop": "http://ns.adobe.com/photoshop/1.0/",
+            "Iptc4xmpCore": "http://iptc.org/std/Iptc4xmpCore/1.0/xmlns/",
+            "Iptc4xmpExt": "http://iptc.org/std/Iptc4xmpExt/2008-02-29/",
+        },
+        "dc:creator": ["Erika Fictional"],
+        "dc:rights": "© 2026 Example Media. All rights reserved.",
+        "photoshop:DateCreated": "2026-08-31",
+        "Iptc4xmpExt:DigitalSourceType":
+            "https://cv.iptc.org/newscodes/digitalsourcetype/digitalCapture",
+        "Iptc4xmpExt:LocationCreated": {"Iptc4xmpExt:City": "San Francisco"},
+        "Iptc4xmpCore:AltTextAccessibility":
+            "Photo of a suspension bridge at sunset.",
+    },
+}]
+```
 
-For more details, see [cawg.io/metadata/1.1](https://cawg.io/metadata/1.1/).
+Camera, lens, and GPS fields follow the same pattern under `exif`, `exifEX`, and
+`tiff`. For the full vocabulary see
+[cawg.io/metadata/1.1](https://cawg.io/metadata/1.1/).
 
 ---
 
@@ -92,79 +105,3 @@ For more details, see [cawg.io/training-and-data-mining/1.1](https://cawg.io/tra
 
 - `assertions` and `actions` field reference: [../api/api_c2pa.md](../api/api_c2pa.md)
 - Complete runnable example: [4_cawg_publish.py](4_cawg_publish.py)
-
----
-
-## Appendix A: `cawg_metadata` Examples
-
-From the CAWG metadata assertion spec §3.1 (non-normative).
-
-**Image:**
-
-```python
-["cawg_metadata", {
-    "assertion": {
-        "@context": {
-            "exif": "http://ns.adobe.com/exif/1.0/",
-            "exifEX": "http://cipa.jp/exif/2.32/",
-            "tiff": "http://ns.adobe.com/tiff/1.0/",
-            "Iptc4xmpCore": "http://iptc.org/std/Iptc4xmpCore/1.0/xmlns/",
-            "Iptc4xmpExt": "http://iptc.org/std/Iptc4xmpExt/2008-02-29/",
-            "dc": "http://purl.org/dc/elements/1.1/",
-            "photoshop": "http://ns.adobe.com/photoshop/1.0/",
-        },
-        "photoshop:DateCreated": "Aug 31, 2022",
-        "Iptc4xmpExt:DigitalSourceType": "https://cv.iptc.org/newscodes/digitalsourcetype/digitalCapture",
-        "Iptc4xmpExt:LocationCreated": {
-            "Iptc4xmpExt:City": "San Francisco",
-        },
-        "Iptc4xmpExt:PersonInImage": ["Erika Fictional"],
-        "Iptc4xmpCore:AltTextAccessibility": "Photo of Erika Fictional standing in front of the Golden Gate Bridge at sunset.",
-        "exif:GPSVersionID": "2.2.0.0",
-        "exif:GPSLatitude": "39,21.102N",
-        "exif:GPSLongitude": "74,26.5737W",
-        "exif:GPSAltitudeRef": 0,
-        "exif:GPSAltitude": "100963/29890",
-        "exif:GPSTimeStamp": "2019-09-22T18:22:57Z",
-        "exif:GPSSpeedRef": "K",
-        "exif:GPSSpeed": "4009/161323",
-        "exif:GPSImgDirectionRef": "T",
-        "exif:GPSImgDirection": "296140/911",
-        "exif:GPSDestBearingRef": "T",
-        "exif:GPSDestBearing": "296140/911",
-        "exif:GPSHPositioningError": "13244/2207",
-        "exif:ExposureTime": "1/100",
-        "exif:FNumber": 4.0,
-        "exif:ColorSpace": 1,
-        "exif:DigitalZoomRatio": 2.0,
-        "tiff:Make": "CameraCompany",
-        "tiff:Model": "Shooter S1",
-        "exifEX:LensMake": "CameraCompany",
-        "exifEX:LensModel": "17.0-35.0 mm",
-        "exifEX:LensSpecification": {"@list": [1.55, 4.2, 1.6, 2.4]},
-    },
-}]
-```
-
-**PDF:**
-
-```python
-["cawg_metadata", {
-    "assertion": {
-        "@context": {
-            "dc": "http://purl.org/dc/elements/1.1/",
-            "xmp": "http://ns.adobe.com/xap/1.0/",
-            "pdf": "http://ns.adobe.com/pdf/1.3/",
-            "pdfx": "http://ns.adobe.com/pdfx/1.3/",
-        },
-        "dc:created": "2015 February 3",
-        "dc:title": ["This is a test file"],
-        "xmp:CreatorTool": "TeX",
-        "pdf:Producer": "pdfTeX-1.40.14",
-        "pdf:Trapped": "Unknown",
-        "pdfx:PTEX.Fullbanner": "This is pdfTeX, Version 3.1415926-2.5-1.40.14 (TeX Live 2013) kpathsea version 6.1.1",
-    },
-}]
-```
-
----

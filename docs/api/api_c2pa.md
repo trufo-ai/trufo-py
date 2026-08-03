@@ -197,8 +197,8 @@ Organizations with a dedicated API or TSA pass those hosts explicitly via
 
 The type is detected from the bytes, not from any declared value. Common aliases
 resolve automatically (`audio/x-wav` → `audio/wav`, `audio/x-m4a` → `audio/mp4`);
-an MP4 with no video stream is treated as `audio/mp4`. More formats are added on
-request.
+an MP4 with no video stream is treated as `audio/mp4`. Contact
+[support@trufo.ai](mailto:support@trufo.ai) about additional formats.
 
 ### `actions`
 

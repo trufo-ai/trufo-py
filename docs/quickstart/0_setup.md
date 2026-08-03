@@ -179,7 +179,7 @@ from trufo.api.session import TrufoSession
 session = TrufoSession(base_api_url=TRUFO_API_URL_EUROPE)
 ```
 
-See [what is region-scoped](../api/api_trufo.md#what-is-region-scoped) for which data crosses regions.
+See [what is region-scoped](../api/api_trufo.md#regions) for which data crosses regions.
 
 ---
 

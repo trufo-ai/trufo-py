@@ -6,9 +6,9 @@
 Attaches a C2PA manifest with:
   - AI disclosure  (c2pa.ai-disclosure)
 
-To additionally stamp a CAWG organization identity, see 3_cawg_publish.py.
+To additionally stamp a CAWG organization identity, see 4_cawg_publish.py.
 
-See docs/quickstart/2_ai_labeling.md for details.
+See docs/quickstart/3_ai_labeling.md for details.
 Requires a c2pa-sign-prod API key — set TRUFO_C2PA_SIGN_PROD_API_KEY
 or save it to ~/.trufo/credentials/c2pa_sign_prod_api_key.
 """

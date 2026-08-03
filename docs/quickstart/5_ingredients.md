@@ -86,37 +86,29 @@ The same assertion may not be targeted twice in one call.
 
 #### Supported Labels
 
-The labels supported for redaction are listed below; more will be added over time (upon request).
+Four assertion labels may be redacted: `c2pa.metadata` (capture date, location,
+GPS, device), `cawg.metadata` (byline, people depicted, credit, rights),
+`cawg.training-mining` (AI-training permissions), and `cawg.identity` (the identity
+assertion naming a signer). Any other label is rejected — see the
+[reference](../api/api_c2pa.md#redact).
 
-| Label                    | Carries                                                             |
-| ------------------------ | ------------------------------------------------------------------- |
-| `"c2pa.metadata"`        | capture metadata — date/time, location, GPS coordinates, device      |
-| `"cawg.metadata"`        | editorial metadata — byline/creator, people depicted, credit, rights |
-| `"cawg.training-mining"` | AI-training and data-mining permissions and opt-outs                 |
-| `"cawg.identity"`        | the identity binding a named signer to that manifest's assertions    |
-
-Each label is enumerated individually rather than by namespace, so any label not listed — including other `cawg.*` labels and `c2pa.ai-disclosure` — is rejected.
-
-Removing a contributor from an asset generally takes both `"cawg.metadata"` and `"cawg.identity"`: the first carries the byline, the second carries the identity certificate that names the signer. Redacting either one alone leaves the other in place.
+Removing a contributor from an asset generally takes both `cawg.metadata` and
+`cawg.identity`: the first carries the byline, the second the certificate that names
+the signer. Redacting either alone leaves the other in place.
 
 #### Reason
 
-A reason is required on every `redact` action. It is either one of the preset values or a custom entity-namespaced value:
-
-| Preset                         | Redacted because the assertion contains |
-| ------------------------------ | --------------------------------------- |
-| `c2pa.PII.present`             | personally identifiable information |
-| `c2pa.invalid.data`            | incorrect data |
-| `c2pa.trade-secret.present`    | commercially sensitive information |
-| `c2pa.government.confidential` | information restricted by a government |
+Every `redact` action requires a `reason`, recorded on the resulting
+`c2pa.redacted` action so a reviewer can see *why* something was removed, not just
+that it was. Use one of the C2PA presets — `c2pa.PII.present`,
+`c2pa.invalid.data`, `c2pa.trade-secret.present`, `c2pa.government.confidential` —
+or a custom reverse-DNS value such as `com.example.internal-policy`, which requires
+domain validation for that domain. See the
+[reference](../api/api_c2pa.md#redact).
 
 ```python
 actions=[["redact", {"label": "c2pa.metadata", "reason": "c2pa.trade-secret.present"}]]
 ```
-
-Each redacted assertion gets its own `c2pa.redacted` action recording this reason plus a direct reference to the specific assertion that was removed, so a reviewer of the provenance history can understand *why* something was removed, not just that it was.
-
-You may also supply a **custom** reverse-DNS reason (e.g. `"com.example.internal-policy"`) instead of a preset. Custom reasons require that your organization has completed domain validation for that domain (the same domain-validation flow used for custom assertions).
 
 ### Targeting One Specific Instance
 

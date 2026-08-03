@@ -17,7 +17,7 @@ The signed manifest declares the watermark per the C2PA specification: a `c2pa.w
 | Image    | JPEG, PNG, WebP, TIFF |
 | Audio    | WAV, FLAC, MP3, M4A (`audio/mp4`) |
 
-Other signable formats (e.g. PDF, video, SVG) cannot currently carry a watermark. Support will expand over time.
+Signing formats outside this list succeeds normally; the watermark is simply not embedded, which the `effort` setting below lets you treat as an error or a warning.
 
 ## The `watermark` Action
 
@@ -93,7 +93,7 @@ Additional notes for distributed (local) watermarking:
 
 Production signing issues a unique watermark ID and links it to a permanent signing record. Test signing embeds a watermark from a separate test ID space: IDs are ephemeral, not unique, and no signing record is created. Test-signed watermarks are for integration development only.
 
-See [api_c2pa.md](../api/api_c2pa.md#signing-flows) for the full flow comparison (endpoints, auth, records, billing).
+See [api_c2pa.md](../api/api_c2pa.md#signing-modes) for the full flow comparison (endpoints, auth, records, billing).
 
 ## Reading Watermarks
 
@@ -124,7 +124,7 @@ The embed step failed at runtime. Under `require` and `require_if_supported` thi
 
 **A sign succeeded — was it actually watermarked?**
 
-Under `require_if_supported` and `best_effort` a skipped watermark is a warning, not an error. Catch `TrufoServerWarning` to detect it — see [`warnings`](../api/api_c2pa.md#warnings) in the response reference.
+Under `require_if_supported` and `best_effort` a skipped watermark is a warning, not an error. Catch `TrufoServerWarning` to detect it — see [`warnings`](../api/api_c2pa.md#response-warnings) in the response reference.
 
 **`At most one watermark action is allowed per request.`**
 
@@ -141,3 +141,4 @@ Distributed watermarking requires the full local engine. Install `trufo[local-fu
 - Authentication setup: [0_setup.md](0_setup.md)
 - C2PA signing API reference: [../api/api_c2pa.md](../api/api_c2pa.md)
 - Distributed signing quickstart: [2_c2pa_signing.md](2_c2pa_signing.md)
+- Complete runnable example: [6_watermarking.py](6_watermarking.py)

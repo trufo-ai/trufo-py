@@ -139,8 +139,7 @@ For production, Trufo's RA mints this token for you (see
 
 Test certificates need no account, organization, or validation. The CSR JWT is
 signed with the publicly known HMAC secret `hello-trufo` (HS256), using
-`sub: "test-account"` and a test leaf type. Test tokens are not single-use, so the
-same token may be redeemed repeatedly.
+`sub: "test-account"` and a test leaf type. 
 
 `request_c2pa_test_cert()` and `request_cawg_test_cert()` in the Python SDK perform
 the whole flow.
@@ -255,7 +254,7 @@ Two validations gate production enrollment:
 
 | Validation | Scope | Establishes | Managed at |
 | ---------- | ----- | ----------- | ---------- |
-| Organization Validation (OV) | Organization | Your legal identity — supplies the certificate's `O` and `C` | [api_trufo.md](api_trufo.md#organization-validation-ov) |
+| Organization Validation (OV) | Organization | Your legal identity — supplies the certificate's `O` and `C` | [api_trufo.md](api_trufo.md#accounts-and-organizations) |
 | Product Validation (PV) | Generator product | The product's conformance and assurance level — supplies `CN` and the record id | Below |
 
 Both must be **active** (approved and unexpired) at the moment of enrollment.
