@@ -17,7 +17,7 @@ from trufo.crypt.keygen import generate_keypair
 from trufo.util.credentials import load_api_key, save_api_key
 from trufo.util.warnings import TrufoServerWarning
 
-__version__ = "0.5.2"
+__version__ = "1.0.0"
 
 __all__ = [
     "__version__",

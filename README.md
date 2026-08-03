@@ -56,12 +56,29 @@ Pick `local-sign-only` unless you need watermarking in distributed signing: the 
 
 ### Private Package Index
 
-New releases of `trufo-provenance` and `trufo-pawprint` are distributed through Trufo's private package index at `packages.trufo.ai` rather than public PyPI. Installing the `local` (or `provenance`) extra requires an `sdk-download` API key, created at [app.trufo.ai/settings/org](https://app.trufo.ai/settings/org) under *API Keys* (requires an active C2PA Signing plan). Configure the index alongside PyPI, then install normally:
+New releases of `trufo-provenance` and `trufo-pawprint` are distributed through Trufo's private package index at `packages.trufo.ai` rather than public PyPI. Installing the `local-sign-only` (or `local-full`) extra requires an `sdk-download` API key, created at [app.trufo.ai/settings/org](https://app.trufo.ai/settings/org) under *API Keys* (requires an active C2PA Signing plan).
+
+Store the key in `~/.netrc` rather than in the index URL. pip sends it as an HTTP basic-auth credential either way, but a URL-embedded key also lands in your shell history, the process list, and pip and CI logs:
 
 ```bash
-export PIP_EXTRA_INDEX_URL="https://<your-sdk-download-key>@packages.trufo.ai/simple/"
+cat >> ~/.netrc <<'EOF'
+machine packages.trufo.ai
+  login __token__
+  password <your-sdk-download-key>
+EOF
+chmod 600 ~/.netrc
+```
+
+The literal `__token__` goes in the login field and the key in the password field — the same convention PyPI uses. Keep that order: a Trufo API key contains a colon, which is also the separator in an HTTP basic-auth credential, so putting the key in the login field makes it ambiguous to parse.
+
+Then point pip at the index — no credential in the URL — and install normally:
+
+```bash
+export PIP_EXTRA_INDEX_URL="https://packages.trufo.ai/simple/"
 pip install "trufo[local-sign-only]"   # or "trufo[local-full]"
 ```
+
+In CI, write the `~/.netrc` from your secret store as a build step instead of committing it or exporting the key into the environment.
 
 The `trufo` package itself resolves from public PyPI; only the engine packages come from the private index. Treat the key like any other credential: keep it out of committed lockfiles and logs, and revoke it from the dashboard if it is exposed.
 
