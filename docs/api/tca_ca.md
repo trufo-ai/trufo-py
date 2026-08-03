@@ -192,8 +192,6 @@ stripped server-side, so both `tsa:<key>` and the bare `<key>` are accepted.
 
 `POST https://test.tsa.trufo.ai/`
 
-(The legacy name `tsa.test.trufo.ai` remains available during deprecation.)
-
 A free, keyless test endpoint speaking the same RFC 3161 protocol: no `X-API-Key`
 header, no signup. Responses are signed with a self-signed test certificate and
 always carry the Trufo test policy OID (`1.3.6.1.4.1.62524.2.1`), so tokens

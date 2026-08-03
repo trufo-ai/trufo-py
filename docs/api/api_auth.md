@@ -15,7 +15,7 @@ Documentation for programmatic access to Trufo Provenance Service (TPS) API endp
 | OCSP Responder             | `https://ocsp.trufo.ai`      | [CA] OCSP stapling              |
 | Package Index              | `https://packages.trufo.ai`  | [SDK] Private wheel index       |
 
-Test and regional variants follow one convention: `{qualifier}.{service}.trufo.ai` (e.g. `test.api`, `eu.api`, `test.tsa`). The legacy test-TSA name `tsa.test.trufo.ai` remains available during deprecation.
+Test and regional variants follow one convention: `{qualifier}.{service}.trufo.ai` (e.g. `test.api`, `eu.api`, `test.tsa`).
 
 ## Regional Endpoints
 
