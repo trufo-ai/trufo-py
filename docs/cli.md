@@ -19,7 +19,7 @@ trufo set-api-key c2pa-decode    [KEY] # POST /content/recover
 trufo set-api-key tsa            [KEY] # tsa.trufo.ai
 ```
 
-Once the `trufo-api` key is set, you can login:
+The `trufo-api` key must be set **before** you log in — `trufo login` authenticates with it, and exits with `No trufo-api key configured` otherwise. Once it is set:
 ```bash
 trufo login
 ```

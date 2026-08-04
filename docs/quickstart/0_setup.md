@@ -91,14 +91,21 @@ assert api_key, "Set TRUFO_API_KEY or run: trufo set-api-key trufo-api <KEY>"
 
 ## Step 2a — Authenticate
 
-Some TPS endpoints, especially the Certificate-related ones, require an *access token* (Bearer JWT) and not the API key directly. `trufo login` obtains one, and requires a `trufo-api` scoped key.
+Some TPS endpoints, especially the Certificate-related ones, require an *access token* (Bearer JWT) and not the API key directly. `trufo login` obtains one.
 
-**CLI (recommended):**
+**Order matters.** `trufo login` authenticates *with* your `trufo-api` key, so that key must already be configured — from Step 2, either via `trufo set-api-key trufo-api <KEY>` or the `TRUFO_API_KEY` environment variable. Running `trufo login` first exits with `No trufo-api key configured`.
 
 ```bash
+# 1. configure the key (once)
+trufo set-api-key trufo-api <your-api-key>
+
+# 2. sign in
 trufo login
 # Opens your browser, you sign in, and the CLI is authenticated.
 # Tokens are saved to ~/.trufo/session
+
+# 3. now the session-backed commands work
+trufo add-gpi --gp gp_... --name "my instance"
 ```
 
 `trufo login` opens a browser on the machine it is running on and receives the
