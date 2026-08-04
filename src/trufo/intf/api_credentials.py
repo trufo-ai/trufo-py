@@ -29,7 +29,7 @@ def cmd_set_api_key(args: argparse.Namespace) -> None:
 
 
 def cmd_login(args: argparse.Namespace) -> None:
-    """Authenticate via device authorization flow."""
+    """Authenticate, preferring the same-machine loopback flow."""
     api_key = load_api_key(TrufoApiKey.TRUFO_API)
     if not api_key:
         print(
@@ -39,7 +39,7 @@ def cmd_login(args: argparse.Namespace) -> None:
         sys.exit(1)
 
     session = TrufoSession()
-    session.init_session(api_key)
+    session.init_session(api_key, use_device=args.device)
     save_session(session)
     print("Login successful.")
 
@@ -61,7 +61,14 @@ def register_subcommands(sub: argparse._SubParsersAction) -> None:
     p.add_argument("key", help="API key value.")
     p.set_defaults(func=cmd_set_api_key)
 
-    p = sub.add_parser("login", help="Authenticate via device authorization.")
+    p = sub.add_parser("login", help="Authenticate in your browser.")
+    p.add_argument(
+        "--device",
+        action="store_true",
+        help="Use the device code flow instead of opening a local browser. "
+             "Needed when the CLI and your browser are on different machines, "
+             "e.g. over SSH.",
+    )
     p.set_defaults(func=cmd_login)
 
     p = sub.add_parser("logout", help="Clear saved session.")

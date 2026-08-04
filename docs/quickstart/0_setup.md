@@ -41,7 +41,7 @@ python -c "import trufo; print(trufo.__version__)"
 
 Depending on what you need, set up the corresponding API key:
 
-- **Development / interactive access** — create a `trufo-api` key, then run `trufo login` to exchange it for an access token via the device-authorization flow.
+- **Development / interactive access** — create a `trufo-api` key, then run `trufo login` to exchange it for an access token via a browser sign-in.
 - **Calling `/c2pa/sign` in deployment** — create a `c2pa-sign-prod` key (for the production hosts) or a `c2pa-sign-test` key (for the test host `test.api.trufo.ai`).
 - **Calling `sign_c2pa_distributed_test()` or `sign_c2pa_distributed()`** — create a `c2pa-sign-test` or `c2pa-sign-prod` key (same as above) **plus** a `tsa` key for the RFC 3161 timestamping step.
 - **Calling `tsa.trufo.ai`** — create a `tsa` key.
@@ -89,20 +89,36 @@ assert api_key, "Set TRUFO_API_KEY or run: trufo set-api-key trufo-api <KEY>"
 
 ---
 
-## Step 2a — Authenticate via Device Flow
+## Step 2a — Authenticate
 
-Some TPS endpoints, especially the Certificate-related ones, require an *access token* (Bearer JWT) and not the API key directly. The OAuth 2.0 device authorization flow is the supported headless auth method, and requires a `trufo-api` scoped key.
+Some TPS endpoints, especially the Certificate-related ones, require an *access token* (Bearer JWT) and not the API key directly. `trufo login` obtains one, and requires a `trufo-api` scoped key.
 
 **CLI (recommended):**
 
 ```bash
 trufo login
-# Prints something like:
-#   Visit: https://app.trufo.ai/device?code=ABCD-1234
-#   Enter code: ABCD-1234
-# Open the URL in a browser and approve — the CLI polls automatically.
+# Opens your browser, you sign in, and the CLI is authenticated.
 # Tokens are saved to ~/.trufo/session
 ```
+
+`trufo login` opens a browser on the machine it is running on and receives the
+result over a local loopback address (OAuth 2.0 authorization code + PKCE,
+RFC 8252). Nothing needs to be typed or copied.
+
+**When the CLI and your browser are on different machines** — over SSH, or in a
+container — that loopback hop cannot work, so use the device flow instead:
+
+```bash
+trufo login --device
+# Prints something like:
+#   Visit: https://app.trufo.ai/device?user_code=ABCD-1234
+#   Confirm code: ABCD-1234
+# Open the URL in any browser, check the code matches, and approve.
+# The CLI polls automatically. Tokens are saved to ~/.trufo/session
+```
+
+The CLI falls back to this automatically if it cannot open a local listener, so
+`--device` is only needed when you want to force it.
 
 **Python:**
 

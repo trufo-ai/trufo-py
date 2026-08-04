@@ -15,9 +15,15 @@ TRUFO_CA_URL = "https://ca.trufo.ai"
 TRUFO_TSA_URL = "https://tsa.trufo.ai"
 TRUFO_OCSP_URL = "https://ocsp.trufo.ai"
 
-# account / device auth
+# webapp origin — where the browser is sent during loopback sign-in
+TRUFO_APP_URL = "https://app.trufo.ai"
+
+# account / device auth (RFC 8628 — browser on a DIFFERENT machine)
 DEVICE_AUTHORIZE = "/account/device/authorize"
 DEVICE_TOKEN = "/account/device/token"
+# account / loopback auth (RFC 8252 + PKCE — browser on the SAME machine)
+LOOPBACK_TOKEN = "/account/loopback/token"
+LOOPBACK_AUTH_PATH = "/loopback"  # path on TRUFO_APP_URL, not on the API
 ACCOUNT_REFRESH = "/account/refresh"
 
 # registration authority

@@ -23,6 +23,7 @@ from trufo.api.auth import (
     refresh_tokens,
 )
 from trufo.api.endpoints import TRUFO_API_URL
+from trufo.api.loopback_auth import run_loopback_login
 
 logger = logging.getLogger(__name__)
 
@@ -54,16 +55,44 @@ class TrufoSession:
         self.refresh_token = refresh_token
         self.base_api_url = base_api_url
 
-    def init_session(self, api_key: str) -> None:
-        """Run the device authorization flow to obtain tokens.
+    def init_session(self, api_key: str, use_device: bool = False) -> None:
+        """Sign in and obtain tokens.
+
+        Prefers the loopback flow (RFC 8252), which opens a browser on this
+        machine and needs nothing typed. Falls back to the device flow
+        (RFC 8628) when no loopback port can be bound — which is what happens
+        on a headless host, where the browser is on a different machine and the
+        loopback redirect could not reach us anyway.
+
+        Args:
+            api_key: Trufo API key with trufo-api scope.
+            use_device: Skip loopback and use the device flow directly. Useful
+                over SSH, where a browser may open on the wrong machine.
+        """
+        if not use_device:
+            try:
+                tokens = run_loopback_login(api_key, base_url=self.base_api_url)
+                self.access_token = tokens.access_token
+                self.refresh_token = tokens.refresh_token
+                return
+            except OSError as exc:
+                logger.debug("Loopback listener unavailable (%s); using device flow.", exc)
+                print("Could not start a local listener; falling back to device sign-in.")
+
+        self._init_session_device(api_key)
+
+    def _init_session_device(self, api_key: str) -> None:
+        """Run the device authorization flow (RFC 8628) to obtain tokens.
 
         Prints the verification URL for the user, then polls until
         the user approves (or the code expires).
         """
         auth_resp = initiate_device_auth(api_key, base_url=self.base_api_url)
 
+        # keep the pre-filled URL: the /device page has no code-entry field yet,
+        # so the bare verification_uri would land the user on "Invalid link"
         print(f"Visit: {auth_resp.verification_uri_complete}")
-        print(f"Enter code: {auth_resp.user_code}")
+        print(f"Confirm code: {auth_resp.user_code}")
 
         tokens = poll_for_tokens(
             api_key,
