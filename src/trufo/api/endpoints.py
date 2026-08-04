@@ -5,6 +5,8 @@
 Trufo API endpoint definitions.
 """
 
+import os
+
 TRUFO_API_URL = "https://api.trufo.ai"
 TRUFO_API_URL_EUROPE = "https://eu.api.trufo.ai"
 # test signing runs on its own host; unlike the main API there is no dedicated
@@ -15,8 +17,11 @@ TRUFO_CA_URL = "https://ca.trufo.ai"
 TRUFO_TSA_URL = "https://tsa.trufo.ai"
 TRUFO_OCSP_URL = "https://ocsp.trufo.ai"
 
-# webapp origin — where the browser is sent during loopback sign-in
-TRUFO_APP_URL = "https://app.trufo.ai"
+# webapp origin — where the browser is sent during loopback sign-in.
+# Overridable so the flow can be exercised against a non-production webapp; the
+# API base URL is chosen separately via TrufoSession(base_api_url=...).
+TRUFO_APP_URL = os.environ.get("TRUFO_APP_URL", "https://app.trufo.ai")
+TRUFO_APP_URL_TEST = "https://app-test.trufo.ai"
 
 # account / device auth (RFC 8628 — browser on a DIFFERENT machine)
 DEVICE_AUTHORIZE = "/account/device/authorize"

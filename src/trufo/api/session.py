@@ -23,7 +23,7 @@ from trufo.api.auth import (
     refresh_tokens,
 )
 from trufo.api.endpoints import TRUFO_API_URL
-from trufo.api.loopback_auth import run_loopback_login
+from trufo.api.loopback_auth import BrowserUnavailableError, run_loopback_login
 
 logger = logging.getLogger(__name__)
 
@@ -60,9 +60,10 @@ class TrufoSession:
 
         Prefers the loopback flow (RFC 8252), which opens a browser on this
         machine and needs nothing typed. Falls back to the device flow
-        (RFC 8628) when no loopback port can be bound — which is what happens
-        on a headless host, where the browser is on a different machine and the
-        loopback redirect could not reach us anyway.
+        (RFC 8628) when this machine cannot open a browser, which is the real
+        signature of a headless host — binding the loopback port succeeds
+        almost everywhere, including over SSH and in containers, so a bind
+        failure is not a usable signal on its own.
 
         Args:
             api_key: Trufo API key with trufo-api scope.
@@ -75,9 +76,9 @@ class TrufoSession:
                 self.access_token = tokens.access_token
                 self.refresh_token = tokens.refresh_token
                 return
-            except OSError as exc:
-                logger.debug("Loopback listener unavailable (%s); using device flow.", exc)
-                print("Could not start a local listener; falling back to device sign-in.")
+            except (BrowserUnavailableError, OSError) as exc:
+                logger.debug("Loopback sign-in unavailable (%s); using device flow.", exc)
+                print("No local browser available; falling back to device sign-in.")
 
         self._init_session_device(api_key)
 

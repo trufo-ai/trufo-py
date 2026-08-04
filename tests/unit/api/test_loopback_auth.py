@@ -10,6 +10,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from trufo.api.loopback_auth import (
+    BrowserUnavailableError,
     exchange_loopback_code,
     generate_pkce,
     run_loopback_login,
@@ -108,6 +109,7 @@ class TestRunLoopbackLogin:
             # echo back whatever state went out in the browser URL
             server.auth_state = _state_from(mock_open.call_args[0][0])
 
+        server.auth_code = None
         server.handle_request.side_effect = _receive
 
         run_loopback_login("key")
@@ -154,6 +156,7 @@ class TestRunLoopbackLogin:
             server.auth_code = "the-code"
             server.auth_state = "not-the-state-we-sent"
 
+        server.auth_code = None
         server.handle_request.side_effect = _receive
 
         with pytest.raises(RuntimeError, match="State mismatch"):
@@ -169,11 +172,54 @@ class TestRunLoopbackLogin:
         mock_server_cls.return_value = server
         server.auth_code = None
         server.auth_state = None
+        server.callback_seen = False
         server.handle_request.side_effect = lambda: None
 
         with pytest.raises(TimeoutError):
             run_loopback_login("key", timeout=1)
         mock_exchange.assert_not_called()
+
+    @patch("trufo.api.loopback_auth.exchange_loopback_code")
+    @patch("trufo.api.loopback_auth.webbrowser.open", return_value=False)
+    @patch("trufo.api.loopback_auth.HTTPServer")
+    def test_no_browser_raises_immediately(self, mock_server_cls, mock_open, mock_exchange):
+        """A headless host must fail fast, not block for the full timeout.
+
+        webbrowser.open returning False is the real headless signal — binding
+        127.0.0.1 succeeds over SSH and in containers, so the bind cannot be
+        what we key on.
+        """
+        server = MagicMock()
+        server.server_address = ("127.0.0.1", 54321)
+        mock_server_cls.return_value = server
+        server.auth_code = None
+
+        with pytest.raises(BrowserUnavailableError):
+            run_loopback_login("key")
+
+        server.handle_request.assert_not_called()  # did not wait
+        mock_exchange.assert_not_called()
+
+    @patch("trufo.api.loopback_auth.exchange_loopback_code")
+    @patch("trufo.api.loopback_auth.webbrowser.open", return_value=True)
+    @patch("trufo.api.loopback_auth.HTTPServer")
+    def test_callback_without_code_is_not_reported_as_timeout(
+        self, mock_server_cls, mock_open, mock_exchange,
+    ):
+        server = MagicMock()
+        server.server_address = ("127.0.0.1", 54321)
+        mock_server_cls.return_value = server
+        server.auth_code = None
+        server.auth_state = None
+
+        def _callback_without_code():
+            # the browser reached us, but carried no code parameter
+            server.callback_seen = True
+
+        server.handle_request.side_effect = _callback_without_code
+
+        with pytest.raises(RuntimeError, match="without an authorization code"):
+            run_loopback_login("key", timeout=1)
 
 
 def _state_from(url: str) -> str:

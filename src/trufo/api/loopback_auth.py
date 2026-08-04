@@ -23,6 +23,7 @@ import base64
 import hashlib
 import logging
 import secrets
+import time
 import webbrowser
 from dataclasses import dataclass
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -44,9 +45,24 @@ logger = logging.getLogger(__name__)
 _VERIFIER_BYTES = 32
 _STATE_BYTES = 32
 
-# Matches the server-side authorization code lifetime; a same-machine browser
-# hop should take seconds, so this is generous.
+# How long to wait for the user to finish in the browser. Deliberately NOT the
+# same clock as the server's 60 s authorization-code lifetime: that one covers
+# mint -> redeem, which is a machine-speed hop, while this one covers a human
+# opening a browser and signing in. Do not "fix" one to match the other.
 _DEFAULT_TIMEOUT = 300
+
+# Path the CLI listens on. Checked so that an unrelated local request cannot
+# consume our one-shot listener and strand the sign-in.
+_CALLBACK_PATH = "/callback"
+
+
+class BrowserUnavailableError(Exception):
+    """Raised when no browser could be opened on this machine.
+
+    Signals the caller to fall back to the device flow, which does not need a
+    local browser or a local listener.
+    """
+
 
 _BROWSER_RESPONSE = b"""<!doctype html>
 <html><body style="font-family: sans-serif; text-align: center; padding: 60px">
@@ -80,7 +96,18 @@ class _CallbackHandler(BaseHTTPRequestHandler):
     """One-shot handler that captures the code and state from the redirect."""
 
     def do_GET(self) -> None:  # noqa: N802 — name fixed by BaseHTTPRequestHandler
-        params = parse_qs(urlparse(self.path).query)
+        parsed = urlparse(self.path)
+
+        # ignore anything that is not our callback (a browser favicon prefetch,
+        # say) so it cannot consume the one-shot listener
+        if parsed.path != _CALLBACK_PATH:
+            self.send_response(404)
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
+
+        params = parse_qs(parsed.query)
+        self.server.callback_seen = True  # type: ignore[attr-defined]
         self.server.auth_code = (params.get("code") or [None])[0]  # type: ignore[attr-defined]
         self.server.auth_state = (params.get("state") or [None])[0]  # type: ignore[attr-defined]
 
@@ -117,10 +144,14 @@ def run_loopback_login(
         TokenPair.
 
     Raises:
-        OSError: If no loopback port can be bound. The caller should fall back
-            to the device flow, which needs no local listener.
+        BrowserUnavailableError: If no browser could be launched. The caller
+            should fall back to the device flow. This — not a bind failure — is
+            the signal that a machine is headless.
+        OSError: If no loopback port can be bound. Rare; also a reason to fall
+            back to the device flow.
         TimeoutError: If the user does not complete sign-in within timeout.
-        RuntimeError: On state mismatch or a failed code exchange.
+        RuntimeError: On state mismatch, a callback with no code, or a failed
+            code exchange.
     """
     pkce = generate_pkce()
     state = secrets.token_urlsafe(_STATE_BYTES)
@@ -130,6 +161,7 @@ def run_loopback_login(
     httpd.timeout = timeout
     httpd.auth_code = None  # type: ignore[attr-defined]
     httpd.auth_state = None  # type: ignore[attr-defined]
+    httpd.callback_seen = False  # type: ignore[attr-defined]
 
     try:
         port = httpd.server_address[1]
@@ -142,20 +174,35 @@ def run_loopback_login(
         })
         authorize_url = f"{app_url}{LOOPBACK_AUTH_PATH}?{query}"
 
-        opened = webbrowser.open(authorize_url)
-        if not opened:
-            print("Could not open a browser automatically.")
+        # webbrowser.open returns False when it cannot find a browser to launch,
+        # which is the real signal for "this machine is headless". Binding the
+        # loopback port succeeds almost everywhere, including over SSH and in
+        # containers, so a bind failure is NOT that signal.
+        if not webbrowser.open(authorize_url):
+            raise BrowserUnavailableError("No browser available on this machine.")
+
         print(f"Continue sign-in here: {authorize_url}")
 
-        # blocks until the browser hits the callback or timeout elapses
-        httpd.handle_request()
+        # loop rather than a single handle_request: an unrelated local request
+        # (a favicon prefetch, a port scanner) answers 404 without consuming
+        # our wait
+        deadline = time.monotonic() + timeout
+        while httpd.auth_code is None:  # type: ignore[attr-defined]
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                break
+            httpd.timeout = remaining
+            httpd.handle_request()
 
         code = httpd.auth_code  # type: ignore[attr-defined]
         received_state = httpd.auth_state  # type: ignore[attr-defined]
+        callback_seen = httpd.callback_seen  # type: ignore[attr-defined]
     finally:
         httpd.server_close()
 
     if code is None:
+        if callback_seen:
+            raise RuntimeError("Sign-in callback arrived without an authorization code.")
         raise TimeoutError(f"Timed out after {timeout}s waiting for browser sign-in.")
 
     # the state check is what stops a third party from feeding us a code that
