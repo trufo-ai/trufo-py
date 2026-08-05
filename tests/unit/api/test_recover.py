@@ -11,6 +11,7 @@ import requests
 
 from trufo.api.endpoints import TRUFO_API_URL
 from trufo.api.tps.recover import recover_content
+from trufo.api.headers import sdk_headers
 
 _M = "trufo.api.tps.recover"
 
@@ -39,7 +40,7 @@ class TestRecoverContent:
         assert result.manifest is None
         call = mock_post.call_args
         assert call.args[0] == f"{TRUFO_API_URL}/content/recover"
-        assert call.kwargs["headers"] == {"X-API-Key": "key"}
+        assert call.kwargs["headers"] == sdk_headers("key")
         assert call.kwargs["json"] == {
             "media_input": base64.b64encode(b"media-bytes").decode()
         }

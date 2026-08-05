@@ -22,6 +22,7 @@ from trufo.api.endpoints import (
     DEVICE_TOKEN,
     TRUFO_API_URL,
 )
+from trufo.api.headers import sdk_headers
 
 logger = logging.getLogger(__name__)
 
@@ -64,7 +65,7 @@ def initiate_device_auth(
     """
     resp = requests.post(
         f"{base_url}{DEVICE_AUTHORIZE}",
-        headers={"X-API-Key": api_key},
+        headers=sdk_headers(api_key),
         timeout=30,
     )
     if resp.status_code != 200:
@@ -110,10 +111,7 @@ def poll_for_tokens(
     while time.monotonic() < deadline:
         resp = requests.post(
             f"{base_url}{DEVICE_TOKEN}",
-            headers={
-                "X-API-Key": api_key,
-                "Content-Type": "application/json",
-            },
+            headers=sdk_headers(api_key, **{"Content-Type": "application/json"}),
             json={"device_code": device_code},
             timeout=30,
         )

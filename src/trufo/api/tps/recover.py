@@ -9,6 +9,7 @@ from dataclasses import dataclass
 import requests
 
 from trufo.api.endpoints import TPS_CONTENT_RECOVER, TRUFO_API_URL
+from trufo.api.headers import sdk_headers
 
 
 @dataclass(frozen=True)
@@ -51,7 +52,7 @@ def recover_content(
     resp = requests.post(
         trufo_api_url + TPS_CONTENT_RECOVER,
         json={"media_input": base64.b64encode(media_bytes).decode()},
-        headers={"X-API-Key": api_key},
+        headers=sdk_headers(api_key),
         timeout=60,
     )
     resp.raise_for_status()

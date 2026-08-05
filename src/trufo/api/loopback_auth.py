@@ -38,6 +38,7 @@ from trufo.api.endpoints import (
     TRUFO_API_URL,
     TRUFO_APP_URL,
 )
+from trufo.api.headers import sdk_headers
 
 logger = logging.getLogger(__name__)
 
@@ -243,10 +244,7 @@ def exchange_loopback_code(
     """
     resp = requests.post(
         f"{base_url}{LOOPBACK_TOKEN}",
-        headers={
-            "X-API-Key": api_key,
-            "Content-Type": "application/json",
-        },
+        headers=sdk_headers(api_key, **{"Content-Type": "application/json"}),
         json={
             "code": code,
             "code_verifier": code_verifier,

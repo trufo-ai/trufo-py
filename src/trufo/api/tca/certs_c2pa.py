@@ -20,6 +20,7 @@ from trufo.api.endpoints import (
     TRUFO_API_URL,
 )
 from trufo.api.session import TrufoSession
+from trufo.api.headers import sdk_headers
 from trufo.crypt.algorithms import infer_signing_algorithm
 from trufo.crypt.tca_certs import LeafType, build_csr, est_enroll, extract_cert_chain
 
@@ -154,7 +155,7 @@ def _request_c2pa_csr_jwt(
     # RA authenticates via client_assertion in the body, not Bearer JWT
     resp = requests.post(
         f"{TRUFO_API_URL}{RA_CSR_JWT}",
-        headers={"Content-Type": "application/json"},
+        headers=sdk_headers(**{"Content-Type": "application/json"}),
         json=body,
         timeout=30,
     )

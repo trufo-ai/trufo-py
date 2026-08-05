@@ -43,6 +43,7 @@ from trufo.c2pa.watermark import WatermarkEffort
 from trufo.util.credentials import TrufoApiKey, load_api_key
 from trufo.util.optional_imports import require_provenance_module
 from trufo.util.warnings import emit_server_warnings
+from trufo.api.headers import sdk_headers
 
 
 @dataclass(frozen=True)
@@ -214,7 +215,7 @@ def _sign_c2pa_direct(
     resp = requests.post(
         trufo_api_url + endpoint,
         json=body,
-        headers={"X-API-Key": api_key},
+        headers=sdk_headers(api_key),
         timeout=60,
     )
     resp.raise_for_status()
@@ -256,7 +257,7 @@ def get_c2pa_s3_upload_url(
     resp = requests.post(
         trufo_api_url + TPS_C2PA_GET_S3_URL,
         json=body,
-        headers={"X-API-Key": api_key},
+        headers=sdk_headers(api_key),
         timeout=60,
     )
     resp.raise_for_status()
@@ -298,7 +299,7 @@ def _sign_c2pa_s3(
     resp = requests.post(
         trufo_api_url + endpoint,
         json=body,
-        headers={"X-API-Key": api_key},
+        headers=sdk_headers(api_key),
         timeout=60,
     )
     resp.raise_for_status()
