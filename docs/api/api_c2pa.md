@@ -120,17 +120,17 @@ permanent signing record.
 | `media_input_s3` | string | Yes\* | Opaque reference from `/c2pa/io/get-s3-url` |
 | `actions` | list | Yes | `[name, params]` pairs, applied in order |
 | `assertions` | list | No | `[name, params]` pairs recorded in the manifest |
-| `manifest_title` | string | No | Active manifest `dc:title` |
-| `ingredient_title` | string | No | Title of the input-derived `parentOf` ingredient |
+| `manifest_title` | string | No | The manifest title of the signed output asset. Omitted from the manifest when unset. |
+| `ingredient_title` | string | No | The ingredient title assigned to the input asset (parent, via a `c2pa.opened` action). When unset: the input's manifest title, if it exists; otherwise, `input.{ext}`. |
 
 \* Provide exactly one.
 
 **Response (200):** `media_output` (base64) or `media_output_s3` (presigned download
 URL), plus `warnings`.
 
-When titles are omitted the engine derives them by sniffing the media, which cannot
-distinguish formats sharing a container (TIFF/DNG, HEIC/HEIF/AVIF). Pass them
-explicitly when you know the intended filename.
+Fallback titles are derived, not authored: an embedded manifest title is third-party
+text re-signed as-is. Pass explicit titles when you need deterministic, curated
+output — typically the asset's filename.
 
 ### `POST /c2pa/io/get-s3-url`
 
@@ -339,7 +339,7 @@ the asset, not a Trufo attestation; whenever any are present the manifest's
 | Param | Type | Required | Description |
 | ----- | ---- | -------- | ----------- |
 | `relationship` | string | Yes | `inputTo` (a prompt, model, or dataset) or `componentOf` (a placed component) |
-| `title` | string | No | Display name (`dc:title`) |
+| `title` | string | No | The ingredient title (`dc:title`). When unset: the media's manifest title, if it exists; otherwise, `ingredient_{n}.{ext}`. |
 | `data_types` | list | No | `[{"type": "c2pa.types.<kind>", "version": "…"}]` |
 | `digital_source_type` | string | No | The IPTC `trainedAlgorithmicMedia` or `compositeWithTrainedAlgorithmicMedia` URI |
 | `media` | string | For `componentOf` | base64 bytes; must be a thumbnail-capable image (JPEG, PNG, WebP, GIF, TIFF) |
