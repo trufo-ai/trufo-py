@@ -339,7 +339,7 @@ the asset, not a Trufo attestation; whenever any are present the manifest's
 | Param | Type | Required | Description |
 | ----- | ---- | -------- | ----------- |
 | `relationship` | string | Yes | `inputTo` (a prompt, model, or dataset) or `componentOf` (a placed component) |
-| `title` | string | No | The ingredient title (`dc:title`). When unset: the media's manifest title, if it exists; otherwise, `ingredient_{n}.{ext}`. |
+| `title` | string | No | The ingredient title (`dc:title`). When unset: the media's manifest title, if it exists; otherwise, `ingredient_{n}.{ext}` (media-less entries: `ingredient_{n}`). |
 | `data_types` | list | No | `[{"type": "c2pa.types.<kind>", "version": "…"}]` |
 | `digital_source_type` | string | No | The IPTC `trainedAlgorithmicMedia` or `compositeWithTrainedAlgorithmicMedia` URI |
 | `media` | string | For `componentOf` | base64 bytes; must be a thumbnail-capable image (JPEG, PNG, WebP, GIF, TIFF) |
