@@ -31,6 +31,16 @@ trufo --help
 python -c "import trufo; print(trufo.__version__)"
 ```
 
+## Hosts
+
+Trufo serves three API hosts with the same routes:
+
+- **`api.trufo.ai`** — production (global)
+- **`eu.api.trufo.ai`** — production (Europe)
+- **`test.api.trufo.ai`** — the test host: try out endpoints without Organization Validation or billing. Outputs are signed with a test certificate (not accepted by conformant validators), records are ephemeral, and `-test` API key scopes apply.
+
+The test host is the natural place to develop an integration before pointing it at production. Some newer features are available on the test host only — marked (🟠 **test only**) throughout these docs.
+
 ## Prerequisites
 
 1. **Create an account** at [app.trufo.ai](https://app.trufo.ai).

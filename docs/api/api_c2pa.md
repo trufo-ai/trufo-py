@@ -23,6 +23,7 @@ See [api_trufo.md](api_trufo.md) for authentication, error conventions, and regi
 | `POST /c2pa/ai-disclosure/add`, `/list` | `c2pa-sign-prod` or `c2pa-sign-test` | — |
 | `POST /c2pa/software-agent/add`, `/list` | `c2pa-sign-prod` or `c2pa-sign-test` | — |
 | `POST /content/recover` | `c2pa-decode` | — |
+| `POST /bind/watermark`, `/bind/commit` | `watermark-test` (🟠 **test only**) | — |
 
 An account access token with the `c2pa_sign` permission may be used instead of an
 API key on the signing and assertion-record endpoints; `/content/recover` requires
@@ -232,10 +233,11 @@ action per request.
 | `effort_policy` | string | Failure tolerance, below; `"require"` for a bare action. `effort` is a deprecated alias (a warning is returned; providing both is an error) |
 
 **Provenance mode** embeds a per-content watermark ID linked to this signing
-record. **Compliance mode** (🟠 **TEST** — `test.api.trufo.ai` only) embeds
+record. **Compliance mode** (🟠 **test only**) embeds
 your organization's reusable mark for the declared AI class: one watermark ID
 per (label, modality) pair, issued on first use and shared by every
-compliance sign after that.
+compliance sign after that. To watermark media you sign yourself, use
+[standalone binding](#standalone-binding) instead of a sign-flow action.
 
 | `effort_policy` | Unsupported format | Runtime failure |
 | --------------- | ------------------ | --------------- |
@@ -362,6 +364,64 @@ cannot also declare `digital_source_type`.
 
 ---
 
+## Standalone Binding
+
+🟠 **test only**.
+
+Bind embeds a Trufo watermark **without** C2PA signing: you sign the
+watermarked media with your own certificate. In provenance mode, the record
+starts incomplete and `/bind/commit` completes it by verifying your signed
+manifest declares the mark. In compliance mode a single call embeds your
+organization's mark for a declared AI class — there is nothing to commit.
+SDK: `bind_watermark_test()` / `bind_commit_test()`.
+
+### `POST /bind/watermark`
+
+**Auth:** API key with the `watermark-test` scope.
+
+| Field | Type | Required | Description |
+| ----- | ---- | -------- | ----------- |
+| `media_input` | string | Yes | base64-encoded media to watermark |
+| `mode` | string | No | `"provenance"` (default) or `"compliance"` |
+| `ai_compliance_label` | string | In compliance mode | `"ai_generated"`, `"ai_modified"`, or `"undeclared"`; rejected outside compliance mode |
+
+**Response (200):**
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `media_output` | string | base64-encoded watermarked media |
+| `wid` | string | The embedded watermark id |
+| `cid` | string or null | Record id for `/bind/commit`; null in compliance mode |
+
+Bind has no effort tiers: the watermark is always required, and an
+unsupported format (outside the watermarkable table above) is an error.
+
+### `POST /bind/commit`
+
+**Auth:** API key with the `watermark-test` scope.
+
+| Field | Type | Required | Description |
+| ----- | ---- | -------- | ----------- |
+| `cid` | string | Yes | Record id from `/bind/watermark` |
+| `media_input` | string | Yes | base64-encoded C2PA-signed watermarked media |
+
+The manifest must declare the mark: a `c2pa.soft-binding` assertion with
+algorithm `ai.trufo.pawprint.watermark` and the record's watermark id as its
+block value, paired with a `c2pa.watermarked.bound` action, per the C2PA
+specification. The manifest is checked for this declaration, not for trust
+status — sign with whatever certificate you use.
+
+**Response (200):** `cid`, `wid`.
+
+**Errors:**
+
+| Status | Meaning |
+| ------ | ------- |
+| 400 | Invalid mode/label pairing, unsupported media format, no parseable manifest, or the manifest does not declare the record's mark (the record stays incomplete — fix and resubmit) |
+| 404 | Unknown `cid`, or a record not created by `/bind/watermark` |
+
+---
+
 ## Watermark Recovery
 
 ### `POST /content/recover`
@@ -382,12 +442,16 @@ been stripped.
 | `detected` | bool | Whether a Trufo watermark was found |
 | `wid` | string or null | The decoded watermark id |
 | `confidence` | float or null | Detection strength in (0, 1] — how strongly the signal was recovered, not a probability of correctness |
-| `manifest` | object or null | The stored manifest, when available for that record |
+| `manifest` | object or null | Provenance marks: the stored manifest, when available for that record |
+| `ai_compliance_label` | string or null | Compliance marks: the declared AI class |
+| `oid` | string or null | Your organization ID, present only when the mark is your organization's |
 
 Decoding accepts any parseable image or audio input, not only the formats supported
-for embedding. Watermark ids and confidence are returned for content your own
-organization signed; watermarks belonging to other organizations report `detected`
-without further detail.
+for embedding. What a detected watermark discloses depends on its kind: a
+provenance mark reveals its details for content your own organization signed
+(other organizations' marks report `detected` without further detail), while a
+compliance mark reveals its declared AI class to any decoder — with `oid` marking
+the ones your organization owns.
 
 ---
 

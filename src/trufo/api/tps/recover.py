@@ -16,14 +16,19 @@ from trufo.api.headers import sdk_headers
 class ContentRecovery:
     """Result of a watermark recovery call.
 
-    The response will grow as recovery features land (e.g. the stored C2PA
-    manifest once manifest capture is live); unknown future fields are ignored.
+    What accompanies a detected watermark depends on the mark's kind: a
+    provenance mark carries the stored C2PA manifest when one has been
+    captured; a compliance mark carries the owning organization's declared AI
+    class instead. ``oid`` is set only when the mark belongs to your own
+    organization. Unknown future fields are ignored.
     """
 
     detected: bool
     wid: str | None = None
     confidence: float | None = None
     manifest: dict | None = None
+    ai_compliance_label: str | None = None
+    oid: str | None = None
 
 
 def recover_content(
@@ -63,4 +68,6 @@ def recover_content(
         wid=payload.get("wid"),
         confidence=payload.get("confidence"),
         manifest=payload.get("manifest"),
+        ai_compliance_label=payload.get("ai_compliance_label"),
+        oid=payload.get("oid"),
     )

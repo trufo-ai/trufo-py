@@ -38,12 +38,32 @@ class TestRecoverContent:
         assert result.wid == "image.001a1b2c3d4"
         assert result.confidence == 0.98
         assert result.manifest is None
+        assert result.ai_compliance_label is None
+        assert result.oid is None
         call = mock_post.call_args
         assert call.args[0] == f"{TRUFO_API_URL}/content/recover"
         assert call.kwargs["headers"] == sdk_headers("key")
         assert call.kwargs["json"] == {
             "media_input": base64.b64encode(b"media-bytes").decode()
         }
+
+    @patch(f"{_M}.requests.post")
+    def test_compliance_mark_fields_are_parsed(self, mock_post):
+        mock_post.return_value = _response(
+            {
+                "detected": True,
+                "wid": "image.0000001abcd",
+                "confidence": 0.9,
+                "ai_compliance_label": "ai_generated",
+                "oid": "org_1",
+            }
+        )
+
+        result = recover_content("key", b"media-bytes")
+
+        assert result.ai_compliance_label == "ai_generated"
+        assert result.oid == "org_1"
+        assert result.manifest is None
 
     @patch(f"{_M}.requests.post")
     def test_not_detected_returns_bare_result(self, mock_post):
