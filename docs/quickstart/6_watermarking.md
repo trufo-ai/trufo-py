@@ -4,7 +4,10 @@ Embed an imperceptible Trufo watermark in your media as part of C2PA signing.
 
 ## What This Does
 
-For supported image and audio formats, C2PA signing can embed a **Trufo Pawprint watermark** — an imperceptible signal woven into the pixels or audio samples themselves. The watermark carries a unique watermark ID issued by Trufo and linked to your signing record, so the provenance of the content can be recovered even after the C2PA manifest has been stripped (e.g. by re-encoding, screenshots, or metadata-scrubbing pipelines).
+For supported image and audio formats, C2PA signing can embed a **Trufo Pawprint watermark** — an imperceptible signal woven into the pixels or audio samples themselves. The watermark carries a watermark ID issued by Trufo, so information about the content survives even after the C2PA manifest has been stripped (e.g. by re-encoding, screenshots, or metadata-scrubbing pipelines). What the ID resolves to depends on the mark's mode:
+
+- **Provenance** (the default): a unique per-content ID linked to your signing record.
+- **Compliance** (🟠 **TEST** — `test.api.trufo.ai` only): your organization's reusable mark declaring the content's AI class (`ai_generated`, `ai_modified`, or `undeclared`).
 
 The signed manifest declares the watermark per the C2PA specification: a `c2pa.watermarked.bound` action plus a `c2pa.soft-binding` assertion with algorithm `ai.trufo.pawprint.watermark`, Trufo's entry in the official C2PA soft-binding algorithm registry.
 
@@ -17,14 +20,18 @@ The signed manifest declares the watermark per the C2PA specification: a `c2pa.w
 | Image    | JPEG, PNG, WebP, TIFF |
 | Audio    | WAV, FLAC, MP3, M4A (`audio/mp4`) |
 
-Signing formats outside this list succeeds normally; the watermark is simply not embedded, which the `effort` setting below lets you treat as an error or a warning.
+Signing formats outside this list succeeds normally; the watermark is simply not embedded, which the `effort_policy` setting below lets you treat as an error or a warning.
 
 ## The `watermark` Action
 
-A `["watermark", {...}]` entry in `actions` requests watermarking; at most one is allowed per request. Its `effort` parameter (a `WatermarkEffort` value) sets what happens when the watermark cannot be applied:
+A `["watermark", {...}]` entry in `actions` requests watermarking; at most one is allowed per request. Its parameters:
 
-| `effort` | Unsupported format | Runtime failure (e.g. missing library) |
-| -------- | ------------------ | -------------------------------------- |
+- `mode` (a `WatermarkMode` value): `"provenance"` (default) or `"compliance"`.
+- `ai_compliance_label` (an `AiComplianceLabel` value): the declared AI class. Required in compliance mode, rejected otherwise.
+- `effort_policy` (a `WatermarkEffort` value): what happens when the watermark cannot be applied. `effort` is a deprecated alias — it still works, with a warning; providing both keys is an error.
+
+| `effort_policy` | Unsupported format | Runtime failure (e.g. missing library) |
+| --------------- | ------------------ | -------------------------------------- |
 | `"require"` (default for a bare action) | error | error |
 | `"require_if_supported"` | signs unwatermarked, with a warning | error |
 | `"best_effort"` | signs unwatermarked, with a warning | signs unwatermarked, with a warning |
@@ -43,7 +50,7 @@ signed_bytes = sign_c2pa(
     api_key,
     media_bytes,
     actions=[
-        ["watermark", {}],  # bare action == {"effort": "require"}
+        ["watermark", {}],  # bare action == {"effort_policy": "require"}
     ],
 )
 ```
@@ -55,7 +62,7 @@ signed_bytes = sign_c2pa(
     api_key,
     media_bytes,
     actions=[
-        ["watermark", {"effort": "require_if_supported"}],
+        ["watermark", {"effort_policy": "require_if_supported"}],
     ],
 )
 ```
@@ -67,12 +74,24 @@ signed_bytes = sign_c2pa(
     api_key,
     media_bytes,
     actions=[
-        ["watermark", {"effort": "best_effort"}],
+        ["watermark", {"effort_policy": "best_effort"}],
     ],
 )
 ```
 
-The `trufo.c2pa.WatermarkEffort` enum holds the three values.
+Embed your organization's compliance mark for AI-generated content (🟠 **TEST** — `test.api.trufo.ai` only, so via `sign_c2pa_test`):
+
+```python
+signed_bytes = sign_c2pa_test(
+    api_key,
+    media_bytes,
+    actions=[
+        ["watermark", {"mode": "compliance", "ai_compliance_label": "ai_generated"}],
+    ],
+)
+```
+
+The `trufo.c2pa` enums `WatermarkEffort`, `WatermarkMode`, and `AiComplianceLabel` hold the accepted values.
 
 ## Hosted vs Distributed
 
@@ -81,7 +100,7 @@ Watermarking works in both signing modes with the same request shape:
 - **Hosted** (`sign_c2pa`, `sign_c2pa_test`, and the S3 variants) — the watermark is embedded on Trufo servers. No extra installation is required.
 - **Distributed** (`sign_c2pa_distributed`, `sign_c2pa_distributed_test`) — the watermark is embedded locally by the Trufo engine, so your media never leaves your machine. The watermark ID is issued by the Trufo server during the preprocessing round-trip. Requires the `trufo[local-full]` optional installation (see [README](../../README.md#optional-local-engine)).
 
-**Without the watermark engine** (a `local-sign-only` or legacy `provenance` installation), distributed signing works normally — but a watermark request **always fails immediately** with an install hint (`ImportError`: the trufo-pawprint dependency is required), regardless of `effort`, before anything is sent to the server. The `effort` levels govern what happens when the *installed* engine cannot watermark a particular input; requesting a watermark without the engine installed is refused outright.
+**Without the watermark engine** (a `local-sign-only` or legacy `provenance` installation), distributed signing works normally — but a watermark request **always fails immediately** with an install hint (`ImportError`: the trufo-pawprint dependency is required), regardless of `effort_policy`, before anything is sent to the server. The `effort_policy` levels govern what happens when the *installed* engine cannot watermark a particular input; requesting a watermark without the engine installed is refused outright.
 
 Additional notes for distributed (local) watermarking:
 
@@ -116,7 +135,7 @@ Decoding is read-only and accepts any parseable image or audio input, not just t
 
 **`Watermarking is not supported for <mime> media.`**
 
-You requested a watermark with `effort: require` on a format outside the supported table above. Either transcode first, or use `require_if_supported` / `best_effort` to sign such formats unwatermarked.
+You requested a watermark with `effort_policy: require` on a format outside the supported table above. Either transcode first, or use `require_if_supported` / `best_effort` to sign such formats unwatermarked.
 
 **`Watermarking failed: <engine error>`**
 

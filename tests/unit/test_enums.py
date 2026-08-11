@@ -12,7 +12,7 @@ import pytest
 
 from trufo.c2pa.actions import TrufoAction
 from trufo.c2pa.assertions import UserAssertion
-from trufo.c2pa.watermark import WatermarkEffort
+from trufo.c2pa.watermark import AiComplianceLabel, WatermarkEffort, WatermarkMode
 from trufo.crypt.algorithms import LeafType, SigningAlgorithm
 
 # String-keyed public enums: the member value IS the wire/API string, so each
@@ -36,6 +36,15 @@ STR_ENUMS = {
         "REQUIRE": "require",
         "REQUIRE_IF_SUPPORTED": "require_if_supported",
         "BEST_EFFORT": "best_effort",
+    },
+    WatermarkMode: {
+        "PROVENANCE": "provenance",
+        "COMPLIANCE": "compliance",
+    },
+    AiComplianceLabel: {
+        "AI_GENERATED": "ai_generated",
+        "AI_MODIFIED": "ai_modified",
+        "UNDECLARED": "undeclared",
     },
     LeafType: {
         "C2PA_L1": "c2pa-l1",

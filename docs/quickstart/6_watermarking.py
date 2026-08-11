@@ -33,7 +33,8 @@ media_bytes = INPUT_FILE.read_bytes()
 
 
 # --- 1. watermark, failing the sign if it cannot be embedded -----------------
-# A bare ["watermark", {}] means effort "require": any failure is an error.
+# A bare ["watermark", {}] means effort_policy "require": any failure is an
+# error.
 
 signed_bytes = sign_c2pa_test(
     api_key,
@@ -54,7 +55,9 @@ with warnings.catch_warnings(record=True) as caught:
     signed_bytes = sign_c2pa_test(
         api_key,
         media_bytes,
-        actions=[["watermark", {"effort": WatermarkEffort.REQUIRE_IF_SUPPORTED.value}]],
+        actions=[
+            ["watermark", {"effort_policy": WatermarkEffort.REQUIRE_IF_SUPPORTED.value}]
+        ],
     )
 
 if caught:
@@ -64,7 +67,20 @@ else:
     print("  watermark embedded")
 
 
-# --- 3. recover a watermark --------------------------------------------------
+# --- 3. compliance mark: declare the content's AI class (test host only) -----
+# Instead of a per-content provenance ID, embed the org's reusable mark for a
+# declared AI class; the same wid is reused for every compliance sign of that
+# (label, modality).
+
+signed_bytes = sign_c2pa_test(
+    api_key,
+    media_bytes,
+    actions=[["watermark", {"mode": "compliance", "ai_compliance_label": "ai_generated"}]],
+)
+print("Embedded the org's ai_generated compliance mark")
+
+
+# --- 4. recover a watermark --------------------------------------------------
 # Works even after the C2PA manifest has been stripped — re-encoded, screenshot,
 # or run through a metadata-scrubbing pipeline.
 

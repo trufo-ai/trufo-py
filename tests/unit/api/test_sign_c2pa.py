@@ -657,7 +657,18 @@ class TestRequestValidation:
 
     @pytest.mark.parametrize(
         "params",
-        [{}, {"effort": "require"}, {"effort": "require_if_supported"}, {"effort": "best_effort"}],
+        [
+            {},
+            {"effort_policy": "require"},
+            {"effort_policy": "require_if_supported"},
+            {"effort_policy": "best_effort"},
+            {"effort": "require"},  # deprecated alias, still accepted
+            {"mode": "provenance"},
+            {"mode": "compliance", "ai_compliance_label": "ai_generated"},
+            {"mode": "compliance", "ai_compliance_label": "ai_modified"},
+            {"mode": "compliance", "ai_compliance_label": "undeclared"},
+            {"mode": "compliance", "ai_compliance_label": "ai_generated", "effort_policy": "best_effort"},
+        ],
     )
     def test_valid_watermark_action_accepted(self, params):
         _validate_actions([["watermark", params]])  # must not raise
@@ -665,11 +676,18 @@ class TestRequestValidation:
     @pytest.mark.parametrize(
         "params, match",
         [
-            ({"effort": "maybe"}, "effort"),
-            ({"effort": True}, "effort"),
-            ({"apply": True}, "replaced by 'effort'"),
+            ({"effort_policy": "maybe"}, "effort_policy"),
+            ({"effort_policy": True}, "effort_policy"),
+            ({"effort": "maybe"}, "effort_policy"),
+            ({"effort": "require", "effort_policy": "require"}, "not both"),
+            ({"apply": True}, "replaced by 'effort_policy'"),
+            ({"mode": "attestation"}, "mode"),
+            ({"mode": "compliance"}, "ai_compliance_label"),
+            ({"mode": "compliance", "ai_compliance_label": "none"}, "ai_compliance_label"),
+            ({"ai_compliance_label": "ai_generated"}, "compliance-mode"),
+            ({"mode": "provenance", "ai_compliance_label": "ai_generated"}, "compliance-mode"),
             ({"wid_package": {"wid": "x"}}, "Unsupported watermark parameter"),
-            ({"effort": "require", "nonsense": 1}, "Unsupported watermark parameter"),
+            ({"effort_policy": "require", "nonsense": 1}, "Unsupported watermark parameter"),
             (None, "parameter object"),
         ],
     )

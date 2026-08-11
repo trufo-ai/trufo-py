@@ -207,7 +207,7 @@ Ordered `[name, params]` pairs. Each media-transforming action feeds the next.
 | Action | Params | Description |
 | ------ | ------ | ----------- |
 | `"transcode"` | `{"target_mime_type": "<mime>"}` | Convert to another format in the same media class |
-| `"watermark"` | `{"effort": "<effort>"}` | Embed a Trufo watermark (off by default) |
+| `"watermark"` | `{"mode": "<mode>", "effort_policy": "<effort_policy>", ...}` | Embed a Trufo watermark (off by default) |
 | `"publish"` | `{}` | Mark for final distribution |
 | `"redact"` | `{"label": "<label>", "reason": "<reason>"}` | Remove an assertion from the input's history |
 
@@ -225,8 +225,20 @@ Embeds an imperceptible Trufo Pawprint watermark, declared in the manifest by a
 `ai.trufo.pawprint.watermark`. **Off unless requested.** At most one watermark
 action per request.
 
-| `effort` | Unsupported format | Runtime failure |
-| -------- | ------------------ | --------------- |
+| Param | Type | Description |
+| ----- | ---- | ----------- |
+| `mode` | string | `"provenance"` (default) or `"compliance"` — what the embedded watermark ID resolves to |
+| `ai_compliance_label` | string | Required in compliance mode, rejected otherwise: `"ai_generated"`, `"ai_modified"`, or `"undeclared"` |
+| `effort_policy` | string | Failure tolerance, below; `"require"` for a bare action. `effort` is a deprecated alias (a warning is returned; providing both is an error) |
+
+**Provenance mode** embeds a per-content watermark ID linked to this signing
+record. **Compliance mode** (🟠 **TEST** — `test.api.trufo.ai` only) embeds
+your organization's reusable mark for the declared AI class: one watermark ID
+per (label, modality) pair, issued on first use and shared by every
+compliance sign after that.
+
+| `effort_policy` | Unsupported format | Runtime failure |
+| --------------- | ------------------ | --------------- |
 | `"require"` (default for a bare action) | Error | Error |
 | `"require_if_supported"` | Signs unwatermarked, with a warning | Error |
 | `"best_effort"` | Signs unwatermarked, with a warning | Signs unwatermarked, with a warning |
