@@ -7,8 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] — 2026-08-12
+
 ### Added
 
+- Standalone bind helpers `bind_watermark_test` and `bind_commit_test`
+  (exported at top level), covering the test-host bind chain:
+  watermark → customer-signed manifest → commit.
+- `WatermarkMode` and `AiComplianceLabel` enums for the watermark action.
+- `recover()` responses carry `ai_compliance_label` and `oid`: a provenance
+  mark returns the stored C2PA manifest when one has been captured; a
+  compliance mark returns the owning organization's declared AI class.
+  `oid` is set only when the mark belongs to your own organization.
 - Browser sign-in for `trufo login`, using the OAuth 2.0 authorization code flow
   with PKCE over a loopback redirect (RFC 8252, RFC 7636). The CLI opens your
   browser and receives the result on `127.0.0.1`, so nothing has to be typed or
@@ -20,6 +30,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Breaking:** the `c2pa-decode` credential scope is renamed
+  `content-recover-{test,prod}`, matching the server's scope split. The old
+  `TRUFO_C2PA_DECODE_API_KEY` variable and stored key file are no longer
+  read, and the API no longer accepts `c2pa-decode` keys; mint a
+  `content-recover-prod` (or `-test`) key and store it with
+  `trufo set-api-key`.
+- The watermark action's `effort` parameter is renamed `effort_policy`;
+  `effort` remains accepted as a deprecated alias. The new `mode` parameter
+  selects the mark kind (`provenance`, the default, or `compliance`, which
+  requires `ai_compliance_label` and is test-host only).
+- Every API call sends SDK version headers (`tf_version`, `tfp_version`)
+  for server-side diagnostics.
+- The local-signing extras require `trufo-provenance >= 1.1.0, < 1.2.0`.
 - `trufo login` now prefers the loopback flow and falls back to the device flow
   automatically when no local listener can be bound. The device flow is
   unchanged and remains fully supported; existing scripts keep working.
@@ -283,7 +306,8 @@ Minor-version bump marks the general availability of the production C2PA signing
 - `trufo.intf`: credential storage and loading (env vars + file), CLI entry point.
 - PyPI trusted publishing via GitHub Actions (OIDC, no API tokens required).
 
-[Unreleased]: https://github.com/trufo-ai/trufo-py/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/trufo-ai/trufo-py/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/trufo-ai/trufo-py/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/trufo-ai/trufo-py/compare/v0.5.2...v1.0.0
 [0.5.2]: https://github.com/trufo-ai/trufo-py/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/trufo-ai/trufo-py/compare/v0.5.0...v0.5.1
