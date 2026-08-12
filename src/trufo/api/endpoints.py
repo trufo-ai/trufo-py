@@ -5,6 +5,8 @@
 Trufo API endpoint definitions.
 """
 
+import os
+
 TRUFO_API_URL = "https://api.trufo.ai"
 TRUFO_API_URL_EUROPE = "https://eu.api.trufo.ai"
 # test signing runs on its own host; unlike the main API there is no dedicated
@@ -15,9 +17,18 @@ TRUFO_CA_URL = "https://ca.trufo.ai"
 TRUFO_TSA_URL = "https://tsa.trufo.ai"
 TRUFO_OCSP_URL = "https://ocsp.trufo.ai"
 
-# account / device auth
+# webapp origin — where the browser is sent during loopback sign-in.
+# Overridable so the flow can be exercised against a non-production webapp; the
+# API base URL is chosen separately via TrufoSession(base_api_url=...).
+TRUFO_APP_URL = os.environ.get("TRUFO_APP_URL", "https://app.trufo.ai")
+TRUFO_APP_URL_TEST = "https://app-test.trufo.ai"
+
+# account / device auth (RFC 8628 — browser on a DIFFERENT machine)
 DEVICE_AUTHORIZE = "/account/device/authorize"
 DEVICE_TOKEN = "/account/device/token"
+# account / loopback auth (RFC 8252 + PKCE — browser on the SAME machine)
+LOOPBACK_TOKEN = "/account/loopback/token"
+LOOPBACK_AUTH_PATH = "/loopback"  # path on TRUFO_APP_URL, not on the API
 ACCOUNT_REFRESH = "/account/refresh"
 
 # registration authority
@@ -35,5 +46,7 @@ TPS_C2PA_SIGN = "/c2pa/sign"
 TPS_C2PA_SIGN_TEST = "/test/c2pa/sign"
 TPS_C2PA_GET_S3_URL = "/c2pa/io/get-s3-url"
 TPS_CONTENT_RECOVER = "/content/recover"
+TPS_BIND_WATERMARK = "/bind/watermark"
+TPS_BIND_COMMIT = "/bind/commit"
 TPS_C2PA_AI_DISCLOSURE_ADD = "/c2pa/ai-disclosure/add"
 TPS_C2PA_AI_DISCLOSURE_LIST = "/c2pa/ai-disclosure/list"

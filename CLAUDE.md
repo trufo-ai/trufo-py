@@ -14,9 +14,15 @@ certificate enrollment.
   `local-full` (adds `trufo-pawprint` + torch for local watermark embedding);
   `provenance` is the legacy alias of `local-sign-only`.
 - Watermarking is **off by default**; a `["watermark", {...}]` action requests it, with
-  `effort` = `require` (bare default) / `require_if_supported` / `best_effort` setting
-  failure tolerance (`WatermarkEffort` enum). Supported: JPEG/PNG/WebP/TIFF,
-  WAV/FLAC/MP3/M4A.
+  `effort_policy` = `require` (bare default) / `require_if_supported` / `best_effort`
+  setting failure tolerance (`WatermarkEffort` enum; `effort` is a deprecated alias)
+  and `mode` = `provenance` (default) / `compliance` selecting the mark kind
+  (`WatermarkMode`; compliance requires `ai_compliance_label` and is test-host only).
+  Supported: JPEG/PNG/WebP/TIFF, WAV/FLAC/MP3/M4A.
+- `bind_watermark_test()` / `bind_commit_test()` (test host only, `watermark-test`
+  scope) embed a watermark without Trufo signing: the caller signs with their own
+  certificate, and commit verifies the manifest declares the mark (soft-binding
+  assertion + `c2pa.watermarked.bound`). Both watermark modes apply.
 - `sign_c2pa_distributed()` uses the production remote signing endpoint and requires
   completed Organization Validation plus `c2pa-sign-prod` and `tsa` API keys.
 - `sign_c2pa_distributed_test()` uses the test remote signing endpoint and requires

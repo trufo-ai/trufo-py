@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Browser sign-in for `trufo login`, using the OAuth 2.0 authorization code flow
+  with PKCE over a loopback redirect (RFC 8252, RFC 7636). The CLI opens your
+  browser and receives the result on `127.0.0.1`, so nothing has to be typed or
+  copied. `trufo.api.loopback_auth` exposes `generate_pkce`,
+  `run_loopback_login`, and `exchange_loopback_code`.
+- `trufo login --device` forces the existing device authorization flow
+  (RFC 8628), for when the CLI and browser are on different machines — over SSH
+  or in a container, where a loopback redirect cannot reach the browser.
+
+### Changed
+
+- `trufo login` now prefers the loopback flow and falls back to the device flow
+  automatically when no local listener can be bound. The device flow is
+  unchanged and remains fully supported; existing scripts keep working.
+- `TrufoSession.init_session` takes a `use_device` keyword argument (default
+  `False`). The previous behaviour is `use_device=True`.
+
+### Fixed
+
+- `trufo add-gpi`, `register-gpic`, and `get-c2pa-cert` printed an uncaught
+  traceback instead of "run trufo login" when no session was configured, because
+  `load_session()` raises rather than returning `None`.
+
 ## [1.0.0] — 2026-08-03
 
 ### Added

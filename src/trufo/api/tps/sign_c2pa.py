@@ -39,10 +39,11 @@ from trufo.api.endpoints import (
 from trufo.c2pa.actions import TrufoAction
 from trufo.c2pa.assertions import UserAssertion
 from trufo.c2pa.redactions import RedactableAssertion, RedactionReason
-from trufo.c2pa.watermark import WatermarkEffort
+from trufo.c2pa.watermark import AiComplianceLabel, WatermarkEffort, WatermarkMode
 from trufo.util.credentials import TrufoApiKey, load_api_key
 from trufo.util.optional_imports import require_provenance_module
 from trufo.util.warnings import emit_server_warnings
+from trufo.api.headers import sdk_headers
 
 
 @dataclass(frozen=True)
@@ -118,21 +119,49 @@ def _validate_watermark_action(entry: Any) -> None:
     if not isinstance(params, dict):
         raise ValueError("The watermark action requires a parameter object.")
     if "apply" in params:
-        raise ValueError("The watermark 'apply' parameter has been replaced by 'effort'.")
-    unsupported = set(params) - {"effort"}
+        raise ValueError(
+            "The watermark 'apply' parameter has been replaced by 'effort_policy'."
+        )
+    unsupported = set(params) - {"effort_policy", "effort", "mode", "ai_compliance_label"}
     if unsupported:
         raise ValueError(
             f"Unsupported watermark parameter(s): {', '.join(sorted(unsupported))}."
         )
-    effort = params.get("effort")
-    if effort is not None:
+    if "effort" in params and "effort_policy" in params:
+        raise ValueError(
+            "Provide the watermark 'effort_policy' parameter or the deprecated "
+            "'effort', not both."
+        )
+    effort_policy = params.get("effort_policy", params.get("effort"))
+    if effort_policy is not None:
         try:
-            WatermarkEffort(effort)
+            WatermarkEffort(effort_policy)
         except (TypeError, ValueError) as exc:
             raise ValueError(
-                "The watermark 'effort' parameter must be one of 'require', "
+                "The watermark 'effort_policy' parameter must be one of 'require', "
                 "'require_if_supported', or 'best_effort'."
             ) from exc
+    mode = params.get("mode", WatermarkMode.PROVENANCE.value)
+    try:
+        WatermarkMode(mode)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(
+            "The watermark 'mode' parameter must be 'provenance' or 'compliance'."
+        ) from exc
+    label = params.get("ai_compliance_label")
+    if mode == WatermarkMode.COMPLIANCE.value:
+        try:
+            AiComplianceLabel(label)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(
+                "Compliance-mode watermarks require the 'ai_compliance_label' "
+                "parameter: one of 'ai_generated', 'ai_modified', or 'undeclared'."
+            ) from exc
+    elif label is not None:
+        raise ValueError(
+            "The 'ai_compliance_label' parameter applies only to compliance-mode "
+            "watermarks."
+        )
 
 
 def _validate_redact_action(entry: Any) -> str:
@@ -214,7 +243,7 @@ def _sign_c2pa_direct(
     resp = requests.post(
         trufo_api_url + endpoint,
         json=body,
-        headers={"X-API-Key": api_key},
+        headers=sdk_headers(api_key),
         timeout=60,
     )
     resp.raise_for_status()
@@ -256,7 +285,7 @@ def get_c2pa_s3_upload_url(
     resp = requests.post(
         trufo_api_url + TPS_C2PA_GET_S3_URL,
         json=body,
-        headers={"X-API-Key": api_key},
+        headers=sdk_headers(api_key),
         timeout=60,
     )
     resp.raise_for_status()
@@ -298,7 +327,7 @@ def _sign_c2pa_s3(
     resp = requests.post(
         trufo_api_url + endpoint,
         json=body,
-        headers={"X-API-Key": api_key},
+        headers=sdk_headers(api_key),
         timeout=60,
     )
     resp.raise_for_status()

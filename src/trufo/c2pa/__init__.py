@@ -6,12 +6,14 @@
 from trufo.c2pa.actions import TrufoAction
 from trufo.c2pa.assertions import UserAssertion
 from trufo.c2pa.redactions import RedactableAssertion, RedactionReason
-from trufo.c2pa.watermark import WatermarkEffort
+from trufo.c2pa.watermark import AiComplianceLabel, WatermarkEffort, WatermarkMode
 
 __all__ = [
+    "AiComplianceLabel",
     "RedactableAssertion",
     "RedactionReason",
     "TrufoAction",
     "UserAssertion",
     "WatermarkEffort",
+    "WatermarkMode",
 ]

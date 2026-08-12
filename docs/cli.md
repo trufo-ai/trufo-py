@@ -12,18 +12,26 @@ trufo --help
 There are a number of API keys you will want to set up (see [api_trufo.md](api/api_trufo.md) for more details):
 
 ```bash
-trufo set-api-key trufo-api      [KEY] # device authorization flow
+trufo set-api-key trufo-api      [KEY] # required for `trufo login`
 trufo set-api-key c2pa-sign-prod [KEY] # POST /c2pa/sign
 trufo set-api-key c2pa-sign-test [KEY] # POST /c2pa/sign (test host)
 trufo set-api-key c2pa-decode    [KEY] # POST /content/recover
 trufo set-api-key tsa            [KEY] # tsa.trufo.ai
 ```
 
-Once the `trufo-api` key is set, you can login:
+The `trufo-api` key must be set **before** you log in — `trufo login` authenticates with it, and exits with `No trufo-api key configured` otherwise. Once it is set:
 ```bash
 trufo login
 ```
-The command prints a verification URL, which you will need to open in a browser. There, you will be instructed to login. Please make sure MFA is set up on your account. For security, when done, you should always logout to clear any refresh tokens:
+This opens a browser on the same machine and signs you in — nothing to type. Please make sure MFA is set up on your account.
+
+If the CLI and your browser are on different machines (over SSH, or in a container), a local browser cannot receive the result. Use the device flow instead, which prints a URL and a code to confirm in any browser:
+```bash
+trufo login --device
+```
+The CLI falls back to this automatically when it cannot open a local listener.
+
+For security, when done, you should always logout to clear any refresh tokens:
 ```bash
 trufo logout
 ```

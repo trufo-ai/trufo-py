@@ -65,6 +65,27 @@ Production signing requires completed OV; without it the API returns
 
 ---
 
+## Titles
+
+Manifests and their ingredients carry display names (`dc:title`) that validator
+UIs show prominently. Pass them explicitly — typically the asset's filename:
+
+```python
+signed_bytes = sign_c2pa_test(
+    api_key,
+    media_bytes,
+    manifest_title="sunset_edit.jpg",   # the signed output's display name
+    ingredient_title="sunset.jpg",      # the input it was derived from
+)
+```
+
+When omitted, the manifest carries no title, and the input's ingredient entry
+falls back to the input's own manifest title, then a generic name. Fallbacks
+are derived, not authored — see
+[title fallbacks](../api/api_c2pa.md#post-c2pasign) for the exact order.
+
+---
+
 ## S3 Signing
 
 For large media, upload to an ephemeral Trufo-signed S3 location instead of

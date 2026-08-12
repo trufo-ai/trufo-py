@@ -33,6 +33,19 @@ from trufo.api.tps.sign_c2pa import (
     sign_c2pa_via_s3_test,
 )
 from trufo.util.credentials import TrufoApiKey
+from trufo.api.headers import sdk_headers
+
+
+def _expected_headers(api_key: str) -> dict[str, str]:
+    """Headers the SDK is expected to send.
+
+    Built via sdk_headers rather than hard-coded so a version bump does not
+    break every assertion; what the tests pin is that the API key is correct
+    and that the version headers are sent at all.
+    """
+    return sdk_headers(api_key)
+
+
 
 
 def _mock_response(json_data: dict):
@@ -160,7 +173,7 @@ class TestDirectC2PASigning:
                 ],
                 "assertions": [["cawg_identity", {"cawg_identity_id": "org_interim"}]],
             },
-            headers={"X-API-Key": "prod-key"},
+            headers=_expected_headers("prod-key"),
             timeout=60,
         )
         mock_post.return_value.raise_for_status.assert_called_once_with()
@@ -182,7 +195,7 @@ class TestDirectC2PASigning:
                 "actions": [],
                 "assertions": [],
             },
-            headers={"X-API-Key": "test-key"},
+            headers=_expected_headers("test-key"),
             timeout=60,
         )
 
@@ -377,7 +390,7 @@ class TestS3C2PASigning:
         mock_post.assert_called_once_with(
             TRUFO_API_URL + TPS_C2PA_GET_S3_URL,
             json={"mime_type": "image/jpeg", "duration": "5m"},
-            headers={"X-API-Key": "api-key"},
+            headers=_expected_headers("api-key"),
             timeout=60,
         )
         mock_post.return_value.raise_for_status.assert_called_once_with()
@@ -401,7 +414,7 @@ class TestS3C2PASigning:
                 "actions": [["publish", {}]],
                 "assertions": [["cawg_identity", {"cawg_identity_id": "org_interim"}]],
             },
-            headers={"X-API-Key": "prod-key"},
+            headers=_expected_headers("prod-key"),
             timeout=60,
         )
 
@@ -419,7 +432,7 @@ class TestS3C2PASigning:
                 "actions": [],
                 "assertions": [],
             },
-            headers={"X-API-Key": "test-key"},
+            headers=_expected_headers("test-key"),
             timeout=60,
         )
 
@@ -644,7 +657,18 @@ class TestRequestValidation:
 
     @pytest.mark.parametrize(
         "params",
-        [{}, {"effort": "require"}, {"effort": "require_if_supported"}, {"effort": "best_effort"}],
+        [
+            {},
+            {"effort_policy": "require"},
+            {"effort_policy": "require_if_supported"},
+            {"effort_policy": "best_effort"},
+            {"effort": "require"},  # deprecated alias, still accepted
+            {"mode": "provenance"},
+            {"mode": "compliance", "ai_compliance_label": "ai_generated"},
+            {"mode": "compliance", "ai_compliance_label": "ai_modified"},
+            {"mode": "compliance", "ai_compliance_label": "undeclared"},
+            {"mode": "compliance", "ai_compliance_label": "ai_generated", "effort_policy": "best_effort"},
+        ],
     )
     def test_valid_watermark_action_accepted(self, params):
         _validate_actions([["watermark", params]])  # must not raise
@@ -652,11 +676,18 @@ class TestRequestValidation:
     @pytest.mark.parametrize(
         "params, match",
         [
-            ({"effort": "maybe"}, "effort"),
-            ({"effort": True}, "effort"),
-            ({"apply": True}, "replaced by 'effort'"),
+            ({"effort_policy": "maybe"}, "effort_policy"),
+            ({"effort_policy": True}, "effort_policy"),
+            ({"effort": "maybe"}, "effort_policy"),
+            ({"effort": "require", "effort_policy": "require"}, "not both"),
+            ({"apply": True}, "replaced by 'effort_policy'"),
+            ({"mode": "attestation"}, "mode"),
+            ({"mode": "compliance"}, "ai_compliance_label"),
+            ({"mode": "compliance", "ai_compliance_label": "none"}, "ai_compliance_label"),
+            ({"ai_compliance_label": "ai_generated"}, "compliance-mode"),
+            ({"mode": "provenance", "ai_compliance_label": "ai_generated"}, "compliance-mode"),
             ({"wid_package": {"wid": "x"}}, "Unsupported watermark parameter"),
-            ({"effort": "require", "nonsense": 1}, "Unsupported watermark parameter"),
+            ({"effort_policy": "require", "nonsense": 1}, "Unsupported watermark parameter"),
             (None, "parameter object"),
         ],
     )

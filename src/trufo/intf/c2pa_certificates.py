@@ -25,11 +25,11 @@ from trufo.util.credentials import load_session, save_session
 
 def _require_session():
     """Load session or exit with error."""
-    session = load_session()
-    if not session:
-        print("No active session. Run: trufo login", file=sys.stderr)
+    try:
+        return load_session()
+    except RuntimeError as exc:
+        print(str(exc), file=sys.stderr)
         sys.exit(1)
-    return session
 
 
 def cmd_add_gpi(args: argparse.Namespace) -> None:
