@@ -15,7 +15,8 @@ There are a number of API keys you will want to set up (see [api_trufo.md](api/a
 trufo set-api-key trufo-api      [KEY] # required for `trufo login`
 trufo set-api-key c2pa-sign-prod [KEY] # POST /c2pa/sign
 trufo set-api-key c2pa-sign-test [KEY] # POST /c2pa/sign (test host)
-trufo set-api-key c2pa-decode    [KEY] # POST /content/recover
+trufo set-api-key content-recover-prod [KEY] # POST /content/recover
+trufo set-api-key content-recover-test [KEY] # POST /content/recover (test host)
 trufo set-api-key tsa            [KEY] # tsa.trufo.ai
 ```
 

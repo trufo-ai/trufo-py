@@ -44,9 +44,11 @@ def recover_content(
 
     Args:
         api_key: API key with scope ``content-recover-test`` or
-            ``content-recover-prod`` (``X-API-Key`` header).
+            ``content-recover-prod`` (``X-API-Key`` header). Each key works
+            only against its own host tier.
         media_bytes: Raw bytes of the media file to decode.
-        trufo_api_url: Freeform Trufo API base URL. Defaults to production.
+        trufo_api_url: Freeform Trufo API base URL. Defaults to production;
+            pass ``TRUFO_API_URL_TEST`` with a ``content-recover-test`` key.
 
     Returns:
         Detection flag with, when detected, the watermark ID, a detection

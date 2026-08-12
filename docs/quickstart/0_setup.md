@@ -55,7 +55,7 @@ Depending on what you need, set up the corresponding API key:
 - **Calling `/c2pa/sign` in deployment** — create a `c2pa-sign-prod` key (for the production hosts) or a `c2pa-sign-test` key (for the test host `test.api.trufo.ai`).
 - **Calling `sign_c2pa_distributed_test()` or `sign_c2pa_distributed()`** — create a `c2pa-sign-test` or `c2pa-sign-prod` key (same as above) **plus** a `tsa` key for the RFC 3161 timestamping step.
 - **Calling `tsa.trufo.ai`** — create a `tsa` key.
-- **Calling `/content/recover` (watermark decode)** — create a `c2pa-decode` key.
+- **Calling `/content/recover` (watermark decode)** — create a `content-recover-prod` key (for the production hosts) or a `content-recover-test` key (for the test host `test.api.trufo.ai`).
 
 See [../api/api_trufo.md](../api/api_trufo.md) for the full scope reference.
 
@@ -73,7 +73,8 @@ To use the API key within this library, save it to a file (directly or via the C
 trufo set-api-key trufo-api      <your-api-key>  # for `trufo login`
 trufo set-api-key c2pa-sign-prod <your-api-key>  # for /c2pa/sign (production hosts)
 trufo set-api-key c2pa-sign-test <your-api-key>  # for /c2pa/sign (test host)
-trufo set-api-key c2pa-decode    <your-api-key>  # for /content/recover
+trufo set-api-key content-recover-prod <your-api-key>  # for /content/recover (production hosts)
+trufo set-api-key content-recover-test <your-api-key>  # for /content/recover (test host)
 trufo set-api-key tsa            <your-api-key>  # for tsa.trufo.ai
 # Saved to ~/.trufo/credentials/<scope>_api_key (mode 0600)
 ```
@@ -84,7 +85,8 @@ trufo set-api-key tsa            <your-api-key>  # for tsa.trufo.ai
 export TRUFO_API_KEY=<your-api-key>                # trufo-api
 export TRUFO_C2PA_SIGN_PROD_API_KEY=<your-api-key>
 export TRUFO_C2PA_SIGN_TEST_API_KEY=<your-api-key>
-export TRUFO_C2PA_DECODE_API_KEY=<your-api-key>
+export TRUFO_CONTENT_RECOVER_PROD_API_KEY=<your-api-key>
+export TRUFO_CONTENT_RECOVER_TEST_API_KEY=<your-api-key>
 export TRUFO_TSA_API_KEY=<your-api-key>
 ```
 
