@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.1] — 2026-08-12
+
+### Fixed
+
+- Documentation still taught the removed `c2pa-decode` scope in twelve places
+  (setup, watermarking quickstart, CLI and API references), including a
+  `TrufoApiKey.C2PA_DECODE` sample that raises `AttributeError` on 1.1.0.
+  All now use `content-recover-{test,prod}`.
+- Documented the recovery host pairing: `recover_content()` defaults to the
+  production host, so test-host recovery passes
+  `trufo_api_url=TRUFO_API_URL_TEST` with a `content-recover-test` key. The
+  quickstart sample and the docstring now show this.
+
 ## [1.1.0] — 2026-08-12
 
 ### Added
@@ -306,7 +319,8 @@ Minor-version bump marks the general availability of the production C2PA signing
 - `trufo.intf`: credential storage and loading (env vars + file), CLI entry point.
 - PyPI trusted publishing via GitHub Actions (OIDC, no API tokens required).
 
-[Unreleased]: https://github.com/trufo-ai/trufo-py/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/trufo-ai/trufo-py/compare/v1.1.1...HEAD
+[1.1.1]: https://github.com/trufo-ai/trufo-py/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/trufo-ai/trufo-py/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/trufo-ai/trufo-py/compare/v0.5.2...v1.0.0
 [0.5.2]: https://github.com/trufo-ai/trufo-py/compare/v0.5.1...v0.5.2

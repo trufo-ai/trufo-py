@@ -150,18 +150,23 @@ See [api_c2pa.md](../api/api_c2pa.md#signing-modes) for the full flow comparison
 
 ## Reading Watermarks
 
-`recover_content()` decodes a watermark from media — even after the C2PA manifest has been stripped — and returns what the mark resolves to: for a provenance mark, the watermark ID, confidence, and the stored manifest when one has been captured; for a compliance mark, the declared AI class. `oid` is set when the mark belongs to your own organization. It requires an API key with the `c2pa-decode` scope:
+`recover_content()` decodes a watermark from media — even after the C2PA manifest has been stripped — and returns what the mark resolves to: for a provenance mark, the watermark ID, confidence, and the stored manifest when one has been captured; for a compliance mark, the declared AI class. `oid` is set when the mark belongs to your own organization. It requires an API key with the `content-recover-test` scope (test host) or `content-recover-prod` scope (production hosts); each key works only against its own host tier.
+
+`recover_content()` defaults to the production host, so test-host recovery — which is what pairs with the test signing flows on this page — must pass the test host explicitly:
 
 ```python
 from trufo import recover_content
+from trufo.api.endpoints import TRUFO_API_URL_TEST
 from trufo.util.credentials import TrufoApiKey, load_api_key
 
-decode_key = load_api_key(TrufoApiKey.C2PA_DECODE)
+recover_key = load_api_key(TrufoApiKey.CONTENT_RECOVER_TEST)
 
-result = recover_content(decode_key, media_bytes)
+result = recover_content(recover_key, media_bytes, trufo_api_url=TRUFO_API_URL_TEST)
 if result.detected:
     print(result.wid, result.confidence, result.ai_compliance_label)
 ```
+
+In production, use a `content-recover-prod` key and omit `trufo_api_url`.
 
 Decoding is read-only and accepts any parseable image or audio input, not just the encode-supported formats. See [api_c2pa.md](../api/api_c2pa.md#post-contentrecover) for the full schema.
 

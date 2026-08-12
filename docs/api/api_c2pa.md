@@ -22,7 +22,7 @@ See [api_trufo.md](api_trufo.md) for authentication, error conventions, and regi
 | `POST /c2pa/io/get-s3-url` | `c2pa-sign-prod` or `c2pa-sign-test` | C2PA Signing (production keys) |
 | `POST /c2pa/ai-disclosure/add`, `/list` | `c2pa-sign-prod` or `c2pa-sign-test` | — |
 | `POST /c2pa/software-agent/add`, `/list` | `c2pa-sign-prod` or `c2pa-sign-test` | — |
-| `POST /content/recover` | `c2pa-decode` | — |
+| `POST /content/recover` | `content-recover-prod` (test host: `content-recover-test`) | C2PA Signing (production keys) |
 | `POST /bind/watermark`, `/bind/commit` | `watermark-test` (🟠 **test only**) | — |
 
 An account access token with the `c2pa_sign` permission may be used instead of an
@@ -429,7 +429,9 @@ status — sign with whatever certificate you use.
 Decode a Trufo watermark and return its provenance — useful after a manifest has
 been stripped.
 
-**Auth:** API key with the `c2pa-decode` scope.
+**Auth:** API key with the `content-recover-prod` scope on the production hosts, or
+`content-recover-test` on the test host (`test.api.trufo.ai`). Each key works only
+against its own host tier.
 
 | Field | Type | Required |
 | ----- | ---- | -------- |

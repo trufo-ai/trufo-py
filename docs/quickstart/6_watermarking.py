@@ -9,13 +9,14 @@ Demonstrates:
   - recovering the watermark from the signed media
 
 See docs/quickstart/6_watermarking.md for details.
-Requires a c2pa-sign-test API key, and a c2pa-decode key for recovery.
+Requires a c2pa-sign-test API key, and a content-recover-test key for recovery.
 """
 
 import warnings
 from pathlib import Path
 
 from trufo import TrufoServerWarning, recover_content, sign_c2pa_test
+from trufo.api.endpoints import TRUFO_API_URL_TEST
 from trufo.c2pa import WatermarkEffort
 from trufo.util.credentials import TrufoApiKey, load_api_key
 
@@ -84,12 +85,15 @@ print("Embedded the org's ai_generated compliance mark")
 # Works even after the C2PA manifest has been stripped — re-encoded, screenshot,
 # or run through a metadata-scrubbing pipeline.
 
-decode_key = load_api_key(TrufoApiKey.C2PA_DECODE)
-if decode_key:
-    result = recover_content(decode_key, OUTPUT_FILE.read_bytes())
+recover_key = load_api_key(TrufoApiKey.CONTENT_RECOVER_TEST)
+if recover_key:
+    # test keys recover against the test host; recover_content defaults to prod
+    result = recover_content(
+        recover_key, OUTPUT_FILE.read_bytes(), trufo_api_url=TRUFO_API_URL_TEST
+    )
     if result.detected:
         print(f"Recovered watermark {result.wid} (confidence {result.confidence:.4f})")
     else:
         print("No watermark detected")
 else:
-    print("Skipping recovery: run `trufo set-api-key c2pa-decode <KEY>`")
+    print("Skipping recovery: run `trufo set-api-key content-recover-test <KEY>`")
