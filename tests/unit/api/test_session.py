@@ -54,7 +54,7 @@ class TestInitSession:
         mock_poll.return_value = TokenPair(access_token="new-at", refresh_token="new-rt")
 
         session = TrufoSession()
-        session.init_session("api-key")
+        session.init_session("api-key", use_device=True)
 
         assert session.access_token == "new-at"
         assert session.refresh_token == "new-rt"
