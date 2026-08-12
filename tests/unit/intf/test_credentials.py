@@ -39,7 +39,8 @@ def _patch_config_paths(tmp_path, monkeypatch):
             TrufoApiKey.TRUFO_API: creds_dir / "trufo_api_key",
             TrufoApiKey.C2PA_SIGN_PROD: creds_dir / "c2pa_sign_prod_api_key",
             TrufoApiKey.C2PA_SIGN_TEST: creds_dir / "c2pa_sign_test_api_key",
-            TrufoApiKey.C2PA_DECODE: creds_dir / "c2pa_decode_api_key",
+            TrufoApiKey.CONTENT_RECOVER_TEST: creds_dir / "content_recover_test_api_key",
+            TrufoApiKey.CONTENT_RECOVER_PROD: creds_dir / "content_recover_prod_api_key",
             TrufoApiKey.TSA: creds_dir / "tsa_api_key",
         },
     )
@@ -62,7 +63,16 @@ _ALL_SCOPES = [
     (TrufoApiKey.TRUFO_API, "TRUFO_API_KEY", "trufo_api_key"),
     (TrufoApiKey.C2PA_SIGN_PROD, "TRUFO_C2PA_SIGN_PROD_API_KEY", "c2pa_sign_prod_api_key"),
     (TrufoApiKey.C2PA_SIGN_TEST, "TRUFO_C2PA_SIGN_TEST_API_KEY", "c2pa_sign_test_api_key"),
-    (TrufoApiKey.C2PA_DECODE, "TRUFO_C2PA_DECODE_API_KEY", "c2pa_decode_api_key"),
+    (
+        TrufoApiKey.CONTENT_RECOVER_TEST,
+        "TRUFO_CONTENT_RECOVER_TEST_API_KEY",
+        "content_recover_test_api_key",
+    ),
+    (
+        TrufoApiKey.CONTENT_RECOVER_PROD,
+        "TRUFO_CONTENT_RECOVER_PROD_API_KEY",
+        "content_recover_prod_api_key",
+    ),
     (TrufoApiKey.TSA, "TRUFO_TSA_API_KEY", "tsa_api_key"),
 ]
 

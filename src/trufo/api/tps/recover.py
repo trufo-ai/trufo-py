@@ -43,7 +43,8 @@ def recover_content(
     not limited to the formats supported for watermark encoding.
 
     Args:
-        api_key: API key with scope ``c2pa-decode`` (``X-API-Key`` header).
+        api_key: API key with scope ``content-recover-test`` or
+            ``content-recover-prod`` (``X-API-Key`` header).
         media_bytes: Raw bytes of the media file to decode.
         trufo_api_url: Freeform Trufo API base URL. Defaults to production.
 
