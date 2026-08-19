@@ -9,6 +9,7 @@ requires-python = ">=3.10"
 description = "Trufo SDK for content provenance API services."
 readme = "README.md"
 license = "Apache-2.0"
+keywords = ["trufo", "trufo-py", "C2PA", "content credentials", "content provenance", "CAWG", "watermarking"]
 dependencies = [
     "cryptography>=41.0",
     "PyJWT>=2.6",
@@ -24,6 +25,11 @@ local-sign-only = ["trufo-provenance[c2pa]>=1.1.0,<1.2.0"]
 local-full = ["trufo-provenance[c2pa,pawprint]>=1.1.0,<1.2.0"]
 provenance = ["trufo-provenance[c2pa]>=1.1.0,<1.2.0"]
 test = ["pytest>=7.0"]
+
+[project.urls]
+Homepage = "https://trufo.ai"
+Documentation = "https://trufo.ai/documentation"
+Repository = "https://github.com/trufo-ai/trufo-py"
 
 [project.scripts]
 trufo = "trufo.intf.cli:main"
