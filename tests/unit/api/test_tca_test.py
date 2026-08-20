@@ -35,6 +35,21 @@ class TestBuildTestCsrJwt:
         for claim in ("iss", "sub", "aud", "jti", "iat", "exp", "record_id", "instance_id"):
             assert claim in payload, f"Missing claim: {claim}"
 
+    def test_country_and_record_id_pass_through(self):
+        jwt_str = _build_test_c2pa_csr_jwt(
+            LeafType.C2PA_L1_TEST, "Org", "CN", country="US", record_id="rid-123"
+        )
+
+        payload = pyjwt.decode(jwt_str, TEST_HMAC_SECRET, algorithms=["HS256"], audience="tca-est")
+        assert payload["distinguished_name"]["C"] == "US"
+        assert payload["record_id"] == "rid-123"
+
+    def test_country_omitted_keeps_dn_minimal(self):
+        jwt_str = _build_test_c2pa_csr_jwt(LeafType.C2PA_L1_TEST, "Org", "CN")
+
+        payload = pyjwt.decode(jwt_str, TEST_HMAC_SECRET, algorithms=["HS256"], audience="tca-est")
+        assert "C" not in payload["distinguished_name"]
+
     def test_cawg_jwt_has_empty_linkage_ids(self):
         jwt_str = _build_test_cawg_csr_jwt("Org", "CN")
 
@@ -75,6 +90,23 @@ class TestRequestC2paTestCert:
 
         est_call_args = mock_enroll.call_args[0]
         assert est_call_args[2] == "c2pa-l2-test"
+
+    @patch("trufo.api.tca.certs_test.extract_cert_chain")
+    @patch("trufo.api.tca.certs_test.est_enroll")
+    @patch("trufo.api.tca.certs_test.build_csr")
+    def test_passes_country_and_record_id_into_csr_jwt(
+        self, mock_csr, mock_enroll, mock_extract_chain
+    ):
+        mock_csr.return_value = b"c"
+        mock_enroll.return_value = b"e"
+        mock_extract_chain.return_value = b"ch"
+
+        request_c2pa_test_cert("O", "CN", b"k", country="US", record_id="rid-456")
+
+        csr_jwt = mock_enroll.call_args[0][0]
+        payload = pyjwt.decode(csr_jwt, TEST_HMAC_SECRET, algorithms=["HS256"], audience="tca-est")
+        assert payload["distinguished_name"]["C"] == "US"
+        assert payload["record_id"] == "rid-456"
 
 
 class TestRequestCawgTestCert:
