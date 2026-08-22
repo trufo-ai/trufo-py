@@ -65,17 +65,25 @@ Production signing requires completed OV; without it the API returns
 
 ---
 
-## Titles
+## Manifest Settings
 
 Manifests and their ingredients carry display names (`dc:title`) that validator
 UIs show prominently. Pass them explicitly — typically the asset's filename:
 
+Legacy `manifest_title` and `ingredient_title` keyword arguments remain
+supported. New code can group them with thumbnail and action-completeness
+settings:
+
 ```python
+from trufo.c2pa import ManifestSettings
+
 signed_bytes = sign_c2pa_test(
     api_key,
     media_bytes,
-    manifest_title="sunset_edit.jpg",   # the signed output's display name
-    ingredient_title="sunset.jpg",      # the input it was derived from
+    manifest_settings=ManifestSettings(
+        manifest_title="sunset_edit.jpg",  # signed output display name
+        ingredient_title="sunset.jpg",     # implicit input-parent display name
+    ),
 )
 ```
 
@@ -89,12 +97,14 @@ WebP thumbnails at quality 80. Use `HIGH` when validator previews need more
 detail:
 
 ```python
-from trufo.c2pa import ThumbnailSettings, ThumbnailSize
+from trufo.c2pa import ManifestSettings, ThumbnailSettings, ThumbnailSize
 
 signed_bytes = sign_c2pa_test(
     api_key,
     media_bytes,
-    thumbnail_settings=ThumbnailSettings(size=ThumbnailSize.HIGH),
+    manifest_settings=ManifestSettings(
+        thumbnail_settings=ThumbnailSettings(size=ThumbnailSize.HIGH),
+    ),
 )
 ```
 

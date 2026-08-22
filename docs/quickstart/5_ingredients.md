@@ -4,12 +4,17 @@ Manage the ingredients of a signed asset — the prior assets carried into its m
 
 ## Declaring Ingredients
 
-Describe prior or contributing assets in the manifest without uploading them. Each `["ingredient", {...}]` entry in `assertions` becomes a gathered `c2pa.ingredient.v3` assertion — your workflow's account of the asset, not a claim attributed to the Trufo signer. Whenever any ingredient entries are present, the manifest's `allActionsIncluded` is set to `false`.
+Describe prior or contributing assets in the manifest. Each
+`["ingredient", {...}]` entry belongs in `assertions`; it is gathered by default.
 
-Two relationships are available today; entries may optionally carry base64 `media`, which is thumbnailed (and validated when it carries its own C2PA manifest; manifest-free media is a visual record, not a cryptographic binding):
+Three relationships are available. Entries may carry base64 `media`, which is
+validated when it has provenance and thumbnailed when supported:
 
 - **`inputTo`** — an input to a computational process: a prompt, model, or dataset. Use `data_types` to say which (`c2pa.types.prompt`, `c2pa.types.model`, `c2pa.types.dataset`, ...).
 - **`componentOf`** — a placed component of a composition; requires `media` in a thumbnail-capable image format.
+- **`parentOf`** — the source asset before the edits represented by the active
+  input. It requires `media`, is always a created declaration, and there may be
+  at most one.
 
 ```python
 signed_bytes = sign_c2pa(
@@ -21,6 +26,55 @@ signed_bytes = sign_c2pa(
     ],
 )
 ```
+
+## Branded provenance declarations
+
+The forms below require a branded business product. The API rejects them when
+the signing organization is not authorized.
+
+Use `parentOf` when asset A was edited into the supplied asset B. Record the
+operations between A and B in that ingredient's `action_history`; individual
+eligible entries can use `placement="created"`:
+
+```python
+assertions = [[
+    "ingredient",
+    {
+        "relationship": "parentOf",
+        "title": "source-a.png",
+        "media": source_a_base64,
+        "action_history": [
+            {"action": "c2pa.cropped"},
+            {"action": "c2pa.resized", "placement": "created"},
+        ],
+    },
+]]
+```
+
+Use the separate `creation` assertion only when the supplied asset itself was
+created by the declared registered software agent. It cannot be combined with
+`parentOf` and the input must not already contain a manifest:
+
+```python
+from trufo.c2pa import DigitalSourceType
+
+assertions = [[
+    "creation",
+    {
+        "digitalSourceType": DigitalSourceType.TRAINED_ALGORITHMIC_MEDIA.value,
+        "softwareAgent": {"software_agent_id": "swagent_..."},
+    },
+]]
+```
+
+Creation and `parentOf` are always placed in the created claim set. Eligible AI,
+custom, component, and input assertions opt in with an inline
+`"placement": "created"`; CAWG assertions do not support created placement.
+
+Normal signing defaults `allActionsIncluded` to true. Elevated requests
+(creation, `parentOf`, action history, or a created placement) default it to
+false. Set `ManifestSettings(all_actions_included=True)` only when your product
+is authorized and the declaration really is complete.
 
 See [api_c2pa.md](../api/api_c2pa.md) for the full parameter reference and conflict rules.
 

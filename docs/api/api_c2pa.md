@@ -123,7 +123,7 @@ permanent signing record.
 | `assertions` | list | No | `[name, params]` pairs recorded in the manifest |
 | `manifest_title` | string | No | The manifest title of the signed output asset. Omitted from the manifest when unset. |
 | `ingredient_title` | string | No | The ingredient title assigned to the input asset (parent, via a `c2pa.opened` action). When unset: the input's manifest title, if it exists; otherwise, `input.{ext}`. |
-| `thumbnail_settings` | object | No | Thumbnail policy and size preset. Defaults to `{"policy": "auto", "size": "medium"}`. |
+| `manifest_settings` | object | No | Structured titles, thumbnail settings, and `all_actions_included`. |
 
 \* Provide exactly one.
 
@@ -134,16 +134,23 @@ Fallback titles are derived, not authored: an embedded manifest title is third-p
 text re-signed as-is. Pass explicit titles when you need deterministic, curated
 output — typically the asset's filename.
 
-Thumbnail settings have the same shape in hosted, S3, and distributed signing:
+`manifest_title` and `ingredient_title` remain supported for compatibility. Do
+not supply a title both directly and inside `manifest_settings`.
+
+Manifest settings have the same shape in hosted, S3, and distributed signing:
 
 ```python
-from trufo.c2pa import ThumbnailPolicy, ThumbnailSettings, ThumbnailSize
+from trufo.c2pa import ManifestSettings, ThumbnailPolicy, ThumbnailSettings, ThumbnailSize
 
-settings = ThumbnailSettings(
-    policy=ThumbnailPolicy.AUTO,
-    size=ThumbnailSize.HIGH,
+settings = ManifestSettings(
+    manifest_title="signed.jpg",
+    ingredient_title="input.jpg",
+    thumbnail_settings=ThumbnailSettings(
+        policy=ThumbnailPolicy.AUTO,
+        size=ThumbnailSize.HIGH,
+    ),
 )
-signed_bytes = sign_c2pa(api_key, media_bytes, thumbnail_settings=settings)
+signed_bytes = sign_c2pa(api_key, media_bytes, manifest_settings=settings)
 ```
 
 `AUTO` generates a claim thumbnail and thumbnails for supported ingredients
@@ -301,7 +308,9 @@ existing history, never the output of a transform in the same call.
 
 ### `assertions`
 
-Ordered `[name, params]` pairs, recorded as gathered assertions.
+Ordered `[name, params]` pairs. Assertions are gathered unless their documented
+schema fixes or permits created placement. Created declarations require an
+authorized branded business product.
 
 | Assertion | Params | C2PA label |
 | --------- | ------ | ---------- |
@@ -311,6 +320,7 @@ Ordered `[name, params]` pairs, recorded as gathered assertions.
 | `"cawg_identity"` | `{"cawg_identity_id": "<id>"}` | `cawg.identity` |
 | `"custom"` | `{"label": "<reverse-dns>", "assertion": {…}}` | Your label |
 | `"ingredient"` | `{"relationship": "<rel>", …}` | `c2pa.ingredient.v3` |
+| `"creation"` | `{"digitalSourceType": "<IPTC URI>", "softwareAgent": {…}}` | `c2pa.actions` (`c2pa.created`) |
 
 #### `ai_disclosure`
 
@@ -366,21 +376,44 @@ domain — `com.example.metadata` requires `example.com`.
 
 #### `ingredient`
 
-Declares a prior or contributing asset. Ingredients are your workflow's account of
-the asset, not a Trufo attestation; whenever any are present the manifest's
-`allActionsIncluded` becomes `false`.
+Declares a prior or contributing asset. Ingredients are your workflow's account
+of the asset, not a Trufo attestation.
 
 | Param | Type | Required | Description |
 | ----- | ---- | -------- | ----------- |
-| `relationship` | string | Yes | `inputTo` (a prompt, model, or dataset) or `componentOf` (a placed component) |
+| `relationship` | string | Yes | `inputTo`, `componentOf`, or `parentOf` (the asset before the supplied input's edits) |
 | `title` | string | No | The ingredient title (`dc:title`). When unset: the media's manifest title, if it exists; otherwise, `ingredient_{n}.{ext}` (media-less entries: `ingredient_{n}`). |
 | `data_types` | list | No | `[{"type": "c2pa.types.<kind>", "version": "…"}]` |
 | `digital_source_type` | string | No | The IPTC `trainedAlgorithmicMedia` or `compositeWithTrainedAlgorithmicMedia` URI |
 | `media` | string | For `componentOf` | base64 bytes; must be a thumbnail-capable image (JPEG, PNG, WebP, GIF, TIFF) |
+| `placement` | string | No | `gathered` (default) or, when eligible and authorized, `created`; `parentOf` is always created |
+| `action_history` | list | No | Actions between a `parentOf` source and the supplied input; entries may independently set `placement` |
 
 Media carrying its own C2PA manifest is validated and referenced; manifest-free
 media is thumbnailed as a described visual record, not a cryptographic binding, and
 cannot also declare `digital_source_type`.
+
+At most one `parentOf` ingredient is allowed, it requires media, and it cannot be
+combined with `creation`. A signed supplied input cannot be relabeled as newly
+created or attached to a different parent.
+
+#### `creation`
+
+Declares that the supplied unsigned asset was created by a registered software
+agent. It emits exactly one leading `c2pa.created` action and is always created:
+
+```python
+["creation", {
+    "digitalSourceType": "http://cv.iptc.org/newscodes/digitalsourcetype/trainedAlgorithmicMedia",
+    "softwareAgent": {"software_agent_id": "swagent_..."},
+    "when": "2026-08-22T12:00:00Z",
+}]
+```
+
+`when` is optional. The server resolves the software-agent id to the registered
+agent record. Creation, external parents, action histories, and any created
+placement default `allActionsIncluded` to false; explicitly asserting true is a
+separately authorized completeness claim.
 
 ---
 
