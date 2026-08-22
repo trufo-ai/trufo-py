@@ -123,6 +123,7 @@ permanent signing record.
 | `assertions` | list | No | `[name, params]` pairs recorded in the manifest |
 | `manifest_title` | string | No | The manifest title of the signed output asset. Omitted from the manifest when unset. |
 | `ingredient_title` | string | No | The ingredient title assigned to the input asset (parent, via a `c2pa.opened` action). When unset: the input's manifest title, if it exists; otherwise, `input.{ext}`. |
+| `thumbnail_settings` | object | No | Thumbnail policy and size preset. Defaults to `{"policy": "auto", "size": "medium"}`. |
 
 \* Provide exactly one.
 
@@ -132,6 +133,25 @@ URL), plus `warnings`.
 Fallback titles are derived, not authored: an embedded manifest title is third-party
 text re-signed as-is. Pass explicit titles when you need deterministic, curated
 output — typically the asset's filename.
+
+Thumbnail settings have the same shape in hosted, S3, and distributed signing:
+
+```python
+from trufo.c2pa import ThumbnailPolicy, ThumbnailSettings, ThumbnailSize
+
+settings = ThumbnailSettings(
+    policy=ThumbnailPolicy.AUTO,
+    size=ThumbnailSize.HIGH,
+)
+signed_bytes = sign_c2pa(api_key, media_bytes, thumbnail_settings=settings)
+```
+
+`AUTO` generates a claim thumbnail and thumbnails for supported ingredients
+that do not already carry one. `AUTO_NO_INGREDIENT` generates only the claim
+thumbnail, while preserving inherited ingredient thumbnails. `NONE` generates
+no thumbnails, while also preserving inherited ingredient thumbnails. The
+`MEDIUM` preset is 512 px at WebP quality 80; `HIGH` is 1024 px at quality
+90. Image alpha transparency is preserved.
 
 ### `POST /c2pa/io/get-s3-url`
 

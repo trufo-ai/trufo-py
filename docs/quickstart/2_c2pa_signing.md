@@ -84,6 +84,27 @@ falls back to the input's own manifest title, then a generic name. Fallbacks
 are derived, not authored — see
 [title fallbacks](../api/api_c2pa.md#post-c2pasign) for the exact order.
 
+Thumbnail generation is automatic. The default `MEDIUM` preset uses 512 px
+WebP thumbnails at quality 80. Use `HIGH` when validator previews need more
+detail:
+
+```python
+from trufo.c2pa import ThumbnailSettings, ThumbnailSize
+
+signed_bytes = sign_c2pa_test(
+    api_key,
+    media_bytes,
+    thumbnail_settings=ThumbnailSettings(size=ThumbnailSize.HIGH),
+)
+```
+
+The default `AUTO` policy creates the claim thumbnail and any missing
+supported ingredient thumbnails without replacing inherited ones. Use
+`ThumbnailPolicy.AUTO_NO_INGREDIENT` for a claim thumbnail only, or
+`ThumbnailPolicy.NONE` to generate none. Inherited ingredient thumbnails are
+preserved under every policy. See the [C2PA API reference](../api/api_c2pa.md#post-c2pasign)
+for the full settings.
+
 ---
 
 ## S3 Signing

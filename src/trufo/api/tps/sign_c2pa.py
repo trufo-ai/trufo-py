@@ -39,6 +39,7 @@ from trufo.api.endpoints import (
 from trufo.c2pa.actions import TrufoAction
 from trufo.c2pa.assertions import UserAssertion
 from trufo.c2pa.redactions import RedactableAssertion, RedactionReason
+from trufo.c2pa.thumbnails import ThumbnailSettings
 from trufo.c2pa.watermark import AiComplianceLabel, WatermarkEffort, WatermarkMode
 from trufo.util.credentials import TrufoApiKey, load_api_key
 from trufo.util.optional_imports import require_provenance_module
@@ -61,6 +62,11 @@ class C2PAS3SignedOutput:
     """Ephemeral S3 signed output reference."""
 
     media_output_s3: str
+
+
+def _thumbnail_settings_payload(settings: ThumbnailSettings) -> dict[str, str]:
+    """Serialize public thumbnail settings for signing request boundaries."""
+    return {"policy": settings.policy.value, "size": settings.size.value}
 
 
 def _validate_assertions(assertions: list | None) -> None:
@@ -224,6 +230,7 @@ def _sign_c2pa_direct(
     manifest_title: str | None = None,
     ingredient_title: str | None = None,
     *,
+    thumbnail_settings: ThumbnailSettings | None = None,
     trufo_api_url: str = TRUFO_API_URL,
 ) -> bytes:
     """Sign media bytes through a C2PA signing endpoint."""
@@ -239,6 +246,8 @@ def _sign_c2pa_direct(
         body["manifest_title"] = manifest_title
     if ingredient_title is not None:
         body["ingredient_title"] = ingredient_title
+    if thumbnail_settings is not None:
+        body["thumbnail_settings"] = _thumbnail_settings_payload(thumbnail_settings)
 
     resp = requests.post(
         trufo_api_url + endpoint,
@@ -308,6 +317,7 @@ def _sign_c2pa_s3(
     manifest_title: str | None = None,
     ingredient_title: str | None = None,
     *,
+    thumbnail_settings: ThumbnailSettings | None = None,
     trufo_api_url: str = TRUFO_API_URL,
 ) -> C2PAS3SignedOutput:
     """Sign an uploaded ephemeral S3 object through a C2PA signing endpoint."""
@@ -323,6 +333,8 @@ def _sign_c2pa_s3(
         body["manifest_title"] = manifest_title
     if ingredient_title is not None:
         body["ingredient_title"] = ingredient_title
+    if thumbnail_settings is not None:
+        body["thumbnail_settings"] = _thumbnail_settings_payload(thumbnail_settings)
 
     resp = requests.post(
         trufo_api_url + endpoint,
@@ -345,6 +357,7 @@ def sign_c2pa_s3(
     manifest_title: str | None = None,
     ingredient_title: str | None = None,
     *,
+    thumbnail_settings: ThumbnailSettings | None = None,
     trufo_api_url: str = TRUFO_API_URL,
 ) -> C2PAS3SignedOutput:
     """Sign an uploaded ephemeral S3 object with production C2PA via the TPS.
@@ -361,6 +374,7 @@ def sign_c2pa_s3(
             module docstring for when to set this explicitly.
         ingredient_title: Optional ``parentOf`` ingredient title (``dc:title``);
             see the module docstring for when to set this explicitly.
+        thumbnail_settings: Optional C2PA thumbnail policy and size preset.
         trufo_api_url: Freeform Trufo API base URL. Defaults to production.
 
     Returns:
@@ -377,6 +391,7 @@ def sign_c2pa_s3(
         assertions=assertions,
         manifest_title=manifest_title,
         ingredient_title=ingredient_title,
+        thumbnail_settings=thumbnail_settings,
         trufo_api_url=trufo_api_url,
     )
 
@@ -389,6 +404,7 @@ def sign_c2pa_s3_test(
     manifest_title: str | None = None,
     ingredient_title: str | None = None,
     *,
+    thumbnail_settings: ThumbnailSettings | None = None,
     trufo_api_url: str = TRUFO_API_URL_TEST,
 ) -> C2PAS3SignedOutput:
     """Sign an uploaded ephemeral S3 object with test C2PA via the TPS.
@@ -402,6 +418,7 @@ def sign_c2pa_s3_test(
             module docstring for when to set this explicitly.
         ingredient_title: Optional ``parentOf`` ingredient title (``dc:title``);
             see the module docstring for when to set this explicitly.
+        thumbnail_settings: Optional C2PA thumbnail policy and size preset.
         trufo_api_url: Trufo API base URL. Defaults to the Trufo test host (test.api.trufo.ai).
 
     Returns:
@@ -418,6 +435,7 @@ def sign_c2pa_s3_test(
         assertions=assertions,
         manifest_title=manifest_title,
         ingredient_title=ingredient_title,
+        thumbnail_settings=thumbnail_settings,
         trufo_api_url=trufo_api_url,
     )
 
@@ -432,6 +450,7 @@ def sign_c2pa_via_s3(
     manifest_title: str | None = None,
     ingredient_title: str | None = None,
     *,
+    thumbnail_settings: ThumbnailSettings | None = None,
     trufo_api_url: str = TRUFO_API_URL,
 ) -> bytes:
     """Upload, production-sign, and download media through the ephemeral S3 flow.
@@ -453,6 +472,7 @@ def sign_c2pa_via_s3(
             module docstring for when to set this explicitly.
         ingredient_title: Optional ``parentOf`` ingredient title (``dc:title``);
             see the module docstring for when to set this explicitly.
+        thumbnail_settings: Optional C2PA thumbnail policy and size preset.
         trufo_api_url: Freeform Trufo API base URL. Defaults to production.
 
     Returns:
@@ -475,6 +495,7 @@ def sign_c2pa_via_s3(
         assertions=assertions,
         manifest_title=manifest_title,
         ingredient_title=ingredient_title,
+        thumbnail_settings=thumbnail_settings,
         trufo_api_url=trufo_api_url,
     )
     return _download_c2pa_s3_media(signed_output.media_output_s3)
@@ -490,6 +511,7 @@ def sign_c2pa_via_s3_test(
     manifest_title: str | None = None,
     ingredient_title: str | None = None,
     *,
+    thumbnail_settings: ThumbnailSettings | None = None,
     trufo_api_url: str = TRUFO_API_URL_TEST,
 ) -> bytes:
     """Upload, test-sign, and download media through the ephemeral S3 flow.
@@ -508,6 +530,7 @@ def sign_c2pa_via_s3_test(
             module docstring for when to set this explicitly.
         ingredient_title: Optional ``parentOf`` ingredient title (``dc:title``);
             see the module docstring for when to set this explicitly.
+        thumbnail_settings: Optional C2PA thumbnail policy and size preset.
         trufo_api_url: Trufo API base URL. Defaults to the Trufo test host (test.api.trufo.ai).
 
     Returns:
@@ -530,6 +553,7 @@ def sign_c2pa_via_s3_test(
         assertions=assertions,
         manifest_title=manifest_title,
         ingredient_title=ingredient_title,
+        thumbnail_settings=thumbnail_settings,
         trufo_api_url=trufo_api_url,
     )
     return _download_c2pa_s3_media(signed_output.media_output_s3)
@@ -561,6 +585,7 @@ def sign_c2pa(
     manifest_title: str | None = None,
     ingredient_title: str | None = None,
     *,
+    thumbnail_settings: ThumbnailSettings | None = None,
     trufo_api_url: str = TRUFO_API_URL,
 ) -> bytes:
     """Sign a media file with production C2PA via the TPS.
@@ -577,6 +602,7 @@ def sign_c2pa(
             module docstring for when to set this explicitly.
         ingredient_title: Optional ``parentOf`` ingredient title (``dc:title``);
             see the module docstring for when to set this explicitly.
+        thumbnail_settings: Optional C2PA thumbnail policy and size preset.
         trufo_api_url: Freeform Trufo API base URL. Defaults to production.
 
     Returns:
@@ -593,6 +619,7 @@ def sign_c2pa(
         assertions=assertions,
         manifest_title=manifest_title,
         ingredient_title=ingredient_title,
+        thumbnail_settings=thumbnail_settings,
         trufo_api_url=trufo_api_url,
     )
 
@@ -605,6 +632,7 @@ def sign_c2pa_test(
     manifest_title: str | None = None,
     ingredient_title: str | None = None,
     *,
+    thumbnail_settings: ThumbnailSettings | None = None,
     trufo_api_url: str = TRUFO_API_URL_TEST,
 ) -> bytes:
     """Sign a media file with C2PA via the TPS test endpoint.
@@ -618,6 +646,7 @@ def sign_c2pa_test(
             module docstring for when to set this explicitly.
         ingredient_title: Optional ``parentOf`` ingredient title (``dc:title``);
             see the module docstring for when to set this explicitly.
+        thumbnail_settings: Optional C2PA thumbnail policy and size preset.
         trufo_api_url: Trufo API base URL. Defaults to the Trufo test host (test.api.trufo.ai).
 
     Returns:
@@ -634,6 +663,7 @@ def sign_c2pa_test(
         assertions=assertions,
         manifest_title=manifest_title,
         ingredient_title=ingredient_title,
+        thumbnail_settings=thumbnail_settings,
         trufo_api_url=trufo_api_url,
     )
 
@@ -666,6 +696,7 @@ def sign_c2pa_distributed_test(
     trufo_api_url: str = TRUFO_API_URL_TEST,
     manifest_title: str | None = None,
     ingredient_title: str | None = None,
+    thumbnail_settings: ThumbnailSettings | None = None,
 ) -> bytes:
     """Sign media locally using the Trufo test remote-signing endpoint.
 
@@ -688,6 +719,7 @@ def sign_c2pa_distributed_test(
             module docstring for when to set this explicitly.
         ingredient_title: Optional ``parentOf`` ingredient title (``dc:title``);
             see the module docstring for when to set this explicitly.
+        thumbnail_settings: Optional C2PA thumbnail policy and size preset.
 
     Returns:
         Signed media bytes.
@@ -714,6 +746,11 @@ def sign_c2pa_distributed_test(
         test=True,
         manifest_title=manifest_title,
         ingredient_title=ingredient_title,
+        **(
+            {"thumbnail_settings": _thumbnail_settings_payload(thumbnail_settings)}
+            if thumbnail_settings is not None
+            else {}
+        ),
     )
     return signed
 
@@ -729,6 +766,7 @@ def sign_c2pa_distributed(
     trufo_api_url: str = TRUFO_API_URL,
     manifest_title: str | None = None,
     ingredient_title: str | None = None,
+    thumbnail_settings: ThumbnailSettings | None = None,
 ) -> bytes:
     """Sign media locally using the Trufo production remote-signing endpoint.
 
@@ -752,6 +790,7 @@ def sign_c2pa_distributed(
             module docstring for when to set this explicitly.
         ingredient_title: Optional ``parentOf`` ingredient title (``dc:title``);
             see the module docstring for when to set this explicitly.
+        thumbnail_settings: Optional C2PA thumbnail policy and size preset.
 
     Returns:
         Signed media bytes.
@@ -778,5 +817,10 @@ def sign_c2pa_distributed(
         test=False,
         manifest_title=manifest_title,
         ingredient_title=ingredient_title,
+        **(
+            {"thumbnail_settings": _thumbnail_settings_payload(thumbnail_settings)}
+            if thumbnail_settings is not None
+            else {}
+        ),
     )
     return signed

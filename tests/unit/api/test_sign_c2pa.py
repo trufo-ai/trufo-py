@@ -32,6 +32,7 @@ from trufo.api.tps.sign_c2pa import (
     sign_c2pa_via_s3,
     sign_c2pa_via_s3_test,
 )
+from trufo.c2pa import ThumbnailPolicy, ThumbnailSettings, ThumbnailSize
 from trufo.util.credentials import TrufoApiKey
 from trufo.api.headers import sdk_headers
 
@@ -160,6 +161,10 @@ class TestDirectC2PASigning:
                 ["redact", {"label": "c2pa.metadata", "reason": "c2pa.PII.present"}],
             ],
             assertions=[["cawg_identity", {"cawg_identity_id": "org_interim"}]],
+            thumbnail_settings=ThumbnailSettings(
+                policy=ThumbnailPolicy.AUTO_NO_INGREDIENT,
+                size=ThumbnailSize.HIGH,
+            ),
         )
 
         assert result == signed
@@ -172,6 +177,10 @@ class TestDirectC2PASigning:
                     ["redact", {"label": "c2pa.metadata", "reason": "c2pa.PII.present"}],
                 ],
                 "assertions": [["cawg_identity", {"cawg_identity_id": "org_interim"}]],
+                "thumbnail_settings": {
+                    "policy": "auto_no_ingredient",
+                    "size": "high",
+                },
             },
             headers=_expected_headers("prod-key"),
             timeout=60,
@@ -233,6 +242,7 @@ class TestRemoteC2PASigning:
             actions=[["publish", {}]],
             assertions=[["cawg_identity", {"cawg_identity_id": "test"}]],
             tsa_api_key="tsa-key",
+            thumbnail_settings=ThumbnailSettings(size=ThumbnailSize.HIGH),
         )
 
         assert result == b"signed-test"
@@ -251,6 +261,7 @@ class TestRemoteC2PASigning:
         assert kwargs["test"] is True
         assert kwargs["trufo_api_url"] == TRUFO_API_URL_TEST
         assert kwargs["ocsp_stapler"] is calls["ocsp_stapler"]
+        assert kwargs["thumbnail_settings"] == {"policy": "auto", "size": "high"}
 
         # a single timestamper is built with the resolved key and SDK TSA default
         assert [ts.api_key for ts in calls["timestampers"]] == ["tsa-key"]
@@ -486,6 +497,7 @@ class TestS3C2PASigning:
             assertions=[["cawg_identity", {"cawg_identity_id": "org_interim"}]],
             manifest_title=None,
             ingredient_title=None,
+            thumbnail_settings=None,
             trufo_api_url=TRUFO_API_URL,
         )
         mock_get.assert_called_once_with("https://download.example", timeout=60)
@@ -571,6 +583,7 @@ class TestS3C2PASigning:
             assertions=None,
             manifest_title=None,
             ingredient_title=None,
+            thumbnail_settings=None,
             trufo_api_url=TRUFO_API_URL_TEST,
         )
 
