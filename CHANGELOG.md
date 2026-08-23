@@ -11,42 +11,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- `ManifestSettings`, accepted through the keyword-only `manifest_settings`
-  parameter by every hosted, S3, and distributed C2PA signing helper. It groups
-  the active-manifest title, implicit-parent title, thumbnail settings, and
-  `all_actions_included` declaration.
-- `ThumbnailSettings`, `ThumbnailPolicy`, and `ThumbnailSize` under
-  `trufo.c2pa`. The medium preset uses 512 px WebP thumbnails at quality 80;
-  high uses 1024 px at quality 90. Policies can generate claim and missing
-  ingredient thumbnails, generate only the claim thumbnail, or disable new
-  thumbnails while preserving inherited ingredient thumbnails. Image
-  transparency is preserved.
-- `DigitalSourceType`, containing the active IPTC digital source type values
-  accepted for caller-claimed C2PA actions.
-- The `creation` user assertion for declaring an unsigned asset created by a
-  registered software agent, with its digital source type and optional time.
-- Explicit `parentOf` ingredients for declaring a source asset A that was
-  edited into the supplied asset B. A parent can include `action_history`
-  describing the intervening edits and referencing registered software agents.
-- Inline `placement` for eligible AI-disclosure, custom, `componentOf`, and
-  `inputTo` assertions and for individual action-history entries. Placement is
-  `gathered` by default and may be `created` for authorized signing products;
-  CAWG assertions remain gathered-only.
-- Creation, explicit parents, and created placement require created-assertion
-  authorization; unauthorized signing requests return `403`.
+- Thumbnail settings:
+  - Thumbnail size (medium [default] at ~256px Q80 WebP, high at ~512px Q90 WebP).
+  - Thumbnail policy (none, generate if supported [active + ingredients], generate if supported [active only]).
+- Declaring `c2pa.created`, along with `digitalSourceType` and `softwareAgent`. Branded business-tier only.
+- Explicit `parentOf` ingredients, for declaring a source asset A that was edited into a supplied asset B, along with an `action_history` to describe the intervening edits. Branded business-tier only.
+- Explicit placement (`created` vs. `gathered`) for eligible assertions, along with an `allActionsIncluded` declaration). Branded business-tier only.
 
 ### Changed
 
-- `manifest_title` and `ingredient_title` remain supported as direct signing
-  keywords. They may be combined with non-conflicting `ManifestSettings`
-  fields; specifying the same title through both routes is an error.
-- Normal implicit-parent signing defaults `allActionsIncluded` to true.
-  Creation, explicit-parent, action-history, and created-placement requests
-  default it to false; elevated callers may declare an explicit value through
-  `ManifestSettings`.
-- Creation requires an unsigned input and cannot be combined with an explicit
-  parent. An explicit `parentOf` ingredient requires media and replaces the
-  normal input-derived parent for the declared A-to-B edit history.
+- `ManifestSettings`, accepted through the keyword-only `manifest_settings`, to group the active-manifest title, implicit-parent title, thumbnail settings, and all-actions-included settings. The legacy fields (`manifest_title` and `ingredient_title`) are still accepted.
+- Normal implicit-parent signing defaults `allActionsIncluded` to true. Higher-trust declarations, such as `c2pa.created` inception or `parentOf` ingredient or `created` placement, defaults `allActionsIncluded` to false; true must be explicitly passed in.
 - Local signing extras now require `trufo-provenance >= 1.2.0, < 1.3.0`.
 
 ## [1.1.2] — 2026-08-21
