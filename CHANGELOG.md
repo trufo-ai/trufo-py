@@ -7,17 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.1.3] — 2026-08-22
+## [1.2.0] — 2026-08-22
 
 ### Added
 
-- `ThumbnailSettings`, `ThumbnailPolicy`, and `ThumbnailSize` under
-  `trufo.c2pa`, accepted by every C2PA signing helper through the optional
-  `thumbnail_settings` keyword.
+- Thumbnail settings:
+  - Thumbnail size (medium [default] at ~256px Q80 WebP, high at ~512px Q90 WebP).
+  - Thumbnail policy (none, generate if supported [active + ingredients], generate if supported [active only]).
+- Declaring `c2pa.created`, along with `digitalSourceType` and `softwareAgent`. Branded business-tier only.
+- Explicit `parentOf` ingredients, for declaring a source asset A that was edited into a supplied asset B, along with an `action_history` to describe the intervening edits. Branded business-tier only.
+- Explicit placement (`created` vs. `gathered`) for eligible assertions, along with an `allActionsIncluded` declaration). Branded business-tier only.
 
 ### Changed
 
-- Local signing extras now require `trufo-provenance >= 1.1.2, < 1.2.0`.
+- `ManifestSettings`, accepted through the keyword-only `manifest_settings`, to group the active-manifest title, implicit-parent title, thumbnail settings, and all-actions-included settings. The legacy fields (`manifest_title` and `ingredient_title`) are still accepted.
+- Normal implicit-parent signing defaults `allActionsIncluded` to true. Higher-trust declarations, such as `c2pa.created` inception or `parentOf` ingredient or `created` placement, defaults `allActionsIncluded` to false; true must be explicitly passed in.
+- Local signing extras now require `trufo-provenance >= 1.2.0, < 1.3.0`.
 
 ## [1.1.2] — 2026-08-21
 
@@ -338,8 +343,8 @@ Minor-version bump marks the general availability of the production C2PA signing
 - `trufo.intf`: credential storage and loading (env vars + file), CLI entry point.
 - PyPI trusted publishing via GitHub Actions (OIDC, no API tokens required).
 
-[Unreleased]: https://github.com/trufo-ai/trufo-py/compare/v1.1.3...HEAD
-[1.1.3]: https://github.com/trufo-ai/trufo-py/compare/v1.1.2...v1.1.3
+[Unreleased]: https://github.com/trufo-ai/trufo-py/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/trufo-ai/trufo-py/compare/v1.1.2...v1.2.0
 [1.1.2]: https://github.com/trufo-ai/trufo-py/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/trufo-ai/trufo-py/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/trufo-ai/trufo-py/compare/v1.0.0...v1.1.0
