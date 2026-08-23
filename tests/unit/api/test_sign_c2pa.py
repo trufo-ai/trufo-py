@@ -8,7 +8,6 @@ import types
 from unittest.mock import MagicMock, patch
 
 import pytest
-
 from trufo.api.endpoints import (
     TPS_C2PA_GET_S3_URL,
     TPS_C2PA_SIGN,
@@ -16,6 +15,7 @@ from trufo.api.endpoints import (
     TRUFO_API_URL_TEST,
     TRUFO_TSA_URL,
 )
+from trufo.api.headers import sdk_headers
 from trufo.api.tps.sign_c2pa import (
     C2PAS3SignedOutput,
     C2PAS3Upload,
@@ -32,8 +32,13 @@ from trufo.api.tps.sign_c2pa import (
     sign_c2pa_via_s3,
     sign_c2pa_via_s3_test,
 )
+from trufo.c2pa import (
+    ManifestSettings,
+    ThumbnailPolicy,
+    ThumbnailSettings,
+    ThumbnailSize,
+)
 from trufo.util.credentials import TrufoApiKey
-from trufo.api.headers import sdk_headers
 
 
 def _expected_headers(api_key: str) -> dict[str, str]:
@@ -44,8 +49,6 @@ def _expected_headers(api_key: str) -> dict[str, str]:
     and that the version headers are sent at all.
     """
     return sdk_headers(api_key)
-
-
 
 
 def _mock_response(json_data: dict):
@@ -160,6 +163,13 @@ class TestDirectC2PASigning:
                 ["redact", {"label": "c2pa.metadata", "reason": "c2pa.PII.present"}],
             ],
             assertions=[["cawg_identity", {"cawg_identity_id": "org_interim"}]],
+            manifest_title="signed.jpg",
+            manifest_settings=ManifestSettings(
+                thumbnail_settings=ThumbnailSettings(
+                    policy=ThumbnailPolicy.AUTO_NO_INGREDIENT,
+                    size=ThumbnailSize.HIGH,
+                ),
+            ),
         )
 
         assert result == signed
@@ -169,14 +179,33 @@ class TestDirectC2PASigning:
                 "media_input": base64.b64encode(b"input-media").decode(),
                 "actions": [
                     ["publish", {}],
-                    ["redact", {"label": "c2pa.metadata", "reason": "c2pa.PII.present"}],
+                    [
+                        "redact",
+                        {"label": "c2pa.metadata", "reason": "c2pa.PII.present"},
+                    ],
                 ],
                 "assertions": [["cawg_identity", {"cawg_identity_id": "org_interim"}]],
+                "manifest_title": "signed.jpg",
+                "manifest_settings": {
+                    "thumbnail_settings": {
+                        "policy": "auto_no_ingredient",
+                        "size": "high",
+                    },
+                },
             },
             headers=_expected_headers("prod-key"),
             timeout=60,
         )
         mock_post.return_value.raise_for_status.assert_called_once_with()
+
+    def test_duplicate_manifest_setting_rejected_before_request(self):
+        with pytest.raises(ValueError, match="duplicates direct field.*manifest_title"):
+            sign_c2pa(
+                "prod-key",
+                b"input-media",
+                manifest_title="legacy.jpg",
+                manifest_settings=ManifestSettings(manifest_title="structured.jpg"),
+            )
 
     @patch("trufo.api.tps.sign_c2pa.requests.post")
     def test_sign_c2pa_test_posts_to_test_endpoint(self, mock_post):
@@ -233,6 +262,9 @@ class TestRemoteC2PASigning:
             actions=[["publish", {}]],
             assertions=[["cawg_identity", {"cawg_identity_id": "test"}]],
             tsa_api_key="tsa-key",
+            manifest_settings=ManifestSettings(
+                thumbnail_settings=ThumbnailSettings(size=ThumbnailSize.HIGH)
+            ),
         )
 
         assert result == b"signed-test"
@@ -251,6 +283,9 @@ class TestRemoteC2PASigning:
         assert kwargs["test"] is True
         assert kwargs["trufo_api_url"] == TRUFO_API_URL_TEST
         assert kwargs["ocsp_stapler"] is calls["ocsp_stapler"]
+        assert kwargs["manifest_settings"] == {
+            "thumbnail_settings": {"policy": "auto", "size": "high"}
+        }
 
         # a single timestamper is built with the resolved key and SDK TSA default
         assert [ts.api_key for ts in calls["timestampers"]] == ["tsa-key"]
@@ -486,6 +521,7 @@ class TestS3C2PASigning:
             assertions=[["cawg_identity", {"cawg_identity_id": "org_interim"}]],
             manifest_title=None,
             ingredient_title=None,
+            manifest_settings=None,
             trufo_api_url=TRUFO_API_URL,
         )
         mock_get.assert_called_once_with("https://download.example", timeout=60)
@@ -571,6 +607,7 @@ class TestS3C2PASigning:
             assertions=None,
             manifest_title=None,
             ingredient_title=None,
+            manifest_settings=None,
             trufo_api_url=TRUFO_API_URL_TEST,
         )
 
@@ -667,7 +704,11 @@ class TestRequestValidation:
             {"mode": "compliance", "ai_compliance_label": "ai_generated"},
             {"mode": "compliance", "ai_compliance_label": "ai_modified"},
             {"mode": "compliance", "ai_compliance_label": "undeclared"},
-            {"mode": "compliance", "ai_compliance_label": "ai_generated", "effort_policy": "best_effort"},
+            {
+                "mode": "compliance",
+                "ai_compliance_label": "ai_generated",
+                "effort_policy": "best_effort",
+            },
         ],
     )
     def test_valid_watermark_action_accepted(self, params):
@@ -683,11 +724,20 @@ class TestRequestValidation:
             ({"apply": True}, "replaced by 'effort_policy'"),
             ({"mode": "attestation"}, "mode"),
             ({"mode": "compliance"}, "ai_compliance_label"),
-            ({"mode": "compliance", "ai_compliance_label": "none"}, "ai_compliance_label"),
+            (
+                {"mode": "compliance", "ai_compliance_label": "none"},
+                "ai_compliance_label",
+            ),
             ({"ai_compliance_label": "ai_generated"}, "compliance-mode"),
-            ({"mode": "provenance", "ai_compliance_label": "ai_generated"}, "compliance-mode"),
+            (
+                {"mode": "provenance", "ai_compliance_label": "ai_generated"},
+                "compliance-mode",
+            ),
             ({"wid_package": {"wid": "x"}}, "Unsupported watermark parameter"),
-            ({"effort_policy": "require", "nonsense": 1}, "Unsupported watermark parameter"),
+            (
+                {"effort_policy": "require", "nonsense": 1},
+                "Unsupported watermark parameter",
+            ),
             (None, "parameter object"),
         ],
     )
@@ -820,7 +870,11 @@ class TestRequestValidation:
         "entry",
         [
             ["redact"],  # missing params
-            ["redact", {"label": "c2pa.metadata", "reason": "c2pa.PII.present"}, "extra"],
+            [
+                "redact",
+                {"label": "c2pa.metadata", "reason": "c2pa.PII.present"},
+                "extra",
+            ],
         ],
     )
     def test_malformed_redact_entry_shape_rejected(self, entry):
@@ -833,7 +887,10 @@ class TestRequestValidation:
         """One entry per assertion, each carrying its own reason."""
         actions = [
             ["redact", {"label": "c2pa.metadata", "reason": "c2pa.PII.present"}],
-            ["redact", {"label": "cawg.metadata", "reason": "c2pa.trade-secret.present"}],
+            [
+                "redact",
+                {"label": "cawg.metadata", "reason": "c2pa.trade-secret.present"},
+            ],
             ["redact", {"label": "cawg.training-mining", "reason": "com.acme.policy"}],
         ]
         _validate_actions(actions)  # must not raise

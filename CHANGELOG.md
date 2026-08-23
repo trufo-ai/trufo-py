@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.3] — 2026-08-22
+
+### Added
+
+- `ThumbnailSettings`, `ThumbnailPolicy`, and `ThumbnailSize` under
+  `trufo.c2pa`, accepted by every C2PA signing helper through the optional
+  `thumbnail_settings` keyword.
+
+### Changed
+
+- Local signing extras now require `trufo-provenance >= 1.1.2, < 1.2.0`.
+
 ## [1.1.2] — 2026-08-21
 
 ### Added
@@ -326,7 +338,8 @@ Minor-version bump marks the general availability of the production C2PA signing
 - `trufo.intf`: credential storage and loading (env vars + file), CLI entry point.
 - PyPI trusted publishing via GitHub Actions (OIDC, no API tokens required).
 
-[Unreleased]: https://github.com/trufo-ai/trufo-py/compare/v1.1.2...HEAD
+[Unreleased]: https://github.com/trufo-ai/trufo-py/compare/v1.1.3...HEAD
+[1.1.3]: https://github.com/trufo-ai/trufo-py/compare/v1.1.2...v1.1.3
 [1.1.2]: https://github.com/trufo-ai/trufo-py/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/trufo-ai/trufo-py/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/trufo-ai/trufo-py/compare/v1.0.0...v1.1.0

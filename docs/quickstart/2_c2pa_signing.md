@@ -65,17 +65,25 @@ Production signing requires completed OV; without it the API returns
 
 ---
 
-## Titles
+## Manifest Settings
 
 Manifests and their ingredients carry display names (`dc:title`) that validator
 UIs show prominently. Pass them explicitly — typically the asset's filename:
 
+Legacy `manifest_title` and `ingredient_title` keyword arguments remain
+supported. New code can group them with thumbnail and action-completeness
+settings:
+
 ```python
+from trufo.c2pa import ManifestSettings
+
 signed_bytes = sign_c2pa_test(
     api_key,
     media_bytes,
-    manifest_title="sunset_edit.jpg",   # the signed output's display name
-    ingredient_title="sunset.jpg",      # the input it was derived from
+    manifest_settings=ManifestSettings(
+        manifest_title="sunset_edit.jpg",  # signed output display name
+        ingredient_title="sunset.jpg",     # implicit input-parent display name
+    ),
 )
 ```
 
@@ -83,6 +91,29 @@ When omitted, the manifest carries no title, and the input's ingredient entry
 falls back to the input's own manifest title, then a generic name. Fallbacks
 are derived, not authored — see
 [title fallbacks](../api/api_c2pa.md#post-c2pasign) for the exact order.
+
+Thumbnail generation is automatic. The default `MEDIUM` preset uses 512 px
+WebP thumbnails at quality 80. Use `HIGH` when validator previews need more
+detail:
+
+```python
+from trufo.c2pa import ManifestSettings, ThumbnailSettings, ThumbnailSize
+
+signed_bytes = sign_c2pa_test(
+    api_key,
+    media_bytes,
+    manifest_settings=ManifestSettings(
+        thumbnail_settings=ThumbnailSettings(size=ThumbnailSize.HIGH),
+    ),
+)
+```
+
+The default `AUTO` policy creates the claim thumbnail and any missing
+supported ingredient thumbnails without replacing inherited ones. Use
+`ThumbnailPolicy.AUTO_NO_INGREDIENT` for a claim thumbnail only, or
+`ThumbnailPolicy.NONE` to generate none. Inherited ingredient thumbnails are
+preserved under every policy. See the [C2PA API reference](../api/api_c2pa.md#post-c2pasign)
+for the full settings.
 
 ---
 
