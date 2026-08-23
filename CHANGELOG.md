@@ -7,17 +7,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.1.3] — 2026-08-22
+## [1.2.0] — 2026-08-22
 
 ### Added
 
+- `ManifestSettings`, accepted through the keyword-only `manifest_settings`
+  parameter by every hosted, S3, and distributed C2PA signing helper. It groups
+  the active-manifest title, implicit-parent title, thumbnail settings, and
+  `all_actions_included` declaration.
 - `ThumbnailSettings`, `ThumbnailPolicy`, and `ThumbnailSize` under
-  `trufo.c2pa`, accepted by every C2PA signing helper through the optional
-  `thumbnail_settings` keyword.
+  `trufo.c2pa`. The medium preset uses 512 px WebP thumbnails at quality 80;
+  high uses 1024 px at quality 90. Policies can generate claim and missing
+  ingredient thumbnails, generate only the claim thumbnail, or disable new
+  thumbnails while preserving inherited ingredient thumbnails. Image
+  transparency is preserved.
+- `DigitalSourceType`, containing the active IPTC digital source type values
+  accepted for caller-claimed C2PA actions.
+- The `creation` user assertion for declaring an unsigned asset created by a
+  registered software agent, with its digital source type and optional time.
+- Explicit `parentOf` ingredients for declaring a source asset A that was
+  edited into the supplied asset B. A parent can include `action_history`
+  describing the intervening edits and referencing registered software agents.
+- Inline `placement` for eligible AI-disclosure, custom, `componentOf`, and
+  `inputTo` assertions and for individual action-history entries. Placement is
+  `gathered` by default and may be `created` for authorized signing products;
+  CAWG assertions remain gathered-only.
+- Creation, explicit parents, and created placement require created-assertion
+  authorization; unauthorized signing requests return `403`.
 
 ### Changed
 
-- Local signing extras now require `trufo-provenance >= 1.1.2, < 1.2.0`.
+- `manifest_title` and `ingredient_title` remain supported as direct signing
+  keywords. They may be combined with non-conflicting `ManifestSettings`
+  fields; specifying the same title through both routes is an error.
+- Normal implicit-parent signing defaults `allActionsIncluded` to true.
+  Creation, explicit-parent, action-history, and created-placement requests
+  default it to false; elevated callers may declare an explicit value through
+  `ManifestSettings`.
+- Creation requires an unsigned input and cannot be combined with an explicit
+  parent. An explicit `parentOf` ingredient requires media and replaces the
+  normal input-derived parent for the declared A-to-B edit history.
+- Local signing extras now require `trufo-provenance >= 1.2.0, < 1.3.0`.
 
 ## [1.1.2] — 2026-08-21
 
@@ -338,8 +368,8 @@ Minor-version bump marks the general availability of the production C2PA signing
 - `trufo.intf`: credential storage and loading (env vars + file), CLI entry point.
 - PyPI trusted publishing via GitHub Actions (OIDC, no API tokens required).
 
-[Unreleased]: https://github.com/trufo-ai/trufo-py/compare/v1.1.3...HEAD
-[1.1.3]: https://github.com/trufo-ai/trufo-py/compare/v1.1.2...v1.1.3
+[Unreleased]: https://github.com/trufo-ai/trufo-py/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/trufo-ai/trufo-py/compare/v1.1.2...v1.2.0
 [1.1.2]: https://github.com/trufo-ai/trufo-py/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/trufo-ai/trufo-py/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/trufo-ai/trufo-py/compare/v1.0.0...v1.1.0
