@@ -301,6 +301,7 @@ instances.
 | `POST /gproduct/instance/create` | MFA, owner/admin | `gp_id`, `name` | `gpi_id` (201) |
 | `POST /gproduct/instance/list` | MFA, member+ | `gp_id` | `instances[]` with `gpi_id`, `name`, `record_id` |
 | `POST /gproduct/instance/info` | MFA, member+ | `gpi_id` | Instance detail |
+| `POST /gproduct/instance/edit` | MFA, owner/admin | `gpi_id`, `name` | `status` |
 | `POST /gproduct/instance/delete` | MFA, owner/admin | `gpi_id` | `status` |
 
 **Errors:** `404 GProductNotFound`, `404 InstanceNotFound`, `400 ProductNotValidated`,
@@ -315,7 +316,8 @@ client assertion that requests a CSR JWT. Private keys never leave your systems.
 | Endpoint | Auth | Request | Response |
 | -------- | ---- | ------- | -------- |
 | `POST /gproduct/instance/credential/register` | MFA, owner/admin | `gpi_id`, `public_key_pem`, `key_algorithm` (`ES256` or `EdDSA`), optional `label` | `gpic_id` (201) |
-| `POST /gproduct/instance/credential/list` | MFA, member+ | `gpi_id` | `credentials[]` with `gpic_id`, `key_algorithm`, `label`, `created_at`, `revoked` |
+| `POST /gproduct/instance/credential/list` | MFA, member+ | `gpi_id` | `credentials[]` with `gpic_id`, `gpi_id`, `key_algorithm`, `label`, `created_at`, `revoked`, `revoked_at` |
+| `POST /gproduct/instance/credential/edit` | MFA, owner/admin | `gpic_id`, `label` | `status` |
 | `POST /gproduct/instance/credential/revoke` | MFA, owner/admin | `gpic_id` | `status` |
 
 Accepted keys: **EC P-256** (`ES256`) or **Ed25519** (`EdDSA`); the declared
@@ -323,7 +325,8 @@ algorithm must match the key. An instance may hold at most **two active
 credentials**, which is what makes key rotation possible: register the replacement,
 cut over, then revoke the old one.
 
-**Errors:** `400 TooManyCredentials`, `400 InvalidPublicKey`,
+**Errors:** `400` with an actionable message when the two-active-credential cap
+is reached (revoke an existing credential first), `400 InvalidPublicKey`,
 `400 UnsupportedKeyAlgorithm`, `400 AlgorithmMismatch`, `400 AlreadyRevoked`,
 `404 InstanceNotFound`, `404 CredentialNotFound`.
 
@@ -353,9 +356,15 @@ seconds (60 is recommended):
 
 **Response (200):** `csr_jwt` — present it to EST simpleenroll as the Basic password.
 
+An instance may hold at most **three active certificates** (revoked and expired
+certificates do not count). The cap never blocks rotation: request a shorter
+`validity_days`, or revoke the certificate being replaced.
+
 **Errors:** `401 ClientAssertionFailed`, `400 InvalidLeafType`,
 `400 InvalidValidityDays`, `403 LeafTypeNotAllowed`, `403 PVNotActive`,
 `403 OVNotActive`, `403 BillingNotActive`, `403 GPCancelled`,
+`403` with an actionable message when the three-active-certificate cap is
+reached (revoke one, or wait for one to expire),
 `404 InstanceNotFound`, `404 ProductNotFound`.
 
 The subject is assembled from your validations, not from your request: `O` from the
@@ -396,7 +405,7 @@ without it they return `403 InvalidC2PACustomDomain`. See
 
 | Endpoint | Auth | Request | Response |
 | -------- | ---- | ------- | -------- |
-| `POST /cert/list` | MFA, member+ | `{}` | `certs[]` with `serial_number`, `leaf_type`, `issue_time`, `expiry_time`, `revocation_status`, `revocation_reason`, `revocation_time`, `revocable`, and the issuing `instance_id` / `gp_id` where applicable |
+| `POST /cert/list` | MFA, member+ | `{}` | `certs[]` with `serial_number`, `leaf_type`, `issue_time`, `expiry_time`, `revocation_status`, `revocation_reason`, `revocation_time`, `revocable`, and the issuing `gpi_id` / `gpi_name` / `gp_id` / `gp_name` where applicable |
 | `POST /cert/revoke` | MFA, owner/admin | `serial_number`, `revocation_reason` | `status` |
 
 **Revocation reasons:** `unspecified`, `key_compromise`, `affiliation_changed`,
