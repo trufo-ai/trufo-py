@@ -4,7 +4,7 @@ Embed an imperceptible Trufo watermark in your media as part of C2PA signing.
 
 ## What This Does
 
-For supported image and audio formats, Trufo can embed a **Trufo Pawprint watermark** — an imperceptible signal woven into the pixels or audio samples themselves. The watermark carries a watermark ID issued by Trufo, so information about the content survives even after the C2PA manifest has been stripped (e.g. by re-encoding, screenshots, or metadata-scrubbing pipelines). What the ID resolves to depends on the mark's mode:
+For supported image, audio, and video formats, Trufo can embed a **Trufo Pawprint watermark** — an imperceptible signal woven into the pixels or audio samples themselves. The watermark carries a watermark ID issued by Trufo, so information about the content survives even after the C2PA manifest has been stripped (e.g. by re-encoding, screenshots, or metadata-scrubbing pipelines). What the ID resolves to depends on the mark's mode:
 
 - **Provenance** (the default): a unique per-content ID linked to your signing record.
 - **Compliance** (🟠 **test only**): your organization's reusable mark declaring the content's AI class (`ai_generated`, `ai_modified`, or `undeclared`).
@@ -22,6 +22,9 @@ Either way, the signed manifest declares the watermark per the C2PA specificatio
 | -------- | ------- |
 | Image    | JPEG, PNG, WebP, TIFF |
 | Audio    | WAV, FLAC, MP3, M4A (`audio/mp4`) |
+| Video    | MP4 (`video/mp4`; H.264/HEVC, 8-bit) |
+
+For video, the same watermark ID is embedded in **every stream**: each frame of the video stream carries the full ID through the image watermark, and every audio stream carries it through the audio watermark — so the ID survives in an extracted audio track or a single surviving frame.
 
 Signing formats outside this list succeeds normally; the watermark is simply not embedded, which the `effort_policy` setting below lets you treat as an error or a warning.
 
