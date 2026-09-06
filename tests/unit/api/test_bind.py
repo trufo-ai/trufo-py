@@ -80,7 +80,7 @@ class TestBindCommitTest:
     def test_posts_cid_and_signed_media(self, mock_post):
         mock_post.return_value = _response({"cid": "c_1", "wid": "image.0000000abcd"})
 
-        bind_commit_test("key", "c_1", b"signed-bytes")
+        bind_commit_test("key", "c_1", signed_media_bytes=b"signed-bytes")
 
         call = mock_post.call_args
         assert call.args[0] == f"{TRUFO_API_URL_TEST}/bind/commit"
@@ -104,18 +104,18 @@ class TestBindCommitTest:
         }
 
     @pytest.mark.parametrize(
-        "args,kwargs",
+        "kwargs",
         [
-            ((), {}),  # no manifest source
-            ((b"signed-bytes",), {"manifest_bytes": b"store"}),  # both sources
+            {},  # no manifest source
+            {"signed_media_bytes": b"signed-bytes", "manifest_bytes": b"store"},  # both
         ],
     )
-    def test_exactly_one_manifest_source_required_locally(self, args, kwargs):
+    def test_exactly_one_manifest_source_required_locally(self, kwargs):
         with pytest.raises(ValueError):
-            bind_commit_test("key", "c_1", *args, **kwargs)
+            bind_commit_test("key", "c_1", **kwargs)
 
     @patch(f"{_M}.requests.post")
     def test_http_error_raises(self, mock_post):
         mock_post.return_value = _response({"detail": "manifest mismatch"}, status=400)
         with pytest.raises(requests.HTTPError):
-            bind_commit_test("key", "c_1", b"signed-bytes")
+            bind_commit_test("key", "c_1", signed_media_bytes=b"signed-bytes")

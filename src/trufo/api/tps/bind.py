@@ -118,8 +118,8 @@ def bind_watermark_test(
 def bind_commit_test(
     api_key: str,
     cid: str,
-    signed_media_bytes: bytes | None = None,
     *,
+    signed_media_bytes: bytes | None = None,
     manifest_bytes: bytes | None = None,
     manifest_endpoint: str | None = None,
     trufo_api_url: str = TRUFO_API_URL_TEST,

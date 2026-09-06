@@ -133,7 +133,7 @@ signed_bytes = my_signer(result.media, wid=result.wid)
 
 # 3. the commit verifies the declaration and completes the record; send the
 #    manifest store itself (small) or the signed media that carries it
-bind_commit_test(api_key, result.cid, signed_bytes)
+bind_commit_test(api_key, result.cid, signed_media_bytes=signed_bytes)
 
 # hosting the manifest in your own C2PA manifest store instead of Trufo's:
 # bind_commit_test(api_key, result.cid, manifest_bytes=store_bytes,
