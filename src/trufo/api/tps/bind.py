@@ -4,13 +4,16 @@
 """Standalone bind watermarking helpers for the Trufo TPS (test host).
 
 Bind embeds a Trufo watermark without C2PA signing: you sign the watermarked
-media with your own certificate. In provenance mode, complete the record by
-submitting the signed media to :func:`bind_commit_test` — its manifest must
-declare the mark with a ``c2pa.soft-binding`` assertion (algorithm
+media with your own certificate. In provenance mode, complete the record with
+:func:`bind_commit_test` by sending the signed manifest — the C2PA manifest
+store itself, or the signed media that carries it. The manifest must declare
+the mark with a ``c2pa.soft-binding`` assertion (algorithm
 ``ai.trufo.pawprint.watermark``, block value = the returned watermark ID)
 paired with a ``c2pa.watermarked.bound`` action, per the C2PA specification.
-Compliance mode embeds your organization's mark for a declared AI class in a
-single call; there is nothing to commit.
+Trufo hosts the manifest for soft-binding resolution unless you name your own
+manifest store with ``manifest_endpoint``. Compliance mode embeds your
+organization's mark for a declared AI class in a single call; there is nothing
+to commit.
 """
 
 import base64
@@ -115,13 +118,17 @@ def bind_watermark_test(
 def bind_commit_test(
     api_key: str,
     cid: str,
-    signed_media_bytes: bytes,
+    signed_media_bytes: bytes | None = None,
     *,
+    manifest_bytes: bytes | None = None,
+    manifest_endpoint: str | None = None,
     trufo_api_url: str = TRUFO_API_URL_TEST,
 ) -> None:
-    """Complete a bind record with your C2PA-signed media.
+    """Complete a bind record with your signed C2PA manifest.
 
-    The media's manifest must declare the mark issued by
+    Send exactly one of ``manifest_bytes`` (the serialized C2PA manifest
+    store; preferred, it is small) or ``signed_media_bytes`` (the signed media
+    carrying it). The manifest must declare the mark issued by
     :func:`bind_watermark_test` (see the module docstring for the required
     assertion); the API returns 400 and leaves the record incomplete
     otherwise.
@@ -130,18 +137,31 @@ def bind_commit_test(
         api_key: API key with scope ``watermark-test`` (``X-API-Key`` header).
         cid: Record ID returned by :func:`bind_watermark_test`.
         signed_media_bytes: Raw bytes of the C2PA-signed watermarked media.
+        manifest_bytes: Raw bytes of the C2PA manifest store read from the
+            signed media.
+        manifest_endpoint: Base URI of your own C2PA manifest store when you
+            host the manifest yourself (``https://…``; the manifest must be
+            reachable at ``{manifest_endpoint}/manifests/{manifestId}``).
+            Omit to have Trufo host it.
         trufo_api_url: Trufo API base URL. Defaults to the Trufo test host
             (test.api.trufo.ai).
 
     Raises:
+        ValueError: If neither or both manifest sources are given.
         requests.HTTPError: If the API returns a non-2xx response.
     """
+    if (signed_media_bytes is None) == (manifest_bytes is None):
+        raise ValueError("Provide exactly one of signed_media_bytes or manifest_bytes.")
+    body: dict = {"cid": cid}
+    if manifest_bytes is not None:
+        body["manifest"] = base64.b64encode(manifest_bytes).decode()
+    else:
+        body["media_input"] = base64.b64encode(signed_media_bytes).decode()
+    if manifest_endpoint is not None:
+        body["manifest_endpoint"] = manifest_endpoint
     resp = requests.post(
         trufo_api_url + TPS_BIND_COMMIT,
-        json={
-            "cid": cid,
-            "media_input": base64.b64encode(signed_media_bytes).decode(),
-        },
+        json=body,
         headers=sdk_headers(api_key),
         timeout=120,
     )

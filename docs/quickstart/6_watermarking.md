@@ -131,8 +131,13 @@ result = bind_watermark_test(api_key, media_bytes)
 #    value = result.wid) paired with a c2pa.watermarked.bound action
 signed_bytes = my_signer(result.media, wid=result.wid)
 
-# 3. the commit verifies the declaration and completes the record
+# 3. the commit verifies the declaration and completes the record; send the
+#    manifest store itself (small) or the signed media that carries it
 bind_commit_test(api_key, result.cid, signed_bytes)
+
+# hosting the manifest in your own C2PA manifest store instead of Trufo's:
+# bind_commit_test(api_key, result.cid, manifest_bytes=store_bytes,
+#                  manifest_endpoint="https://manifests.example.com/c2pa")
 ```
 
 The commit fails with a 400 — and the record stays incomplete — until the manifest declares the mark correctly; your certificate itself is not judged, only the declaration. Compliance mode is a single call with nothing to commit:

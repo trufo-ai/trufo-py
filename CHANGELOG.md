@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- `bind_commit_test` accepts the signed manifest store directly (`manifest_bytes`) as an
+  alternative to the signed media, and `manifest_endpoint` to register a manifest you host
+  in your own C2PA manifest store; Trufo hosts it otherwise. `signed_media_bytes` is now
+  optional (exactly one source is required).
+- Watermark IDs for images and video use the `frame` modality (`frame.<11 hex>`); `image.`
+  IDs issued earlier remain readable.
+
 ## [1.2.0] — 2026-08-22
 
 ### Added

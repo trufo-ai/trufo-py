@@ -456,13 +456,19 @@ unsupported format (outside the watermarkable table above) is an error.
 | Field | Type | Required | Description |
 | ----- | ---- | -------- | ----------- |
 | `cid` | string | Yes | Record id from `/bind/watermark` |
-| `media_input` | string | Yes | base64-encoded C2PA-signed watermarked media |
+| `manifest` | string | One of | base64-encoded C2PA manifest store read from the signed media (preferred: small) |
+| `media_input` | string | One of | base64-encoded C2PA-signed watermarked media carrying the manifest |
+| `manifest_endpoint` | string | No | Base URI (`https://…`) of your own C2PA manifest store hosting this manifest at `{manifest_endpoint}/manifests/{manifestId}`; omit to have Trufo host it |
 
 The manifest must declare the mark: a `c2pa.soft-binding` assertion with
 algorithm `ai.trufo.pawprint.watermark` and the record's watermark id as its
 block value, paired with a `c2pa.watermarked.bound` action, per the C2PA
 specification. The manifest is checked for this declaration, not for trust
 status — sign with whatever certificate you use.
+The manifest id is derived from the manifest itself in both hosting modes.
+When `manifest_endpoint` is given, Trufo keeps no copy and soft-binding
+resolution refers validators to your store; otherwise Trufo stores and serves
+the manifest.
 
 **Response (200):** `cid`, `wid`.
 

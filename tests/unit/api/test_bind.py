@@ -90,6 +90,31 @@ class TestBindCommitTest:
         }
 
     @patch(f"{_M}.requests.post")
+    def test_posts_manifest_store_and_own_endpoint(self, mock_post):
+        mock_post.return_value = _response({"cid": "c_1", "wid": "frame.0000000abcd"})
+
+        bind_commit_test(
+            "key", "c_1", manifest_bytes=b"store", manifest_endpoint="https://m.example/c2pa"
+        )
+
+        assert mock_post.call_args.kwargs["json"] == {
+            "cid": "c_1",
+            "manifest": base64.b64encode(b"store").decode(),
+            "manifest_endpoint": "https://m.example/c2pa",
+        }
+
+    @pytest.mark.parametrize(
+        "args,kwargs",
+        [
+            ((), {}),  # no manifest source
+            ((b"signed-bytes",), {"manifest_bytes": b"store"}),  # both sources
+        ],
+    )
+    def test_exactly_one_manifest_source_required_locally(self, args, kwargs):
+        with pytest.raises(ValueError):
+            bind_commit_test("key", "c_1", *args, **kwargs)
+
+    @patch(f"{_M}.requests.post")
     def test_http_error_raises(self, mock_post):
         mock_post.return_value = _response({"detail": "manifest mismatch"}, status=400)
         with pytest.raises(requests.HTTPError):
