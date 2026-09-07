@@ -5,23 +5,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.3.0] — Unreleased
 
 ### Added
 
-- `bind_watermark` / `bind_commit`: standalone binding against production (a
-  `watermark-prod` key and an active C2PA Signing or Watermark API plan). The `_test`
-  variants keep targeting the test host.
+- Standalone binding in production: `bind_watermark` / `bind_commit` (tpls: Trufo
+  embeds, you sign) and `bind_reserve` / `watermark_media` / `bind_commit` (lpls: you
+  embed with the local engine, you sign), with a `watermark-prod` key and an active
+  C2PA Signing or Watermark API plan. The `_test` variants target the test host.
+- Route names: tpts / lpts / tpls / lpls (trufo- or local-processing, trufo- or
+  local-signing) name the four ways to get a signed, watermarked asset; see the
+  routes table in the watermarking quickstart.
 
 ### Changed
 
+- **Breaking:** `bind_commit` / `bind_commit_test` take the watermark ID as a third
+  positional argument, and the manifest source is one of `manifest_bytes=` (the C2PA
+  manifest store), `manifest_id=` with `manifest_endpoint=` (a manifest in your own
+  store, recorded on your word), or `signed_media_bytes=` (the store is read out
+  locally, which needs `trufo[local-sign-only]`; the API no longer accepts signed
+  media). `manifest_endpoint=` still switches Trufo from hosting the manifest to
+  referring validators to your store. The former positional media argument is gone.
 - Watermark IDs read `v1.{11 hex}` (one payload space for every kind of media);
   IDs issued earlier as `image.` or `audio.` remain valid.
-- `bind_commit_test` (🟠 test only) takes its manifest source as keyword arguments:
-  `signed_media_bytes=` (the signed media) or `manifest_bytes=` (the C2PA manifest store,
-  preferred), exactly one; and `manifest_endpoint=` to register a manifest you host in your
-  own C2PA manifest store, Trufo hosting it otherwise. The former positional media argument
-  is no longer accepted.
+- `/content/recover` accepts either the C2PA Signing or the Watermark API plan.
 
 ## [1.2.0] — 2026-08-22
 

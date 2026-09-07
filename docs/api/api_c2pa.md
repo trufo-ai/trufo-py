@@ -23,7 +23,7 @@ See [api_trufo.md](api_trufo.md) for authentication, error conventions, and regi
 | `POST /c2pa/ai-disclosure/add`, `/list` | `c2pa-sign-prod` or `c2pa-sign-test` | — |
 | `POST /c2pa/software-agent/add`, `/list` | `c2pa-sign-prod` or `c2pa-sign-test` | — |
 | `POST /content/recover` | `content-recover-prod` (test host: `content-recover-test`) | C2PA Signing or Watermark API |
-| `POST /bind/watermark`, `/bind/commit` | `watermark-prod` (test host: `watermark-test`) | C2PA Signing or Watermark API |
+| `POST /bind/watermark`, `/bind/reserve`, `/bind/commit` | `watermark-prod` (test host: `watermark-test`) | C2PA Signing or Watermark API |
 
 An account access token with the `c2pa_sign` permission may be used instead of an
 API key on the signing and assertion-record endpoints; `/content/recover` requires
@@ -419,16 +419,22 @@ separately authorized completeness claim.
 
 ## Standalone Binding
 
-Bind embeds a Trufo watermark **without** C2PA signing: you sign the
-watermarked media with your own certificate. In provenance mode, the record
-starts incomplete and `/bind/commit` completes it by verifying your signed
-manifest declares the mark. In compliance mode a single call embeds your
-organization's mark for a declared AI class (🟠 **test only**) — there is
-nothing to commit. Production requires a `watermark-prod` key, an active C2PA
-Signing or Watermark API plan, and completed organization validation; the
-delivered mark is billed as one watermark encode plus the media bytes, and
-the commit's bytes count toward data processing.
-SDK: `bind_watermark()` / `bind_commit()` (`_test` variants for the test host).
+Bind embeds a Trufo watermark **without** Trufo signing: you sign the
+watermarked media with your own certificate and complete the record with
+`/bind/commit`, which maps the mark to your manifest for soft-binding
+resolution. Two routes share the commit (see the routes table in the
+[watermarking quickstart](../quickstart/6_watermarking.md#routes)): **tpls**,
+where `/bind/watermark` embeds the mark on Trufo's servers, and **lpls**, where
+`/bind/reserve` issues the watermark id and you embed with the local engine.
+Compliance mode (a single `/bind/watermark` call embedding your organization's
+mark for a declared AI class, 🟠 **test only**) has nothing to commit.
+
+Production requires a `watermark-prod` key, an active C2PA Signing or Watermark
+API plan, and completed organization validation. Billing: tpls bills one
+watermark encode plus the media bytes at `/bind/watermark` and the manifest
+bytes at commit; lpls bills one encode at commit plus the manifest bytes.
+SDK: `bind_watermark()`, `bind_reserve()`, `watermark_media()`, `bind_commit()`
+(`_test` variants for the test host).
 
 ### `POST /bind/watermark`
 
@@ -437,7 +443,7 @@ SDK: `bind_watermark()` / `bind_commit()` (`_test` variants for the test host).
 | Field | Type | Required | Description |
 | ----- | ---- | -------- | ----------- |
 | `media_input` | string | Yes | base64-encoded media to watermark |
-| `mode` | string | No | `"provenance"` (default) or `"compliance"` |
+| `mode` | string | No | `"provenance"` (default) or `"compliance"` (test host only) |
 | `ai_compliance_label` | string | In compliance mode | `"ai_generated"`, `"ai_modified"`, or `"undeclared"`; rejected outside compliance mode |
 
 **Response (200):**
@@ -451,26 +457,42 @@ SDK: `bind_watermark()` / `bind_commit()` (`_test` variants for the test host).
 Bind has no effort tiers: the watermark is always required, and an
 unsupported format (outside the watermarkable table above) is an error.
 
+### `POST /bind/reserve`
+
+**Auth:** API key with the `watermark-prod` scope (`watermark-test` on the test host).
+
+| Field | Type | Required | Description |
+| ----- | ---- | -------- | ----------- |
+| `mime_type` | string | Yes | MIME type of the media you will watermark locally (an encode-supported format) |
+
+**Response (200):**
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `cid` | string | Record id for `/bind/commit` |
+| `wid_package` | object | `{ "wid", "expires_at" }` — the reservation to embed with the engine; valid for 24 hours |
+
 ### `POST /bind/commit`
 
 **Auth:** API key with the `watermark-prod` scope (`watermark-test` on the test host).
 
 | Field | Type | Required | Description |
 | ----- | ---- | -------- | ----------- |
-| `cid` | string | Yes | Record id from `/bind/watermark` |
-| `manifest` | string | One of | base64-encoded C2PA manifest store read from the signed media (preferred: small) |
-| `media_input` | string | One of | base64-encoded C2PA-signed watermarked media carrying the manifest |
+| `cid` | string | Yes | Record id from `/bind/watermark` or `/bind/reserve` |
+| `wid` | string | Yes | The watermark id issued with that record |
+| `manifest` | string | One of | base64-encoded C2PA manifest store declaring the mark |
+| `manifest_id` | string | One of | The manifest's id (its urn) when the manifest lives in your own store; requires `manifest_endpoint`, and the declaration is then your responsibility |
 | `manifest_endpoint` | string | No | Base URI (`https://…`) of your own C2PA manifest store hosting this manifest at `{manifest_endpoint}/manifests/{manifestId}`; omit to have Trufo host it |
 
-The manifest must declare the mark: a `c2pa.soft-binding` assertion with
-algorithm `ai.trufo.pawprint.watermark` and the record's watermark id as its
-block value, paired with a `c2pa.watermarked.bound` action, per the C2PA
-specification. The manifest is checked for this declaration, not for trust
-status — sign with whatever certificate you use.
-The manifest id is derived from the manifest itself in both hosting modes.
-When `manifest_endpoint` is given, Trufo keeps no copy and soft-binding
-resolution refers validators to your store; otherwise Trufo stores and serves
-the manifest.
+With `manifest`, the store must declare the mark: a `c2pa.soft-binding`
+assertion with algorithm `ai.trufo.pawprint.watermark` and the record's
+watermark id as its block value, paired with a `c2pa.watermarked.bound`
+action, per the C2PA specification. The manifest is checked for this
+declaration, not for trust status — sign with whatever certificate you use —
+and its id is derived from the bytes. When `manifest_endpoint` is given, Trufo
+keeps no copy and soft-binding resolution refers validators to your store;
+otherwise Trufo stores and serves the manifest. An identical retry of a
+completed commit succeeds; a different one is refused.
 
 **Response (200):** `cid`, `wid`.
 
@@ -478,8 +500,9 @@ the manifest.
 
 | Status | Meaning |
 | ------ | ------- |
-| 400 | Invalid mode/label pairing, unsupported media format, no parseable manifest, or the manifest does not declare the record's mark (the record stays incomplete — fix and resubmit) |
-| 404 | Unknown `cid`, or a record not created by `/bind/watermark` |
+| 400 | Invalid mode/label pairing, unsupported media format, malformed `wid`, no parseable manifest, `manifest_id` without an endpoint, or the manifest does not declare the record's mark (the record stays incomplete — fix and resubmit) |
+| 404 | Unknown `cid`, a record not opened by a bind call, or a `wid` that is not a live reservation of yours from this route |
+| 409 | The record was already completed with a different manifest |
 
 ---
 
