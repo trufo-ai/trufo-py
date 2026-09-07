@@ -23,7 +23,7 @@ See [api_trufo.md](api_trufo.md) for authentication, error conventions, and regi
 | `POST /c2pa/ai-disclosure/add`, `/list` | `c2pa-sign-prod` or `c2pa-sign-test` | — |
 | `POST /c2pa/software-agent/add`, `/list` | `c2pa-sign-prod` or `c2pa-sign-test` | — |
 | `POST /content/recover` | `content-recover-prod` (test host: `content-recover-test`) | C2PA Signing (production keys) |
-| `POST /bind/watermark`, `/bind/commit` | `watermark-test` (🟠 **test only**) | — |
+| `POST /bind/watermark`, `/bind/commit` | `watermark-prod` (test host: `watermark-test`) | C2PA Signing or Watermark API |
 
 An account access token with the `c2pa_sign` permission may be used instead of an
 API key on the signing and assertion-record endpoints; `/content/recover` requires
@@ -262,7 +262,7 @@ action per request.
 **Provenance mode** embeds a per-content watermark ID linked to this signing
 record. **Compliance mode** (🟠 **test only**) embeds
 your organization's reusable mark for the declared AI class: one watermark ID
-per (label, modality) pair, issued on first use and shared by every
+per label, issued on first use and shared by every
 compliance sign after that. To watermark media you sign yourself, use
 [standalone binding](#standalone-binding) instead of a sign-flow action.
 
@@ -419,18 +419,20 @@ separately authorized completeness claim.
 
 ## Standalone Binding
 
-🟠 **test only**.
-
 Bind embeds a Trufo watermark **without** C2PA signing: you sign the
 watermarked media with your own certificate. In provenance mode, the record
 starts incomplete and `/bind/commit` completes it by verifying your signed
 manifest declares the mark. In compliance mode a single call embeds your
-organization's mark for a declared AI class — there is nothing to commit.
-SDK: `bind_watermark_test()` / `bind_commit_test()`.
+organization's mark for a declared AI class (🟠 **test only**) — there is
+nothing to commit. Production requires a `watermark-prod` key, an active C2PA
+Signing or Watermark API plan, and completed organization validation; the
+delivered mark is billed as one watermark encode plus the media bytes, and
+the commit's bytes count toward data processing.
+SDK: `bind_watermark()` / `bind_commit()` (`_test` variants for the test host).
 
 ### `POST /bind/watermark`
 
-**Auth:** API key with the `watermark-test` scope.
+**Auth:** API key with the `watermark-prod` scope (`watermark-test` on the test host).
 
 | Field | Type | Required | Description |
 | ----- | ---- | -------- | ----------- |
@@ -451,7 +453,7 @@ unsupported format (outside the watermarkable table above) is an error.
 
 ### `POST /bind/commit`
 
-**Auth:** API key with the `watermark-test` scope.
+**Auth:** API key with the `watermark-prod` scope (`watermark-test` on the test host).
 
 | Field | Type | Required | Description |
 | ----- | ---- | -------- | ----------- |

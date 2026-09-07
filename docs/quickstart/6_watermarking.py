@@ -71,7 +71,7 @@ else:
 # --- 3. compliance mark: declare the content's AI class (test host only) -----
 # Instead of a per-content provenance ID, embed the org's reusable mark for a
 # declared AI class; the same wid is reused for every compliance sign of that
-# (label, modality).
+# label.
 
 signed_bytes = sign_c2pa_test(
     api_key,

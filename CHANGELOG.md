@@ -7,8 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `bind_watermark` / `bind_commit`: standalone binding against production (a
+  `watermark-prod` key and an active C2PA Signing or Watermark API plan). The `_test`
+  variants keep targeting the test host.
+
 ### Changed
 
+- Watermark IDs read `v1.{11 hex}` (one payload space for every kind of media);
+  IDs issued earlier as `image.` or `audio.` remain valid.
 - `bind_commit_test` (🟠 test only) takes its manifest source as keyword arguments:
   `signed_media_bytes=` (the signed media) or `manifest_bytes=` (the C2PA manifest store,
   preferred), exactly one; and `manifest_endpoint=` to register a manifest you host in your

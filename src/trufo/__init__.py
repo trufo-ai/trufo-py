@@ -4,7 +4,12 @@
 from trufo.api.tca.certs_c2pa import create_instance, register_credential, request_c2pa_cert
 from trufo.api.tca.certs_cawg_interim import request_cawg_interim_cert
 from trufo.api.tca.certs_test import request_c2pa_test_cert, request_cawg_test_cert
-from trufo.api.tps.bind import bind_commit_test, bind_watermark_test
+from trufo.api.tps.bind import (
+    bind_commit,
+    bind_commit_test,
+    bind_watermark,
+    bind_watermark_test,
+)
 from trufo.api.tps.recover import recover_content
 from trufo.api.tps.sign_c2pa import (
     sign_c2pa,
@@ -22,7 +27,9 @@ __version__ = "1.2.0"
 
 __all__ = [
     "__version__",
+    "bind_commit",
     "bind_commit_test",
+    "bind_watermark",
     "bind_watermark_test",
     "create_instance",
     "generate_keypair",

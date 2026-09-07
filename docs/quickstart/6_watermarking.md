@@ -12,7 +12,7 @@ For supported image, audio, and video formats, Trufo can embed a **Trufo Pawprin
 There are two ways to get a watermark, sharing both modes:
 
 - **As part of C2PA signing** — a `["watermark", {...}]` action in a `sign_c2pa*` call; Trufo embeds the mark and signs the manifest in one step. **Off by default** — the action requests it.
-- **Standalone binding** (🟠 **test only**) — `bind_watermark_test()` embeds the mark and *you* sign the media with your own certificate; see [Binding Without Trufo Signing](#binding-without-trufo-signing-bind).
+- **Standalone binding** — `bind_watermark()` embeds the mark and *you* sign the media with your own certificate; see [Binding Without Trufo Signing](#binding-without-trufo-signing-bind).
 
 Either way, the signed manifest declares the watermark per the C2PA specification: a `c2pa.watermarked.bound` action plus a `c2pa.soft-binding` assertion with algorithm `ai.trufo.pawprint.watermark`, Trufo's entry in the official C2PA soft-binding algorithm registry — Trufo writes these for you in the signing flow, while bind requires your manifest to carry them.
 
@@ -116,15 +116,15 @@ Additional notes for distributed (local) watermarking:
 
 ## Binding Without Trufo Signing (Bind)
 
-🟠 **test only** — requires an API key with the `watermark-test` scope.
+Requires an API key with the `watermark-prod` scope and an active C2PA Signing or Watermark API plan (`watermark-test` on the test host, where nothing is billed).
 
 If you sign C2PA manifests yourself (your own certificate and signing pipeline), bind gives you a Trufo watermark without handing Trufo the signature step:
 
 ```python
-from trufo import bind_watermark_test, bind_commit_test
+from trufo import bind_watermark, bind_commit
 
 # 1. Trufo embeds the mark and opens a record
-result = bind_watermark_test(api_key, media_bytes)
+result = bind_watermark(api_key, media_bytes)
 
 # 2. sign result.media with YOUR certificate; the manifest must declare the
 #    mark: a c2pa.soft-binding assertion (alg "ai.trufo.pawprint.watermark",
@@ -133,14 +133,14 @@ signed_bytes = my_signer(result.media, wid=result.wid)
 
 # 3. the commit verifies the declaration and completes the record; send the
 #    manifest store itself (small) or the signed media that carries it
-bind_commit_test(api_key, result.cid, signed_media_bytes=signed_bytes)
+bind_commit(api_key, result.cid, signed_media_bytes=signed_bytes)
 
 # hosting the manifest in your own C2PA manifest store instead of Trufo's:
-# bind_commit_test(api_key, result.cid, manifest_bytes=store_bytes,
+# bind_commit(api_key, result.cid, manifest_bytes=store_bytes,
 #                  manifest_endpoint="https://manifests.example.com/c2pa")
 ```
 
-The commit fails with a 400 — and the record stays incomplete — until the manifest declares the mark correctly; your certificate itself is not judged, only the declaration. Compliance mode is a single call with nothing to commit:
+The commit fails with a 400 — and the record stays incomplete — until the manifest declares the mark correctly; your certificate itself is not judged, only the declaration. Compliance mode (🟠 **test only**) is a single call with nothing to commit:
 
 ```python
 result = bind_watermark_test(
