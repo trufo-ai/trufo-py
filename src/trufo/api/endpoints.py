@@ -21,7 +21,6 @@ TRUFO_OCSP_URL = "https://ocsp.trufo.ai"
 # Overridable so the flow can be exercised against a non-production webapp; the
 # API base URL is chosen separately via TrufoSession(base_api_url=...).
 TRUFO_APP_URL = os.environ.get("TRUFO_APP_URL", "https://app.trufo.ai")
-TRUFO_APP_URL_TEST = "https://app-test.trufo.ai"
 
 # account / device auth (RFC 8628 — browser on a DIFFERENT machine)
 DEVICE_AUTHORIZE = "/account/device/authorize"
