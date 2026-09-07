@@ -224,7 +224,9 @@ keys are created and revoked in the dashboard under *Settings → API Keys*.
 | `c2pa-sign-test` | C2PA signing on the test host | — |
 | `c2pa-sign-prod` | C2PA signing on the production hosts | C2PA Signing plan |
 | `content-recover-test` | Watermark recovery (`/content/recover`, test host) | — |
-| `content-recover-prod` | Watermark recovery (`/content/recover`, production hosts) | C2PA Signing plan |
+| `content-recover-prod` | Watermark recovery (`/content/recover`, production hosts) | C2PA Signing or Watermark API plan |
+| `watermark-test` | Standalone binding (`/bind/*`, test host) | — |
+| `watermark-prod` | Standalone binding (`/bind/*`, production hosts) | C2PA Signing or Watermark API plan |
 | `tsa` | RFC 3161 timestamping (`tsa.trufo.ai`) | C2PA TSA plan |
 | `sdk-download` | Downloading the local engine packages from Trufo's private package index | C2PA Signing plan |
 

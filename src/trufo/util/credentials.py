@@ -56,6 +56,8 @@ class TrufoApiKey(str, Enum):
     C2PA_SIGN_TEST = "c2pa-sign-test"
     CONTENT_RECOVER_TEST = "content-recover-test"
     CONTENT_RECOVER_PROD = "content-recover-prod"
+    WATERMARK_TEST = "watermark-test"
+    WATERMARK_PROD = "watermark-prod"
     TSA = "tsa"
 
 
@@ -70,6 +72,8 @@ _API_KEY_ENV_VARS = {
     TrufoApiKey.C2PA_SIGN_TEST: "TRUFO_C2PA_SIGN_TEST_API_KEY",
     TrufoApiKey.CONTENT_RECOVER_TEST: "TRUFO_CONTENT_RECOVER_TEST_API_KEY",
     TrufoApiKey.CONTENT_RECOVER_PROD: "TRUFO_CONTENT_RECOVER_PROD_API_KEY",
+    TrufoApiKey.WATERMARK_TEST: "TRUFO_WATERMARK_TEST_API_KEY",
+    TrufoApiKey.WATERMARK_PROD: "TRUFO_WATERMARK_PROD_API_KEY",
     TrufoApiKey.TSA: "TRUFO_TSA_API_KEY",
 }
 _API_KEY_FILES = {
@@ -78,6 +82,8 @@ _API_KEY_FILES = {
     TrufoApiKey.C2PA_SIGN_TEST: CREDENTIALS_DIR / "c2pa_sign_test_api_key",
     TrufoApiKey.CONTENT_RECOVER_TEST: CREDENTIALS_DIR / "content_recover_test_api_key",
     TrufoApiKey.CONTENT_RECOVER_PROD: CREDENTIALS_DIR / "content_recover_prod_api_key",
+    TrufoApiKey.WATERMARK_TEST: CREDENTIALS_DIR / "watermark_test_api_key",
+    TrufoApiKey.WATERMARK_PROD: CREDENTIALS_DIR / "watermark_prod_api_key",
     TrufoApiKey.TSA: CREDENTIALS_DIR / "tsa_api_key",
 }
 
