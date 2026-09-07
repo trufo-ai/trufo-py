@@ -124,12 +124,15 @@ Additional notes for local embedding:
 
 ## Binding Without Trufo Signing (tpls and lpls)
 
-Requires an API key with the `watermark-prod` scope and an active C2PA Signing or Watermark API plan (`watermark-test` on the test host, where nothing is billed).
+Requires an API key with the `watermark-prod` scope and an active C2PA Signing or Watermark API plan (`watermark-test` on the test host, where nothing is billed). Store it with `trufo set-api-key watermark-prod <KEY>` and load it with `load_api_key(TrufoApiKey.WATERMARK_PROD)`. Production bills each bound asset as one watermark encode plus the bytes processed, and every committed record accrues resolution hosting per ID per day — see [billing](../api/api_c2pa.md#standalone-binding).
 
 If you sign C2PA manifests yourself (your own certificate and signing pipeline), bind gives you a Trufo watermark without handing Trufo the signature step. On the **tpls** route Trufo embeds the mark:
 
 ```python
 from trufo import bind_watermark, bind_commit
+from trufo.util.credentials import TrufoApiKey, load_api_key
+
+api_key = load_api_key(TrufoApiKey.WATERMARK_PROD)
 
 # 1. Trufo embeds the mark and opens a record
 result = bind_watermark(api_key, media_bytes)
@@ -161,7 +164,7 @@ bind_commit(api_key, result.cid, result.wid, manifest_bytes=store_bytes,
             manifest_endpoint="https://manifests.example.com/c2pa")
 ```
 
-The commit fails with a 400 — and the record stays incomplete — until the manifest declares the mark correctly; your certificate itself is not judged, only the declaration. A reservation lasts 24 hours; an uncommitted mark never resolves. Compliance mode (🟠 **test only**) is a single call with nothing to commit:
+The commit fails with a 400 — and the record stays incomplete — until the manifest declares the mark correctly; your certificate itself is not judged, only the declaration. A reservation lasts 24 hours (1 hour on the test host); an uncommitted mark never resolves. Compliance mode (🟠 **test only**) is a single call with nothing to commit:
 
 ```python
 result = bind_watermark_test(
@@ -197,7 +200,7 @@ if result.detected:
 
 In production, use a `content-recover-prod` key and omit `trufo_api_url`.
 
-Decoding is read-only and accepts any parseable image or audio input, not just the encode-supported formats. See [api_c2pa.md](../api/api_c2pa.md#post-contentrecover) for the full schema.
+Decoding is read-only and accepts any parseable image, video, or audio input, not just the encode-supported formats; an input the engine cannot decode returns a 400 `UndecodableMedia` error. In production each call bills one watermark decode plus the bytes processed (an undecodable input bills the bytes only). See [api_c2pa.md](../api/api_c2pa.md#post-contentrecover) for the full schema.
 
 ## Troubleshooting
 

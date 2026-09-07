@@ -76,7 +76,7 @@ class BindReservation:
     """Result of :func:`bind_reserve`: the record and the watermark ID to embed.
 
     ``wid_package`` is what :func:`watermark_media` consumes; ``expires_at`` is
-    the RFC 3339 expiry of the reservation (24 hours).
+    the RFC 3339 expiry of the reservation (24 hours; 1 hour on the test host).
     """
 
     cid: str

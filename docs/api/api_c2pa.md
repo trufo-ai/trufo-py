@@ -91,7 +91,8 @@ Beyond the platform-wide codes in [api_trufo.md](api_trufo.md):
 **Retries and billing.** A sign is metered when it completes, so a failed request
 never bills. Retries are not deduplicated: if a request completed but its response
 was lost, retrying produces a second signed output and a second billed sign. Prefer
-a generous client timeout over aggressive retries.
+a generous client timeout over aggressive retries. `/bind/watermark` bills at
+delivery on the same terms; `/bind/commit` is idempotent for an identical retry.
 
 ---
 
@@ -432,7 +433,9 @@ mark for a declared AI class, 🟠 **test only**) has nothing to commit.
 Production requires a `watermark-prod` key, an active C2PA Signing or Watermark
 API plan, and completed organization validation. Billing: tpls bills one
 watermark encode plus the media bytes at `/bind/watermark` and the manifest
-bytes at commit; lpls bills one encode at commit plus the manifest bytes.
+bytes at commit; lpls bills one encode at commit plus the manifest bytes. Every
+committed production record, on any route, then accrues resolution hosting:
+one active-ID day per day the mark stays resolvable, billed as ID-years.
 SDK: `bind_watermark()`, `bind_reserve()`, `watermark_media()`, `bind_commit()`
 (`_test` variants for the test host).
 
@@ -470,7 +473,7 @@ unsupported format (outside the watermarkable table above) is an error.
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | `cid` | string | Record id for `/bind/commit` |
-| `wid_package` | object | `{ "wid", "expires_at" }` — the reservation to embed with the engine; valid for 24 hours |
+| `wid_package` | object | `{ "wid", "expires_at" }` — the reservation to embed with the engine; valid for 24 hours (1 hour on the test host) |
 
 ### `POST /bind/commit`
 
@@ -515,7 +518,9 @@ been stripped.
 
 **Auth:** API key with the `content-recover-prod` scope on the production hosts, or
 `content-recover-test` on the test host (`test.api.trufo.ai`). Each key works only
-against its own host tier.
+against its own host tier. Production requires an active C2PA Signing or Watermark
+API plan and bills one watermark decode plus the input bytes per call; an input the
+engine cannot decode bills the bytes only.
 
 | Field | Type | Required |
 | ----- | ---- | -------- |
@@ -532,12 +537,18 @@ against its own host tier.
 | `ai_compliance_label` | string or null | Compliance marks: the declared AI class |
 | `oid` | string or null | Your organization ID, present only when the mark is your organization's |
 
-Decoding accepts any parseable image or audio input, not only the formats supported
-for embedding. What a detected watermark discloses depends on its kind: a
+Decoding accepts any parseable image, video, or audio input, not only the formats
+supported for embedding. What a detected watermark discloses depends on its kind: a
 provenance mark reveals its details for content your own organization signed
 (other organizations' marks report `detected` without further detail), while a
 compliance mark reveals its declared AI class to any decoder — with `oid` marking
 the ones your organization owns.
+
+**Errors:**
+
+| Status | Meaning |
+| ------ | ------- |
+| 400 | `UndecodableMedia`: the input could not be parsed as image, video, or audio |
 
 ---
 

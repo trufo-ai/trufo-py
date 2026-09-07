@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `TrufoApiKey.WATERMARK_TEST` / `WATERMARK_PROD` (`trufo set-api-key watermark-prod`),
+  the key scopes standalone binding uses.
 - Standalone binding in production: `bind_watermark` / `bind_commit` (tpls: Trufo
   embeds, you sign) and `bind_reserve` / `watermark_media` / `bind_commit` (lpls: you
   embed with the local engine, you sign), with a `watermark-prod` key and an active
@@ -19,6 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The local-engine extras require trufo-provenance 1.3.0, which reads the shared
+  `v1.` watermark ID space.
 - **Breaking:** `bind_commit` / `bind_commit_test` take the watermark ID as a third
   positional argument, and the manifest source is one of `manifest_bytes=` (the C2PA
   manifest store), `manifest_id=` with `manifest_endpoint=` (a manifest in your own
