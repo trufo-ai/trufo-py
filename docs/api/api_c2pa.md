@@ -22,7 +22,7 @@ See [api_trufo.md](api_trufo.md) for authentication, error conventions, and regi
 | `POST /c2pa/io/get-s3-url` | `c2pa-sign-prod` or `c2pa-sign-test` | C2PA Signing (production keys) |
 | `POST /c2pa/ai-disclosure/add`, `/list` | `c2pa-sign-prod` or `c2pa-sign-test` | — |
 | `POST /c2pa/software-agent/add`, `/list` | `c2pa-sign-prod` or `c2pa-sign-test` | — |
-| `POST /content/recover` | `content-recover-prod` (test host: `content-recover-test`) | C2PA Signing (production keys) |
+| `POST /content/recover` | `content-recover-prod` (test host: `content-recover-test`) | C2PA Signing or Watermark API |
 | `POST /bind/watermark`, `/bind/commit` | `watermark-prod` (test host: `watermark-test`) | C2PA Signing or Watermark API |
 
 An account access token with the `c2pa_sign` permission may be used instead of an

@@ -9,9 +9,14 @@ from unittest.mock import MagicMock, patch
 import pytest
 import requests
 
-from trufo.api.endpoints import TRUFO_API_URL_TEST
+from trufo.api.endpoints import TRUFO_API_URL, TRUFO_API_URL_TEST
 from trufo.api.headers import sdk_headers
-from trufo.api.tps.bind import bind_commit_test, bind_watermark_test
+from trufo.api.tps.bind import (
+    bind_commit,
+    bind_commit_test,
+    bind_watermark,
+    bind_watermark_test,
+)
 
 _M = "trufo.api.tps.bind"
 
@@ -91,7 +96,7 @@ class TestBindCommitTest:
 
     @patch(f"{_M}.requests.post")
     def test_posts_manifest_store_and_own_endpoint(self, mock_post):
-        mock_post.return_value = _response({"cid": "c_1", "wid": "frame.0000000abcd"})
+        mock_post.return_value = _response({"cid": "c_1", "wid": "v1.0000000abcd"})
 
         bind_commit_test(
             "key", "c_1", manifest_bytes=b"store", manifest_endpoint="https://m.example/c2pa"
@@ -119,3 +124,18 @@ class TestBindCommitTest:
         mock_post.return_value = _response({"detail": "manifest mismatch"}, status=400)
         with pytest.raises(requests.HTTPError):
             bind_commit_test("key", "c_1", signed_media_bytes=b"signed-bytes")
+
+
+class TestProdDefaults:
+    @patch("trufo.api.tps.bind.requests.post")
+    def test_prod_functions_target_production_and_test_variants_delegate(self, mock_post):
+        mock_post.return_value = _response(
+            {"media_output": base64.b64encode(b"m").decode(), "wid": "v1.001abcdef12", "cid": "c_1"}
+        )
+        bind_watermark("k", b"media")
+        assert mock_post.call_args.args[0] == f"{TRUFO_API_URL}/bind/watermark"
+        bind_watermark_test("k", b"media")
+        assert mock_post.call_args.args[0] == f"{TRUFO_API_URL_TEST}/bind/watermark"
+        mock_post.return_value = _response({"cid": "c_1", "wid": "v1.001abcdef12"})
+        bind_commit("k", "c_1", manifest_bytes=b"store")
+        assert mock_post.call_args.args[0] == f"{TRUFO_API_URL}/bind/commit"

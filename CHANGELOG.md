@@ -22,8 +22,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   preferred), exactly one; and `manifest_endpoint=` to register a manifest you host in your
   own C2PA manifest store, Trufo hosting it otherwise. The former positional media argument
   is no longer accepted.
-- Watermark IDs for images and video use the `frame` modality (`frame.<11 hex>`); `image.`
-  IDs issued earlier remain readable.
 
 ## [1.2.0] — 2026-08-22
 
