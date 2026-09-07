@@ -19,10 +19,13 @@ certificate enrollment.
   and `mode` = `provenance` (default) / `compliance` selecting the mark kind
   (`WatermarkMode`; compliance requires `ai_compliance_label` and is test-host only).
   Supported: JPEG/PNG/WebP/TIFF, WAV/FLAC/MP3/M4A.
-- `bind_watermark_test()` / `bind_commit_test()` (test host only, `watermark-test`
-  scope) embed a watermark without Trufo signing: the caller signs with their own
-  certificate, and commit verifies the manifest declares the mark (soft-binding
-  assertion + `c2pa.watermarked.bound`). Both watermark modes apply.
+- Routes are named by who embeds and who signs: tpts / lpts (Trufo signs; `sign_c2pa`,
+  `sign_c2pa_distributed`) and tpls / lpls (the caller signs with their own certificate;
+  `bind_watermark` → `bind_commit`, or `bind_reserve` → `watermark_media` →
+  `bind_commit`). Production bind needs a `watermark-prod` key and a C2PA Signing or
+  Watermark API plan; `_test` variants use the test host with `watermark-test`. Commit
+  verifies the manifest declares the mark (soft-binding assertion +
+  `c2pa.watermarked.bound`). Compliance mode is test-host only.
 - `sign_c2pa_distributed()` uses the production remote signing endpoint and requires
   completed Organization Validation plus `c2pa-sign-prod` and `tsa` API keys.
 - `sign_c2pa_distributed_test()` uses the test remote signing endpoint and requires
@@ -55,5 +58,5 @@ Two modes exist; see `docs/api/api_c2pa.md` for the full comparison.
 
 | Mode | Function | Requires local engine extra | Media sent to server |
 |---|---|---|---|
-| Hosted (server) | `sign_c2pa`, `sign_c2pa_test` | No | Yes |
-| Distributed | `sign_c2pa_distributed`, `sign_c2pa_distributed_test` | Yes (`trufo[local-sign-only]`; `trufo[local-full]` for watermarking) | No |
+| Hosted (tpts) | `sign_c2pa`, `sign_c2pa_test` | No | Yes |
+| Distributed (lpts) | `sign_c2pa_distributed`, `sign_c2pa_distributed_test` | Yes (`trufo[local-sign-only]`; `trufo[local-full]` for watermarking) | No |
