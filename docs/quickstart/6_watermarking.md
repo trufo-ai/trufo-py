@@ -174,6 +174,26 @@ result = bind_watermark_test(
 
 Bind has no `effort_policy`: the watermark is always required, and an unsupported format is an error. See the [API reference](../api/api_c2pa.md#standalone-binding) for schemas.
 
+## Managing Your Marks
+
+Every production sign or bind creates a content record, and each committed
+record accrues soft-binding resolution maintenance for as long as Trufo keeps
+its mark resolvable. You can stop that at any time:
+
+```python
+from trufo import list_content, set_content_status
+
+page = list_content(api_key)                       # oldest first, 50 per page
+for record in page.items:
+    print(record.cid, record.wid, record.status)
+set_content_status(api_key, page.items[0].cid, "inactive")   # stops resolving and accruing
+```
+
+Keep calling `list_content(api_key, cursor=page.next_cursor)` until the cursor
+is `None`. An inactive record no longer resolves for validators and stops
+counting from the next UTC day; setting it `active` again restores both. See
+the [API reference](../api/api_c2pa.md#content-records).
+
 ## Test vs Production
 
 Production signing issues a unique watermark ID and links it to a permanent signing record. Test signing embeds a watermark from a separate test ID space: IDs are ephemeral, not unique, and no signing record is created. Test-signed watermarks are for integration development only.

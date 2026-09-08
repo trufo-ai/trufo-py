@@ -553,6 +553,44 @@ the ones your organization owns.
 
 ---
 
+## Content Records
+
+Every production sign or bind creates a content record. A record with a
+watermark id and a manifest id is what public soft-binding resolution serves
+and what soft-binding resolution maintenance charges for, per ID per day. The
+owner can list its records and switch each one off and on. Production hosts
+only. SDK: `list_content()`, `set_content_status()`.
+
+**Auth (both endpoints):** API key with the `c2pa-sign-prod` or `watermark-prod`
+scope, or a dashboard session. No active plan is required, so a lapsed
+subscriber can still deactivate its marks.
+
+### `POST /content/list`
+
+| Field | Type | Required | Description |
+| ----- | ---- | -------- | ----------- |
+| `cursor` | string | No | The `next_cursor` of the previous page; omit for the first page |
+| `limit` | int | No | Page size, 1 to 100 (default 50) |
+| `status` | string | No | `active` or `inactive` to list one status only |
+
+**Response (200):** `items`, each with `cid`, `wid`, `mid`, `status`, `origin`,
+`mime_type`, `create_ts`, `commit_ts`; and `next_cursor`, null on the last page.
+Records come oldest first; pages are stable under concurrent writes because the
+cursor is the last record's id.
+
+### `POST /content/status`
+
+| Field | Type | Required | Description |
+| ----- | ---- | -------- | ----------- |
+| `cid` | string | Yes | The record's content id |
+| `status` | string | Yes | `inactive` withdraws the record from public soft-binding resolution and stops its resolution maintenance from the next day; `active` restores it |
+
+**Response (200):** `cid`, `wid`, `status`.
+
+**Errors:** 404 when the record is not your organization's.
+
+---
+
 ## Assertion Records
 
 Reusable bodies registered once and referenced by id when signing. Both groups

@@ -13,6 +13,7 @@ from trufo.api.tps.bind import (
     bind_watermark_test,
     watermark_media,
 )
+from trufo.api.tps.records import list_content, set_content_status
 from trufo.api.tps.recover import recover_content
 from trufo.api.tps.sign_c2pa import (
     sign_c2pa,
@@ -39,6 +40,7 @@ __all__ = [
     "watermark_media",
     "create_instance",
     "generate_keypair",
+    "list_content",
     "load_api_key",
     "recover_content",
     "register_credential",
@@ -47,6 +49,7 @@ __all__ = [
     "request_cawg_interim_cert",
     "request_cawg_test_cert",
     "save_api_key",
+    "set_content_status",
     "sign_c2pa",
     "sign_c2pa_distributed",
     "sign_c2pa_distributed_test",
