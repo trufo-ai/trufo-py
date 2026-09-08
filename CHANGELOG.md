@@ -9,10 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- `list_content` and `set_content_status`: page through your organization's
-  content records and switch a record's lifecycle status. `inactive` withdraws
-  the mark from public soft-binding resolution and stops its soft-binding
-  resolution maintenance from the next day.
+- Content records: `get_content` (by content id, watermark ID, or manifest ID),
+  `list_content` (oldest first, filtered by status, route, and creation window),
+  and `set_content_status`. Setting a record `inactive` withdraws its mark from
+  public soft-binding resolution and stops its soft-binding resolution
+  maintenance from the next UTC day; `active` restores it.
 - `TrufoApiKey.WATERMARK_TEST` / `WATERMARK_PROD` (`trufo set-api-key watermark-prod`),
   the key scopes standalone binding uses.
 - Standalone binding in production: `bind_watermark` / `bind_commit` (tpls: Trufo

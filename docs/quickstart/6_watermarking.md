@@ -178,21 +178,30 @@ Bind has no `effort_policy`: the watermark is always required, and an unsupporte
 
 Every production sign or bind creates a content record, and each committed
 record accrues soft-binding resolution maintenance for as long as Trufo keeps
-its mark resolvable. You can stop that at any time:
+its mark resolvable. Look records up by the watermark ID a decode returns, the
+manifest ID, or the record id, and switch them off and on:
 
 ```python
-from trufo import list_content, set_content_status
+from trufo import get_content, list_content, set_content_status
 
-page = list_content(api_key)                       # oldest first, 50 per page
-for record in page.items:
-    print(record.cid, record.wid, record.status)
-set_content_status(api_key, page.items[0].cid, "inactive")   # stops resolving and accruing
+record = get_content(api_key, wid="v1.001a1b2c3d4")     # what is this mark, is it accruing?
+set_content_status(api_key, "inactive", wid=record.wid)  # stops resolving and accruing
+
+page = list_content(api_key, status="active", origin="bind_hosted",
+                    created_after="2026-04-01T00:00:00Z")
+while True:
+    for item in page.items:
+        print(item.cid, item.wid, item.create_ts)
+    if page.next_cursor is None:
+        break
+    page = list_content(api_key, status="active", origin="bind_hosted",
+                        created_after="2026-04-01T00:00:00Z", cursor=page.next_cursor)
+
+set_content_status(api_key, "active", cid=record.cid)    # restores it
 ```
 
-Keep calling `list_content(api_key, cursor=page.next_cursor)` until the cursor
-is `None`. An inactive record no longer resolves for validators and stops
-counting from the next UTC day; setting it `active` again restores both. See
-the [API reference](../api/api_c2pa.md#content-records).
+An inactive record no longer resolves for validators and stops counting from
+the next UTC day. See the [API reference](../api/api_c2pa.md#content-records).
 
 ## Test vs Production
 

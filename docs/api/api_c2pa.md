@@ -557,37 +557,53 @@ the ones your organization owns.
 
 Every production sign or bind creates a content record. A record with a
 watermark id and a manifest id is what public soft-binding resolution serves
-and what soft-binding resolution maintenance charges for, per ID per day. The
-owner can list its records and switch each one off and on. Production hosts
-only. SDK: `list_content()`, `set_content_status()`.
+and what soft-binding resolution maintenance charges for, per ID per UTC day.
+The owner can look records up, list them, and switch each one off and on.
+Production hosts only. SDK: `get_content()`, `list_content()`,
+`set_content_status()`.
 
-**Auth (both endpoints):** API key with the `c2pa-sign-prod` or `watermark-prod`
+Unlike `/content/recover`, which decodes media and is metered, these take an
+identifier or filters, touch only your own records, and are not metered.
+
+**Auth (all three):** API key with the `c2pa-sign-prod` or `watermark-prod`
 scope, or a dashboard session. No active plan is required, so a lapsed
 subscriber can still deactivate its marks.
+
+**The record:** `cid` (record id, returned by every sign and bind call), `wid`
+(once the mark is embedded and, on the bind routes, committed), `mid` (once a
+manifest is captured), `status` (`active` or `inactive`), `origin`
+(`c2pa_hosted`, `c2pa_distributed`, `bind_hosted`, `bind_distributed`),
+`mime_type`, `create_ts`, `commit_ts`. Fields only ever gain members.
+
+### `POST /content/get`
+
+Exactly one of `cid`, `wid` (any spelling), `mid`. **Response (200):** the
+record. **Errors:** 400 malformed `wid`; 404 when no record of yours matches;
+422 when zero or several keys are given.
 
 ### `POST /content/list`
 
 | Field | Type | Required | Description |
 | ----- | ---- | -------- | ----------- |
-| `cursor` | string | No | The `next_cursor` of the previous page; omit for the first page |
-| `limit` | int | No | Page size, 1 to 100 (default 50) |
-| `status` | string | No | `active` or `inactive` to list one status only |
+| `status` | string | No | `active` or `inactive` |
+| `origin` | string | No | one route |
+| `created_after` | string | No | RFC 3339; created at or after |
+| `created_before` | string | No | RFC 3339; created before |
+| `cursor` | string | No | Opaque; the `next_cursor` of the previous page |
+| `limit` | int | No | 1 to 100 (default 50) |
 
-**Response (200):** `items`, each with `cid`, `wid`, `mid`, `status`, `origin`,
-`mime_type`, `create_ts`, `commit_ts`; and `next_cursor`, null on the last page.
-Records come oldest first; pages are stable under concurrent writes because the
-cursor is the last record's id.
+**Response (200):** `items`, oldest first, and `next_cursor`, null on the last
+page. The limit bounds one response; bulk changes are a separate, job-shaped
+endpoint still to come.
 
 ### `POST /content/status`
 
-| Field | Type | Required | Description |
-| ----- | ---- | -------- | ----------- |
-| `cid` | string | Yes | The record's content id |
-| `status` | string | Yes | `inactive` withdraws the record from public soft-binding resolution and stops its resolution maintenance from the next day; `active` restores it |
-
-**Response (200):** `cid`, `wid`, `status`.
-
-**Errors:** 404 when the record is not your organization's.
+Exactly one of `cid`, `wid`, `mid`, plus `status`: `inactive` withdraws the
+record from public soft-binding resolution immediately and stops its resolution
+maintenance from the next UTC day, so the day of deactivation is the last one
+charged; `active` restores it from the next day. Idempotent. Nothing is deleted
+and the signed asset is untouched. **Response (200):** the record after the
+write. **Errors:** as `get`.
 
 ---
 

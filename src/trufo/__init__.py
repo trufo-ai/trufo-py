@@ -13,7 +13,7 @@ from trufo.api.tps.bind import (
     bind_watermark_test,
     watermark_media,
 )
-from trufo.api.tps.records import list_content, set_content_status
+from trufo.api.tps.records import get_content, list_content, set_content_status
 from trufo.api.tps.recover import recover_content
 from trufo.api.tps.sign_c2pa import (
     sign_c2pa,
@@ -40,6 +40,7 @@ __all__ = [
     "watermark_media",
     "create_instance",
     "generate_keypair",
+    "get_content",
     "list_content",
     "load_api_key",
     "recover_content",
