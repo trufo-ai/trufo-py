@@ -22,12 +22,12 @@ See [api_trufo.md](api_trufo.md) for authentication, error conventions, and regi
 | `POST /c2pa/io/get-s3-url` | `c2pa-sign-prod` or `c2pa-sign-test` | C2PA Signing (production keys) |
 | `POST /c2pa/ai-disclosure/add`, `/list` | `c2pa-sign-prod` or `c2pa-sign-test` | — |
 | `POST /c2pa/software-agent/add`, `/list` | `c2pa-sign-prod` or `c2pa-sign-test` | — |
-| `POST /content/recover` | `content-recover-prod` (test host: `content-recover-test`) | C2PA Signing (production keys) |
-| `POST /bind/watermark`, `/bind/commit` | `watermark-test` (🟠 **test only**) | — |
+| `POST /content/recover` | `content-recover-prod` (test host: `content-recover-test`) | C2PA Signing or Watermark API |
+| `POST /bind/watermark`, `/bind/reserve`, `/bind/commit` | `watermark-prod` (test host: `watermark-test`) | C2PA Signing or Watermark API |
 
 An account access token with the `c2pa_sign` permission may be used instead of an
-API key on the signing and assertion-record endpoints; `/content/recover` requires
-an API key.
+API key on the signing, assertion-record, and content-record endpoints;
+`/content/recover` and the `/bind/*` endpoints require an API key.
 
 Distributed signing is performed by the SDK over a dedicated protocol whose
 endpoints are an internal detail of that protocol, not a public interface. Use
@@ -91,7 +91,8 @@ Beyond the platform-wide codes in [api_trufo.md](api_trufo.md):
 **Retries and billing.** A sign is metered when it completes, so a failed request
 never bills. Retries are not deduplicated: if a request completed but its response
 was lost, retrying produces a second signed output and a second billed sign. Prefer
-a generous client timeout over aggressive retries.
+a generous client timeout over aggressive retries. `/bind/watermark` bills at
+delivery on the same terms; `/bind/commit` is idempotent for an identical retry.
 
 ---
 
@@ -262,7 +263,7 @@ action per request.
 **Provenance mode** embeds a per-content watermark ID linked to this signing
 record. **Compliance mode** (🟠 **test only**) embeds
 your organization's reusable mark for the declared AI class: one watermark ID
-per (label, modality) pair, issued on first use and shared by every
+per label, issued on first use and shared by every
 compliance sign after that. To watermark media you sign yourself, use
 [standalone binding](#standalone-binding) instead of a sign-flow action.
 
@@ -272,7 +273,7 @@ compliance sign after that. To watermark media you sign yourself, use
 | `"require_if_supported"` | Signs unwatermarked, with a warning | Error |
 | `"best_effort"` | Signs unwatermarked, with a warning | Signs unwatermarked, with a warning |
 
-Watermarkable formats: JPEG, PNG, WebP, TIFF, WAV, FLAC, MP3, M4A. See the
+Watermarkable formats: JPEG, PNG, WebP, TIFF, WAV, FLAC, MP3, M4A, MP4. See the
 [watermarking quickstart](../quickstart/6_watermarking.md).
 
 #### `redact`
@@ -419,23 +420,34 @@ separately authorized completeness claim.
 
 ## Standalone Binding
 
-🟠 **test only**.
+Bind embeds a Trufo watermark **without** Trufo signing: you sign the
+watermarked media with your own certificate and complete the record with
+`/bind/commit`, which maps the mark to your manifest for soft-binding
+resolution. Two routes share the commit (see the routes table in the
+[watermarking quickstart](../quickstart/6_watermarking.md#routes)): **tpls**,
+where `/bind/watermark` embeds the mark on Trufo's servers, and **lpls**, where
+`/bind/reserve` issues the watermark id and you embed with the local engine.
+Compliance mode (a single `/bind/watermark` call embedding your organization's
+mark for a declared AI class, 🟠 **test only**) has nothing to commit.
 
-Bind embeds a Trufo watermark **without** C2PA signing: you sign the
-watermarked media with your own certificate. In provenance mode, the record
-starts incomplete and `/bind/commit` completes it by verifying your signed
-manifest declares the mark. In compliance mode a single call embeds your
-organization's mark for a declared AI class — there is nothing to commit.
-SDK: `bind_watermark_test()` / `bind_commit_test()`.
+Production requires a `watermark-prod` key, an active C2PA Signing or Watermark
+API plan, and completed organization validation. Billing: tpls bills one
+watermark encode plus the media bytes at `/bind/watermark` and the manifest
+bytes at commit; lpls bills one encode at commit plus the manifest bytes. Every
+committed production record, on any route, then accrues soft-binding resolution maintenance:
+Trufo keeps the link between the watermark and its manifest id for C2PA public
+soft-binding resolution, metered as one active-ID day per day and billed as ID-years.
+SDK: `bind_watermark()`, `bind_reserve()`, `watermark_media()`, `bind_commit()`
+(`_test` variants for the test host).
 
 ### `POST /bind/watermark`
 
-**Auth:** API key with the `watermark-test` scope.
+**Auth:** API key with the `watermark-prod` scope (`watermark-test` on the test host).
 
 | Field | Type | Required | Description |
 | ----- | ---- | -------- | ----------- |
 | `media_input` | string | Yes | base64-encoded media to watermark |
-| `mode` | string | No | `"provenance"` (default) or `"compliance"` |
+| `mode` | string | No | `"provenance"` (default) or `"compliance"` (test host only) |
 | `ai_compliance_label` | string | In compliance mode | `"ai_generated"`, `"ai_modified"`, or `"undeclared"`; rejected outside compliance mode |
 
 **Response (200):**
@@ -449,20 +461,42 @@ SDK: `bind_watermark_test()` / `bind_commit_test()`.
 Bind has no effort tiers: the watermark is always required, and an
 unsupported format (outside the watermarkable table above) is an error.
 
-### `POST /bind/commit`
+### `POST /bind/reserve`
 
-**Auth:** API key with the `watermark-test` scope.
+**Auth:** API key with the `watermark-prod` scope (`watermark-test` on the test host).
 
 | Field | Type | Required | Description |
 | ----- | ---- | -------- | ----------- |
-| `cid` | string | Yes | Record id from `/bind/watermark` |
-| `media_input` | string | Yes | base64-encoded C2PA-signed watermarked media |
+| `mime_type` | string | Yes | MIME type of the media you will watermark locally (an encode-supported format) |
 
-The manifest must declare the mark: a `c2pa.soft-binding` assertion with
-algorithm `ai.trufo.pawprint.watermark` and the record's watermark id as its
-block value, paired with a `c2pa.watermarked.bound` action, per the C2PA
-specification. The manifest is checked for this declaration, not for trust
-status — sign with whatever certificate you use.
+**Response (200):**
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `cid` | string | Record id for `/bind/commit` |
+| `wid_package` | object | `{ "wid", "expires_at" }` — the reservation to embed with the engine; valid for 24 hours (1 hour on the test host) |
+
+### `POST /bind/commit`
+
+**Auth:** API key with the `watermark-prod` scope (`watermark-test` on the test host).
+
+| Field | Type | Required | Description |
+| ----- | ---- | -------- | ----------- |
+| `cid` | string | Yes | Record id from `/bind/watermark` or `/bind/reserve` |
+| `wid` | string | Yes | The watermark id issued with that record |
+| `manifest` | string | One of | base64-encoded C2PA manifest store declaring the mark |
+| `manifest_id` | string | One of | The manifest's id (its urn) when the manifest lives in your own store; requires `manifest_endpoint`, and the declaration is then your responsibility |
+| `manifest_endpoint` | string | No | Base URI (`https://…`) of your own C2PA manifest store hosting this manifest at `{manifest_endpoint}/manifests/{manifestId}`; omit to have Trufo host it |
+
+With `manifest`, the store must declare the mark: a `c2pa.soft-binding`
+assertion with algorithm `ai.trufo.pawprint.watermark` and the record's
+watermark id as its block value, paired with a `c2pa.watermarked.bound`
+action, per the C2PA specification. The manifest is checked for this
+declaration, not for trust status — sign with whatever certificate you use —
+and its id is derived from the bytes. When `manifest_endpoint` is given, Trufo
+keeps no copy and soft-binding resolution refers validators to your store;
+otherwise Trufo stores and serves the manifest. An identical retry of a
+completed commit succeeds; a different one is refused.
 
 **Response (200):** `cid`, `wid`.
 
@@ -470,8 +504,9 @@ status — sign with whatever certificate you use.
 
 | Status | Meaning |
 | ------ | ------- |
-| 400 | Invalid mode/label pairing, unsupported media format, no parseable manifest, or the manifest does not declare the record's mark (the record stays incomplete — fix and resubmit) |
-| 404 | Unknown `cid`, or a record not created by `/bind/watermark` |
+| 400 | Malformed `wid`, no parseable manifest, `manifest_id` without an endpoint, or the manifest does not declare the record's mark (the record stays incomplete — fix and resubmit). `/bind/watermark` also rejects an invalid mode/label pairing or an unsupported media format |
+| 404 | Unknown `cid`, a record not opened by a bind call, or a `wid` that is not a live reservation of yours for the record's route |
+| 409 | The record was already completed with a different manifest |
 
 ---
 
@@ -484,7 +519,9 @@ been stripped.
 
 **Auth:** API key with the `content-recover-prod` scope on the production hosts, or
 `content-recover-test` on the test host (`test.api.trufo.ai`). Each key works only
-against its own host tier.
+against its own host tier. Production requires an active C2PA Signing or Watermark
+API plan and bills one watermark decode plus the input bytes per call; an input the
+engine cannot decode bills the bytes only.
 
 | Field | Type | Required |
 | ----- | ---- | -------- |
@@ -501,12 +538,72 @@ against its own host tier.
 | `ai_compliance_label` | string or null | Compliance marks: the declared AI class |
 | `oid` | string or null | Your organization ID, present only when the mark is your organization's |
 
-Decoding accepts any parseable image or audio input, not only the formats supported
-for embedding. What a detected watermark discloses depends on its kind: a
+Decoding accepts any parseable image, video, or audio input, not only the formats
+supported for embedding. What a detected watermark discloses depends on its kind: a
 provenance mark reveals its details for content your own organization signed
 (other organizations' marks report `detected` without further detail), while a
 compliance mark reveals its declared AI class to any decoder — with `oid` marking
 the ones your organization owns.
+
+**Errors:**
+
+| Status | Meaning |
+| ------ | ------- |
+| 400 | `UndecodableMedia`: the input could not be parsed as image, video, or audio |
+
+---
+
+## Content Records
+
+Every production sign or bind creates a content record. A record with a
+watermark id and a manifest id is what public soft-binding resolution serves
+and what soft-binding resolution maintenance charges for, per ID per UTC day.
+The owner can look records up, list them, and switch each one off and on.
+Production hosts only. SDK: `get_content()`, `list_content()`,
+`set_content_status()`.
+
+Unlike `/content/recover`, which decodes media and is metered, these take an
+identifier or filters, touch only your own records, and are not metered.
+
+**Auth (all three):** API key with the `c2pa-sign-prod` or `watermark-prod`
+scope, or a dashboard session. No active plan is required, so a lapsed
+subscriber can still deactivate its marks.
+
+**The record:** `cid` (record id, returned by every sign and bind call), `wid`
+(once the mark is embedded and, on the bind routes, committed), `mid` (once a
+manifest is captured), `status` (`active` or `inactive`), `origin`
+(`c2pa_hosted`, `c2pa_distributed`, `bind_hosted`, `bind_distributed`),
+`mime_type`, `create_ts`, `commit_ts`. Fields only ever gain members.
+
+### `POST /content/get`
+
+Exactly one of `cid`, `wid` (current `v1.` or legacy `image.` / `audio.` form), `mid`. **Response (200):** the
+record. **Errors:** 400 malformed `wid`; 404 when no record of yours matches;
+422 when zero or several keys are given.
+
+### `POST /content/list`
+
+| Field | Type | Required | Description |
+| ----- | ---- | -------- | ----------- |
+| `status` | string | No | `active` or `inactive` |
+| `origin` | string | No | one route |
+| `created_after` | string | No | RFC 3339; created at or after |
+| `created_before` | string | No | RFC 3339; created before |
+| `cursor` | string | No | Opaque; the `next_cursor` of the previous page |
+| `limit` | int | No | 1 to 100 (default 50) |
+
+**Response (200):** `items`, oldest first, and `next_cursor`. A short or empty
+page is the last one, and `next_cursor` is then null; a full last page yields
+one more, empty, page. The limit bounds one response.
+
+### `POST /content/status`
+
+Exactly one of `cid`, `wid`, `mid`, plus `status`: `inactive` withdraws the
+record from public soft-binding resolution immediately and stops its resolution
+maintenance from the next UTC day, so the day of deactivation is the last one
+charged; `active` restores resolution immediately and counting from the next
+day. Idempotent. Nothing is deleted and the signed asset is untouched. **Response (200):** the record after the
+write. **Errors:** as `get`.
 
 ---
 

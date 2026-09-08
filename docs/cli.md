@@ -17,6 +17,8 @@ trufo set-api-key c2pa-sign-prod [KEY] # POST /c2pa/sign
 trufo set-api-key c2pa-sign-test [KEY] # POST /c2pa/sign (test host)
 trufo set-api-key content-recover-prod [KEY] # POST /content/recover
 trufo set-api-key content-recover-test [KEY] # POST /content/recover (test host)
+trufo set-api-key watermark-prod [KEY] # POST /bind/* and /content/* (standalone binding, content records)
+trufo set-api-key watermark-test [KEY] # POST /bind/* (test host)
 trufo set-api-key tsa            [KEY] # tsa.trufo.ai
 ```
 

@@ -56,7 +56,7 @@ def register_subcommands(sub: argparse._SubParsersAction) -> None:
     p.add_argument(
         "key_type",
         choices=[k.value for k in TrufoApiKey],
-        help="API key scope (trufo-api, c2pa-sign-prod, c2pa-sign-test, tsa).",
+        help="API key scope (" + ", ".join(k.value for k in TrufoApiKey) + ").",
     )
     p.add_argument("key", help="API key value.")
     p.set_defaults(func=cmd_set_api_key)

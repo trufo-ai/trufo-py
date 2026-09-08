@@ -5,7 +5,43 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.3.0] — Unreleased
+
+### Added
+
+- Content records: `get_content` (by content id, watermark ID, or manifest ID),
+  `list_content` (oldest first, filtered by status, route, and creation window),
+  and `set_content_status`. Setting a record `inactive` withdraws its mark from
+  public soft-binding resolution and stops its soft-binding resolution
+  maintenance from the next UTC day; `active` restores it.
+- Video watermarking (`video/mp4`) on every route, through trufo-provenance 1.3.0 and
+  trufo-pawprint 0.2.
+- `TrufoApiKey.WATERMARK_TEST` / `WATERMARK_PROD` (`trufo set-api-key watermark-prod`),
+  the key scopes standalone binding uses.
+- Standalone binding in production: `bind_watermark` / `bind_commit` (tpls: Trufo
+  embeds, you sign) and `bind_reserve` / `watermark_media` / `bind_commit` (lpls: you
+  embed with the local engine, you sign), with a `watermark-prod` key and an active
+  C2PA Signing or Watermark API plan. The `_test` variants target the test host.
+- Route names: tpts / lpts / tpls / lpls (trufo- or local-processing, trufo- or
+  local-signing) name the four ways to get a signed, watermarked asset. tpts and
+  lpts are the hosted and distributed C2PA Signing products; tpls and lpls are the
+  standalone Watermark APIs. See the routes table in the watermarking quickstart.
+
+### Changed
+
+- The local-engine extras require trufo-provenance 1.3.0, which reads the shared
+  `v1.` watermark ID space.
+- `bind_commit` / `bind_commit_test` (test-host only until this release) take the
+  watermark ID as a third positional argument, and the manifest source is one of
+  `manifest_bytes=` (the C2PA manifest store), `manifest_id=` with
+  `manifest_endpoint=` (a manifest in your own store, recorded as given), or
+  `signed_media_bytes=` (the store is read out locally, which needs
+  `trufo[local-sign-only]`). `manifest_endpoint=` still switches Trufo from hosting
+  the manifest to referring validators to your store. The former positional media
+  argument is gone.
+- Watermark IDs read `v1.{11 hex}` (one payload space for every kind of media);
+  IDs issued earlier as `image.` or `audio.` remain valid.
+- `/content/recover` accepts either the C2PA Signing or the Watermark API plan.
 
 ## [1.2.0] — 2026-08-22
 
@@ -343,7 +379,7 @@ Minor-version bump marks the general availability of the production C2PA signing
 - `trufo.intf`: credential storage and loading (env vars + file), CLI entry point.
 - PyPI trusted publishing via GitHub Actions (OIDC, no API tokens required).
 
-[Unreleased]: https://github.com/trufo-ai/trufo-py/compare/v1.2.0...HEAD
+[1.3.0]: https://github.com/trufo-ai/trufo-py/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/trufo-ai/trufo-py/compare/v1.1.2...v1.2.0
 [1.1.2]: https://github.com/trufo-ai/trufo-py/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/trufo-ai/trufo-py/compare/v1.1.0...v1.1.1

@@ -23,7 +23,7 @@ from trufo.util.credentials import TrufoApiKey, load_api_key
 # --- configuration ---
 
 INPUT_FILE = Path("photo.jpg")       # a watermarkable format: JPEG, PNG, WebP,
-OUTPUT_FILE = Path("watermarked.jpg")  # TIFF, WAV, FLAC, MP3, or M4A
+OUTPUT_FILE = Path("watermarked.jpg")  # TIFF, WAV, FLAC, MP3, M4A, or MP4
 
 api_key = load_api_key(TrufoApiKey.C2PA_SIGN_TEST)
 assert api_key, (
@@ -71,7 +71,7 @@ else:
 # --- 3. compliance mark: declare the content's AI class (test host only) -----
 # Instead of a per-content provenance ID, embed the org's reusable mark for a
 # declared AI class; the same wid is reused for every compliance sign of that
-# (label, modality).
+# label.
 
 signed_bytes = sign_c2pa_test(
     api_key,

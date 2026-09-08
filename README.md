@@ -33,7 +33,8 @@ That is a complete C2PA signature — Trufo assembles and signs the manifest, so
 - **Sign C2PA manifests** — hosted, or [distributed](docs/quickstart/2_c2pa_signing.md) so media never leaves your machine
 - **Label AI-generated content** with [C2PA AI disclosures](docs/quickstart/3_ai_labeling.md)
 - **Stamp organization identity and metadata** via [CAWG](docs/quickstart/4_cawg_publish.md)
-- **Embed and recover watermarks** that [survive manifest stripping](docs/quickstart/6_watermarking.md)
+- **Embed and recover watermarks** that [survive manifest stripping](docs/quickstart/6_watermarking.md), with Trufo signing or your own
+- **Manage your content records** — look up, list, and switch off the marks you keep resolvable ([content records](docs/api/api_c2pa.md#content-records))
 - **Declare source assets, or redact** from provenance history ([ingredients](docs/quickstart/5_ingredients.md))
 - **Enrol your own C2PA certificates** for a generator product ([CSRs](docs/quickstart/1_certs.md))
 
@@ -56,7 +57,7 @@ Pick `local-sign-only` unless you need watermarking in distributed signing: the 
 
 ### Private Package Index
 
-New releases of `trufo-provenance` and `trufo-pawprint` are distributed through Trufo's private package index at `packages.trufo.ai` rather than public PyPI. Installing the `local-sign-only` (or `local-full`) extra requires an `sdk-download` API key, created at [app.trufo.ai/settings/org](https://app.trufo.ai/settings/org) under *API Keys* (requires an active C2PA Signing plan).
+New releases of `trufo-provenance` and `trufo-pawprint` are distributed through Trufo's private package index at `packages.trufo.ai` rather than public PyPI. Installing the `local-sign-only` (or `local-full`) extra requires an `sdk-download` API key, created at [app.trufo.ai/settings/org](https://app.trufo.ai/settings/org) under *API Keys* (requires an active C2PA Signing or Watermark API plan).
 
 Store the key in `~/.netrc` rather than in the index URL. pip sends it as an HTTP basic-auth credential either way, but a URL-embedded key also lands in your shell history, the process list, and pip and CI logs:
 
@@ -107,6 +108,6 @@ The full reference documentation is spread across the following files:
 | Document                                       | Covers                                                                    |
 | ---------------------------------------------- | ------------------------------------------------------------------------- |
 | [docs/api/api_trufo.md](docs/api/api_trufo.md) | Accounts, organizations, MFA, API keys and scopes, Organization Validation, errors, regions |
-| [docs/api/api_c2pa.md](docs/api/api_c2pa.md)   | C2PA signing (hosted, S3, distributed), actions and assertions, watermark recovery, assertion records |
+| [docs/api/api_c2pa.md](docs/api/api_c2pa.md)   | C2PA signing (hosted, S3, distributed), actions and assertions, standalone binding, watermark recovery, content records, assertion records |
 | [docs/api/api_certs.md](docs/api/api_certs.md) | Certificate enrollment (EST), OCSP, timestamping, and the Registration Authority |
 | [docs/cli.md](docs/cli.md)                     | CLI credential management                                                 |

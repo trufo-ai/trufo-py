@@ -56,6 +56,7 @@ Depending on what you need, set up the corresponding API key:
 - **Calling `sign_c2pa_distributed_test()` or `sign_c2pa_distributed()`** — create a `c2pa-sign-test` or `c2pa-sign-prod` key (same as above) **plus** a `tsa` key for the RFC 3161 timestamping step.
 - **Calling `tsa.trufo.ai`** — create a `tsa` key.
 - **Calling `/content/recover` (watermark decode)** — create a `content-recover-prod` key (for the production hosts) or a `content-recover-test` key (for the test host `test.api.trufo.ai`).
+- **Calling `bind_watermark()`, `bind_reserve()`, or `bind_commit()` (standalone binding)** — create a `watermark-prod` key (for the production hosts) or a `watermark-test` key (for the test host).
 
 See [../api/api_trufo.md](../api/api_trufo.md) for the full scope reference.
 

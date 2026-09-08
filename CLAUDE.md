@@ -18,11 +18,21 @@ certificate enrollment.
   setting failure tolerance (`WatermarkEffort` enum; `effort` is a deprecated alias)
   and `mode` = `provenance` (default) / `compliance` selecting the mark kind
   (`WatermarkMode`; compliance requires `ai_compliance_label` and is test-host only).
-  Supported: JPEG/PNG/WebP/TIFF, WAV/FLAC/MP3/M4A.
-- `bind_watermark_test()` / `bind_commit_test()` (test host only, `watermark-test`
-  scope) embed a watermark without Trufo signing: the caller signs with their own
-  certificate, and commit verifies the manifest declares the mark (soft-binding
-  assertion + `c2pa.watermarked.bound`). Both watermark modes apply.
+  Supported: JPEG/PNG/WebP/TIFF, WAV/FLAC/MP3/M4A, MP4.
+- Routes are named by who embeds and who signs: tpts / lpts (Trufo signs; `sign_c2pa`,
+  `sign_c2pa_distributed`) and tpls / lpls (the caller signs with their own certificate;
+  `bind_watermark` → `bind_commit`, or `bind_reserve` → `watermark_media` →
+  `bind_commit`). Production bind needs a `watermark-prod` key, a C2PA Signing or
+  Watermark API plan, and completed Organization Validation; `_test` variants use the
+  test host with `watermark-test`. Commit
+  verifies the manifest declares the mark (soft-binding assertion +
+  `c2pa.watermarked.bound`). Compliance mode is test-host only.
+- Every production sign or bind creates a content record. `get_content` looks one up by
+  `cid`, `wid`, or `mid`; `list_content` pages them oldest first (status / origin / creation
+  window filters, ≤100 per page); `set_content_status(api_key, "inactive", wid=...)`
+  withdraws a mark from public soft-binding resolution and stops its soft-binding
+  resolution maintenance charge from the next UTC day. Production hosts only; no plan
+  required.
 - `sign_c2pa_distributed()` uses the production remote signing endpoint and requires
   completed Organization Validation plus `c2pa-sign-prod` and `tsa` API keys.
 - `sign_c2pa_distributed_test()` uses the test remote signing endpoint and requires
@@ -55,5 +65,5 @@ Two modes exist; see `docs/api/api_c2pa.md` for the full comparison.
 
 | Mode | Function | Requires local engine extra | Media sent to server |
 |---|---|---|---|
-| Hosted (server) | `sign_c2pa`, `sign_c2pa_test` | No | Yes |
-| Distributed | `sign_c2pa_distributed`, `sign_c2pa_distributed_test` | Yes (`trufo[local-sign-only]`; `trufo[local-full]` for watermarking) | No |
+| Hosted (tpts) | `sign_c2pa`, `sign_c2pa_test` | No | Yes |
+| Distributed (lpts) | `sign_c2pa_distributed`, `sign_c2pa_distributed_test` | Yes (`trufo[local-sign-only]`; `trufo[local-full]` for watermarking) | No |

@@ -13,6 +13,10 @@ _ALL_API_KEY_ENV_VARS = (
     "TRUFO_API_KEY",
     "TRUFO_C2PA_SIGN_PROD_API_KEY",
     "TRUFO_C2PA_SIGN_TEST_API_KEY",
+    "TRUFO_CONTENT_RECOVER_TEST_API_KEY",
+    "TRUFO_CONTENT_RECOVER_PROD_API_KEY",
+    "TRUFO_WATERMARK_TEST_API_KEY",
+    "TRUFO_WATERMARK_PROD_API_KEY",
     "TRUFO_TSA_API_KEY",
     "TRUFO_ACCESS_TOKEN",
     "TRUFO_REFRESH_TOKEN",
@@ -41,6 +45,8 @@ def _patch_config_paths(tmp_path, monkeypatch):
             TrufoApiKey.C2PA_SIGN_TEST: creds_dir / "c2pa_sign_test_api_key",
             TrufoApiKey.CONTENT_RECOVER_TEST: creds_dir / "content_recover_test_api_key",
             TrufoApiKey.CONTENT_RECOVER_PROD: creds_dir / "content_recover_prod_api_key",
+            TrufoApiKey.WATERMARK_TEST: creds_dir / "watermark_test_api_key",
+            TrufoApiKey.WATERMARK_PROD: creds_dir / "watermark_prod_api_key",
             TrufoApiKey.TSA: creds_dir / "tsa_api_key",
         },
     )
@@ -73,6 +79,8 @@ _ALL_SCOPES = [
         "TRUFO_CONTENT_RECOVER_PROD_API_KEY",
         "content_recover_prod_api_key",
     ),
+    (TrufoApiKey.WATERMARK_TEST, "TRUFO_WATERMARK_TEST_API_KEY", "watermark_test_api_key"),
+    (TrufoApiKey.WATERMARK_PROD, "TRUFO_WATERMARK_PROD_API_KEY", "watermark_prod_api_key"),
     (TrufoApiKey.TSA, "TRUFO_TSA_API_KEY", "tsa_api_key"),
 ]
 
