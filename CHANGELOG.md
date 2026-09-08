@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and `set_content_status`. Setting a record `inactive` withdraws its mark from
   public soft-binding resolution and stops its soft-binding resolution
   maintenance from the next UTC day; `active` restores it.
+- Video watermarking (`video/mp4`) on every route, through trufo-provenance 1.3.0 and
+  trufo-pawprint 0.2.
 - `TrufoApiKey.WATERMARK_TEST` / `WATERMARK_PROD` (`trufo set-api-key watermark-prod`),
   the key scopes standalone binding uses.
 - Standalone binding in production: `bind_watermark` / `bind_commit` (tpls: Trufo
@@ -32,7 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `bind_commit` / `bind_commit_test` (test-host only until this release) take the
   watermark ID as a third positional argument, and the manifest source is one of
   `manifest_bytes=` (the C2PA manifest store), `manifest_id=` with
-  `manifest_endpoint=` (a manifest in your own store, recorded on your word), or
+  `manifest_endpoint=` (a manifest in your own store, recorded as given), or
   `signed_media_bytes=` (the store is read out locally, which needs
   `trufo[local-sign-only]`). `manifest_endpoint=` still switches Trufo from hosting
   the manifest to referring validators to your store. The former positional media
@@ -377,7 +379,7 @@ Minor-version bump marks the general availability of the production C2PA signing
 - `trufo.intf`: credential storage and loading (env vars + file), CLI entry point.
 - PyPI trusted publishing via GitHub Actions (OIDC, no API tokens required).
 
-[Unreleased]: https://github.com/trufo-ai/trufo-py/compare/v1.2.0...HEAD
+[1.3.0]: https://github.com/trufo-ai/trufo-py/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/trufo-ai/trufo-py/compare/v1.1.2...v1.2.0
 [1.1.2]: https://github.com/trufo-ai/trufo-py/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/trufo-ai/trufo-py/compare/v1.1.0...v1.1.1

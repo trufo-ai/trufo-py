@@ -18,12 +18,13 @@ certificate enrollment.
   setting failure tolerance (`WatermarkEffort` enum; `effort` is a deprecated alias)
   and `mode` = `provenance` (default) / `compliance` selecting the mark kind
   (`WatermarkMode`; compliance requires `ai_compliance_label` and is test-host only).
-  Supported: JPEG/PNG/WebP/TIFF, WAV/FLAC/MP3/M4A.
+  Supported: JPEG/PNG/WebP/TIFF, WAV/FLAC/MP3/M4A, MP4.
 - Routes are named by who embeds and who signs: tpts / lpts (Trufo signs; `sign_c2pa`,
   `sign_c2pa_distributed`) and tpls / lpls (the caller signs with their own certificate;
   `bind_watermark` → `bind_commit`, or `bind_reserve` → `watermark_media` →
-  `bind_commit`). Production bind needs a `watermark-prod` key and a C2PA Signing or
-  Watermark API plan; `_test` variants use the test host with `watermark-test`. Commit
+  `bind_commit`). Production bind needs a `watermark-prod` key, a C2PA Signing or
+  Watermark API plan, and completed Organization Validation; `_test` variants use the
+  test host with `watermark-test`. Commit
   verifies the manifest declares the mark (soft-binding assertion +
   `c2pa.watermarked.bound`). Compliance mode is test-host only.
 - Every production sign or bind creates a content record. `get_content` looks one up by
@@ -31,7 +32,7 @@ certificate enrollment.
   window filters, ≤100 per page); `set_content_status(api_key, "inactive", wid=...)`
   withdraws a mark from public soft-binding resolution and stops its soft-binding
   resolution maintenance charge from the next UTC day. Production hosts only; no plan
-  required. Bulk operations, the dashboard page, and deactivate-on-cancel are TODO.
+  required.
 - `sign_c2pa_distributed()` uses the production remote signing endpoint and requires
   completed Organization Validation plus `c2pa-sign-prod` and `tsa` API keys.
 - `sign_c2pa_distributed_test()` uses the test remote signing endpoint and requires

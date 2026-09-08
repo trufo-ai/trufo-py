@@ -106,7 +106,7 @@ Four routes produce a signed, watermarked asset. They differ in who embeds the m
 | Route | Step 1 | Step 2 | Step 3 | Step 4 | trufo-py |
 | ----- | ------ | ------ | ------ | ------ | -------- |
 | **tpts** | `POST /c2pa/sign`: Trufo embeds the mark (when the `watermark` action is present) and signs; the record is complete | | | | `sign_c2pa` |
-| **lpts** | `POST /c2pa/remote-preprocess`: Trufo reserves the watermark ID and opens the record | you embed locally (Trufo engine) and build the manifest | `POST /c2pa/remote-sign`: Trufo signs the claim | `POST /c2pa/remote-commit`: Trufo stamps the ID and stores the manifest | `sign_c2pa_distributed` runs all four |
+| **lpts** | SDK-internal protocol: Trufo reserves the watermark ID and opens the record | you embed locally (Trufo engine) and build the manifest | Trufo signs the claim | Trufo stamps the ID and stores the manifest | `sign_c2pa_distributed` runs all four |
 | **tpls** | `POST /bind/watermark`: Trufo embeds the mark, reserves the ID, opens the record, returns the marked media | you sign with your own certificate | | `POST /bind/commit`: Trufo checks the manifest declares the ID, stamps, stores or refers | `bind_watermark`, then `bind_commit` |
 | **lpls** | `POST /bind/reserve`: Trufo reserves the ID and opens the record for a MIME type | you embed locally (Trufo engine) | you sign with your own certificate | `POST /bind/commit`, as above | `bind_reserve`, `watermark_media`, then `bind_commit` |
 
@@ -124,7 +124,7 @@ Additional notes for local embedding:
 
 ## Binding Without Trufo Signing (tpls and lpls)
 
-Requires an API key with the `watermark-prod` scope and an active C2PA Signing or Watermark API plan (`watermark-test` on the test host, where nothing is billed). Store it with `trufo set-api-key watermark-prod <KEY>` and load it with `load_api_key(TrufoApiKey.WATERMARK_PROD)`. Production bills each bound asset as one watermark encode plus the bytes processed, and every committed record accrues soft-binding resolution maintenance (the watermark-to-manifest link kept for C2PA soft-binding resolution) per ID per day — see [billing](../api/api_c2pa.md#standalone-binding).
+Requires an API key with the `watermark-prod` scope, an active C2PA Signing or Watermark API plan, and completed Organization Validation (`watermark-test` on the test host, where nothing is billed and no validation is needed). Store it with `trufo set-api-key watermark-prod <KEY>` and load it with `load_api_key(TrufoApiKey.WATERMARK_PROD)`. Production bills each bound asset as one watermark encode plus the bytes processed, and every committed record accrues soft-binding resolution maintenance (the watermark-to-manifest link kept for C2PA soft-binding resolution) per ID per day — see [billing](../api/api_c2pa.md#standalone-binding).
 
 If you sign C2PA manifests yourself (your own certificate and signing pipeline), bind gives you a Trufo watermark without handing Trufo the signature step. On the **tpls** route Trufo embeds the mark:
 
@@ -184,7 +184,7 @@ manifest ID, or the record id, and switch them off and on:
 ```python
 from trufo import get_content, list_content, set_content_status
 
-record = get_content(api_key, wid="v1.001a1b2c3d4")     # what is this mark, is it accruing?
+record = get_content(api_key, wid="v1.001a1b2c3d4")     # the record behind a decoded mark
 set_content_status(api_key, "inactive", wid=record.wid)  # stops resolving and accruing
 
 page = list_content(api_key, status="active", origin="bind_hosted",
@@ -205,7 +205,7 @@ the next UTC day. See the [API reference](../api/api_c2pa.md#content-records).
 
 ## Test vs Production
 
-Production signing issues a unique watermark ID and links it to a permanent signing record. Test signing embeds a watermark from a separate test ID space: IDs are ephemeral, not unique, and no signing record is created. Test-signed watermarks are for integration development only.
+Production signing issues a unique watermark ID and links it to a permanent signing record. Test signing embeds a watermark from a separate test ID space: IDs are ephemeral, not unique, and test records are neither resolvable nor billed. Test-signed watermarks are for integration development only.
 
 See [api_c2pa.md](../api/api_c2pa.md#signing-modes) for the full flow comparison (endpoints, auth, records, billing).
 

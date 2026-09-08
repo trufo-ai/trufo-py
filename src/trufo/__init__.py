@@ -37,7 +37,6 @@ __all__ = [
     "bind_reserve_test",
     "bind_watermark",
     "bind_watermark_test",
-    "watermark_media",
     "create_instance",
     "generate_keypair",
     "get_content",
@@ -58,6 +57,7 @@ __all__ = [
     "sign_c2pa_via_s3",
     "sign_c2pa_via_s3_test",
     "TrufoServerWarning",
+    "watermark_media",
 ]
 
 # register the trufo-py version with tfprov so X-TF-Version is sent on all

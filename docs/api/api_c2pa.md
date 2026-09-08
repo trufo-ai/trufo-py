@@ -26,8 +26,8 @@ See [api_trufo.md](api_trufo.md) for authentication, error conventions, and regi
 | `POST /bind/watermark`, `/bind/reserve`, `/bind/commit` | `watermark-prod` (test host: `watermark-test`) | C2PA Signing or Watermark API |
 
 An account access token with the `c2pa_sign` permission may be used instead of an
-API key on the signing and assertion-record endpoints; `/content/recover` requires
-an API key.
+API key on the signing, assertion-record, and content-record endpoints;
+`/content/recover` and the `/bind/*` endpoints require an API key.
 
 Distributed signing is performed by the SDK over a dedicated protocol whose
 endpoints are an internal detail of that protocol, not a public interface. Use
@@ -273,7 +273,7 @@ compliance sign after that. To watermark media you sign yourself, use
 | `"require_if_supported"` | Signs unwatermarked, with a warning | Error |
 | `"best_effort"` | Signs unwatermarked, with a warning | Signs unwatermarked, with a warning |
 
-Watermarkable formats: JPEG, PNG, WebP, TIFF, WAV, FLAC, MP3, M4A. See the
+Watermarkable formats: JPEG, PNG, WebP, TIFF, WAV, FLAC, MP3, M4A, MP4. See the
 [watermarking quickstart](../quickstart/6_watermarking.md).
 
 #### `redact`
@@ -504,8 +504,8 @@ completed commit succeeds; a different one is refused.
 
 | Status | Meaning |
 | ------ | ------- |
-| 400 | Invalid mode/label pairing, unsupported media format, malformed `wid`, no parseable manifest, `manifest_id` without an endpoint, or the manifest does not declare the record's mark (the record stays incomplete — fix and resubmit) |
-| 404 | Unknown `cid`, a record not opened by a bind call, or a `wid` that is not a live reservation of yours from this route |
+| 400 | Malformed `wid`, no parseable manifest, `manifest_id` without an endpoint, or the manifest does not declare the record's mark (the record stays incomplete — fix and resubmit). `/bind/watermark` also rejects an invalid mode/label pairing or an unsupported media format |
+| 404 | Unknown `cid`, a record not opened by a bind call, or a `wid` that is not a live reservation of yours for the record's route |
 | 409 | The record was already completed with a different manifest |
 
 ---
@@ -577,7 +577,7 @@ manifest is captured), `status` (`active` or `inactive`), `origin`
 
 ### `POST /content/get`
 
-Exactly one of `cid`, `wid` (any spelling), `mid`. **Response (200):** the
+Exactly one of `cid`, `wid` (current `v1.` or legacy `image.` / `audio.` form), `mid`. **Response (200):** the
 record. **Errors:** 400 malformed `wid`; 404 when no record of yours matches;
 422 when zero or several keys are given.
 
@@ -592,17 +592,17 @@ record. **Errors:** 400 malformed `wid`; 404 when no record of yours matches;
 | `cursor` | string | No | Opaque; the `next_cursor` of the previous page |
 | `limit` | int | No | 1 to 100 (default 50) |
 
-**Response (200):** `items`, oldest first, and `next_cursor`, null on the last
-page. The limit bounds one response; bulk changes are a separate, job-shaped
-endpoint still to come.
+**Response (200):** `items`, oldest first, and `next_cursor`. A short or empty
+page is the last one, and `next_cursor` is then null; a full last page yields
+one more, empty, page. The limit bounds one response.
 
 ### `POST /content/status`
 
 Exactly one of `cid`, `wid`, `mid`, plus `status`: `inactive` withdraws the
 record from public soft-binding resolution immediately and stops its resolution
 maintenance from the next UTC day, so the day of deactivation is the last one
-charged; `active` restores it from the next day. Idempotent. Nothing is deleted
-and the signed asset is untouched. **Response (200):** the record after the
+charged; `active` restores resolution immediately and counting from the next
+day. Idempotent. Nothing is deleted and the signed asset is untouched. **Response (200):** the record after the
 write. **Errors:** as `get`.
 
 ---

@@ -32,7 +32,7 @@ commit) is available on the test host only.
 
 import base64
 import tempfile
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import requests
@@ -82,10 +82,8 @@ class BindReservation:
     cid: str
     wid: str
     expires_at: str
-
-    @property
-    def wid_package(self) -> dict:
-        return {"wid": self.wid, "expires_at": self.expires_at}
+    # the package exactly as the server issued it, so fields added later pass through
+    wid_package: dict = field(default_factory=dict)
 
 
 def _validate_mode(mode: str, ai_compliance_label: str | None) -> None:
@@ -184,7 +182,9 @@ def bind_reserve(
     """
     payload = _post(api_key, trufo_api_url + TPS_BIND_RESERVE, {"mime_type": mime_type})
     package = payload["wid_package"]
-    return BindReservation(cid=payload["cid"], wid=package["wid"], expires_at=package["expires_at"])
+    return BindReservation(
+        cid=payload["cid"], wid=package["wid"], expires_at=package["expires_at"], wid_package=dict(package)
+    )
 
 
 def watermark_media(media_bytes: bytes, wid_package: dict) -> bytes:

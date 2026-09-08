@@ -14,6 +14,9 @@ File layout (CLI — ``trufo set-api-key``, ``trufo login``):
     │   ├── c2pa_sign_prod_api_key  # c2pa-sign-prod key (/c2pa/sign)
     │   ├── c2pa_sign_test_api_key  # c2pa-sign-test key (test host)
     │   ├── content_recover_prod_api_key  # content-recover-prod key (/content/recover)
+    │   ├── content_recover_test_api_key  # content-recover-test key (test host)
+    │   ├── watermark_prod_api_key  # watermark-prod key (/bind/*, /content/*)
+    │   ├── watermark_test_api_key  # watermark-test key (test host)
     │   └── tsa_api_key             # tsa key (tsa.trufo.ai)
     └── session                     # access + refresh tokens (JSON)
 
@@ -21,6 +24,8 @@ Environment variables (programmatic — CI/CD, containers):
     TRUFO_API_KEY                   → trufo-api key
     TRUFO_C2PA_SIGN_PROD_API_KEY    → c2pa-sign-prod key
     TRUFO_C2PA_SIGN_TEST_API_KEY    → c2pa-sign-test key
+    TRUFO_CONTENT_RECOVER_PROD_API_KEY / _TEST_ → content-recover keys
+    TRUFO_WATERMARK_PROD_API_KEY / _TEST_       → watermark keys
     TRUFO_TSA_API_KEY               → tsa key
     TRUFO_ACCESS_TOKEN              → access token  (both must be set)
     TRUFO_REFRESH_TOKEN             → refresh token (both must be set)
