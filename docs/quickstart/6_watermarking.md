@@ -124,7 +124,7 @@ Additional notes for local embedding:
 
 ## Binding Without Trufo Signing (tpls and lpls)
 
-Requires an API key with the `watermark-prod` scope and an active C2PA Signing or Watermark API plan (`watermark-test` on the test host, where nothing is billed). Store it with `trufo set-api-key watermark-prod <KEY>` and load it with `load_api_key(TrufoApiKey.WATERMARK_PROD)`. Production bills each bound asset as one watermark encode plus the bytes processed, and every committed record accrues resolution hosting per ID per day — see [billing](../api/api_c2pa.md#standalone-binding).
+Requires an API key with the `watermark-prod` scope and an active C2PA Signing or Watermark API plan (`watermark-test` on the test host, where nothing is billed). Store it with `trufo set-api-key watermark-prod <KEY>` and load it with `load_api_key(TrufoApiKey.WATERMARK_PROD)`. Production bills each bound asset as one watermark encode plus the bytes processed, and every committed record accrues soft-binding maintenance (the watermark-to-manifest link kept for C2PA soft-binding resolution) per ID per day — see [billing](../api/api_c2pa.md#standalone-binding).
 
 If you sign C2PA manifests yourself (your own certificate and signing pipeline), bind gives you a Trufo watermark without handing Trufo the signature step. On the **tpls** route Trufo embeds the mark:
 
