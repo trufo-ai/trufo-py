@@ -101,7 +101,7 @@ The `trufo.c2pa` enums `WatermarkEffort`, `WatermarkMode`, and `AiComplianceLabe
 
 ## Routes
 
-Four routes produce a signed, watermarked asset. They differ in who embeds the mark (*processing*) and who signs the manifest (*signing*), and the names combine the two: **tpts** = trufo-processing + trufo-signing, **lpts** = local-processing + trufo-signing, **tpls** = trufo-processing + local-signing, **lpls** = local-processing + local-signing.
+Four routes produce a signed, watermarked asset. They differ in who embeds the mark (*processing*) and who signs the manifest (*signing*), and the names combine the two: **tpts** = trufo-processing + trufo-signing, **lpts** = local-processing + trufo-signing, **tpls** = trufo-processing + local-signing, **lpls** = local-processing + local-signing. tpts and lpts are the hosted and distributed C2PA Signing products; tpls and lpls are the standalone Watermark APIs.
 
 | Route | Step 1 | Step 2 | Step 3 | Step 4 | trufo-py |
 | ----- | ------ | ------ | ------ | ------ | -------- |
