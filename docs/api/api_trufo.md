@@ -228,7 +228,7 @@ keys are created and revoked in the dashboard under *Settings → API Keys*.
 | `watermark-test` | Standalone binding (`/bind/*`, test host) | — |
 | `watermark-prod` | Standalone binding (`/bind/*`, production hosts) | C2PA Signing or Watermark API plan |
 | `tsa` | RFC 3161 timestamping (`tsa.trufo.ai`) | C2PA TSA plan |
-| `sdk-download` | Downloading the local engine packages from Trufo's private package index | C2PA Signing plan |
+| `sdk-download` | Downloading the local engine packages from Trufo's private package index | C2PA Signing or Watermark API plan |
 
 Keys are issued as `{scope}:{key}`; Trufo stores only a hash and shows the full key
 once, at creation. Keys expire — the dashboard shows each key's expiry and last use.

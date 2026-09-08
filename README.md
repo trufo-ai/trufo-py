@@ -57,7 +57,7 @@ Pick `local-sign-only` unless you need watermarking in distributed signing: the 
 
 ### Private Package Index
 
-New releases of `trufo-provenance` and `trufo-pawprint` are distributed through Trufo's private package index at `packages.trufo.ai` rather than public PyPI. Installing the `local-sign-only` (or `local-full`) extra requires an `sdk-download` API key, created at [app.trufo.ai/settings/org](https://app.trufo.ai/settings/org) under *API Keys* (requires an active C2PA Signing plan).
+New releases of `trufo-provenance` and `trufo-pawprint` are distributed through Trufo's private package index at `packages.trufo.ai` rather than public PyPI. Installing the `local-sign-only` (or `local-full`) extra requires an `sdk-download` API key, created at [app.trufo.ai/settings/org](https://app.trufo.ai/settings/org) under *API Keys* (requires an active C2PA Signing or Watermark API plan).
 
 Store the key in `~/.netrc` rather than in the index URL. pip sends it as an HTTP basic-auth credential either way, but a URL-embedded key also lands in your shell history, the process list, and pip and CI logs:
 
