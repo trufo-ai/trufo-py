@@ -15,8 +15,9 @@ from trufo.api.headers import sdk_headers
 class ContentRecord:
     """One content record, created by a production sign or bind.
 
-    ``wid`` is the watermark ID when a mark was embedded and ``mid`` the
-    manifest ID when a manifest was captured; a record with both is what
+    ``wid`` is the watermark ID once a mark is embedded (and, on the bind
+    routes, committed) and ``mid`` the manifest ID once a manifest is captured;
+    a record with both is what
     public soft-binding resolution serves and what soft-binding resolution
     maintenance charges for. ``status`` is ``"active"`` or ``"inactive"``.
     """
