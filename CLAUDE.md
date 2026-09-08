@@ -26,6 +26,10 @@ certificate enrollment.
   Watermark API plan; `_test` variants use the test host with `watermark-test`. Commit
   verifies the manifest declares the mark (soft-binding assertion +
   `c2pa.watermarked.bound`). Compliance mode is test-host only.
+- Every production sign or bind creates a content record; `list_content` pages them
+  (cursor, ≤100 per page) and `set_content_status(api_key, cid, "inactive")` withdraws a
+  mark from public soft-binding resolution and stops its soft-binding resolution
+  maintenance charge from the next day. Production hosts only; no plan required.
 - `sign_c2pa_distributed()` uses the production remote signing endpoint and requires
   completed Organization Validation plus `c2pa-sign-prod` and `tsa` API keys.
 - `sign_c2pa_distributed_test()` uses the test remote signing endpoint and requires
