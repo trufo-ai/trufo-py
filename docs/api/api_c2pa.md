@@ -434,7 +434,7 @@ Production requires a `watermark-prod` key, an active C2PA Signing or Watermark
 API plan, and completed organization validation. Billing: tpls bills one
 watermark encode plus the media bytes at `/bind/watermark` and the manifest
 bytes at commit; lpls bills one encode at commit plus the manifest bytes. Every
-committed production record, on any route, then accrues soft-binding maintenance:
+committed production record, on any route, then accrues soft-binding resolution maintenance:
 Trufo keeps the link between the watermark and its manifest id for C2PA public
 soft-binding resolution, metered as one active-ID day per day and billed as ID-years.
 SDK: `bind_watermark()`, `bind_reserve()`, `watermark_media()`, `bind_commit()`
