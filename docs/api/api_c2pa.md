@@ -526,6 +526,7 @@ engine cannot decode bills the bytes only.
 | Field | Type | Required |
 | ----- | ---- | -------- |
 | `media_input` | string | Yes — base64-encoded media |
+| `parse_manifest_json` | bool | No (default `false`) — also return the stored manifest parsed as JSON |
 
 **Response (200):**
 
@@ -534,7 +535,8 @@ engine cannot decode bills the bytes only.
 | `detected` | bool | Whether a Trufo watermark was found |
 | `wid` | string or null | The decoded watermark id |
 | `confidence` | float or null | Detection strength in (0, 1] — how strongly the signal was recovered, not a probability of correctness |
-| `manifest` | object or null | Provenance marks: the stored manifest, when available for that record |
+| `manifest_bytes` | string or null | Provenance marks: the stored C2PA manifest store, base64-encoded, when available for that record; validate it against your own copy of the media |
+| `manifest_json` | object or null | The same manifest parsed as JSON, only when `parse_manifest_json` was set; a convenience for callers without a local C2PA engine, not a validation result |
 | `ai_compliance_label` | string or null | Compliance marks: the declared AI class |
 | `oid` | string or null | Your organization ID, present only when the mark is your organization's |
 
