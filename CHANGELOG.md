@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.1] — 2026-09-10
+
+### Fixed
+
+- `recover_content()`: the stored manifest is returned as the signed C2PA
+  manifest store, `ContentRecovery.manifest_bytes`, which is what a validator
+  needs; the server-side parse is opt-in via `parse_manifest_json=True` and
+  arrives as `manifest_json`. The 1.3.0 `manifest` field, an unvalidated parse
+  under an ambiguous name, is gone.
+
 ## [1.3.0] — 2026-09-08
 
 ### Added
@@ -379,6 +389,7 @@ Minor-version bump marks the general availability of the production C2PA signing
 - `trufo.intf`: credential storage and loading (env vars + file), CLI entry point.
 - PyPI trusted publishing via GitHub Actions (OIDC, no API tokens required).
 
+[1.3.1]: https://github.com/trufo-ai/trufo-py/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/trufo-ai/trufo-py/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/trufo-ai/trufo-py/compare/v1.1.2...v1.2.0
 [1.1.2]: https://github.com/trufo-ai/trufo-py/compare/v1.1.1...v1.1.2

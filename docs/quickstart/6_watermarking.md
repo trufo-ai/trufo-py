@@ -211,7 +211,7 @@ See [api_c2pa.md](../api/api_c2pa.md#signing-modes) for the full flow comparison
 
 ## Reading Watermarks
 
-`recover_content()` decodes a watermark from media — even after the C2PA manifest has been stripped — and returns what the mark resolves to: for a provenance mark, the watermark ID, confidence, and the stored manifest when one has been captured; for a compliance mark, the declared AI class. `oid` is set when the mark belongs to your own organization. It requires an API key with the `content-recover-test` scope (test host) or `content-recover-prod` scope (production hosts); each key works only against its own host tier.
+`recover_content()` decodes a watermark from media — even after the C2PA manifest has been stripped — and returns what the mark resolves to: for a provenance mark, the watermark ID, confidence, and the stored C2PA manifest store (`manifest_bytes`) when one has been captured; for a compliance mark, the declared AI class. `oid` is set when the mark belongs to your own organization. It requires an API key with the `content-recover-test` scope (test host) or `content-recover-prod` scope (production hosts); each key works only against its own host tier.
 
 `recover_content()` defaults to the production host, so test-host recovery — which is what pairs with the test signing flows on this page — must pass the test host explicitly:
 
@@ -228,6 +228,8 @@ if result.detected:
 ```
 
 In production, use a `content-recover-prod` key and omit `trufo_api_url`.
+
+`manifest_bytes` is the signed manifest store as captured. Per the C2PA specification a manifest obtained through soft-binding recovery must be validated like any other, so validate it against your own copy of the media (for example with `trufo-provenance` or c2patool) before relying on it. If you have no local C2PA engine and only need to read the manifest's contents, pass `parse_manifest_json=True` to also receive `manifest_json`, the server's parse; it is not a validation result.
 
 Decoding is read-only and accepts any parseable image, video, or audio input, not just the encode-supported formats; an input the engine cannot decode returns a 400 `UndecodableMedia` error. In production each call bills one watermark decode plus the bytes processed (an undecodable input bills the bytes only). See [api_c2pa.md](../api/api_c2pa.md#post-contentrecover) for the full schema.
 
