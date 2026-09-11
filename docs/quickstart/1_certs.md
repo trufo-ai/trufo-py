@@ -216,8 +216,8 @@ credential, move signing to it, then revoke the old one.
 
 Revoke a certificate when a key is compromised or a deployment is retired — from
 the dashboard, or `POST /cert/revoke` with the serial number and a reason. Choose
-**Now** or specify an effective date, time, and UTC offset in the dashboard. API
-callers can provide `revocation_time`; omitting it uses the processing time.
+**Now** or specify an effective date, time, and named timezone in the dashboard.
+API callers can provide `revocation_time`; omitting it uses the processing time.
 See the [certificate API reference](../api/api_certs.md#certificates) for the
 request format and authentication requirements.
 
