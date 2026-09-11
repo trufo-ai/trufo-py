@@ -215,10 +215,15 @@ two active credentials at once, rotation is non-disruptive: register the new
 credential, move signing to it, then revoke the old one.
 
 Revoke a certificate when a key is compromised or a deployment is retired — from
-the dashboard, or `POST /cert/revoke` with the serial number and a reason. Revocation
-is permanent and publishes through OCSP; content signed *before* revocation remains
-valid if it carries a trusted timestamp, which is the practical reason to timestamp
-everything.
+the dashboard, or `POST /cert/revoke` with the serial number and a reason. Choose
+**Now** or specify an effective date, time, and named timezone in the dashboard.
+API callers can provide `revocation_time`; omitting it uses the processing time.
+See the [certificate API reference](../api/api_certs.md#certificates) for the
+request format and authentication requirements.
+
+Revocation is permanent and publishes through OCSP. A trusted timestamp lets
+validators assess whether content was signed before the effective revocation
+cutoff, subject to the applicable validation rules.
 
 ### OCSP stapling
 

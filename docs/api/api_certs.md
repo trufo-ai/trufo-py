@@ -406,7 +406,28 @@ without it they return `403 InvalidC2PACustomDomain`. See
 | Endpoint | Auth | Request | Response |
 | -------- | ---- | ------- | -------- |
 | `POST /cert/list` | MFA, member+ | `{}` | `certs[]` with `serial_number`, `leaf_type`, `issue_time`, `expiry_time`, `revocation_status`, `revocation_reason`, `revocation_time`, `revocable`, and the issuing `gpi_id` / `gpi_name` / `gp_id` / `gp_name` where applicable |
-| `POST /cert/revoke` | MFA, owner/admin | `serial_number`, `revocation_reason` | `status` |
+| `POST /cert/revoke` | MFA, owner/admin | `serial_number`, `revocation_reason`, optional `revocation_time` | `status` |
+
+`POST /cert/revoke` requires an MFA-verified user access token from an organization
+owner or admin. A developer API key alone is insufficient.
+
+The optional `revocation_time` sets the effective revocation cutoff. Supply an
+ISO 8601 date and time with `Z` or an explicit UTC offset. Values are normalized
+to UTC and must not be in the future. Omitting the field (or passing `null`)
+uses the time the revocation is processed. Invalid timestamps return `422`.
+The certificate list returns the effective cutoff as `revocation_time`.
+
+```json
+{
+  "serial_number": "<certificate-serial-hex>",
+  "revocation_reason": "key_compromise",
+  "revocation_time": "2026-09-10T14:30:00-04:00"
+}
+```
+
+This example sets the effective cutoff to `2026-09-10T18:30:00Z`.
+The time cannot be changed by submitting another revocation request: an
+already-revoked certificate returns `400 AlreadyRevoked`.
 
 **Revocation reasons:** `unspecified`, `key_compromise`, `affiliation_changed`,
 `superseded`, `cessation_of_operation`.
