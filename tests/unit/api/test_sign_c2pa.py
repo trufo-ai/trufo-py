@@ -701,14 +701,6 @@ class TestRequestValidation:
             {"effort_policy": "best_effort"},
             {"effort": "require"},  # deprecated alias, still accepted
             {"mode": "provenance"},
-            {"mode": "compliance", "ai_compliance_label": "ai_generated"},
-            {"mode": "compliance", "ai_compliance_label": "ai_modified"},
-            {"mode": "compliance", "ai_compliance_label": "undeclared"},
-            {
-                "mode": "compliance",
-                "ai_compliance_label": "ai_generated",
-                "effort_policy": "best_effort",
-            },
         ],
     )
     def test_valid_watermark_action_accepted(self, params):
@@ -723,15 +715,10 @@ class TestRequestValidation:
             ({"effort": "require", "effort_policy": "require"}, "not both"),
             ({"apply": True}, "replaced by 'effort_policy'"),
             ({"mode": "attestation"}, "mode"),
-            ({"mode": "compliance"}, "ai_compliance_label"),
-            (
-                {"mode": "compliance", "ai_compliance_label": "none"},
-                "ai_compliance_label",
-            ),
-            ({"ai_compliance_label": "ai_generated"}, "compliance-mode"),
+            ({"ai_compliance_label": "ai_generated"}, "Unsupported watermark parameter"),
             (
                 {"mode": "provenance", "ai_compliance_label": "ai_generated"},
-                "compliance-mode",
+                "Unsupported watermark parameter",
             ),
             ({"wid_package": {"wid": "x"}}, "Unsupported watermark parameter"),
             (
@@ -744,6 +731,11 @@ class TestRequestValidation:
     def test_invalid_watermark_params_rejected(self, params, match):
         with pytest.raises(ValueError, match=match):
             _validate_actions([["watermark", params]])
+
+    @pytest.mark.parametrize("effort", ["require", "require_if_supported", "best_effort"])
+    def test_unsupported_mode_is_not_tolerated(self, effort):
+        with pytest.raises(NotImplementedError, match="Compliance watermarking"):
+            _validate_actions([["watermark", {"mode": "compliance", "effort_policy": effort}]])
 
     def test_duplicate_watermark_action_rejected(self):
         with pytest.raises(ValueError, match="At most one watermark action"):

@@ -256,16 +256,12 @@ action per request.
 
 | Param | Type | Description |
 | ----- | ---- | ----------- |
-| `mode` | string | `"provenance"` (default) or `"compliance"` — what the embedded watermark ID resolves to |
-| `ai_compliance_label` | string | Required in compliance mode, rejected otherwise: `"ai_generated"`, `"ai_modified"`, or `"undeclared"` |
+| `mode` | string | `"provenance"` (default); `"compliance"` is unsupported (HTTP 501) |
 | `effort_policy` | string | Failure tolerance, below; `"require"` for a bare action. `effort` is a deprecated alias (a warning is returned; providing both is an error) |
 
-**Provenance mode** embeds a per-content watermark ID linked to this signing
-record. **Compliance mode** (🟠 **test only**) embeds
-your organization's reusable mark for the declared AI class: one watermark ID
-per label, issued on first use and shared by every
-compliance sign after that. To watermark media you sign yourself, use
-[standalone binding](#standalone-binding) instead of a sign-flow action.
+A watermark ID identifies one content record. To watermark media you sign
+yourself, use [standalone binding](#standalone-binding). Compliance mode is
+unsupported on all hosts.
 
 | `effort_policy` | Unsupported format | Runtime failure |
 | --------------- | ------------------ | --------------- |
@@ -447,8 +443,7 @@ SDK: `bind_watermark()`, `bind_reserve()`, `watermark_media()`, `bind_commit()`
 | Field | Type | Required | Description |
 | ----- | ---- | -------- | ----------- |
 | `media_input` | string | Yes | base64-encoded media to watermark |
-| `mode` | string | No | `"provenance"` (default) or `"compliance"` (test host only) |
-| `ai_compliance_label` | string | In compliance mode | `"ai_generated"`, `"ai_modified"`, or `"undeclared"`; rejected outside compliance mode |
+| `mode` | string | No | `"provenance"` (default); `"compliance"` is unsupported (HTTP 501) |
 
 **Response (200):**
 
@@ -456,7 +451,7 @@ SDK: `bind_watermark()`, `bind_reserve()`, `watermark_media()`, `bind_commit()`
 | ----- | ---- | ----------- |
 | `media_output` | string | base64-encoded watermarked media |
 | `wid` | string | The embedded watermark id |
-| `cid` | string or null | Record id for `/bind/commit`; null in compliance mode |
+| `cid` | string or null | Record id for `/bind/commit` |
 
 Bind has no effort tiers: the watermark is always required, and an
 unsupported format (outside the watermarkable table above) is an error.
@@ -537,15 +532,11 @@ engine cannot decode bills the bytes only.
 | `confidence` | float or null | Detection strength in (0, 1] — how strongly the signal was recovered, not a probability of correctness |
 | `manifest_bytes` | string or null | Provenance marks: the stored C2PA manifest store, base64-encoded, when available for that record; validate it against your own copy of the media |
 | `manifest_json` | object or null | The same manifest parsed as JSON, only when `parse_manifest_json` was set; a convenience for callers without a local C2PA engine, not a validation result |
-| `ai_compliance_label` | string or null | Compliance marks: the declared AI class |
 | `oid` | string or null | Your organization ID, present only when the mark is your organization's |
 
 Decoding accepts any parseable image, video, or audio input, not only the formats
-supported for embedding. What a detected watermark discloses depends on its kind: a
-provenance mark reveals its details for content your own organization signed
-(other organizations' marks report `detected` without further detail), while a
-compliance mark reveals its declared AI class to any decoder — with `oid` marking
-the ones your organization owns.
+supported for embedding. Provenance marks resolve through the content record;
+reserved and unknown prefixes return detection only.
 
 **Errors:**
 

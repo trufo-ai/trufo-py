@@ -32,14 +32,15 @@ class WatermarkMode(str, Enum):
 
     # a per-content mark linked to this signing record
     PROVENANCE = "provenance"
-    # the org's reusable mark carrying its declared AI class; requires
-    # ai_compliance_label
+    # reserved; requesting this mode raises NotImplementedError
     COMPLIANCE = "compliance"
 
 
-class AiComplianceLabel(str, Enum):
-    """Declared AI class carried by a compliance-mode watermark."""
-
-    AI_GENERATED = "ai_generated"
-    AI_MODIFIED = "ai_modified"
-    UNDECLARED = "undeclared"  # no declaration; the mark identifies the org only
+def validate_watermark_mode(mode: str) -> None:
+    """Reject unsupported modes before sending a request or invoking the engine."""
+    try:
+        selected = WatermarkMode(mode)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("Invalid watermark mode.") from exc
+    if selected == WatermarkMode.COMPLIANCE:
+        raise NotImplementedError("Compliance watermarking is not supported.")

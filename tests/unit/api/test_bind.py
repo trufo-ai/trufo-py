@@ -54,33 +54,17 @@ class TestBindWatermark:
             "mode": "provenance",
         }
 
+
+    @pytest.mark.parametrize("kwargs, error", [
+        ({"mode": "compliance"}, NotImplementedError),
+        ({"ai_compliance_label": "ai_generated"}, TypeError),
+        ({"mode": "attestation"}, ValueError),
+    ])
     @patch(f"{_M}.requests.post")
-    def test_compliance_sends_label_and_has_no_cid(self, mock_post):
-        mock_post.return_value = _response(
-            {"media_output": _MARKED_B64, "wid": "v1.0000001abcd", "cid": None}
-        )
-
-        result = bind_watermark_test(
-            "key", b"media-bytes", mode="compliance", ai_compliance_label="ai_generated"
-        )
-
-        assert result.cid is None
-        assert mock_post.call_args.args[0] == f"{TRUFO_API_URL_TEST}/bind/watermark"
-        assert mock_post.call_args.kwargs["json"]["mode"] == "compliance"
-        assert mock_post.call_args.kwargs["json"]["ai_compliance_label"] == "ai_generated"
-
-    @pytest.mark.parametrize(
-        "kwargs",
-        [
-            {"mode": "compliance"},  # label missing
-            {"ai_compliance_label": "ai_generated"},  # label without compliance
-            {"mode": "attestation"},  # unknown mode
-            {"mode": "compliance", "ai_compliance_label": "none"},  # unknown label
-        ],
-    )
-    def test_bad_mode_label_pairing_rejected_locally(self, kwargs):
-        with pytest.raises(ValueError):
+    def test_unsupported_options_do_not_send_request(self, post, kwargs, error):
+        with pytest.raises(error):
             bind_watermark("key", b"media-bytes", **kwargs)
+        post.assert_not_called()
 
 
 class TestBindReserve:

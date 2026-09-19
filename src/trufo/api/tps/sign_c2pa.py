@@ -41,7 +41,7 @@ from trufo.c2pa.actions import TrufoAction
 from trufo.c2pa.assertions import UserAssertion
 from trufo.c2pa.manifest import ManifestSettings
 from trufo.c2pa.redactions import RedactableAssertion, RedactionReason
-from trufo.c2pa.watermark import AiComplianceLabel, WatermarkEffort, WatermarkMode
+from trufo.c2pa.watermark import WatermarkEffort, WatermarkMode, validate_watermark_mode
 from trufo.util.credentials import TrufoApiKey, load_api_key
 from trufo.util.optional_imports import require_provenance_module
 from trufo.util.warnings import emit_server_warnings
@@ -157,11 +157,11 @@ def _validate_watermark_action(entry: Any) -> None:
         raise ValueError("The watermark action requires a parameter object.")
     if "apply" in params:
         raise ValueError("The watermark 'apply' parameter has been replaced by 'effort_policy'.")
+    validate_watermark_mode(params.get("mode", WatermarkMode.PROVENANCE.value))
     unsupported = set(params) - {
         "effort_policy",
         "effort",
         "mode",
-        "ai_compliance_label",
     }
     if unsupported:
         raise ValueError(f"Unsupported watermark parameter(s): {', '.join(sorted(unsupported))}.")
@@ -186,19 +186,6 @@ def _validate_watermark_action(entry: Any) -> None:
         raise ValueError(
             "The watermark 'mode' parameter must be 'provenance' or 'compliance'."
         ) from exc
-    label = params.get("ai_compliance_label")
-    if mode == WatermarkMode.COMPLIANCE.value:
-        try:
-            AiComplianceLabel(label)
-        except (TypeError, ValueError) as exc:
-            raise ValueError(
-                "Compliance-mode watermarks require the 'ai_compliance_label' "
-                "parameter: one of 'ai_generated', 'ai_modified', or 'undeclared'."
-            ) from exc
-    elif label is not None:
-        raise ValueError(
-            "The 'ai_compliance_label' parameter applies only to compliance-mode " "watermarks."
-        )
 
 
 def _validate_redact_action(entry: Any) -> str:

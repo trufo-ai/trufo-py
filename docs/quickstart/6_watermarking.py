@@ -68,20 +68,7 @@ else:
     print("  watermark embedded")
 
 
-# --- 3. compliance mark: declare the content's AI class (test host only) -----
-# Instead of a per-content provenance ID, embed the org's reusable mark for a
-# declared AI class; the same wid is reused for every compliance sign of that
-# label.
-
-signed_bytes = sign_c2pa_test(
-    api_key,
-    media_bytes,
-    actions=[["watermark", {"mode": "compliance", "ai_compliance_label": "ai_generated"}]],
-)
-print("Embedded the org's ai_generated compliance mark")
-
-
-# --- 4. recover a watermark --------------------------------------------------
+# --- 3. recover a watermark --------------------------------------------------
 # Works even after the C2PA manifest has been stripped — re-encoded, screenshot,
 # or run through a metadata-scrubbing pipeline.
 

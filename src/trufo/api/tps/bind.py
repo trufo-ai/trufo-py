@@ -45,7 +45,7 @@ from trufo.api.endpoints import (
     TRUFO_API_URL_TEST,
 )
 from trufo.api.headers import sdk_headers
-from trufo.c2pa.watermark import AiComplianceLabel, WatermarkMode
+from trufo.c2pa.watermark import validate_watermark_mode
 
 _ENGINE_HINT = (
     "Local watermarking requires the Trufo engine. Install it with: "
@@ -62,8 +62,7 @@ _C2PA_HINT = (
 class BindWatermark:
     """Result of :func:`bind_watermark`.
 
-    ``cid`` addresses the record for the commit step; compliance marks have
-    no record, so no cid.
+    ``cid`` addresses the record for the commit step.
     """
 
     media: bytes
@@ -86,26 +85,6 @@ class BindReservation:
     wid_package: dict = field(default_factory=dict)
 
 
-def _validate_mode(mode: str, ai_compliance_label: str | None) -> None:
-    """Enforce the mode/label pairing before any bytes leave the client."""
-    try:
-        WatermarkMode(mode)
-    except (TypeError, ValueError) as exc:
-        raise ValueError("The 'mode' parameter must be 'provenance' or 'compliance'.") from exc
-    if mode == WatermarkMode.COMPLIANCE.value:
-        try:
-            AiComplianceLabel(ai_compliance_label)
-        except (TypeError, ValueError) as exc:
-            raise ValueError(
-                "Compliance-mode watermarks require the 'ai_compliance_label' "
-                "parameter: one of 'ai_generated', 'ai_modified', or 'undeclared'."
-            ) from exc
-    elif ai_compliance_label is not None:
-        raise ValueError(
-            "The 'ai_compliance_label' parameter applies only to compliance-mode " "watermarks."
-        )
-
-
 def _post(api_key: str, url: str, body: dict) -> dict:
     resp = requests.post(url, json=body, headers=sdk_headers(api_key), timeout=120)
     resp.raise_for_status()
@@ -117,7 +96,6 @@ def bind_watermark(
     media_bytes: bytes,
     *,
     mode: str = "provenance",
-    ai_compliance_label: str | None = None,
     trufo_api_url: str = TRUFO_API_URL,
 ) -> BindWatermark:
     """tpls step 1: embed a Trufo watermark in media on Trufo's servers.
@@ -126,12 +104,8 @@ def bind_watermark(
         api_key: API key with scope ``watermark-prod`` (``X-API-Key`` header);
             ``watermark-test`` on the test host.
         media_bytes: Raw bytes of the media file to watermark.
-        mode: ``"provenance"`` (default; per-content mark, commit completes
-            the record) or ``"compliance"`` (your org's mark for a declared
-            AI class; single call, test host only).
-        ai_compliance_label: Declared AI class (``"ai_generated"``,
-            ``"ai_modified"``, or ``"undeclared"``); required in compliance
-            mode, rejected otherwise.
+        mode: ``"provenance"`` (default). ``"compliance"`` is unsupported
+            and raises NotImplementedError before sending a request.
         trufo_api_url: Trufo API base URL. Defaults to production; pass
             ``TRUFO_API_URL_TEST`` (or use :func:`bind_watermark_test`) for
             the test host.
@@ -144,13 +118,11 @@ def bind_watermark(
         ValueError: On an invalid mode/label pairing.
         requests.HTTPError: If the API returns a non-2xx response.
     """
-    _validate_mode(mode, ai_compliance_label)
+    validate_watermark_mode(mode)
     body: dict = {
         "media_input": base64.b64encode(media_bytes).decode(),
         "mode": mode,
     }
-    if ai_compliance_label is not None:
-        body["ai_compliance_label"] = ai_compliance_label
     payload = _post(api_key, trufo_api_url + TPS_BIND_WATERMARK, body)
     return BindWatermark(
         media=base64.b64decode(payload["media_output"]),
@@ -292,7 +264,6 @@ def bind_watermark_test(
     media_bytes: bytes,
     *,
     mode: str = "provenance",
-    ai_compliance_label: str | None = None,
     trufo_api_url: str = TRUFO_API_URL_TEST,
 ) -> BindWatermark:
     """:func:`bind_watermark` against the Trufo test host (``watermark-test`` key)."""
@@ -300,7 +271,6 @@ def bind_watermark_test(
         api_key,
         media_bytes,
         mode=mode,
-        ai_compliance_label=ai_compliance_label,
         trufo_api_url=trufo_api_url,
     )
 
