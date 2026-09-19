@@ -30,13 +30,13 @@ from typing import Any
 import requests
 
 from trufo.api.endpoints import (
-    TPS_C2PA_GET_S3_URL,
     TPS_C2PA_SIGN,
     TRUFO_API_URL,
     TRUFO_API_URL_TEST,
     TRUFO_TSA_URL,
 )
 from trufo.api.headers import sdk_headers
+from trufo.api.tps.io import S3Upload, get_s3_upload_url
 from trufo.c2pa.actions import TrufoAction
 from trufo.c2pa.assertions import UserAssertion
 from trufo.c2pa.manifest import ManifestSettings
@@ -47,14 +47,7 @@ from trufo.util.optional_imports import require_provenance_module
 from trufo.util.warnings import emit_server_warnings
 
 
-@dataclass(frozen=True)
-class C2PAS3Upload:
-    """Ephemeral S3 upload target for C2PA signing."""
-
-    upload_url: str
-    media_input_s3: str
-    expires_at: int
-    duration: str
+C2PAS3Upload = S3Upload
 
 
 @dataclass(frozen=True)
@@ -306,25 +299,7 @@ def get_c2pa_s3_upload_url(
     Raises:
         requests.HTTPError: If the API returns a non-2xx response.
     """
-    body = {"mime_type": mime_type}
-    if duration is not None:
-        body["duration"] = duration
-
-    resp = requests.post(
-        trufo_api_url + TPS_C2PA_GET_S3_URL,
-        json=body,
-        headers=sdk_headers(api_key),
-        timeout=60,
-    )
-    resp.raise_for_status()
-
-    payload = resp.json()
-    return C2PAS3Upload(
-        upload_url=payload["upload_url"],
-        media_input_s3=payload["media_input_s3"],
-        expires_at=payload["expires_at"],
-        duration=payload["duration"],
-    )
+    return get_s3_upload_url(api_key, mime_type, duration, trufo_api_url=trufo_api_url)
 
 
 def _sign_c2pa_s3(

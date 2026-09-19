@@ -14,6 +14,7 @@ from trufo.api.tps.bind import (
     watermark_media,
 )
 from trufo.api.tps.records import get_content, list_content, set_content_status
+from trufo.api.tps.io import get_s3_upload_url
 from trufo.api.tps.recover import recover_content
 from trufo.api.tps.sign_c2pa import (
     sign_c2pa,
@@ -40,6 +41,7 @@ __all__ = [
     "create_instance",
     "generate_keypair",
     "get_content",
+    "get_s3_upload_url",
     "list_content",
     "load_api_key",
     "recover_content",
