@@ -12,7 +12,7 @@ from trufo.api.headers import sdk_headers
 
 
 @dataclass(frozen=True)
-class S3Upload:
+class C2PAS3Upload:
     """An upload URL and the Trufo reference to use after uploading."""
 
     upload_url: str
@@ -21,13 +21,16 @@ class S3Upload:
     duration: str
 
 
+GetS3UploadURLResult = C2PAS3Upload
+
+
 def get_s3_upload_url(
     api_key: str,
     mime_type: str,
     duration: str | None = None,
     *,
     trufo_api_url: str = TRUFO_API_URL,
-) -> S3Upload:
+) -> GetS3UploadURLResult:
     """Allocate a media upload using a signing or watermark API key.
 
     PUT the media bytes to ``upload_url`` with the supplied Content-Type.
@@ -45,7 +48,7 @@ def get_s3_upload_url(
     )
     response.raise_for_status()
     payload = response.json()
-    return S3Upload(
+    return GetS3UploadURLResult(
         upload_url=payload["upload_url"],
         media_input_s3=payload["media_input_s3"],
         expires_at=payload["expires_at"],

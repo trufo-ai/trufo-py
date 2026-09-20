@@ -4,10 +4,17 @@
 """Unit tests for TPS C2PA signing helpers."""
 
 import base64
+import pickle
 import types
 from unittest.mock import MagicMock, patch
 
 import pytest
+from trufo import (
+    BindReserveResult, BindWatermarkResult, GetS3UploadURLResult,
+    RecoverContentResult, SignC2PAS3Result,
+)
+from trufo.api.tps.bind import BindReservation, BindWatermark
+from trufo.api.tps.recover import ContentRecovery
 from trufo.api.endpoints import (
     TPS_GET_S3_UPLOAD_URL,
     TPS_C2PA_SIGN,
@@ -411,6 +418,19 @@ class TestRemoteC2PASigning:
         assert caplog.records == []
 
 
+@pytest.mark.parametrize("current,legacy,module,name", [
+    (BindWatermarkResult, BindWatermark, "bind", "BindWatermark"),
+    (BindReserveResult, BindReservation, "bind", "BindReservation"),
+    (RecoverContentResult, ContentRecovery, "recover", "ContentRecovery"),
+    (GetS3UploadURLResult, C2PAS3Upload, "sign_c2pa", "C2PAS3Upload"),
+    (SignC2PAS3Result, C2PAS3SignedOutput, "sign_c2pa", "C2PAS3SignedOutput"),
+])
+def test_standard_result_names_preserve_published_class_identity(current, legacy, module, name):
+    assert current is legacy
+    # old pickles resolve their original module and class name
+    assert pickle.loads(f"ctrufo.api.tps.{module}\n{name}\n.".encode()) is current
+
+
 class TestS3C2PASigning:
     """Ephemeral S3 C2PA signing helpers."""
 
@@ -425,7 +445,8 @@ class TestS3C2PASigning:
             }
         )
 
-        upload = get_c2pa_s3_upload_url("api-key", "image/jpeg", duration="5m")
+        with pytest.warns(DeprecationWarning, match="use get_s3_upload_url"):
+            upload = get_c2pa_s3_upload_url("api-key", "image/jpeg", duration="5m")
 
         assert upload == C2PAS3Upload(
             upload_url="https://upload.example",
@@ -467,7 +488,8 @@ class TestS3C2PASigning:
 
     @patch("trufo.api.tps.sign_c2pa.requests.post")
     def test_s3_request_and_test_signing_reject_before_network(self, mock_post):
-        with pytest.raises(ValueError, match="S3 input requires"):
+        with pytest.warns(DeprecationWarning, match="use submit_c2pa_sign"), \
+             pytest.raises(ValueError, match="S3 input requires"):
             sign_c2pa_s3("prod-key", "signed-input-reference")
         with pytest.raises(ValueError, match="REQUEST execution with bytes only"):
             sign_c2pa_s3_test("test-key", "signed-input-reference")

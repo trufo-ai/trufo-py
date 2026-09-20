@@ -24,6 +24,7 @@ will silently pick the wrong title.
 """
 
 import base64
+import warnings
 from dataclasses import dataclass
 from typing import Any
 
@@ -36,7 +37,7 @@ from trufo.api.endpoints import (
     TRUFO_TSA_URL,
 )
 from trufo.api.headers import sdk_headers
-from trufo.api.tps.io import S3Upload, get_s3_upload_url, _upload_task_input
+from trufo.api.tps.io import C2PAS3Upload, GetS3UploadURLResult, get_s3_upload_url, _upload_task_input
 from trufo.api.tps.tasks import (
     ExecutionMode, TaskReceipt, _submit_task, wait_for_task, _download_task_output,
 )
@@ -50,9 +51,6 @@ from trufo.util.optional_imports import require_provenance_module
 from trufo.util.warnings import emit_server_warnings
 
 
-C2PAS3Upload = S3Upload
-
-
 @dataclass(frozen=True)
 class C2PAS3SignedOutput:
     """Ephemeral S3 signed output reference."""
@@ -62,6 +60,9 @@ class C2PAS3SignedOutput:
     task_id: str | None = None
     cid: str | None = None
     wid: str | None = None
+
+
+SignC2PAS3Result = C2PAS3SignedOutput
 
 
 def _manifest_settings_payload(settings: ManifestSettings) -> dict:
@@ -280,11 +281,11 @@ def get_c2pa_s3_upload_url(
     duration: str | None = None,
     *,
     trufo_api_url: str = TRUFO_API_URL,
-) -> C2PAS3Upload:
-    """Request an ephemeral S3 upload URL for C2PA signing.
+) -> GetS3UploadURLResult:
+    """Deprecated: use get_s3_upload_url() for media uploads.
 
     The returned ``media_input_s3`` reference can be passed to
-    :func:`sign_c2pa_s3` with explicit TASK execution after uploading media
+    :func:`submit_c2pa_sign` after uploading media
     bytes to ``upload_url``.
 
     Args:
@@ -299,6 +300,8 @@ def get_c2pa_s3_upload_url(
     Raises:
         requests.HTTPError: If the API returns a non-2xx response.
     """
+    warnings.warn("get_c2pa_s3_upload_url() is deprecated; use get_s3_upload_url().",
+                  DeprecationWarning, stacklevel=2)
     return get_s3_upload_url(api_key, mime_type, duration, trufo_api_url=trufo_api_url)
 
 
@@ -349,15 +352,15 @@ def sign_c2pa_s3(
     execution_mode: ExecutionMode = ExecutionMode.REQUEST,
     wait_seconds: float = 600,
     trufo_api_url: str = TRUFO_API_URL,
-) -> C2PAS3SignedOutput:
-    """Sign an uploaded ephemeral S3 object with production C2PA via the TPS.
+) -> SignC2PAS3Result:
+    """Deprecated: use submit_c2pa_sign() followed by wait_for_task().
 
     Requires completed Organization Validation for the caller's org; the API
     returns 403 otherwise.
 
     Args:
         api_key: API key with scope ``c2pa-sign-prod``.
-        media_input_s3: Opaque reference returned by :func:`get_c2pa_s3_upload_url`.
+        media_input_s3: Opaque reference returned by :func:`get_s3_upload_url`.
         actions: Ordered list of ``[action_name, params]`` pairs (default ``[]``).
         assertions: List of ``[assertion_name, params]`` pairs (default ``[]``).
         manifest_title: Optional active-manifest title (``dc:title``); see the
@@ -379,6 +382,8 @@ def sign_c2pa_s3(
     For TASK bytes, provide mime_type; submit_c2pa_sign() accepts an existing
     Trufo upload reference without waiting.
     """
+    warnings.warn("sign_c2pa_s3() is deprecated; use submit_c2pa_sign() and wait_for_task().",
+                  DeprecationWarning, stacklevel=2)
     if ExecutionMode.validate(execution_mode) != ExecutionMode.TASK:
         raise ValueError("S3 input requires execution_mode=ExecutionMode.TASK.")
     if wait_seconds <= 0:
@@ -394,7 +399,7 @@ def sign_c2pa_s3(
         trufo_api_url=trufo_api_url,
     )
     task = wait_for_task(api_key, receipt.task_id, wait_seconds=wait_seconds, trufo_api_url=trufo_api_url)
-    return C2PAS3SignedOutput(task.result.media_output_s3, task.result.download_url,
+    return SignC2PAS3Result(task.result.media_output_s3, task.result.download_url,
                              task.task_id, task.result.cid, task.result.wid)
 
 
@@ -408,8 +413,8 @@ def sign_c2pa_s3_test(
     *,
     manifest_settings: ManifestSettings | None = None,
     trufo_api_url: str = TRUFO_API_URL_TEST,
-) -> C2PAS3SignedOutput:
-    """Retired: the test endpoint accepts REQUEST bytes via sign_c2pa_test()."""
+) -> SignC2PAS3Result:
+    """Deprecated and unsupported: use sign_c2pa_test() with REQUEST bytes."""
     raise ValueError("The test endpoint supports REQUEST execution with bytes only; use sign_c2pa_test().")
 
 
@@ -428,7 +433,7 @@ def sign_c2pa_via_s3(
     wait_seconds: float = 600,
     trufo_api_url: str = TRUFO_API_URL,
 ) -> bytes:
-    """Upload, production-sign, and download media through the ephemeral S3 flow.
+    """Deprecated: use sign_c2pa() with execution_mode=ExecutionMode.TASK.
 
     Requires completed Organization Validation for the caller's org; the API
     returns 403 otherwise.
@@ -462,6 +467,8 @@ def sign_c2pa_via_s3(
     For TASK bytes, provide mime_type; submit_c2pa_sign() accepts an existing
     Trufo upload reference without waiting.
     """
+    warnings.warn("sign_c2pa_via_s3() is deprecated; use sign_c2pa() with execution_mode=ExecutionMode.TASK.",
+                  DeprecationWarning, stacklevel=2)
     if ExecutionMode.validate(execution_mode) != ExecutionMode.TASK:
         raise ValueError("S3 input requires execution_mode=ExecutionMode.TASK.")
     if wait_seconds <= 0:
@@ -506,7 +513,7 @@ def sign_c2pa_via_s3_test(
     manifest_settings: ManifestSettings | None = None,
     trufo_api_url: str = TRUFO_API_URL_TEST,
 ) -> bytes:
-    """Retired: the test endpoint accepts REQUEST bytes via sign_c2pa_test()."""
+    """Deprecated and unsupported: use sign_c2pa_test() with REQUEST bytes."""
     raise ValueError("The test endpoint supports REQUEST execution with bytes only; use sign_c2pa_test().")
 
 

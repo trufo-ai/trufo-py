@@ -85,6 +85,6 @@ except RuntimeError as exc:
 
 
 # --- going to production -----------------------------------------------------
-# Swap the helpers (sign_c2pa, sign_c2pa_via_s3, sign_c2pa_distributed) and use a
+# Swap the helpers (sign_c2pa, sign_c2pa_distributed) and use a
 # c2pa-sign-prod key. Production signing requires completed Organization
 # Validation for your organization.

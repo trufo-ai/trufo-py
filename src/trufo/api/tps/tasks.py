@@ -55,7 +55,7 @@ class TaskReceipt:
 
 
 @dataclass(frozen=True)
-class C2PASignTaskResult:
+class SignC2PATaskResult:
     """Signed output references, identifiers, and warnings; no media bytes."""
 
     media_output_s3: str
@@ -67,7 +67,7 @@ class C2PASignTaskResult:
 
 
 @dataclass(frozen=True)
-class WatermarkTaskResult:
+class BindWatermarkTaskResult:
     """Watermarked output references and identifiers; no media bytes."""
 
     media_output_s3: str
@@ -94,7 +94,7 @@ class TaskInfo(TaskReceipt):
     progress: str | None = None
     error_code: str | None = None
     error_http_status: int | None = None
-    result: C2PASignTaskResult | WatermarkTaskResult | None = None
+    result: SignC2PATaskResult | BindWatermarkTaskResult | None = None
 
 
 class TaskFailedError(RuntimeError):
@@ -123,7 +123,7 @@ def _parse_task_response(payload: dict, response_type):
         values["error_code"] = payload["error"]["code"]
         values["error_http_status"] = payload["error"]["http_status"]
     if values.get("result"):
-        result_type = C2PASignTaskResult if values["task_type"] == TaskType.C2PA_SIGN else WatermarkTaskResult
+        result_type = SignC2PATaskResult if values["task_type"] == TaskType.C2PA_SIGN else BindWatermarkTaskResult
         result = values["result"]
         values["result"] = result_type(**{f.name: result[f.name] for f in fields(result_type) if f.name in result})
     return response_type(**values)
@@ -172,7 +172,7 @@ def wait_for_task(api_key: str, task_id: str, *, wait_seconds: float = 600,
         if task.status == TaskStatus.SUCCEEDED:
             if task.result is None:
                 raise ValueError(f"Succeeded task {task_id} has no output reference.")
-            if isinstance(task.result, C2PASignTaskResult):
+            if isinstance(task.result, SignC2PATaskResult):
                 emit_server_warnings({"warnings": task.result.warnings})
             return task
         if task.status in (TaskStatus.FAILED, TaskStatus.EXPIRED):

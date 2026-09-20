@@ -85,6 +85,10 @@ class BindReservation:
     wid_package: dict = field(default_factory=dict)
 
 
+BindWatermarkResult = BindWatermark
+BindReserveResult = BindReservation
+
+
 def _post(api_key: str, url: str, body: dict) -> dict:
     resp = requests.post(url, json=body, headers=sdk_headers(api_key), timeout=120)
     resp.raise_for_status()
@@ -100,7 +104,7 @@ def bind_watermark(
     mime_type: str | None = None,
     wait_seconds: float = 600,
     trufo_api_url: str = TRUFO_API_URL,
-) -> BindWatermark:
+) -> BindWatermarkResult:
     """tpls step 1: embed a Trufo watermark in media on Trufo's servers.
 
     Args:
@@ -132,13 +136,13 @@ def bind_watermark(
         reference = _upload_task_input(api_key, media_bytes, mime_type, trufo_api_url=trufo_api_url)
         receipt = submit_bind_watermark(api_key, reference, mode=mode, trufo_api_url=trufo_api_url)
         task = wait_for_task(api_key, receipt.task_id, wait_seconds=wait_seconds, trufo_api_url=trufo_api_url)
-        return BindWatermark(_download_task_output(task), task.result.wid, task.result.cid)
+        return BindWatermarkResult(_download_task_output(task), task.result.wid, task.result.cid)
     body: dict = {
         "media_input": base64.b64encode(media_bytes).decode(),
         "mode": mode,
     }
     payload = _post(api_key, trufo_api_url + TPS_BIND_WATERMARK, body)
-    return BindWatermark(
+    return BindWatermarkResult(
         media=base64.b64decode(payload["media_output"]),
         wid=payload["wid"],
         cid=payload.get("cid"),
@@ -162,7 +166,7 @@ def bind_reserve(
     mime_type: str,
     *,
     trufo_api_url: str = TRUFO_API_URL,
-) -> BindReservation:
+) -> BindReserveResult:
     """lpls step 1: reserve a watermark ID for media you will watermark locally.
 
     Args:
@@ -180,7 +184,7 @@ def bind_reserve(
     """
     payload = _post(api_key, trufo_api_url + TPS_BIND_RESERVE, {"mime_type": mime_type})
     package = payload["wid_package"]
-    return BindReservation(
+    return BindReserveResult(
         cid=payload["cid"], wid=package["wid"], expires_at=package["expires_at"], wid_package=dict(package)
     )
 
@@ -190,7 +194,7 @@ def watermark_media(media_bytes: bytes, wid_package: dict) -> bytes:
 
     Args:
         media_bytes: Raw bytes of the media file to watermark.
-        wid_package: ``BindReservation.wid_package`` (or the ``wid_package``
+        wid_package: ``BindReserveResult.wid_package`` (or the ``wid_package``
             of a Trufo API response).
 
     Returns:
@@ -292,7 +296,7 @@ def bind_watermark_test(
     mode: str = "provenance",
     execution_mode: ExecutionMode = ExecutionMode.REQUEST,
     trufo_api_url: str = TRUFO_API_URL_TEST,
-) -> BindWatermark:
+) -> BindWatermarkResult:
     """:func:`bind_watermark` against the Trufo test host (``watermark-test`` key)."""
     ExecutionMode.validate(execution_mode, test=True)
     return bind_watermark(
@@ -308,7 +312,7 @@ def bind_reserve_test(
     mime_type: str,
     *,
     trufo_api_url: str = TRUFO_API_URL_TEST,
-) -> BindReservation:
+) -> BindReserveResult:
     """:func:`bind_reserve` against the Trufo test host (``watermark-test`` key)."""
     return bind_reserve(api_key, mime_type, trufo_api_url=trufo_api_url)
 

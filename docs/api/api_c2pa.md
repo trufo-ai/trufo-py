@@ -19,7 +19,8 @@ See [api_trufo.md](api_trufo.md) for authentication, error conventions, and regi
 | Endpoint | Scope | Plan |
 | -------- | ----- | ---- |
 | `POST /c2pa/sign` | `c2pa-sign-prod` (test host: `c2pa-sign-test`) | C2PA Signing |
-| `POST /c2pa/io/get-s3-url` | `c2pa-sign-prod` or `c2pa-sign-test` | C2PA Signing (production keys) |
+| `POST /io/get-s3-upload-url` | Signing or watermark API key (test host: test keys only) | Corresponding signing or watermark access for production keys |
+| `POST /c2pa/io/get-s3-url` **(deprecated alias)** | Same as `/io/get-s3-upload-url` | Same as `/io/get-s3-upload-url` |
 | `POST /c2pa/ai-disclosure/add`, `/list` | `c2pa-sign-prod` or `c2pa-sign-test` | — |
 | `POST /c2pa/software-agent/add`, `/list` | `c2pa-sign-prod` or `c2pa-sign-test` | — |
 | `POST /content/recover` | `content-recover-prod` (test host: `content-recover-test`) | C2PA Signing or Watermark API |
@@ -103,7 +104,7 @@ of them.
 
 | | Hosted | Hosted (S3) | Distributed |
 | --- | --- | --- | --- |
-| Entry | `POST /c2pa/sign` | `get-s3-url` → upload → `POST /c2pa/sign` | `sign_c2pa_distributed()` (SDK only) |
+| Entry | `POST /c2pa/sign` | `/io/get-s3-upload-url` → upload → `POST /c2pa/sign` with TASK | `sign_c2pa_distributed()` (SDK only) |
 | Media reaches Trufo | Yes, in the body | Yes, via ephemeral S3 | **No** — only the claim hash |
 | Manifest assembled by | Trufo | Trufo | Your process (`trufo-provenance`) |
 | Signing key | Trufo | Trufo | Trufo |
@@ -166,7 +167,8 @@ no thumbnails, while also preserving inherited ingredient thumbnails. The
 
 ### `POST /io/get-s3-upload-url`
 
-Shared by signing and watermarking. `/c2pa/io/get-s3-url` remains an alias.
+Shared by signing and watermarking. `/c2pa/io/get-s3-url` is a deprecated alias
+with the same request and response; use `/io/get-s3-upload-url` instead.
 
 | Field | Type | Required | Description |
 | ----- | ---- | -------- | ----------- |

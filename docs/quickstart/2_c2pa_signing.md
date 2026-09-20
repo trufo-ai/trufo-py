@@ -138,8 +138,17 @@ supported formats under the size cap can use REQUEST. The SDK defaults to REQUES
 and never switches modes automatically; requests requiring TASK are rejected.
 TASK is not supported on the test host.
 
-The legacy `sign_c2pa_via_s3()` remains supported with explicit TASK; prefer
-`sign_c2pa(..., execution_mode=ExecutionMode.TASK)` for new code.
+The legacy S3 helpers are deprecated:
+
+| Deprecated helper | Replacement |
+|---|---|
+| `get_c2pa_s3_upload_url()` | `get_s3_upload_url()`; both return `GetS3UploadURLResult` |
+| `sign_c2pa_s3()` | `submit_c2pa_sign()` followed by `wait_for_task()` |
+| `sign_c2pa_via_s3()` | `sign_c2pa(..., execution_mode=ExecutionMode.TASK, mime_type=...)` |
+| `sign_c2pa_s3_test()` / `sign_c2pa_via_s3_test()` | `sign_c2pa_test()` with REQUEST bytes; test endpoints do not support tasks |
+
+The production helpers remain callable with their existing signatures and require
+explicit TASK execution for signing. Test S3 helpers reject before making a request.
 
 To submit without waiting for processing, use `submit_c2pa_sign()` with a Trufo
 upload reference, then `get_task()` or `wait_for_task()` against the same API

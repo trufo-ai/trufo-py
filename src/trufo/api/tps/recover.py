@@ -31,13 +31,16 @@ class ContentRecovery:
     oid: str | None = None
 
 
+RecoverContentResult = ContentRecovery
+
+
 def recover_content(
     api_key: str,
     media_bytes: bytes,
     *,
     parse_manifest_json: bool = False,
     trufo_api_url: str = TRUFO_API_URL,
-) -> ContentRecovery:
+) -> RecoverContentResult:
     """Decode a Trufo watermark from media and return its provenance.
 
     Accepts any parseable image or audio input; decoding is read-only and is
@@ -76,7 +79,7 @@ def recover_content(
 
     payload = resp.json()
     manifest_b64 = payload.get("manifest_bytes")
-    return ContentRecovery(
+    return RecoverContentResult(
         detected=payload["detected"],
         wid=payload.get("wid"),
         confidence=payload.get("confidence"),

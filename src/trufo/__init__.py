@@ -5,6 +5,8 @@ from trufo.api.tca.certs_c2pa import create_instance, register_credential, reque
 from trufo.api.tca.certs_cawg_interim import request_cawg_interim_cert
 from trufo.api.tca.certs_test import request_c2pa_test_cert, request_cawg_test_cert
 from trufo.api.tps.bind import (
+    BindWatermarkResult,
+    BindReserveResult,
     bind_commit,
     bind_commit_test,
     bind_reserve,
@@ -15,14 +17,15 @@ from trufo.api.tps.bind import (
     submit_bind_watermark,
 )
 from trufo.api.tps.records import get_content, list_content, set_content_status
-from trufo.api.tps.io import get_s3_upload_url
+from trufo.api.tps.io import GetS3UploadURLResult, get_s3_upload_url
 from trufo.api.tps.tasks import (
     ExecutionMode, TaskType, TaskStatus, TaskReceipt, TaskInfo,
-    C2PASignTaskResult, WatermarkTaskResult, TaskFailedError, TaskWaitTimeoutError,
+    SignC2PATaskResult, BindWatermarkTaskResult, TaskFailedError, TaskWaitTimeoutError,
     get_task, wait_for_task,
 )
-from trufo.api.tps.recover import recover_content
+from trufo.api.tps.recover import RecoverContentResult, recover_content
 from trufo.api.tps.sign_c2pa import (
+    SignC2PAS3Result,
     sign_c2pa,
     sign_c2pa_distributed,
     sign_c2pa_distributed_test,
@@ -40,7 +43,9 @@ __version__ = "1.3.1"
 
 __all__ = [
     "ExecutionMode", "TaskType", "TaskStatus", "TaskReceipt", "TaskInfo",
-    "C2PASignTaskResult", "WatermarkTaskResult", "TaskFailedError", "TaskWaitTimeoutError",
+    "SignC2PATaskResult", "BindWatermarkTaskResult", "TaskFailedError", "TaskWaitTimeoutError",
+    "BindWatermarkResult", "BindReserveResult", "RecoverContentResult",
+    "GetS3UploadURLResult", "SignC2PAS3Result",
     "get_task", "wait_for_task", "submit_c2pa_sign", "submit_bind_watermark", "sign_c2pa_s3",
     "__version__",
     "bind_commit",

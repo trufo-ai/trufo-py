@@ -40,6 +40,20 @@ certificate enrollment.
 - Test signing runs on its own host (`test.api.trufo.ai`, `TRUFO_API_URL_TEST`) with the
   same routes as production; the legacy `/test/c2pa/sign` path remains during deprecation.
 
+## Public response type naming
+
+- New operation-specific return dataclasses use `<FunctionNameInPascalCase>Result`;
+  preserve word order and acronyms (`C2PA`, `CAWG`, `S3`, `HTTP`, `URL`, `ID`).
+- Completed task payloads use `<UnderlyingOperationNameInPascalCase>TaskResult`,
+  not the submission or polling function name.
+- Approved shared types are `ContentRecord`, `ContentPage`, `TaskReceipt`, and
+  `TaskInfo`. New shared types require explicit design review.
+- Preserve published class names and import paths. Standardized names are aliases
+  to those classes, not subclasses or replacement classes; update annotations and
+  examples to the standardized names. Both upload helpers use `GetS3UploadURLResult`.
+- A response schema does not automatically need a dataclass. Adding a public class
+  is a compatibility commitment and requires justification before implementation.
+
 ## Documentation map
 
 | Topic | File |
