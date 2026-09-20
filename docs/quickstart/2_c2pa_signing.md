@@ -147,6 +147,9 @@ region. Upload and submission are synchronous HTTP calls; only processing runs
 independently. The synchronous helpers use a local polling budget of
 600 seconds by default (`wait_seconds`); `TaskWaitTimeoutError.task_id` lets you resume
 polling without resubmitting. Stopping the wait does not cancel the task.
+`wait_for_task()` checks immediately, then every second for the first 10 seconds,
+every 10 seconds until 10 minutes, and every minute for longer waits. This schedule
+is fixed; only the waiting budget is configurable.
 See the [API contract](../api/api_c2pa.md#tasks).
 
 ```python

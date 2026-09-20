@@ -66,8 +66,17 @@ def test_terminal_failure_keeps_task_id_and_does_not_resubmit(status, code):
         with pytest.raises(TaskFailedError) as failure:
             wait_for_task("key", "task-1")
     assert failure.value.task_id == "task-1"
-    assert failure.value.task.error.code == code
+    assert failure.value.task.error_code == code
+    assert failure.value.task.error_http_status == payload["error"]["http_status"]
+    assert code in str(failure.value)
     post.assert_not_called()
+
+
+def test_successful_task_has_no_failure_fields():
+    with patch("requests.get", return_value=response(task())):
+        completed = wait_for_task("key", "task-1")
+    assert completed.error_code is None
+    assert completed.error_http_status is None
 
 
 def test_wait_timeout_preserves_handle_without_cancelling_task():
@@ -77,6 +86,32 @@ def test_wait_timeout_preserves_handle_without_cancelling_task():
     assert failure.value.task_id == "task-1"
     assert "not cancelled" in str(failure.value)
     post.assert_not_called()
+
+
+@pytest.mark.parametrize("wait_seconds", [600, 665])
+def test_polling_slows_down_and_stops_at_wait_budget(wait_seconds):
+    now = 0
+    polls = []
+
+    def sleep(seconds):
+        nonlocal now
+        assert seconds > 0
+        now += seconds
+
+    def get(*args, **kwargs):
+        polls.append(now)
+        return response(task("queued"))
+
+    with patch("trufo.api.tps.tasks.time.monotonic", side_effect=lambda: now), \
+         patch("trufo.api.tps.tasks.time.sleep", side_effect=sleep), \
+         patch("requests.get", side_effect=get):
+        with pytest.raises(TaskWaitTimeoutError):
+            wait_for_task("key", "task-1", wait_seconds=wait_seconds)
+    expected = list(range(11)) + list(range(20, 600, 10))
+    if wait_seconds > 600:
+        expected += [600, 660]
+    assert polls == expected
+    assert now == wait_seconds
 
 
 def test_explicit_modes_reject_before_upload():

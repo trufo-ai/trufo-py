@@ -21,7 +21,7 @@ Either way, the signed manifest declares the watermark per the C2PA specificatio
 Hosted REQUEST execution is limited to images up to 10 MB (10,000,000 bytes).
 For larger images, audio, or video, explicitly select `ExecutionMode.TASK` and
 pass `mime_type` to `sign_c2pa()` or `bind_watermark()`. The SDK uploads, submits,
-polls, and downloads synchronously. `submit_watermark()` accepts an existing
+polls, and downloads synchronously. `submit_bind_watermark()` accepts an existing
 Trufo upload reference and returns immediately with a task ID. A completed
 watermark task still requires signing and `bind_commit()`; it does not commit
 the content record itself. Test endpoints accept REQUEST only.

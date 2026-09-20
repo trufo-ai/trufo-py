@@ -44,7 +44,7 @@ from trufo.api.endpoints import (
 )
 from trufo.api.headers import sdk_headers
 from trufo.api.tps.io import _upload_task_input
-from trufo.api.tps.tasks import ExecutionMode, TaskSubmission, _submit_task, wait_for_task, _download_task_output
+from trufo.api.tps.tasks import ExecutionMode, TaskReceipt, _submit_task, wait_for_task, _download_task_output
 from trufo.c2pa.watermark import WatermarkMode
 
 _ENGINE_HINT = (
@@ -130,8 +130,8 @@ def bind_watermark(
         if wait_seconds <= 0:
             raise ValueError("Wait duration must be positive.")
         reference = _upload_task_input(api_key, media_bytes, mime_type, trufo_api_url=trufo_api_url)
-        submission = submit_watermark(api_key, reference, mode=mode, trufo_api_url=trufo_api_url)
-        task = wait_for_task(api_key, submission.task_id, wait_seconds=wait_seconds, trufo_api_url=trufo_api_url)
+        receipt = submit_bind_watermark(api_key, reference, mode=mode, trufo_api_url=trufo_api_url)
+        task = wait_for_task(api_key, receipt.task_id, wait_seconds=wait_seconds, trufo_api_url=trufo_api_url)
         return BindWatermark(_download_task_output(task), task.result.wid, task.result.cid)
     body: dict = {
         "media_input": base64.b64encode(media_bytes).decode(),
@@ -145,8 +145,8 @@ def bind_watermark(
     )
 
 
-def submit_watermark(api_key: str, media_input_s3: str, *, mode: str = "provenance",
-                     trufo_api_url: str = TRUFO_API_URL) -> TaskSubmission:
+def submit_bind_watermark(api_key: str, media_input_s3: str, *, mode: str = "provenance",
+                          trufo_api_url: str = TRUFO_API_URL) -> TaskReceipt:
     """Submit a Trufo upload reference for watermarking without waiting.
 
     Poll with get_task() or wait_for_task(). Completion does not replace the

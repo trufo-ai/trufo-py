@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Explicit `ExecutionMode.REQUEST` (default) and `ExecutionMode.TASK` for hosted
   signing and watermarking. TASK uploads bytes to S3, submits once, polls, and
   downloads the result. Pass `mime_type` when supplying bytes.
-- `submit_c2pa_sign`, `submit_watermark`, `get_task`, and `wait_for_task` for
+- `submit_c2pa_sign`, `submit_bind_watermark`, `get_task`, and `wait_for_task` for
   callers managing their own task lifecycle, with typed results and failures.
 
 ### Changed
