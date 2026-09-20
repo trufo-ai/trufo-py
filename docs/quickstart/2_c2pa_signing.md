@@ -29,9 +29,9 @@ organization — see [Automatic assertions](../api/api_c2pa.md#automatic-asserti
 | S3 | Media is large | Yes, via an ephemeral upload | None |
 | Distributed | Media must not leave your infrastructure | No — only the claim hash | `trufo[local-sign-only]` or `[local-full]`, a `tsa` key, Linux x86_64 + CPython 3.12 |
 
-Test and production are variants of each mode: the test helpers target the test
-host and need no OV, and their output is **not** recognized by conformant C2PA
-validators. Start on test, then swap the helper and the key.
+The test helpers target the test host (`test.api.trufo.ai`) and need no OV; you can use
+them to test basic API functions before making a production-signed asset.
+The test output is not recognized by conformant C2PA validators.
 
 ---
 
@@ -120,27 +120,74 @@ for the full settings.
 ## S3 Signing
 
 For large media, upload to an ephemeral Trufo-signed S3 location instead of
-putting bytes in the request body. `sign_c2pa_via_s3()` performs the whole
-upload → submit task → poll → download sequence. Select TASK explicitly:
+putting bytes in the request body. Specify `ExecutionMode.TASK` to have the SDK
+upload → submit task → poll → download for you. This call blocks until completion:
 
 ```python
 from trufo import ExecutionMode, sign_c2pa
 
-signed_bytes = sign_c2pa(api_key, media_bytes, mime_type="image/jpeg",
-                         execution_mode=ExecutionMode.TASK)
+api_key = load_api_key(TrufoApiKey.C2PA_SIGN_PROD)
+signed_bytes = sign_c2pa(
+    api_key, media_bytes, mime_type="image/jpeg", execution_mode=ExecutionMode.TASK,
+)
 ```
 
-The SDK never chooses TASK automatically. REQUEST is the default and accepts
-at most 10 MB (10,000,000 bytes); image watermarking uses that same size limit.
-Audio/video watermarking requires TASK. Test endpoints are REQUEST-only.
-`sign_c2pa_via_s3()` remains available but also requires explicit TASK.
+Use TASK for files above 10 MB (10,000,000 bytes), and for audio, video, or other
+non-image processing (e.g. watermarking or transcoding). Signing-only calls for
+supported formats under the size cap can use REQUEST. The SDK defaults to REQUEST
+and never switches modes automatically; requests requiring TASK are rejected.
+TASK is not supported on the test host.
 
-For an existing Trufo upload, use `sign_c2pa_s3(..., execution_mode=ExecutionMode.TASK)`.
-For non-blocking submission, use `submit_c2pa_sign()` then `get_task()` or
-`wait_for_task()` against the same API region. The synchronous helpers wait up to
+The legacy `sign_c2pa_via_s3()` remains supported with explicit TASK; prefer
+`sign_c2pa(..., execution_mode=ExecutionMode.TASK)` for new code.
+
+To submit without waiting for processing, use `submit_c2pa_sign()` with a Trufo
+upload reference, then `get_task()` or `wait_for_task()` against the same API
+region. Upload and submission are synchronous HTTP calls; only processing runs
+independently. The synchronous helpers use a local polling budget of
 600 seconds by default (`wait_seconds`); `TaskWaitTimeout.task_id` lets you resume
 polling without resubmitting. Stopping the wait does not cancel the task.
 See the [API contract](../api/api_c2pa.md#tasks).
+
+```python
+from pathlib import Path
+
+import requests
+from trufo import get_s3_upload_url, submit_c2pa_sign, get_task, wait_for_task
+from trufo.util.credentials import TrufoApiKey, load_api_key
+
+api_key = load_api_key(TrufoApiKey.C2PA_SIGN_PROD)
+upload = get_s3_upload_url(api_key, mime_type="image/tiff")
+with Path("input.tiff").open("rb") as source:
+    response = requests.put(
+        upload.upload_url, data=source,
+        headers={"Content-Type": "image/tiff"}, timeout=120,
+    )
+    response.raise_for_status()
+
+task = submit_c2pa_sign(api_key, upload.media_input_s3)
+print(task.task_id)  # save this ID to retrieve the result later
+
+# elsewhere: check once, or wait for completion without resubmitting
+status = get_task(api_key, task.task_id)
+print(status.status.value)
+completed = wait_for_task(api_key, task.task_id, wait_seconds=600)
+if completed.result.download_url is None:
+    raise RuntimeError("The task output has expired.")
+
+with requests.get(completed.result.download_url, stream=True, timeout=120) as response:
+    response.raise_for_status()
+    with Path("signed.tiff").open("wb") as output:
+        for chunk in response.iter_content(chunk_size=1024 * 1024):
+            output.write(chunk)
+```
+
+`submit_c2pa_sign()` always submits a TASK, so it takes no `execution_mode`
+argument. Reuse an existing Trufo upload reference to skip the upload step;
+arbitrary S3 URLs are not accepted. Download from `download_url`, not the opaque
+`media_output_s3` reference. `wait_for_task()` raises `TaskFailed` for a failed or
+expired task; its `.task` contains the status and error code. Increasing
+`wait_seconds` does not increase the server's execution timeout.
 
 ---
 
