@@ -121,18 +121,26 @@ for the full settings.
 
 For large media, upload to an ephemeral Trufo-signed S3 location instead of
 putting bytes in the request body. `sign_c2pa_via_s3()` performs the whole
-upload → sign → download sequence:
+upload → submit task → poll → download sequence. Select TASK explicitly:
 
 ```python
-from trufo import sign_c2pa_via_s3
+from trufo import ExecutionMode, sign_c2pa
 
-signed_bytes = sign_c2pa_via_s3(api_key, media_bytes, mime_type="image/jpeg")
+signed_bytes = sign_c2pa(api_key, media_bytes, mime_type="image/jpeg",
+                         execution_mode=ExecutionMode.TASK)
 ```
 
-`sign_c2pa_via_s3_test()` is the test-host equivalent. The lower-level helpers
-(`get_c2pa_s3_upload_url`, `sign_c2pa_s3`, `sign_c2pa_s3_test`) are available when
-you want to manage the upload yourself — see
-[api_c2pa.md](../api/api_c2pa.md#post-c2paioget-s3-url).
+The SDK never chooses TASK automatically. REQUEST is the default and accepts
+at most 10 MB (10,000,000 bytes); image watermarking uses that same size limit.
+Audio/video watermarking requires TASK. Test endpoints are REQUEST-only.
+`sign_c2pa_via_s3()` remains available but also requires explicit TASK.
+
+For an existing Trufo upload, use `sign_c2pa_s3(..., execution_mode=ExecutionMode.TASK)`.
+For non-blocking submission, use `submit_c2pa_sign()` then `get_task()` or
+`wait_for_task()` against the same API region. The synchronous helpers wait up to
+600 seconds by default (`wait_seconds`); `TaskWaitTimeout.task_id` lets you resume
+polling without resubmitting. Stopping the wait does not cancel the task.
+See the [API contract](../api/api_c2pa.md#tasks).
 
 ---
 

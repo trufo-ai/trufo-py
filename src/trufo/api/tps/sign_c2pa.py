@@ -36,7 +36,10 @@ from trufo.api.endpoints import (
     TRUFO_TSA_URL,
 )
 from trufo.api.headers import sdk_headers
-from trufo.api.tps.io import S3Upload, get_s3_upload_url
+from trufo.api.tps.io import S3Upload, get_s3_upload_url, _upload_task_input
+from trufo.api.tps.tasks import (
+    ExecutionMode, TaskAccepted, _submit_task, wait_for_task, _download_task_output,
+)
 from trufo.c2pa.actions import TrufoAction
 from trufo.c2pa.assertions import UserAssertion
 from trufo.c2pa.manifest import ManifestSettings
@@ -55,6 +58,10 @@ class C2PAS3SignedOutput:
     """Ephemeral S3 signed output reference."""
 
     media_output_s3: str
+    download_url: str | None = None
+    task_id: str | None = None
+    cid: str | None = None
+    wid: str | None = None
 
 
 def _manifest_settings_payload(settings: ManifestSettings) -> dict:
@@ -277,7 +284,7 @@ def get_c2pa_s3_upload_url(
     """Request an ephemeral S3 upload URL for C2PA signing.
 
     The returned ``media_input_s3`` reference can be passed to
-    :func:`sign_c2pa_s3` or :func:`sign_c2pa_s3_test` after uploading media
+    :func:`sign_c2pa_s3` with explicit TASK execution after uploading media
     bytes to ``upload_url``.
 
     Args:
@@ -295,8 +302,7 @@ def get_c2pa_s3_upload_url(
     return get_s3_upload_url(api_key, mime_type, duration, trufo_api_url=trufo_api_url)
 
 
-def _sign_c2pa_s3(
-    endpoint: str,
+def submit_c2pa_sign(
     api_key: str,
     media_input_s3: str,
     actions: list | None = None,
@@ -306,8 +312,12 @@ def _sign_c2pa_s3(
     *,
     manifest_settings: ManifestSettings | None = None,
     trufo_api_url: str = TRUFO_API_URL,
-) -> C2PAS3SignedOutput:
-    """Sign an uploaded ephemeral S3 object through a C2PA signing endpoint."""
+) -> TaskAccepted:
+    """Submit an existing Trufo upload reference for signing without waiting.
+
+    Use get_task() or wait_for_task() against the same API region to retrieve
+    the outcome. Task IDs and execution time limits are assigned by the server.
+    """
     _validate_actions(actions)
     _validate_assertions(assertions)
     _validate_manifest_setting_aliases(manifest_settings, manifest_title, ingredient_title)
@@ -324,17 +334,7 @@ def _sign_c2pa_s3(
     if manifest_settings is not None:
         body["manifest_settings"] = _manifest_settings_payload(manifest_settings)
 
-    resp = requests.post(
-        trufo_api_url + endpoint,
-        json=body,
-        headers=sdk_headers(api_key),
-        timeout=60,
-    )
-    resp.raise_for_status()
-
-    payload = resp.json()
-    emit_server_warnings(payload)
-    return C2PAS3SignedOutput(media_output_s3=payload["media_output_s3"])
+    return _submit_task(api_key, TPS_C2PA_SIGN, body, trufo_api_url=trufo_api_url)
 
 
 def sign_c2pa_s3(
@@ -346,6 +346,8 @@ def sign_c2pa_s3(
     ingredient_title: str | None = None,
     *,
     manifest_settings: ManifestSettings | None = None,
+    execution_mode: ExecutionMode = ExecutionMode.REQUEST,
+    wait_seconds: float = 600,
     trufo_api_url: str = TRUFO_API_URL,
 ) -> C2PAS3SignedOutput:
     """Sign an uploaded ephemeral S3 object with production C2PA via the TPS.
@@ -366,13 +368,22 @@ def sign_c2pa_s3(
         trufo_api_url: Freeform Trufo API base URL. Defaults to production.
 
     Returns:
-        Presigned S3 download URL for the signed output media.
+        Output reference, separate download URL, task ID, and optional content/watermark IDs.
 
     Raises:
         requests.HTTPError: If the API returns a non-2xx response.
+
+    Execution is REQUEST by default, with no automatic classification. S3 input
+    requires explicit ExecutionMode.TASK. TASK waits up to wait_seconds (600 by
+    default); TaskWaitTimeout preserves the task ID without cancelling work.
+    For TASK bytes, provide mime_type; submit_c2pa_sign() accepts an existing
+    Trufo upload reference without waiting.
     """
-    return _sign_c2pa_s3(
-        TPS_C2PA_SIGN,
+    if ExecutionMode.validate(execution_mode) != ExecutionMode.TASK:
+        raise ValueError("S3 input requires execution_mode=ExecutionMode.TASK.")
+    if wait_seconds <= 0:
+        raise ValueError("Wait duration must be positive.")
+    accepted = submit_c2pa_sign(
         api_key,
         media_input_s3,
         actions=actions,
@@ -382,6 +393,9 @@ def sign_c2pa_s3(
         manifest_settings=manifest_settings,
         trufo_api_url=trufo_api_url,
     )
+    task = wait_for_task(api_key, accepted.task_id, wait_seconds=wait_seconds, trufo_api_url=trufo_api_url)
+    return C2PAS3SignedOutput(task.result.media_output_s3, task.result.download_url,
+                             task.task_id, task.result.cid, task.result.wid)
 
 
 def sign_c2pa_s3_test(
@@ -395,37 +409,8 @@ def sign_c2pa_s3_test(
     manifest_settings: ManifestSettings | None = None,
     trufo_api_url: str = TRUFO_API_URL_TEST,
 ) -> C2PAS3SignedOutput:
-    """Sign an uploaded ephemeral S3 object with test C2PA via the TPS.
-
-    Args:
-        api_key: API key with scope ``c2pa-sign-test``.
-        media_input_s3: Opaque reference returned by :func:`get_c2pa_s3_upload_url`.
-        actions: Ordered list of ``[action_name, params]`` pairs (default ``[]``).
-        assertions: List of ``[assertion_name, params]`` pairs (default ``[]``).
-        manifest_title: Optional active-manifest title (``dc:title``); see the
-            module docstring for when to set this explicitly.
-        ingredient_title: Optional ``parentOf`` ingredient title (``dc:title``);
-            see the module docstring for when to set this explicitly.
-        manifest_settings: Optional structured C2PA manifest settings.
-        trufo_api_url: Trufo API base URL. Defaults to the Trufo test host (test.api.trufo.ai).
-
-    Returns:
-        Presigned S3 download URL for the signed output media.
-
-    Raises:
-        requests.HTTPError: If the API returns a non-2xx response.
-    """
-    return _sign_c2pa_s3(
-        TPS_C2PA_SIGN,
-        api_key,
-        media_input_s3,
-        actions=actions,
-        assertions=assertions,
-        manifest_title=manifest_title,
-        ingredient_title=ingredient_title,
-        manifest_settings=manifest_settings,
-        trufo_api_url=trufo_api_url,
-    )
+    """Retired: the test endpoint accepts REQUEST bytes via sign_c2pa_test()."""
+    raise ValueError("The test endpoint supports REQUEST execution with bytes only; use sign_c2pa_test().")
 
 
 def sign_c2pa_via_s3(
@@ -439,6 +424,8 @@ def sign_c2pa_via_s3(
     ingredient_title: str | None = None,
     *,
     manifest_settings: ManifestSettings | None = None,
+    execution_mode: ExecutionMode = ExecutionMode.REQUEST,
+    wait_seconds: float = 600,
     trufo_api_url: str = TRUFO_API_URL,
 ) -> bytes:
     """Upload, production-sign, and download media through the ephemeral S3 flow.
@@ -468,7 +455,20 @@ def sign_c2pa_via_s3(
 
     Raises:
         requests.HTTPError: If an API, upload, or download request fails.
+
+    Execution is REQUEST by default, with no automatic classification. S3 input
+    requires explicit ExecutionMode.TASK. TASK waits up to wait_seconds (600 by
+    default); TaskWaitTimeout preserves the task ID without cancelling work.
+    For TASK bytes, provide mime_type; submit_c2pa_sign() accepts an existing
+    Trufo upload reference without waiting.
     """
+    if ExecutionMode.validate(execution_mode) != ExecutionMode.TASK:
+        raise ValueError("S3 input requires execution_mode=ExecutionMode.TASK.")
+    if wait_seconds <= 0:
+        raise ValueError("Wait duration must be positive.")
+    _validate_actions(actions)
+    _validate_assertions(assertions)
+    _validate_manifest_setting_aliases(manifest_settings, manifest_title, ingredient_title)
     upload = get_c2pa_s3_upload_url(
         api_key,
         mime_type,
@@ -484,9 +484,13 @@ def sign_c2pa_via_s3(
         manifest_title=manifest_title,
         ingredient_title=ingredient_title,
         manifest_settings=manifest_settings,
+        execution_mode=execution_mode,
+        wait_seconds=wait_seconds,
         trufo_api_url=trufo_api_url,
     )
-    return _download_c2pa_s3_media(signed_output.media_output_s3)
+    if signed_output.download_url is None:
+        raise ValueError(f"Output for task {signed_output.task_id} is no longer available to download.")
+    return _download_c2pa_s3_media(signed_output.download_url)
 
 
 def sign_c2pa_via_s3_test(
@@ -502,49 +506,8 @@ def sign_c2pa_via_s3_test(
     manifest_settings: ManifestSettings | None = None,
     trufo_api_url: str = TRUFO_API_URL_TEST,
 ) -> bytes:
-    """Upload, test-sign, and download media through the ephemeral S3 flow.
-
-    This convenience helper composes the low-level helpers:
-    :func:`get_c2pa_s3_upload_url` and :func:`sign_c2pa_s3_test`.
-
-    Args:
-        api_key: API key with scope ``c2pa-sign-test``.
-        media_bytes: Raw bytes of the media file to sign.
-        mime_type: MIME type of the media file.
-        actions: Ordered list of ``[action_name, params]`` pairs (default ``[]``).
-        assertions: List of ``[assertion_name, params]`` pairs (default ``[]``).
-        duration: Optional server-supported S3 URL duration. Currently ``"5m"``.
-        manifest_title: Optional active-manifest title (``dc:title``); see the
-            module docstring for when to set this explicitly.
-        ingredient_title: Optional ``parentOf`` ingredient title (``dc:title``);
-            see the module docstring for when to set this explicitly.
-        manifest_settings: Optional structured C2PA manifest settings.
-        trufo_api_url: Trufo API base URL. Defaults to the Trufo test host (test.api.trufo.ai).
-
-    Returns:
-        Signed media bytes downloaded from the returned S3 output URL.
-
-    Raises:
-        requests.HTTPError: If an API, upload, or download request fails.
-    """
-    upload = get_c2pa_s3_upload_url(
-        api_key,
-        mime_type,
-        duration=duration,
-        trufo_api_url=trufo_api_url,
-    )
-    _upload_c2pa_s3_media(upload.upload_url, media_bytes, mime_type)
-    signed_output = sign_c2pa_s3_test(
-        api_key,
-        upload.media_input_s3,
-        actions=actions,
-        assertions=assertions,
-        manifest_title=manifest_title,
-        ingredient_title=ingredient_title,
-        manifest_settings=manifest_settings,
-        trufo_api_url=trufo_api_url,
-    )
-    return _download_c2pa_s3_media(signed_output.media_output_s3)
+    """Retired: the test endpoint accepts REQUEST bytes via sign_c2pa_test()."""
+    raise ValueError("The test endpoint supports REQUEST execution with bytes only; use sign_c2pa_test().")
 
 
 def _upload_c2pa_s3_media(upload_url: str, media_bytes: bytes, mime_type: str) -> None:
@@ -574,6 +537,9 @@ def sign_c2pa(
     ingredient_title: str | None = None,
     *,
     manifest_settings: ManifestSettings | None = None,
+    execution_mode: ExecutionMode = ExecutionMode.REQUEST,
+    mime_type: str | None = None,
+    wait_seconds: float = 600,
     trufo_api_url: str = TRUFO_API_URL,
 ) -> bytes:
     """Sign a media file with production C2PA via the TPS.
@@ -598,7 +564,26 @@ def sign_c2pa(
 
     Raises:
         requests.HTTPError: If the API returns a non-2xx response.
+
+    Execution is REQUEST by default, with no automatic classification. S3 input
+    requires explicit ExecutionMode.TASK. TASK waits up to wait_seconds (600 by
+    default); TaskWaitTimeout preserves the task ID without cancelling work.
+    For TASK bytes, provide mime_type; submit_c2pa_sign() accepts an existing
+    Trufo upload reference without waiting.
     """
+    if ExecutionMode.validate(execution_mode) == ExecutionMode.TASK:
+        if wait_seconds <= 0:
+            raise ValueError("Wait duration must be positive.")
+        _validate_actions(actions)
+        _validate_assertions(assertions)
+        _validate_manifest_setting_aliases(manifest_settings, manifest_title, ingredient_title)
+        reference = _upload_task_input(api_key, media_bytes, mime_type, trufo_api_url=trufo_api_url)
+        accepted = submit_c2pa_sign(
+            api_key, reference, actions, assertions, manifest_title, ingredient_title,
+            manifest_settings=manifest_settings, trufo_api_url=trufo_api_url,
+        )
+        task = wait_for_task(api_key, accepted.task_id, wait_seconds=wait_seconds, trufo_api_url=trufo_api_url)
+        return _download_task_output(task)
     return _sign_c2pa_direct(
         TPS_C2PA_SIGN,
         api_key,
@@ -621,6 +606,7 @@ def sign_c2pa_test(
     ingredient_title: str | None = None,
     *,
     manifest_settings: ManifestSettings | None = None,
+    execution_mode: ExecutionMode = ExecutionMode.REQUEST,
     trufo_api_url: str = TRUFO_API_URL_TEST,
 ) -> bytes:
     """Sign a media file with C2PA via the TPS test endpoint.
@@ -643,6 +629,7 @@ def sign_c2pa_test(
     Raises:
         requests.HTTPError: If the API returns a non-2xx response.
     """
+    ExecutionMode.validate(execution_mode, test=True)
     return _sign_c2pa_direct(
         TPS_C2PA_SIGN,
         api_key,

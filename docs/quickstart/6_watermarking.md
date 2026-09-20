@@ -7,9 +7,9 @@ Embed an imperceptible Trufo watermark in your media as part of C2PA signing.
 For supported image, audio, and video formats, Trufo can embed a **Trufo Pawprint watermark** — an imperceptible signal woven into the pixels or audio samples themselves. The watermark carries a watermark ID issued by Trufo, so information about the content survives even after the C2PA manifest has been stripped (e.g. by re-encoding, screenshots, or metadata-scrubbing pipelines). What the ID resolves to depends on the mark's mode:
 
 - **Provenance** (the default): a unique per-content ID linked to your signing record.
-- **Compliance** (🟠 **test only**): your organization's reusable mark declaring the content's AI class (`ai_generated`, `ai_modified`, or `undeclared`).
+- **Compliance**: unsupported; selecting it raises `NotImplementedError`.
 
-There are two ways to get a watermark, sharing both modes:
+There are two ways to get a provenance watermark:
 
 - **As part of C2PA signing** — a `["watermark", {...}]` action in a `sign_c2pa*` call; Trufo embeds the mark and signs the manifest in one step. **Off by default** — the action requests it.
 - **Standalone binding** — `bind_watermark()` embeds the mark and *you* sign the media with your own certificate; see [Binding Without Trufo Signing](#binding-without-trufo-signing-bind).
@@ -17,6 +17,14 @@ There are two ways to get a watermark, sharing both modes:
 Either way, the signed manifest declares the watermark per the C2PA specification: a `c2pa.watermarked.bound` action plus a `c2pa.soft-binding` assertion with algorithm `ai.trufo.pawprint.watermark`, Trufo's entry in the official C2PA soft-binding algorithm registry — Trufo writes these for you in the signing flow, while bind requires your manifest to carry them.
 
 ## Supported Formats
+
+Hosted REQUEST execution is limited to images up to 10 MB (10,000,000 bytes).
+For larger images, audio, or video, explicitly select `ExecutionMode.TASK` and
+pass `mime_type` to `sign_c2pa()` or `bind_watermark()`. The SDK uploads, submits,
+polls, and downloads synchronously. `submit_watermark()` accepts an existing
+Trufo upload reference and returns immediately with a task ID. A completed
+watermark task still requires signing and `bind_commit()`; it does not commit
+the content record itself. Test endpoints accept REQUEST only.
 
 | Modality | Formats |
 | -------- | ------- |

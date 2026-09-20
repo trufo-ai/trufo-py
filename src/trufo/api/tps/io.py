@@ -51,3 +51,14 @@ def get_s3_upload_url(
         expires_at=payload["expires_at"],
         duration=payload["duration"],
     )
+
+
+def _upload_task_input(api_key: str, media_bytes: bytes, mime_type: str | None, *, trufo_api_url: str) -> str:
+    """Upload once; content classification and eligibility remain server-side."""
+    if not mime_type:
+        raise ValueError("Provide mime_type when uploading bytes for TASK execution.")
+    upload = get_s3_upload_url(api_key, mime_type, trufo_api_url=trufo_api_url)
+    response = requests.put(upload.upload_url, data=media_bytes,
+                            headers={"Content-Type": mime_type}, timeout=120)
+    response.raise_for_status()
+    return upload.media_input_s3

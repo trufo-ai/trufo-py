@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Explicit `ExecutionMode.REQUEST` (default) and `ExecutionMode.TASK` for hosted
+  signing and watermarking. TASK uploads bytes to S3, submits once, polls, and
+  downloads the result. Pass `mime_type` when supplying bytes.
+- `submit_c2pa_sign`, `submit_watermark`, `get_task`, and `wait_for_task` for
+  callers managing their own task lifecycle, with typed results and failures.
+
+### Changed
+
+- S3 signing requires explicit TASK execution; it no longer performs synchronous
+  S3 signing. `C2PAS3SignedOutput.download_url` is the download link;
+  `media_output_s3` is the opaque output reference. Test signing is REQUEST-only.
+
 ### Removed
 
 - Test-only compliance watermarking. `mode="compliance"` raises

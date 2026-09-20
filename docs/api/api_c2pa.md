@@ -98,7 +98,7 @@ delivery on the same terms; `/bind/commit` is idempotent for an identical retry.
 
 ## Signing Modes
 
-Four flows, one request shape. `actions` and `assertions` behave identically in all
+Three flows, one operation shape. `actions` and `assertions` behave identically in all
 of them.
 
 | | Hosted | Hosted (S3) | Distributed |
@@ -109,7 +109,7 @@ of them.
 | Signing key | Trufo | Trufo | Trufo |
 | Extra requirements | — | — | Local engine extra, `tsa` key, Linux x86_64 + CPython 3.12 |
 
-Each mode has a test variant: use a `c2pa-sign-test` key against
+Direct and distributed signing have test variants: use a `c2pa-sign-test` key against
 `test.api.trufo.ai`. Test signing skips OV and billing, produces manifests signed by
 the test certificate (not accepted by conformant validators), and creates no
 permanent signing record.
@@ -119,17 +119,20 @@ permanent signing record.
 | Field | Type | Required | Description |
 | ----- | ---- | -------- | ----------- |
 | `media_input` | string | Yes\* | base64-encoded input media |
-| `media_input_s3` | string | Yes\* | Opaque reference from `/c2pa/io/get-s3-url` |
+| `media_input_s3` | string | Yes\* | Opaque reference from `/io/get-s3-upload-url`; TASK only |
+| `execution_mode` | string | No | `request` (default) or `task`; `stream` is unsupported |
 | `actions` | list | Yes | `[name, params]` pairs, applied in order |
 | `assertions` | list | No | `[name, params]` pairs recorded in the manifest |
 | `manifest_title` | string | No | The manifest title of the signed output asset. Omitted from the manifest when unset. |
 | `ingredient_title` | string | No | The ingredient title assigned to the input asset (parent, via a `c2pa.opened` action). When unset: the input's manifest title, if it exists; otherwise, `input.{ext}`. |
 | `manifest_settings` | object | No | Structured titles, thumbnail settings, and `all_actions_included`. |
 
-\* Provide exactly one.
+\* Provide exactly one: bytes for REQUEST, an S3 reference for TASK. There is no
+automatic fallback. REQUEST has a 10 MB (10,000,000-byte) input cap; audio/video
+watermarking requires TASK. Test endpoints support REQUEST only.
 
-**Response (200):** `media_output` (base64) or `media_output_s3` (presigned download
-URL), plus `warnings`.
+**REQUEST response (200):** `media_output` (base64), plus `warnings`.
+**TASK response (202):** task acceptance, not the completed result; see [Tasks](#tasks).
 
 Fallback titles are derived, not authored: an embedded manifest title is third-party
 text re-signed as-is. Pass explicit titles when you need deterministic, curated
@@ -161,7 +164,9 @@ no thumbnails, while also preserving inherited ingredient thumbnails. The
 `MEDIUM` preset is 512 px at WebP quality 80; `HIGH` is 1024 px at quality
 90. Image alpha transparency is preserved.
 
-### `POST /c2pa/io/get-s3-url`
+### `POST /io/get-s3-upload-url`
+
+Shared by signing and watermarking. `/c2pa/io/get-s3-url` remains an alias.
 
 | Field | Type | Required | Description |
 | ----- | ---- | -------- | ----------- |
@@ -171,9 +176,32 @@ no thumbnails, while also preserving inherited ingredient thumbnails. The
 **Response (200):** `media_input_s3` (opaque reference), `upload_url` (presigned PUT
 — send the same `Content-Type`), `expires_at`, `duration`.
 
-Upload, then call `/c2pa/sign` with `media_input_s3`. Trufo re-probes the uploaded
-bytes rather than trusting the declared type. The signed output is returned as a
-presigned download URL valid for the remainder of the reference's lifetime.
+Upload, then call `/c2pa/sign` or `/bind/watermark` with `media_input_s3` and
+`execution_mode: "task"`. Arbitrary S3 URLs are not accepted. Trufo checks the
+uploaded bytes rather than trusting the declared type.
+
+### Tasks
+
+Submission returns HTTP 202 with `task_id`, `task_type` (`c2pa_sign` or
+`watermark`), `status`, `startby_ts`, and `timeout_seconds`. IDs and timing are
+server-generated; do not supply them in API input.
+
+`GET /tasks/{task_id}` on the same API region returns those fields plus
+`create_ts`, `update_ts`, `start_ts`, `finish_ts`, `duration_ms`, `progress`,
+`file_size_bytes`, `file_mime_type`, `result`, and `error`. Authenticate with a
+key for the same organization and operation. Status is `queued`, `running`,
+`succeeded`, `failed`, or `expired`.
+
+| Outcome | Fields |
+| --- | --- |
+| Signing result | `media_output_s3`, `download_url`, `expires_ts`, optional `cid`/`wid`, `warnings` |
+| Watermark result | `media_output_s3`, `download_url`, `expires_ts`, `wid`, optional `cid` |
+| Error | Stable `code` and corresponding `http_status` (inside the HTTP 200 status response) |
+
+`media_output_s3` is an opaque reference, not a URL. Download through
+`download_url`; it is null after the retained output expires. Task info contains
+no media bytes. Polling does not retry a failed task. Watermark completion does
+not replace the subsequent `/bind/commit` step.
 
 ### Distributed signing
 

@@ -5,7 +5,7 @@
 
 Demonstrates the three signing modes:
   - simple       (media sent in the request body)
-  - S3           (for large media)
+  - TASK via S3  (production only; see the companion guide)
   - distributed  (media never leaves this machine)
 
 See docs/quickstart/2_c2pa_signing.md for details.
@@ -13,14 +13,12 @@ Requires a c2pa-sign-test API key — set TRUFO_C2PA_SIGN_TEST_API_KEY
 or save it to ~/.trufo/credentials/c2pa_sign_test_api_key.
 """
 
-import mimetypes
 import warnings
 from pathlib import Path
 
 from trufo import (
     TrufoServerWarning,
     sign_c2pa_test,
-    sign_c2pa_via_s3_test,
 )
 from trufo.util.credentials import TrufoApiKey, load_api_key
 
@@ -35,7 +33,6 @@ assert api_key, (
 )
 
 media_bytes = INPUT_FILE.read_bytes()
-mime_type = mimetypes.guess_type(INPUT_FILE.name)[0] or "application/octet-stream"
 
 
 # --- 1. simple signing -------------------------------------------------------
@@ -59,16 +56,8 @@ for notice in caught:
 
 
 # --- 2. signing large media via S3 -------------------------------------------
-# Uploads to an ephemeral Trufo-signed location instead of the request body.
-# Same request shape; use for files too large to send inline.
-
-signed_via_s3 = sign_c2pa_via_s3_test(
-    api_key,
-    media_bytes,
-    mime_type=mime_type,
-    actions=[["publish", {}]],
-)
-print(f"Signed via S3 ({len(signed_via_s3)} bytes)")
+# TASK is not available on the test host. For production, use sign_c2pa(...,
+# execution_mode=ExecutionMode.TASK, mime_type="image/jpeg"); see the guide.
 
 
 # --- 3. distributed signing --------------------------------------------------

@@ -25,9 +25,7 @@ Two routes share the commit step:
 Production requires a ``watermark-prod`` key, an active C2PA Signing or
 Watermark API plan, and completed organization validation; the ``_test``
 variants target the Trufo test host with a ``watermark-test`` key, where marks
-are ephemeral and nothing is billed. Compliance mode (your organization's mark
-for a declared AI class, a single :func:`bind_watermark` call with nothing to
-commit) is available on the test host only.
+are ephemeral and nothing is billed. Compliance watermarking is unsupported.
 """
 
 import base64
@@ -45,6 +43,8 @@ from trufo.api.endpoints import (
     TRUFO_API_URL_TEST,
 )
 from trufo.api.headers import sdk_headers
+from trufo.api.tps.io import _upload_task_input
+from trufo.api.tps.tasks import ExecutionMode, TaskAccepted, _submit_task, wait_for_task, _download_task_output
 from trufo.c2pa.watermark import WatermarkMode
 
 _ENGINE_HINT = (
@@ -96,6 +96,9 @@ def bind_watermark(
     media_bytes: bytes,
     *,
     mode: str = "provenance",
+    execution_mode: ExecutionMode = ExecutionMode.REQUEST,
+    mime_type: str | None = None,
+    wait_seconds: float = 600,
     trufo_api_url: str = TRUFO_API_URL,
 ) -> BindWatermark:
     """tpls step 1: embed a Trufo watermark in media on Trufo's servers.
@@ -106,6 +109,10 @@ def bind_watermark(
         media_bytes: Raw bytes of the media file to watermark.
         mode: ``"provenance"`` (default). ``"compliance"`` is unsupported
             and raises NotImplementedError before sending a request.
+        execution_mode: REQUEST (default) or explicit TASK; no automatic fallback.
+        mime_type: Required for TASK bytes uploaded to S3.
+        wait_seconds: Local TASK waiting budget (default 600), not the server
+            execution timeout. TaskWaitTimeout retains the task ID.
         trufo_api_url: Trufo API base URL. Defaults to production; pass
             ``TRUFO_API_URL_TEST`` (or use :func:`bind_watermark_test`) for
             the test host.
@@ -115,10 +122,17 @@ def bind_watermark(
         mode) the record ID for :func:`bind_commit`.
 
     Raises:
-        ValueError: On an invalid mode/label pairing.
+        ValueError: On invalid mode, execution settings, or missing MIME type.
         requests.HTTPError: If the API returns a non-2xx response.
     """
     WatermarkMode.validate(mode)
+    if ExecutionMode.validate(execution_mode) == ExecutionMode.TASK:
+        if wait_seconds <= 0:
+            raise ValueError("Wait duration must be positive.")
+        reference = _upload_task_input(api_key, media_bytes, mime_type, trufo_api_url=trufo_api_url)
+        accepted = submit_watermark(api_key, reference, mode=mode, trufo_api_url=trufo_api_url)
+        task = wait_for_task(api_key, accepted.task_id, wait_seconds=wait_seconds, trufo_api_url=trufo_api_url)
+        return BindWatermark(_download_task_output(task), task.result.wid, task.result.cid)
     body: dict = {
         "media_input": base64.b64encode(media_bytes).decode(),
         "mode": mode,
@@ -129,6 +143,18 @@ def bind_watermark(
         wid=payload["wid"],
         cid=payload.get("cid"),
     )
+
+
+def submit_watermark(api_key: str, media_input_s3: str, *, mode: str = "provenance",
+                     trufo_api_url: str = TRUFO_API_URL) -> TaskAccepted:
+    """Submit a Trufo upload reference for watermarking without waiting.
+
+    Poll with get_task() or wait_for_task(). Completion does not replace the
+    separate bind_commit() step after signing the watermarked media.
+    """
+    WatermarkMode.validate(mode)
+    return _submit_task(api_key, TPS_BIND_WATERMARK,
+                        {"media_input_s3": media_input_s3, "mode": mode}, trufo_api_url=trufo_api_url)
 
 
 def bind_reserve(
@@ -264,9 +290,11 @@ def bind_watermark_test(
     media_bytes: bytes,
     *,
     mode: str = "provenance",
+    execution_mode: ExecutionMode = ExecutionMode.REQUEST,
     trufo_api_url: str = TRUFO_API_URL_TEST,
 ) -> BindWatermark:
     """:func:`bind_watermark` against the Trufo test host (``watermark-test`` key)."""
+    ExecutionMode.validate(execution_mode, test=True)
     return bind_watermark(
         api_key,
         media_bytes,
