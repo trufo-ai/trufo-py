@@ -38,7 +38,7 @@ from trufo.api.endpoints import (
 from trufo.api.headers import sdk_headers
 from trufo.api.tps.io import S3Upload, get_s3_upload_url, _upload_task_input
 from trufo.api.tps.tasks import (
-    ExecutionMode, TaskAccepted, _submit_task, wait_for_task, _download_task_output,
+    ExecutionMode, TaskSubmission, _submit_task, wait_for_task, _download_task_output,
 )
 from trufo.c2pa.actions import TrufoAction
 from trufo.c2pa.assertions import UserAssertion
@@ -312,7 +312,7 @@ def submit_c2pa_sign(
     *,
     manifest_settings: ManifestSettings | None = None,
     trufo_api_url: str = TRUFO_API_URL,
-) -> TaskAccepted:
+) -> TaskSubmission:
     """Submit an existing Trufo upload reference for signing without waiting.
 
     Use get_task() or wait_for_task() against the same API region to retrieve
@@ -375,7 +375,7 @@ def sign_c2pa_s3(
 
     Execution is REQUEST by default, with no automatic classification. S3 input
     requires explicit ExecutionMode.TASK. TASK waits up to wait_seconds (600 by
-    default); TaskWaitTimeout preserves the task ID without cancelling work.
+    default); TaskWaitTimeoutError preserves the task ID without cancelling work.
     For TASK bytes, provide mime_type; submit_c2pa_sign() accepts an existing
     Trufo upload reference without waiting.
     """
@@ -383,7 +383,7 @@ def sign_c2pa_s3(
         raise ValueError("S3 input requires execution_mode=ExecutionMode.TASK.")
     if wait_seconds <= 0:
         raise ValueError("Wait duration must be positive.")
-    accepted = submit_c2pa_sign(
+    submission = submit_c2pa_sign(
         api_key,
         media_input_s3,
         actions=actions,
@@ -393,7 +393,7 @@ def sign_c2pa_s3(
         manifest_settings=manifest_settings,
         trufo_api_url=trufo_api_url,
     )
-    task = wait_for_task(api_key, accepted.task_id, wait_seconds=wait_seconds, trufo_api_url=trufo_api_url)
+    task = wait_for_task(api_key, submission.task_id, wait_seconds=wait_seconds, trufo_api_url=trufo_api_url)
     return C2PAS3SignedOutput(task.result.media_output_s3, task.result.download_url,
                              task.task_id, task.result.cid, task.result.wid)
 
@@ -458,7 +458,7 @@ def sign_c2pa_via_s3(
 
     Execution is REQUEST by default, with no automatic classification. S3 input
     requires explicit ExecutionMode.TASK. TASK waits up to wait_seconds (600 by
-    default); TaskWaitTimeout preserves the task ID without cancelling work.
+    default); TaskWaitTimeoutError preserves the task ID without cancelling work.
     For TASK bytes, provide mime_type; submit_c2pa_sign() accepts an existing
     Trufo upload reference without waiting.
     """
@@ -567,7 +567,7 @@ def sign_c2pa(
 
     Execution is REQUEST by default, with no automatic classification. S3 input
     requires explicit ExecutionMode.TASK. TASK waits up to wait_seconds (600 by
-    default); TaskWaitTimeout preserves the task ID without cancelling work.
+    default); TaskWaitTimeoutError preserves the task ID without cancelling work.
     For TASK bytes, provide mime_type; submit_c2pa_sign() accepts an existing
     Trufo upload reference without waiting.
     """
@@ -578,11 +578,11 @@ def sign_c2pa(
         _validate_assertions(assertions)
         _validate_manifest_setting_aliases(manifest_settings, manifest_title, ingredient_title)
         reference = _upload_task_input(api_key, media_bytes, mime_type, trufo_api_url=trufo_api_url)
-        accepted = submit_c2pa_sign(
+        submission = submit_c2pa_sign(
             api_key, reference, actions, assertions, manifest_title, ingredient_title,
             manifest_settings=manifest_settings, trufo_api_url=trufo_api_url,
         )
-        task = wait_for_task(api_key, accepted.task_id, wait_seconds=wait_seconds, trufo_api_url=trufo_api_url)
+        task = wait_for_task(api_key, submission.task_id, wait_seconds=wait_seconds, trufo_api_url=trufo_api_url)
         return _download_task_output(task)
     return _sign_c2pa_direct(
         TPS_C2PA_SIGN,

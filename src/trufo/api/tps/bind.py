@@ -44,7 +44,7 @@ from trufo.api.endpoints import (
 )
 from trufo.api.headers import sdk_headers
 from trufo.api.tps.io import _upload_task_input
-from trufo.api.tps.tasks import ExecutionMode, TaskAccepted, _submit_task, wait_for_task, _download_task_output
+from trufo.api.tps.tasks import ExecutionMode, TaskSubmission, _submit_task, wait_for_task, _download_task_output
 from trufo.c2pa.watermark import WatermarkMode
 
 _ENGINE_HINT = (
@@ -112,7 +112,7 @@ def bind_watermark(
         execution_mode: REQUEST (default) or explicit TASK; no automatic fallback.
         mime_type: Required for TASK bytes uploaded to S3.
         wait_seconds: Local TASK waiting budget (default 600), not the server
-            execution timeout. TaskWaitTimeout retains the task ID.
+            execution timeout. TaskWaitTimeoutError retains the task ID.
         trufo_api_url: Trufo API base URL. Defaults to production; pass
             ``TRUFO_API_URL_TEST`` (or use :func:`bind_watermark_test`) for
             the test host.
@@ -130,8 +130,8 @@ def bind_watermark(
         if wait_seconds <= 0:
             raise ValueError("Wait duration must be positive.")
         reference = _upload_task_input(api_key, media_bytes, mime_type, trufo_api_url=trufo_api_url)
-        accepted = submit_watermark(api_key, reference, mode=mode, trufo_api_url=trufo_api_url)
-        task = wait_for_task(api_key, accepted.task_id, wait_seconds=wait_seconds, trufo_api_url=trufo_api_url)
+        submission = submit_watermark(api_key, reference, mode=mode, trufo_api_url=trufo_api_url)
+        task = wait_for_task(api_key, submission.task_id, wait_seconds=wait_seconds, trufo_api_url=trufo_api_url)
         return BindWatermark(_download_task_output(task), task.result.wid, task.result.cid)
     body: dict = {
         "media_input": base64.b64encode(media_bytes).decode(),
@@ -146,7 +146,7 @@ def bind_watermark(
 
 
 def submit_watermark(api_key: str, media_input_s3: str, *, mode: str = "provenance",
-                     trufo_api_url: str = TRUFO_API_URL) -> TaskAccepted:
+                     trufo_api_url: str = TRUFO_API_URL) -> TaskSubmission:
     """Submit a Trufo upload reference for watermarking without waiting.
 
     Poll with get_task() or wait_for_task(). Completion does not replace the

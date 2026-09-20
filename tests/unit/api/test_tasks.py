@@ -8,8 +8,10 @@ from unittest.mock import Mock, patch
 import pytest
 import requests
 
-from trufo import ExecutionMode, bind_watermark, bind_watermark_test, sign_c2pa, sign_c2pa_test
-from trufo.api.tps.tasks import TaskFailed, TaskWaitTimeout, wait_for_task
+from trufo import (
+    ExecutionMode, TaskFailedError, TaskWaitTimeoutError, bind_watermark,
+    bind_watermark_test, sign_c2pa, sign_c2pa_test, wait_for_task,
+)
 
 
 def response(payload=None, *, status=200, content=b""):
@@ -32,11 +34,15 @@ def task(status="succeeded", task_type="c2pa_sign"):
 @pytest.mark.parametrize("operation,task_type", [(sign_c2pa, "c2pa_sign"), (bind_watermark, "watermark")])
 def test_bytes_task_uploads_submits_polls_downloads_without_leaking_api_key(operation, task_type):
     accepted = task("queued", task_type)
+    completed = task(task_type=task_type)
+    # additive server fields must not break existing SDK clients
+    completed["additional_status_field"] = "ignored"
+    completed["result"]["additional_result_field"] = "ignored"
     upload = {"upload_url": "https://input.example", "media_input_s3": "input-reference",
               "expires_at": 1770000000, "duration": "5m"}
     with patch("requests.post", side_effect=[response(upload), response(accepted, status=202)]) as post, \
          patch("requests.put", return_value=response()) as put, \
-         patch("requests.get", side_effect=[response(task(task_type=task_type)), response(content=b"output")]) as get:
+         patch("requests.get", side_effect=[response(completed), response(content=b"output")]) as get:
         result = operation("secret-key", b"input", execution_mode=ExecutionMode.TASK,
                            mime_type="image/jpeg", trufo_api_url="https://selected.example")
     assert (result if task_type == "c2pa_sign" else result.media) == b"output"
@@ -54,9 +60,10 @@ def test_bytes_task_uploads_submits_polls_downloads_without_leaking_api_key(oper
 @pytest.mark.parametrize("status,code", [("failed", "execution_timeout"), ("expired", "start_timeout")])
 def test_terminal_failure_keeps_task_id_and_does_not_resubmit(status, code):
     payload = task(status)
-    payload["error"] = {"code": code, "http_status": 504 if status == "failed" else 503}
+    payload["error"] = {"code": code, "http_status": 504 if status == "failed" else 503,
+                        "additional_error_field": "ignored"}
     with patch("requests.get", return_value=response(payload)), patch("requests.post") as post:
-        with pytest.raises(TaskFailed) as failure:
+        with pytest.raises(TaskFailedError) as failure:
             wait_for_task("key", "task-1")
     assert failure.value.task_id == "task-1"
     assert failure.value.task.error.code == code
@@ -65,7 +72,7 @@ def test_terminal_failure_keeps_task_id_and_does_not_resubmit(status, code):
 
 def test_wait_timeout_preserves_handle_without_cancelling_task():
     with patch("requests.get", side_effect=requests.Timeout), patch("requests.post") as post:
-        with pytest.raises(TaskWaitTimeout) as failure:
+        with pytest.raises(TaskWaitTimeoutError) as failure:
             wait_for_task("key", "task-1")
     assert failure.value.task_id == "task-1"
     assert "not cancelled" in str(failure.value)

@@ -44,7 +44,9 @@ class TaskStatus(str, Enum):
 
 
 @dataclass(frozen=True)
-class TaskAccepted:
+class TaskSubmission:
+    """Server receipt for an accepted task, not a completed result."""
+
     task_id: str
     task_type: TaskType
     status: TaskStatus
@@ -53,13 +55,17 @@ class TaskAccepted:
 
 
 @dataclass(frozen=True)
-class TaskError:
+class TaskErrorInfo:
+    """Failure details returned by the API; this is not an exception."""
+
     code: str
     http_status: int
 
 
 @dataclass(frozen=True)
 class TaskOutput:
+    """Output references and expiration, without media bytes."""
+
     media_output_s3: str
     download_url: str | None
     expires_ts: str
@@ -79,7 +85,9 @@ class WatermarkTaskResult(TaskOutput):
 
 
 @dataclass(frozen=True)
-class TaskInfo(TaskAccepted):
+class TaskInfo(TaskSubmission):
+    """Task status, progress, and an optional typed result or error."""
+
     create_ts: str
     update_ts: str
     file_size_bytes: int
@@ -88,11 +96,13 @@ class TaskInfo(TaskAccepted):
     finish_ts: str | None = None
     duration_ms: int | None = None
     progress: str | None = None
-    error: TaskError | None = None
+    error: TaskErrorInfo | None = None
     result: C2PASignTaskResult | WatermarkTaskResult | None = None
 
 
-class TaskFailed(RuntimeError):
+class TaskFailedError(RuntimeError):
+    """Waiting observed a failed or expired task; retains its status response."""
+
     def __init__(self, task: TaskInfo):
         self.task = task
         self.task_id = task.task_id
@@ -100,31 +110,35 @@ class TaskFailed(RuntimeError):
         super().__init__(f"Task {task.task_id} failed: {code}.")
 
 
-class TaskWaitTimeout(TimeoutError):
+class TaskWaitTimeoutError(TimeoutError):
+    """The SDK stopped waiting; the server task was not cancelled."""
+
     def __init__(self, task_id: str):
         self.task_id = task_id
         super().__init__(f"Stopped waiting for task {task_id}; server execution was not cancelled. Use get_task() to check its status.")
 
 
-def _parse_task(payload: dict, schema):
-    values = {f.name: payload[f.name] for f in fields(schema) if f.name in payload}
+def _parse_task_response(payload: dict, response_type):
+    values = {f.name: payload[f.name] for f in fields(response_type) if f.name in payload}
     values["task_type"] = TaskType(values["task_type"])
     values["status"] = TaskStatus(values["status"])
     if values.get("error"):
-        values["error"] = TaskError(**values["error"])
+        error = values["error"]
+        values["error"] = TaskErrorInfo(**{f.name: error[f.name] for f in fields(TaskErrorInfo) if f.name in error})
     if values.get("result"):
         result_type = C2PASignTaskResult if values["task_type"] == TaskType.C2PA_SIGN else WatermarkTaskResult
-        values["result"] = result_type(**values["result"])
-    return schema(**values)
+        result = values["result"]
+        values["result"] = result_type(**{f.name: result[f.name] for f in fields(result_type) if f.name in result})
+    return response_type(**values)
 
 
-def _submit_task(api_key: str, endpoint: str, body: dict, *, trufo_api_url: str) -> TaskAccepted:
+def _submit_task(api_key: str, endpoint: str, body: dict, *, trufo_api_url: str) -> TaskSubmission:
     response = requests.post(trufo_api_url + endpoint, json={**body, "execution_mode": "task"},
                              headers=sdk_headers(api_key), timeout=60)
     response.raise_for_status()
     if response.status_code != 202:
         raise ValueError("Expected task acceptance (HTTP 202); check that the endpoint supports TASK execution.")
-    return _parse_task(response.json(), TaskAccepted)
+    return _parse_task_response(response.json(), TaskSubmission)
 
 
 def get_task(api_key: str, task_id: str, *, trufo_api_url: str = TRUFO_API_URL) -> TaskInfo:
@@ -132,7 +146,7 @@ def get_task(api_key: str, task_id: str, *, trufo_api_url: str = TRUFO_API_URL) 
     response = requests.get(trufo_api_url + "/tasks/" + quote(task_id, safe=""),
                             headers=sdk_headers(api_key), timeout=30)
     response.raise_for_status()
-    return _parse_task(response.json(), TaskInfo)
+    return _parse_task_response(response.json(), TaskInfo)
 
 
 def wait_for_task(api_key: str, task_id: str, *, wait_seconds: float = 600,
@@ -140,7 +154,7 @@ def wait_for_task(api_key: str, task_id: str, *, wait_seconds: float = 600,
     """Wait for a terminal outcome without retrying submission or server failures.
 
     The local waiting budget is checked between HTTP polls; an in-flight poll
-    has its own 30-second HTTP timeout. TaskWaitTimeout retains the task ID.
+    has its own 30-second HTTP timeout. TaskWaitTimeoutError retains the task ID.
     """
     if wait_seconds <= 0 or poll_interval <= 0:
         raise ValueError("Wait duration and polling interval must be positive.")
@@ -148,11 +162,11 @@ def wait_for_task(api_key: str, task_id: str, *, wait_seconds: float = 600,
     while True:
         remaining = deadline - time.monotonic()
         if remaining <= 0:
-            raise TaskWaitTimeout(task_id)
+            raise TaskWaitTimeoutError(task_id)
         try:
             task = get_task(api_key, task_id, trufo_api_url=trufo_api_url)
         except requests.Timeout as exc:
-            raise TaskWaitTimeout(task_id) from exc
+            raise TaskWaitTimeoutError(task_id) from exc
         except requests.RequestException as exc:
             raise RuntimeError(f"Could not read task {task_id}; use get_task() to check its status.") from exc
         if task.status == TaskStatus.SUCCEEDED:
@@ -162,7 +176,7 @@ def wait_for_task(api_key: str, task_id: str, *, wait_seconds: float = 600,
                 emit_server_warnings({"warnings": task.result.warnings})
             return task
         if task.status in (TaskStatus.FAILED, TaskStatus.EXPIRED):
-            raise TaskFailed(task)
+            raise TaskFailedError(task)
         time.sleep(min(poll_interval, max(0, deadline - time.monotonic())))
 
 

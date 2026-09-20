@@ -17,8 +17,8 @@ from trufo.api.tps.bind import (
 from trufo.api.tps.records import get_content, list_content, set_content_status
 from trufo.api.tps.io import get_s3_upload_url
 from trufo.api.tps.tasks import (
-    ExecutionMode, TaskType, TaskStatus, TaskAccepted, TaskInfo,
-    C2PASignTaskResult, WatermarkTaskResult, TaskError, TaskFailed, TaskWaitTimeout,
+    ExecutionMode, TaskType, TaskStatus, TaskSubmission, TaskInfo,
+    C2PASignTaskResult, WatermarkTaskResult, TaskErrorInfo, TaskFailedError, TaskWaitTimeoutError,
     get_task, wait_for_task,
 )
 from trufo.api.tps.recover import recover_content
@@ -39,8 +39,8 @@ from trufo.util.warnings import TrufoServerWarning
 __version__ = "1.3.1"
 
 __all__ = [
-    "ExecutionMode", "TaskType", "TaskStatus", "TaskAccepted", "TaskInfo",
-    "C2PASignTaskResult", "WatermarkTaskResult", "TaskError", "TaskFailed", "TaskWaitTimeout",
+    "ExecutionMode", "TaskType", "TaskStatus", "TaskSubmission", "TaskInfo",
+    "C2PASignTaskResult", "WatermarkTaskResult", "TaskErrorInfo", "TaskFailedError", "TaskWaitTimeoutError",
     "get_task", "wait_for_task", "submit_c2pa_sign", "submit_watermark", "sign_c2pa_s3",
     "__version__",
     "bind_commit",

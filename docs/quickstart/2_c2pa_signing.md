@@ -145,7 +145,7 @@ To submit without waiting for processing, use `submit_c2pa_sign()` with a Trufo
 upload reference, then `get_task()` or `wait_for_task()` against the same API
 region. Upload and submission are synchronous HTTP calls; only processing runs
 independently. The synchronous helpers use a local polling budget of
-600 seconds by default (`wait_seconds`); `TaskWaitTimeout.task_id` lets you resume
+600 seconds by default (`wait_seconds`); `TaskWaitTimeoutError.task_id` lets you resume
 polling without resubmitting. Stopping the wait does not cancel the task.
 See the [API contract](../api/api_c2pa.md#tasks).
 
@@ -185,7 +185,7 @@ with requests.get(completed.result.download_url, stream=True, timeout=120) as re
 `submit_c2pa_sign()` always submits a TASK, so it takes no `execution_mode`
 argument. Reuse an existing Trufo upload reference to skip the upload step;
 arbitrary S3 URLs are not accepted. Download from `download_url`, not the opaque
-`media_output_s3` reference. `wait_for_task()` raises `TaskFailed` for a failed or
+`media_output_s3` reference. `wait_for_task()` raises `TaskFailedError` for a failed or
 expired task; its `.task` contains the status and error code. Increasing
 `wait_seconds` does not increase the server's execution timeout.
 
