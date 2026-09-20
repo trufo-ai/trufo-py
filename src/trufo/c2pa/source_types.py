@@ -1,7 +1,7 @@
 # Copyright 2025-2026 Trufo, Inc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-"""Writable C2PA digital source types supported by Trufo."""
+"""C2PA digital source type vocabulary; accepted values depend on the operation."""
 
 from enum import Enum
 
@@ -9,7 +9,7 @@ _IPTC = "http://cv.iptc.org/newscodes/digitalsourcetype/"
 
 
 class DigitalSourceType(str, Enum):
-    """Active IPTC Digital Source Type values accepted for claimed actions."""
+    """IPTC and C2PA source types, including legacy values for reading manifests."""
 
     DIGITAL_CAPTURE = f"{_IPTC}digitalCapture"
     COMPUTATIONAL_CAPTURE = f"{_IPTC}computationalCapture"
@@ -28,3 +28,10 @@ class DigitalSourceType(str, Enum):
     TRAINED_ALGORITHMIC_MEDIA = f"{_IPTC}trainedAlgorithmicMedia"
     VIRTUAL_RECORDING = f"{_IPTC}virtualRecording"
     COMPOSITE_WITH_TRAINED_ALGORITHMIC_MEDIA = f"{_IPTC}compositeWithTrainedAlgorithmicMedia"
+
+    # Legacy IPTC value retained for reading, not new declarations.
+    DIGITAL_ART = f"{_IPTC}digitalArt"
+
+    # C2PA extensions; availability is controlled by each operation.
+    EMPTY = "http://c2pa.org/digitalsourcetype/empty"
+    TRAINED_ALGORITHMIC_DATA = "http://c2pa.org/digitalsourcetype/trainedAlgorithmicData"
