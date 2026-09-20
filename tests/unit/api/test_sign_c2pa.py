@@ -4,18 +4,26 @@
 """Unit tests for TPS C2PA signing helpers."""
 
 import base64
+import pickle
 import types
 from unittest.mock import MagicMock, patch
 
 import pytest
+from trufo import (
+    BindReserveResult, BindWatermarkResult, GetS3UploadURLResult,
+    RecoverContentResult, SignC2PAS3Result,
+)
+from trufo.api.tps.bind import BindReservation, BindWatermark
+from trufo.api.tps.recover import ContentRecovery
 from trufo.api.endpoints import (
-    TPS_C2PA_GET_S3_URL,
+    TPS_GET_S3_UPLOAD_URL,
     TPS_C2PA_SIGN,
     TRUFO_API_URL,
     TRUFO_API_URL_TEST,
     TRUFO_TSA_URL,
 )
 from trufo.api.headers import sdk_headers
+from trufo.api.tps.tasks import ExecutionMode
 from trufo.api.tps.sign_c2pa import (
     C2PAS3SignedOutput,
     C2PAS3Upload,
@@ -31,6 +39,7 @@ from trufo.api.tps.sign_c2pa import (
     sign_c2pa_test,
     sign_c2pa_via_s3,
     sign_c2pa_via_s3_test,
+    submit_c2pa_sign,
 )
 from trufo.c2pa import (
     ManifestSettings,
@@ -56,6 +65,15 @@ def _mock_response(json_data: dict):
     resp = MagicMock()
     resp.json.return_value = json_data
     return resp
+
+
+def _accepted_task():
+    response = _mock_response({
+        "task_id": "task-1", "task_type": "c2pa_sign", "status": "queued",
+        "startby_ts": "2026-09-19T12:05:00Z", "timeout_seconds": 60,
+    })
+    response.status_code = 202
+    return response
 
 
 def _install_fake_remote_stack(
@@ -400,6 +418,19 @@ class TestRemoteC2PASigning:
         assert caplog.records == []
 
 
+@pytest.mark.parametrize("current,legacy,module,name", [
+    (BindWatermarkResult, BindWatermark, "bind", "BindWatermark"),
+    (BindReserveResult, BindReservation, "bind", "BindReservation"),
+    (RecoverContentResult, ContentRecovery, "recover", "ContentRecovery"),
+    (GetS3UploadURLResult, C2PAS3Upload, "sign_c2pa", "C2PAS3Upload"),
+    (SignC2PAS3Result, C2PAS3SignedOutput, "sign_c2pa", "C2PAS3SignedOutput"),
+])
+def test_standard_result_names_preserve_published_class_identity(current, legacy, module, name):
+    assert current is legacy
+    # old pickles resolve their original module and class name
+    assert pickle.loads(f"ctrufo.api.tps.{module}\n{name}\n.".encode()) is current
+
+
 class TestS3C2PASigning:
     """Ephemeral S3 C2PA signing helpers."""
 
@@ -414,7 +445,8 @@ class TestS3C2PASigning:
             }
         )
 
-        upload = get_c2pa_s3_upload_url("api-key", "image/jpeg", duration="5m")
+        with pytest.warns(DeprecationWarning, match="use get_s3_upload_url"):
+            upload = get_c2pa_s3_upload_url("api-key", "image/jpeg", duration="5m")
 
         assert upload == C2PAS3Upload(
             upload_url="https://upload.example",
@@ -423,7 +455,7 @@ class TestS3C2PASigning:
             duration="5m",
         )
         mock_post.assert_called_once_with(
-            TRUFO_API_URL + TPS_C2PA_GET_S3_URL,
+            TRUFO_API_URL + TPS_GET_S3_UPLOAD_URL,
             json={"mime_type": "image/jpeg", "duration": "5m"},
             headers=_expected_headers("api-key"),
             timeout=60,
@@ -431,21 +463,22 @@ class TestS3C2PASigning:
         mock_post.return_value.raise_for_status.assert_called_once_with()
 
     @patch("trufo.api.tps.sign_c2pa.requests.post")
-    def test_sign_c2pa_s3_posts_to_prod_endpoint(self, mock_post):
-        mock_post.return_value = _mock_response({"media_output_s3": "https://download.example"})
+    def test_submit_c2pa_sign_posts_to_prod_endpoint(self, mock_post):
+        mock_post.return_value = _accepted_task()
 
-        result = sign_c2pa_s3(
+        result = submit_c2pa_sign(
             "prod-key",
             "signed-input-reference",
             actions=[["publish", {}]],
             assertions=[["cawg_identity", {"cawg_identity_id": "org_interim"}]],
         )
 
-        assert result == C2PAS3SignedOutput(media_output_s3="https://download.example")
+        assert result.task_id == "task-1"
         mock_post.assert_called_once_with(
             TRUFO_API_URL + TPS_C2PA_SIGN,
             json={
                 "media_input_s3": "signed-input-reference",
+                "execution_mode": "task",
                 "actions": [["publish", {}]],
                 "assertions": [["cawg_identity", {"cawg_identity_id": "org_interim"}]],
             },
@@ -454,22 +487,15 @@ class TestS3C2PASigning:
         )
 
     @patch("trufo.api.tps.sign_c2pa.requests.post")
-    def test_sign_c2pa_s3_test_posts_to_test_endpoint(self, mock_post):
-        mock_post.return_value = _mock_response({"media_output_s3": "https://download.example"})
-
-        result = sign_c2pa_s3_test("test-key", "signed-input-reference")
-
-        assert result == C2PAS3SignedOutput(media_output_s3="https://download.example")
-        mock_post.assert_called_once_with(
-            TRUFO_API_URL_TEST + TPS_C2PA_SIGN,
-            json={
-                "media_input_s3": "signed-input-reference",
-                "actions": [],
-                "assertions": [],
-            },
-            headers=_expected_headers("test-key"),
-            timeout=60,
-        )
+    def test_s3_request_and_test_signing_reject_before_network(self, mock_post):
+        with pytest.warns(DeprecationWarning, match="use submit_c2pa_sign"), \
+             pytest.raises(ValueError, match="S3 input requires"):
+            sign_c2pa_s3("prod-key", "signed-input-reference")
+        with pytest.raises(ValueError, match="REQUEST execution with bytes only"):
+            sign_c2pa_s3_test("test-key", "signed-input-reference")
+        with pytest.raises(ValueError, match="REQUEST execution with bytes only"):
+            sign_c2pa_via_s3_test("test-key", b"input", "image/jpeg")
+        mock_post.assert_not_called()
 
     @patch("trufo.api.tps.sign_c2pa.requests.get")
     @patch("trufo.api.tps.sign_c2pa.requests.put")
@@ -488,7 +514,7 @@ class TestS3C2PASigning:
             expires_at=1770000000,
             duration="5m",
         )
-        mock_sign_s3.return_value = C2PAS3SignedOutput(media_output_s3="https://download.example")
+        mock_sign_s3.return_value = C2PAS3SignedOutput(media_output_s3="output-reference", download_url="https://download.example")
         mock_get.return_value.content = b"signed-media"
 
         result = sign_c2pa_via_s3(
@@ -498,6 +524,7 @@ class TestS3C2PASigning:
             actions=[["publish", {}]],
             assertions=[["cawg_identity", {"cawg_identity_id": "org_interim"}]],
             duration="5m",
+            execution_mode=ExecutionMode.TASK,
         )
 
         assert result == b"signed-media"
@@ -522,6 +549,8 @@ class TestS3C2PASigning:
             manifest_title=None,
             ingredient_title=None,
             manifest_settings=None,
+            execution_mode=ExecutionMode.TASK,
+            wait_seconds=600,
             trufo_api_url=TRUFO_API_URL,
         )
         mock_get.assert_called_once_with("https://download.example", timeout=60)
@@ -532,6 +561,7 @@ class TestS3C2PASigning:
         [TRUFO_API_URL, "https://api.trufo.example"],
         ids=["default", "supplied"],
     )
+    @patch("trufo.api.tps.sign_c2pa.wait_for_task")
     @patch("trufo.api.tps.sign_c2pa.requests.get")
     @patch("trufo.api.tps.sign_c2pa.requests.put")
     @patch("trufo.api.tps.sign_c2pa.requests.post")
@@ -540,6 +570,7 @@ class TestS3C2PASigning:
         mock_post,
         _mock_put,
         mock_get,
+        mock_wait,
         trufo_api_url,
     ):
         mock_post.side_effect = [
@@ -552,8 +583,10 @@ class TestS3C2PASigning:
                     "duration": "5m",
                 }
             ),
-            _mock_response({"media_output_s3": "https://download.example"}),
+            _accepted_task(),
         ]
+        mock_wait.return_value = types.SimpleNamespace(task_id="task-1", result=types.SimpleNamespace(
+            media_output_s3="output-reference", download_url="https://download.example", cid=None, wid=None))
         mock_get.return_value.content = b"s3-signed"
 
         assert (
@@ -565,66 +598,32 @@ class TestS3C2PASigning:
                 b"input-media",
                 "image/jpeg",
                 trufo_api_url=trufo_api_url,
+                execution_mode=ExecutionMode.TASK,
             )
             == b"s3-signed"
         )
 
         assert [call.args[0] for call in mock_post.call_args_list] == [
             trufo_api_url + TPS_C2PA_SIGN,
-            trufo_api_url + TPS_C2PA_GET_S3_URL,
+            trufo_api_url + TPS_GET_S3_UPLOAD_URL,
             trufo_api_url + TPS_C2PA_SIGN,
         ]
+        mock_wait.assert_called_once_with("prod-key", "task-1", wait_seconds=600, trufo_api_url=trufo_api_url)
 
-    @patch("trufo.api.tps.sign_c2pa.requests.get")
-    @patch("trufo.api.tps.sign_c2pa.requests.put")
-    @patch("trufo.api.tps.sign_c2pa.sign_c2pa_s3_test")
-    @patch("trufo.api.tps.sign_c2pa.get_c2pa_s3_upload_url")
-    def test_sign_c2pa_via_s3_test_uses_test_signer(
-        self,
-        mock_get_upload_url,
-        mock_sign_test_s3,
-        _mock_put,
-        mock_get,
-    ):
-        mock_get_upload_url.return_value = C2PAS3Upload(
-            upload_url="https://upload.example",
-            media_input_s3="signed-input-reference",
-            expires_at=1770000000,
-            duration="5m",
-        )
-        mock_sign_test_s3.return_value = C2PAS3SignedOutput(
-            media_output_s3="https://download.example"
-        )
-        mock_get.return_value.content = b"signed-media"
 
-        result = sign_c2pa_via_s3_test("test-key", b"input-media", "image/jpeg")
-
-        assert result == b"signed-media"
-        mock_sign_test_s3.assert_called_once_with(
-            "test-key",
-            "signed-input-reference",
-            actions=None,
-            assertions=None,
-            manifest_title=None,
-            ingredient_title=None,
-            manifest_settings=None,
-            trufo_api_url=TRUFO_API_URL_TEST,
-        )
-
-    @pytest.mark.parametrize("signer", [sign_c2pa_s3, sign_c2pa_s3_test])
     @patch("trufo.api.tps.sign_c2pa.requests.post")
-    def test_s3_assertions_without_cawg_identity_pass_silently(self, mock_post, signer, caplog):
+    def test_s3_assertions_without_cawg_identity_pass_silently(self, mock_post, caplog):
         """CAWG identity is optional: no warning is emitted when absent."""
-        mock_post.return_value = _mock_response({"media_output_s3": "https://download.example"})
+        mock_post.return_value = _accepted_task()
 
         with caplog.at_level("WARNING"):
-            result = signer(
+            result = submit_c2pa_sign(
                 "api-key",
                 "signed-input-reference",
                 assertions=[["ai_disclosure", {}]],
             )
 
-        assert result == C2PAS3SignedOutput(media_output_s3="https://download.example")
+        assert result.task_id == "task-1"
         assert caplog.records == []
 
 
@@ -701,14 +700,6 @@ class TestRequestValidation:
             {"effort_policy": "best_effort"},
             {"effort": "require"},  # deprecated alias, still accepted
             {"mode": "provenance"},
-            {"mode": "compliance", "ai_compliance_label": "ai_generated"},
-            {"mode": "compliance", "ai_compliance_label": "ai_modified"},
-            {"mode": "compliance", "ai_compliance_label": "undeclared"},
-            {
-                "mode": "compliance",
-                "ai_compliance_label": "ai_generated",
-                "effort_policy": "best_effort",
-            },
         ],
     )
     def test_valid_watermark_action_accepted(self, params):
@@ -723,15 +714,10 @@ class TestRequestValidation:
             ({"effort": "require", "effort_policy": "require"}, "not both"),
             ({"apply": True}, "replaced by 'effort_policy'"),
             ({"mode": "attestation"}, "mode"),
-            ({"mode": "compliance"}, "ai_compliance_label"),
-            (
-                {"mode": "compliance", "ai_compliance_label": "none"},
-                "ai_compliance_label",
-            ),
-            ({"ai_compliance_label": "ai_generated"}, "compliance-mode"),
+            ({"ai_compliance_label": "ai_generated"}, "Unsupported watermark parameter"),
             (
                 {"mode": "provenance", "ai_compliance_label": "ai_generated"},
-                "compliance-mode",
+                "Unsupported watermark parameter",
             ),
             ({"wid_package": {"wid": "x"}}, "Unsupported watermark parameter"),
             (
@@ -744,6 +730,11 @@ class TestRequestValidation:
     def test_invalid_watermark_params_rejected(self, params, match):
         with pytest.raises(ValueError, match=match):
             _validate_actions([["watermark", params]])
+
+    @pytest.mark.parametrize("effort", ["require", "require_if_supported", "best_effort"])
+    def test_unsupported_mode_is_not_tolerated(self, effort):
+        with pytest.raises(NotImplementedError, match="Compliance watermarking"):
+            _validate_actions([["watermark", {"mode": "compliance", "effort_policy": effort}]])
 
     def test_duplicate_watermark_action_rejected(self):
         with pytest.raises(ValueError, match="At most one watermark action"):

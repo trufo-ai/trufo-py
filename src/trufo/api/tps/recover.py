@@ -16,12 +16,10 @@ from trufo.api.headers import sdk_headers
 class ContentRecovery:
     """Result of a watermark recovery call.
 
-    What accompanies a detected watermark depends on the mark's kind: a
-    provenance mark carries the stored C2PA manifest store as ``manifest_bytes``
+    A provenance mark carries the stored C2PA manifest store as ``manifest_bytes``
     when one has been captured (validate it against your own copy of the
-    media; ``manifest_json`` is its parse, present only when requested); a
-    compliance mark carries the owning organization's declared AI class
-    instead. ``oid`` is set only when the mark belongs to your own
+    media; ``manifest_json`` is its parse, present only when requested).
+    ``oid`` is set only when the mark belongs to your own
     organization. Unknown future fields are ignored.
     """
 
@@ -30,8 +28,10 @@ class ContentRecovery:
     confidence: float | None = None
     manifest_bytes: bytes | None = None
     manifest_json: dict | None = None
-    ai_compliance_label: str | None = None
     oid: str | None = None
+
+
+RecoverContentResult = ContentRecovery
 
 
 def recover_content(
@@ -40,7 +40,7 @@ def recover_content(
     *,
     parse_manifest_json: bool = False,
     trufo_api_url: str = TRUFO_API_URL,
-) -> ContentRecovery:
+) -> RecoverContentResult:
     """Decode a Trufo watermark from media and return its provenance.
 
     Accepts any parseable image or audio input; decoding is read-only and is
@@ -79,12 +79,11 @@ def recover_content(
 
     payload = resp.json()
     manifest_b64 = payload.get("manifest_bytes")
-    return ContentRecovery(
+    return RecoverContentResult(
         detected=payload["detected"],
         wid=payload.get("wid"),
         confidence=payload.get("confidence"),
         manifest_bytes=base64.b64decode(manifest_b64) if manifest_b64 else None,
         manifest_json=payload.get("manifest_json"),
-        ai_compliance_label=payload.get("ai_compliance_label"),
         oid=payload.get("oid"),
     )

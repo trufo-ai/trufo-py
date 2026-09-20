@@ -17,7 +17,7 @@ certificate enrollment.
   `effort_policy` = `require` (bare default) / `require_if_supported` / `best_effort`
   setting failure tolerance (`WatermarkEffort` enum; `effort` is a deprecated alias)
   and `mode` = `provenance` (default) / `compliance` selecting the mark kind
-  (`WatermarkMode`; compliance requires `ai_compliance_label` and is test-host only).
+  (`WatermarkMode`; compliance is a placeholder that raises `NotImplementedError`).
   Supported: JPEG/PNG/WebP/TIFF, WAV/FLAC/MP3/M4A, MP4.
 - Routes are named by who embeds and who signs: tpts / lpts (Trufo signs; `sign_c2pa`,
   `sign_c2pa_distributed`) and tpls / lpls (the caller signs with their own certificate;
@@ -26,7 +26,7 @@ certificate enrollment.
   Watermark API plan, and completed Organization Validation; `_test` variants use the
   test host with `watermark-test`. Commit
   verifies the manifest declares the mark (soft-binding assertion +
-  `c2pa.watermarked.bound`). Compliance mode is test-host only.
+  `c2pa.watermarked.bound`). Compliance mode is unsupported.
 - Every production sign or bind creates a content record. `get_content` looks one up by
   `cid`, `wid`, or `mid`; `list_content` pages them oldest first (status / origin / creation
   window filters, ≤100 per page); `set_content_status(api_key, "inactive", wid=...)`
@@ -39,6 +39,20 @@ certificate enrollment.
   `c2pa-sign-test` and `tsa` API keys.
 - Test signing runs on its own host (`test.api.trufo.ai`, `TRUFO_API_URL_TEST`) with the
   same routes as production; the legacy `/test/c2pa/sign` path remains during deprecation.
+
+## Public response type naming
+
+- New operation-specific return dataclasses use `<FunctionNameInPascalCase>Result`;
+  preserve word order and acronyms (`C2PA`, `CAWG`, `S3`, `HTTP`, `URL`, `ID`).
+- Completed task payloads use `<UnderlyingOperationNameInPascalCase>TaskResult`,
+  not the submission or polling function name.
+- Approved shared types are `ContentRecord`, `ContentPage`, `TaskReceipt`, and
+  `TaskInfo`. New shared types require explicit design review.
+- Preserve published class names and import paths. Standardized names are aliases
+  to those classes, not subclasses or replacement classes; update annotations and
+  examples to the standardized names. Both upload helpers use `GetS3UploadURLResult`.
+- A response schema does not automatically need a dataclass. Adding a public class
+  is a compatibility commitment and requires justification before implementation.
 
 ## Documentation map
 

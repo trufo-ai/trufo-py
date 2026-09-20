@@ -19,7 +19,8 @@ See [api_trufo.md](api_trufo.md) for authentication, error conventions, and regi
 | Endpoint | Scope | Plan |
 | -------- | ----- | ---- |
 | `POST /c2pa/sign` | `c2pa-sign-prod` (test host: `c2pa-sign-test`) | C2PA Signing |
-| `POST /c2pa/io/get-s3-url` | `c2pa-sign-prod` or `c2pa-sign-test` | C2PA Signing (production keys) |
+| `POST /io/get-s3-upload-url` | Signing or watermark API key (test host: test keys only) | Corresponding signing or watermark access for production keys |
+| `POST /c2pa/io/get-s3-url` **(deprecated alias)** | Same as `/io/get-s3-upload-url` | Same as `/io/get-s3-upload-url` |
 | `POST /c2pa/ai-disclosure/add`, `/list` | `c2pa-sign-prod` or `c2pa-sign-test` | — |
 | `POST /c2pa/software-agent/add`, `/list` | `c2pa-sign-prod` or `c2pa-sign-test` | — |
 | `POST /content/recover` | `content-recover-prod` (test host: `content-recover-test`) | C2PA Signing or Watermark API |
@@ -98,18 +99,18 @@ delivery on the same terms; `/bind/commit` is idempotent for an identical retry.
 
 ## Signing Modes
 
-Four flows, one request shape. `actions` and `assertions` behave identically in all
+Three flows, one operation shape. `actions` and `assertions` behave identically in all
 of them.
 
 | | Hosted | Hosted (S3) | Distributed |
 | --- | --- | --- | --- |
-| Entry | `POST /c2pa/sign` | `get-s3-url` → upload → `POST /c2pa/sign` | `sign_c2pa_distributed()` (SDK only) |
+| Entry | `POST /c2pa/sign` | `/io/get-s3-upload-url` → upload → `POST /c2pa/sign` with TASK | `sign_c2pa_distributed()` (SDK only) |
 | Media reaches Trufo | Yes, in the body | Yes, via ephemeral S3 | **No** — only the claim hash |
 | Manifest assembled by | Trufo | Trufo | Your process (`trufo-provenance`) |
 | Signing key | Trufo | Trufo | Trufo |
 | Extra requirements | — | — | Local engine extra, `tsa` key, Linux x86_64 + CPython 3.12 |
 
-Each mode has a test variant: use a `c2pa-sign-test` key against
+Direct and distributed signing have test variants: use a `c2pa-sign-test` key against
 `test.api.trufo.ai`. Test signing skips OV and billing, produces manifests signed by
 the test certificate (not accepted by conformant validators), and creates no
 permanent signing record.
@@ -119,17 +120,20 @@ permanent signing record.
 | Field | Type | Required | Description |
 | ----- | ---- | -------- | ----------- |
 | `media_input` | string | Yes\* | base64-encoded input media |
-| `media_input_s3` | string | Yes\* | Opaque reference from `/c2pa/io/get-s3-url` |
+| `media_input_s3` | string | Yes\* | Opaque reference from `/io/get-s3-upload-url`; TASK only |
+| `execution_mode` | string | No | `request` (default) or `task`; `stream` is unsupported |
 | `actions` | list | Yes | `[name, params]` pairs, applied in order |
 | `assertions` | list | No | `[name, params]` pairs recorded in the manifest |
 | `manifest_title` | string | No | The manifest title of the signed output asset. Omitted from the manifest when unset. |
 | `ingredient_title` | string | No | The ingredient title assigned to the input asset (parent, via a `c2pa.opened` action). When unset: the input's manifest title, if it exists; otherwise, `input.{ext}`. |
 | `manifest_settings` | object | No | Structured titles, thumbnail settings, and `all_actions_included`. |
 
-\* Provide exactly one.
+\* Provide exactly one: bytes for REQUEST, an S3 reference for TASK. There is no
+automatic fallback. REQUEST has a 10 MB (10,000,000-byte) input cap; audio/video
+watermarking requires TASK. Test endpoints support REQUEST only.
 
-**Response (200):** `media_output` (base64) or `media_output_s3` (presigned download
-URL), plus `warnings`.
+**REQUEST response (200):** `media_output` (base64), plus `warnings`.
+**TASK response (202):** task acceptance, not the completed result; see [Tasks](#tasks).
 
 Fallback titles are derived, not authored: an embedded manifest title is third-party
 text re-signed as-is. Pass explicit titles when you need deterministic, curated
@@ -161,7 +165,10 @@ no thumbnails, while also preserving inherited ingredient thumbnails. The
 `MEDIUM` preset is 512 px at WebP quality 80; `HIGH` is 1024 px at quality
 90. Image alpha transparency is preserved.
 
-### `POST /c2pa/io/get-s3-url`
+### `POST /io/get-s3-upload-url`
+
+Shared by signing and watermarking. `/c2pa/io/get-s3-url` is a deprecated alias
+with the same request and response; use `/io/get-s3-upload-url` instead.
 
 | Field | Type | Required | Description |
 | ----- | ---- | -------- | ----------- |
@@ -171,9 +178,32 @@ no thumbnails, while also preserving inherited ingredient thumbnails. The
 **Response (200):** `media_input_s3` (opaque reference), `upload_url` (presigned PUT
 — send the same `Content-Type`), `expires_at`, `duration`.
 
-Upload, then call `/c2pa/sign` with `media_input_s3`. Trufo re-probes the uploaded
-bytes rather than trusting the declared type. The signed output is returned as a
-presigned download URL valid for the remainder of the reference's lifetime.
+Upload, then call `/c2pa/sign` or `/bind/watermark` with `media_input_s3` and
+`execution_mode: "task"`. Arbitrary S3 URLs are not accepted. Trufo checks the
+uploaded bytes rather than trusting the declared type.
+
+### Tasks
+
+Submission returns HTTP 202 with `task_id`, `task_type` (`c2pa_sign` or
+`watermark`), `status`, `startby_ts`, and `timeout_seconds`. IDs and timing are
+server-generated; do not supply them in API input.
+
+`GET /tasks/{task_id}` on the same API region returns those fields plus
+`create_ts`, `update_ts`, `start_ts`, `finish_ts`, `duration_ms`, `progress`,
+`file_size_bytes`, `file_mime_type`, `result`, and `error`. Authenticate with a
+key for the same organization and operation. Status is `queued`, `running`,
+`succeeded`, `failed`, or `expired`.
+
+| Outcome | Fields |
+| --- | --- |
+| Signing result | `media_output_s3`, `download_url`, `expires_ts`, optional `cid`/`wid`, `warnings` |
+| Watermark result | `media_output_s3`, `download_url`, `expires_ts`, `wid`, optional `cid` |
+| Error | Stable `code` and corresponding `http_status` (inside the HTTP 200 status response) |
+
+`media_output_s3` is an opaque reference, not a URL. Download through
+`download_url`; it is null after the retained output expires. Task info contains
+no media bytes. Polling does not retry a failed task. Watermark completion does
+not replace the subsequent `/bind/commit` step.
 
 ### Distributed signing
 
@@ -256,16 +286,12 @@ action per request.
 
 | Param | Type | Description |
 | ----- | ---- | ----------- |
-| `mode` | string | `"provenance"` (default) or `"compliance"` — what the embedded watermark ID resolves to |
-| `ai_compliance_label` | string | Required in compliance mode, rejected otherwise: `"ai_generated"`, `"ai_modified"`, or `"undeclared"` |
+| `mode` | string | `"provenance"` (default); `"compliance"` is unsupported (HTTP 501) |
 | `effort_policy` | string | Failure tolerance, below; `"require"` for a bare action. `effort` is a deprecated alias (a warning is returned; providing both is an error) |
 
-**Provenance mode** embeds a per-content watermark ID linked to this signing
-record. **Compliance mode** (🟠 **test only**) embeds
-your organization's reusable mark for the declared AI class: one watermark ID
-per label, issued on first use and shared by every
-compliance sign after that. To watermark media you sign yourself, use
-[standalone binding](#standalone-binding) instead of a sign-flow action.
+A watermark ID identifies one content record. To watermark media you sign
+yourself, use [standalone binding](#standalone-binding). Compliance mode is
+unsupported on all hosts.
 
 | `effort_policy` | Unsupported format | Runtime failure |
 | --------------- | ------------------ | --------------- |
@@ -447,8 +473,7 @@ SDK: `bind_watermark()`, `bind_reserve()`, `watermark_media()`, `bind_commit()`
 | Field | Type | Required | Description |
 | ----- | ---- | -------- | ----------- |
 | `media_input` | string | Yes | base64-encoded media to watermark |
-| `mode` | string | No | `"provenance"` (default) or `"compliance"` (test host only) |
-| `ai_compliance_label` | string | In compliance mode | `"ai_generated"`, `"ai_modified"`, or `"undeclared"`; rejected outside compliance mode |
+| `mode` | string | No | `"provenance"` (default); `"compliance"` is unsupported (HTTP 501) |
 
 **Response (200):**
 
@@ -456,7 +481,7 @@ SDK: `bind_watermark()`, `bind_reserve()`, `watermark_media()`, `bind_commit()`
 | ----- | ---- | ----------- |
 | `media_output` | string | base64-encoded watermarked media |
 | `wid` | string | The embedded watermark id |
-| `cid` | string or null | Record id for `/bind/commit`; null in compliance mode |
+| `cid` | string or null | Record id for `/bind/commit` |
 
 Bind has no effort tiers: the watermark is always required, and an
 unsupported format (outside the watermarkable table above) is an error.
@@ -537,15 +562,11 @@ engine cannot decode bills the bytes only.
 | `confidence` | float or null | Detection strength in (0, 1] — how strongly the signal was recovered, not a probability of correctness |
 | `manifest_bytes` | string or null | Provenance marks: the stored C2PA manifest store, base64-encoded, when available for that record; validate it against your own copy of the media |
 | `manifest_json` | object or null | The same manifest parsed as JSON, only when `parse_manifest_json` was set; a convenience for callers without a local C2PA engine, not a validation result |
-| `ai_compliance_label` | string or null | Compliance marks: the declared AI class |
 | `oid` | string or null | Your organization ID, present only when the mark is your organization's |
 
 Decoding accepts any parseable image, video, or audio input, not only the formats
-supported for embedding. What a detected watermark discloses depends on its kind: a
-provenance mark reveals its details for content your own organization signed
-(other organizations' marks report `detected` without further detail), while a
-compliance mark reveals its declared AI class to any decoder — with `oid` marking
-the ones your organization owns.
+supported for embedding. Provenance marks resolve through the content record;
+reserved and unknown prefixes return detection only.
 
 **Errors:**
 

@@ -25,9 +25,7 @@ Two routes share the commit step:
 Production requires a ``watermark-prod`` key, an active C2PA Signing or
 Watermark API plan, and completed organization validation; the ``_test``
 variants target the Trufo test host with a ``watermark-test`` key, where marks
-are ephemeral and nothing is billed. Compliance mode (your organization's mark
-for a declared AI class, a single :func:`bind_watermark` call with nothing to
-commit) is available on the test host only.
+are ephemeral and nothing is billed. Compliance watermarking is unsupported.
 """
 
 import base64
@@ -45,7 +43,9 @@ from trufo.api.endpoints import (
     TRUFO_API_URL_TEST,
 )
 from trufo.api.headers import sdk_headers
-from trufo.c2pa.watermark import AiComplianceLabel, WatermarkMode
+from trufo.api.tps.io import _upload_task_input
+from trufo.api.tps.tasks import ExecutionMode, TaskReceipt, _submit_task, wait_for_task, _download_task_output
+from trufo.c2pa.watermark import WatermarkMode
 
 _ENGINE_HINT = (
     "Local watermarking requires the Trufo engine. Install it with: "
@@ -62,8 +62,7 @@ _C2PA_HINT = (
 class BindWatermark:
     """Result of :func:`bind_watermark`.
 
-    ``cid`` addresses the record for the commit step; compliance marks have
-    no record, so no cid.
+    ``cid`` addresses the record for the commit step.
     """
 
     media: bytes
@@ -86,24 +85,8 @@ class BindReservation:
     wid_package: dict = field(default_factory=dict)
 
 
-def _validate_mode(mode: str, ai_compliance_label: str | None) -> None:
-    """Enforce the mode/label pairing before any bytes leave the client."""
-    try:
-        WatermarkMode(mode)
-    except (TypeError, ValueError) as exc:
-        raise ValueError("The 'mode' parameter must be 'provenance' or 'compliance'.") from exc
-    if mode == WatermarkMode.COMPLIANCE.value:
-        try:
-            AiComplianceLabel(ai_compliance_label)
-        except (TypeError, ValueError) as exc:
-            raise ValueError(
-                "Compliance-mode watermarks require the 'ai_compliance_label' "
-                "parameter: one of 'ai_generated', 'ai_modified', or 'undeclared'."
-            ) from exc
-    elif ai_compliance_label is not None:
-        raise ValueError(
-            "The 'ai_compliance_label' parameter applies only to compliance-mode " "watermarks."
-        )
+BindWatermarkResult = BindWatermark
+BindReserveResult = BindReservation
 
 
 def _post(api_key: str, url: str, body: dict) -> dict:
@@ -117,21 +100,23 @@ def bind_watermark(
     media_bytes: bytes,
     *,
     mode: str = "provenance",
-    ai_compliance_label: str | None = None,
+    execution_mode: ExecutionMode = ExecutionMode.REQUEST,
+    mime_type: str | None = None,
+    wait_seconds: float = 600,
     trufo_api_url: str = TRUFO_API_URL,
-) -> BindWatermark:
+) -> BindWatermarkResult:
     """tpls step 1: embed a Trufo watermark in media on Trufo's servers.
 
     Args:
         api_key: API key with scope ``watermark-prod`` (``X-API-Key`` header);
             ``watermark-test`` on the test host.
         media_bytes: Raw bytes of the media file to watermark.
-        mode: ``"provenance"`` (default; per-content mark, commit completes
-            the record) or ``"compliance"`` (your org's mark for a declared
-            AI class; single call, test host only).
-        ai_compliance_label: Declared AI class (``"ai_generated"``,
-            ``"ai_modified"``, or ``"undeclared"``); required in compliance
-            mode, rejected otherwise.
+        mode: ``"provenance"`` (default). ``"compliance"`` is unsupported
+            and raises NotImplementedError before sending a request.
+        execution_mode: REQUEST (default) or explicit TASK; no automatic fallback.
+        mime_type: Required for TASK bytes uploaded to S3.
+        wait_seconds: Local TASK waiting budget (default 600), not the server
+            execution timeout. TaskWaitTimeoutError retains the task ID.
         trufo_api_url: Trufo API base URL. Defaults to production; pass
             ``TRUFO_API_URL_TEST`` (or use :func:`bind_watermark_test`) for
             the test host.
@@ -141,22 +126,39 @@ def bind_watermark(
         mode) the record ID for :func:`bind_commit`.
 
     Raises:
-        ValueError: On an invalid mode/label pairing.
+        ValueError: On invalid mode, execution settings, or missing MIME type.
         requests.HTTPError: If the API returns a non-2xx response.
     """
-    _validate_mode(mode, ai_compliance_label)
+    WatermarkMode.validate(mode)
+    if ExecutionMode.validate(execution_mode) == ExecutionMode.TASK:
+        if wait_seconds <= 0:
+            raise ValueError("Wait duration must be positive.")
+        reference = _upload_task_input(api_key, media_bytes, mime_type, trufo_api_url=trufo_api_url)
+        receipt = submit_bind_watermark(api_key, reference, mode=mode, trufo_api_url=trufo_api_url)
+        task = wait_for_task(api_key, receipt.task_id, wait_seconds=wait_seconds, trufo_api_url=trufo_api_url)
+        return BindWatermarkResult(_download_task_output(task), task.result.wid, task.result.cid)
     body: dict = {
         "media_input": base64.b64encode(media_bytes).decode(),
         "mode": mode,
     }
-    if ai_compliance_label is not None:
-        body["ai_compliance_label"] = ai_compliance_label
     payload = _post(api_key, trufo_api_url + TPS_BIND_WATERMARK, body)
-    return BindWatermark(
+    return BindWatermarkResult(
         media=base64.b64decode(payload["media_output"]),
         wid=payload["wid"],
         cid=payload.get("cid"),
     )
+
+
+def submit_bind_watermark(api_key: str, media_input_s3: str, *, mode: str = "provenance",
+                          trufo_api_url: str = TRUFO_API_URL) -> TaskReceipt:
+    """Submit a Trufo upload reference for watermarking without waiting.
+
+    Poll with get_task() or wait_for_task(). Completion does not replace the
+    separate bind_commit() step after signing the watermarked media.
+    """
+    WatermarkMode.validate(mode)
+    return _submit_task(api_key, TPS_BIND_WATERMARK,
+                        {"media_input_s3": media_input_s3, "mode": mode}, trufo_api_url=trufo_api_url)
 
 
 def bind_reserve(
@@ -164,7 +166,7 @@ def bind_reserve(
     mime_type: str,
     *,
     trufo_api_url: str = TRUFO_API_URL,
-) -> BindReservation:
+) -> BindReserveResult:
     """lpls step 1: reserve a watermark ID for media you will watermark locally.
 
     Args:
@@ -182,7 +184,7 @@ def bind_reserve(
     """
     payload = _post(api_key, trufo_api_url + TPS_BIND_RESERVE, {"mime_type": mime_type})
     package = payload["wid_package"]
-    return BindReservation(
+    return BindReserveResult(
         cid=payload["cid"], wid=package["wid"], expires_at=package["expires_at"], wid_package=dict(package)
     )
 
@@ -192,7 +194,7 @@ def watermark_media(media_bytes: bytes, wid_package: dict) -> bytes:
 
     Args:
         media_bytes: Raw bytes of the media file to watermark.
-        wid_package: ``BindReservation.wid_package`` (or the ``wid_package``
+        wid_package: ``BindReserveResult.wid_package`` (or the ``wid_package``
             of a Trufo API response).
 
     Returns:
@@ -292,15 +294,15 @@ def bind_watermark_test(
     media_bytes: bytes,
     *,
     mode: str = "provenance",
-    ai_compliance_label: str | None = None,
+    execution_mode: ExecutionMode = ExecutionMode.REQUEST,
     trufo_api_url: str = TRUFO_API_URL_TEST,
-) -> BindWatermark:
+) -> BindWatermarkResult:
     """:func:`bind_watermark` against the Trufo test host (``watermark-test`` key)."""
+    ExecutionMode.validate(execution_mode, test=True)
     return bind_watermark(
         api_key,
         media_bytes,
         mode=mode,
-        ai_compliance_label=ai_compliance_label,
         trufo_api_url=trufo_api_url,
     )
 
@@ -310,7 +312,7 @@ def bind_reserve_test(
     mime_type: str,
     *,
     trufo_api_url: str = TRUFO_API_URL_TEST,
-) -> BindReservation:
+) -> BindReserveResult:
     """:func:`bind_reserve` against the Trufo test host (``watermark-test`` key)."""
     return bind_reserve(api_key, mime_type, trufo_api_url=trufo_api_url)
 

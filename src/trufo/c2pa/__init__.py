@@ -9,10 +9,9 @@ from trufo.c2pa.manifest import ManifestSettings
 from trufo.c2pa.redactions import RedactableAssertion, RedactionReason
 from trufo.c2pa.source_types import DigitalSourceType
 from trufo.c2pa.thumbnails import ThumbnailPolicy, ThumbnailSettings, ThumbnailSize
-from trufo.c2pa.watermark import AiComplianceLabel, WatermarkEffort, WatermarkMode
+from trufo.c2pa.watermark import WatermarkEffort, WatermarkMode
 
 __all__ = [
-    "AiComplianceLabel",
     "DigitalSourceType",
     "ManifestSettings",
     "RedactableAssertion",

@@ -5,6 +5,41 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- Explicit `ExecutionMode.REQUEST` (default) and `ExecutionMode.TASK` for hosted
+  signing and watermarking. TASK uploads bytes to S3, submits once, polls, and
+  downloads the result. Pass `mime_type` when supplying bytes.
+- `submit_c2pa_sign`, `submit_bind_watermark`, `get_task`, and `wait_for_task` for
+  callers managing their own task lifecycle, with typed results and failures.
+
+### Changed
+
+- Standardized SDK result names: `BindWatermarkResult`, `BindReserveResult`,
+  `RecoverContentResult`, `GetS3UploadURLResult`, and `SignC2PAS3Result`.
+  Published names remain compatible aliases to the same classes.
+- Completed task result types are `SignC2PATaskResult` and `BindWatermarkTaskResult`.
+- S3 signing requires explicit TASK execution; it no longer performs synchronous
+  S3 signing. `C2PAS3SignedOutput.download_url` is the download link;
+  `media_output_s3` is the opaque output reference. Test signing is REQUEST-only.
+
+### Deprecated
+
+- `get_c2pa_s3_upload_url`, `sign_c2pa_s3`, and `sign_c2pa_via_s3`: use
+  `get_s3_upload_url`, `submit_c2pa_sign` / `wait_for_task`, or `sign_c2pa` with
+  explicit TASK execution. The test S3 variants are unsupported; use
+  `sign_c2pa_test` with REQUEST bytes.
+- `/c2pa/io/get-s3-url`: use `/io/get-s3-upload-url`. Both return the same upload structure.
+
+### Removed
+
+- Test-only compliance watermarking. `mode="compliance"` raises
+  `NotImplementedError`; provenance remains the default. Removed
+  `AiComplianceLabel`, the standalone binding `ai_compliance_label` argument,
+  and the recovery result's `ai_compliance_label` field.
+
 ## [1.3.1] — 2026-09-10
 
 ### Fixed

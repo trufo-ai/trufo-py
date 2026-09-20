@@ -43,7 +43,8 @@ TPS_C2PA_SIGN = "/c2pa/sign"
 # legacy hosted test path on the main host; superseded by TRUFO_API_URL_TEST +
 # TPS_C2PA_SIGN, kept live during deprecation
 TPS_C2PA_SIGN_TEST = "/test/c2pa/sign"
-TPS_C2PA_GET_S3_URL = "/c2pa/io/get-s3-url"
+TPS_C2PA_GET_S3_URL = "/c2pa/io/get-s3-url"  # deprecated: use TPS_GET_S3_UPLOAD_URL
+TPS_GET_S3_UPLOAD_URL = "/io/get-s3-upload-url"
 TPS_CONTENT_RECOVER = "/content/recover"
 TPS_CONTENT_GET = "/content/get"
 TPS_CONTENT_LIST = "/content/list"
