@@ -45,7 +45,7 @@ from trufo.api.endpoints import (
     TRUFO_API_URL_TEST,
 )
 from trufo.api.headers import sdk_headers
-from trufo.c2pa.watermark import validate_watermark_mode
+from trufo.c2pa.watermark import WatermarkMode
 
 _ENGINE_HINT = (
     "Local watermarking requires the Trufo engine. Install it with: "
@@ -118,7 +118,7 @@ def bind_watermark(
         ValueError: On an invalid mode/label pairing.
         requests.HTTPError: If the API returns a non-2xx response.
     """
-    validate_watermark_mode(mode)
+    WatermarkMode.validate(mode)
     body: dict = {
         "media_input": base64.b64encode(media_bytes).decode(),
         "mode": mode,

@@ -35,12 +35,12 @@ class WatermarkMode(str, Enum):
     # reserved; requesting this mode raises NotImplementedError
     COMPLIANCE = "compliance"
 
-
-def validate_watermark_mode(mode: str) -> None:
-    """Reject unsupported modes before sending a request or invoking the engine."""
-    try:
-        selected = WatermarkMode(mode)
-    except (TypeError, ValueError) as exc:
-        raise ValueError("Invalid watermark mode.") from exc
-    if selected == WatermarkMode.COMPLIANCE:
-        raise NotImplementedError("Compliance watermarking is not supported.")
+    @staticmethod
+    def validate(mode: str) -> None:
+        """Reject unsupported modes before sending a request or invoking the engine."""
+        try:
+            selected = WatermarkMode(mode)
+        except (TypeError, ValueError) as exc:
+            raise ValueError("Invalid watermark mode.") from exc
+        if selected == WatermarkMode.COMPLIANCE:
+            raise NotImplementedError("Compliance watermarking is not supported.")

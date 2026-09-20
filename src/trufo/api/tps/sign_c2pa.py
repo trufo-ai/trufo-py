@@ -41,7 +41,7 @@ from trufo.c2pa.actions import TrufoAction
 from trufo.c2pa.assertions import UserAssertion
 from trufo.c2pa.manifest import ManifestSettings
 from trufo.c2pa.redactions import RedactableAssertion, RedactionReason
-from trufo.c2pa.watermark import WatermarkEffort, WatermarkMode, validate_watermark_mode
+from trufo.c2pa.watermark import WatermarkEffort, WatermarkMode
 from trufo.util.credentials import TrufoApiKey, load_api_key
 from trufo.util.optional_imports import require_provenance_module
 from trufo.util.warnings import emit_server_warnings
@@ -150,7 +150,7 @@ def _validate_watermark_action(entry: Any) -> None:
         raise ValueError("The watermark action requires a parameter object.")
     if "apply" in params:
         raise ValueError("The watermark 'apply' parameter has been replaced by 'effort_policy'.")
-    validate_watermark_mode(params.get("mode", WatermarkMode.PROVENANCE.value))
+    WatermarkMode.validate(params.get("mode", WatermarkMode.PROVENANCE.value))
     unsupported = set(params) - {
         "effort_policy",
         "effort",
@@ -172,13 +172,6 @@ def _validate_watermark_action(entry: Any) -> None:
                 "The watermark 'effort_policy' parameter must be one of 'require', "
                 "'require_if_supported', or 'best_effort'."
             ) from exc
-    mode = params.get("mode", WatermarkMode.PROVENANCE.value)
-    try:
-        WatermarkMode(mode)
-    except (TypeError, ValueError) as exc:
-        raise ValueError(
-            "The watermark 'mode' parameter must be 'provenance' or 'compliance'."
-        ) from exc
 
 
 def _validate_redact_action(entry: Any) -> str:
