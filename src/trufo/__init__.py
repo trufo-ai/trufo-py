@@ -39,7 +39,7 @@ from trufo.crypt.keygen import generate_keypair
 from trufo.util.credentials import load_api_key, save_api_key
 from trufo.util.warnings import TrufoServerWarning
 
-__version__ = "1.4.0"
+__version__ = "1.5.0"
 
 __all__ = [
     "ExecutionMode", "TaskType", "TaskStatus", "TaskReceipt", "TaskInfo",
@@ -77,12 +77,3 @@ __all__ = [
     "TrufoServerWarning",
     "watermark_media",
 ]
-
-# register the trufo-py version with tfprov so X-TF-Version is sent on all
-# remote calls; no-op if trufo-provenance is not installed
-try:
-    from tfprov.api.session import set_trufo_version as _set_trufo_version
-
-    _set_trufo_version(__version__)
-except ImportError:
-    pass

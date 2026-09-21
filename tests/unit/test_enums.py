@@ -3,9 +3,8 @@
 
 """Public enum contracts: exact members/values and str-mixin expectations.
 
-These enums are duplicated across repos (tfprov keeps its own copies); this
-pins trufo-py's side so any value drift or accidental base-class change fails
-locally without needing tfprov installed.
+The shared C2PA enums are owned by this package and imported by tfprov.
+These checks run without needing tfprov installed.
 """
 
 import pytest

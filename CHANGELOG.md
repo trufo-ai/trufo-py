@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.0] — 2026-09-20
+
+### Added
+
+- AI disclosure registration supports `first_party_operated` with a linked
+  `software_agent_id`; the AI-labeling guide explains creation signing.
+- Shared C2PA source types and manifest settings are available without loading
+  the optional local signing engine.
+
+
 ## [1.4.0] — 2026-09-20
 
 ### Added
@@ -426,7 +436,8 @@ Minor-version bump marks the general availability of the production C2PA signing
 - `trufo.intf`: credential storage and loading (env vars + file), CLI entry point.
 - PyPI trusted publishing via GitHub Actions (OIDC, no API tokens required).
 
-[Unreleased]: https://github.com/trufo-ai/trufo-py/compare/v1.4.0...HEAD
+[Unreleased]: https://github.com/trufo-ai/trufo-py/compare/v1.5.0...HEAD
+[1.5.0]: https://github.com/trufo-ai/trufo-py/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/trufo-ai/trufo-py/compare/v1.3.1...v1.4.0
 [1.3.1]: https://github.com/trufo-ai/trufo-py/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/trufo-ai/trufo-py/compare/v1.2.0...v1.3.0

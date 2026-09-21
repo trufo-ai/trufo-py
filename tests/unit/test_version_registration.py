@@ -1,46 +1,25 @@
-# Copyright 2025-2026 Trufo, Inc. All rights reserved.
-# SPDX-License-Identifier: Apache-2.0
+"""Importing the base SDK must not load its optional provenance engine."""
 
-"""Unit tests for trufo-py version registration with the optional tfprov package."""
-
-import importlib
+import os
+import subprocess
 import sys
-import types
+from pathlib import Path
 
 
-def _reload_trufo_with(monkeypatch, session_module):
-    """Reload the ``trufo`` package with a given fake ``tfprov.api.session``.
-
-    Passing ``None`` simulates ``trufo-provenance`` being uninstalled by forcing
-    an ``ImportError`` on ``from tfprov.api.session import set_trufo_version``.
-    """
-    for name in ("tfprov.api.session", "tfprov.api", "tfprov"):
-        monkeypatch.delitem(sys.modules, name, raising=False)
-
-    if session_module is None:
-        monkeypatch.setitem(sys.modules, "tfprov", None)
-    else:
-        monkeypatch.setitem(sys.modules, "tfprov", types.ModuleType("tfprov"))
-        monkeypatch.setitem(sys.modules, "tfprov.api", types.ModuleType("tfprov.api"))
-        monkeypatch.setitem(sys.modules, "tfprov.api.session", session_module)
-
-    import trufo
-
-    return importlib.reload(trufo)
-
-
-def test_import_registers_version_with_tfprov(monkeypatch):
-    recorded = []
-    fake_session = types.ModuleType("tfprov.api.session")
-    fake_session.set_trufo_version = lambda version: recorded.append(version)
-
-    trufo = _reload_trufo_with(monkeypatch, fake_session)
-
-    assert recorded == [trufo.__version__]
-
-
-def test_import_without_tfprov_is_noop(monkeypatch):
-    # reloading must not raise when trufo-provenance is unavailable
-    trufo = _reload_trufo_with(monkeypatch, None)
-
-    assert trufo.__version__
+def test_base_sdk_does_not_import_engine():
+    code = """
+import importlib.abc
+import sys
+class BlockEngine(importlib.abc.MetaPathFinder):
+    def find_spec(self, fullname, path=None, target=None):
+        if fullname.split('.')[0] in {'tfprov', 'cv2', 'numpy'}:
+            raise AssertionError(f'Base SDK imported optional dependency: {fullname}')
+sys.meta_path.insert(0, BlockEngine())
+import trufo
+from trufo.c2pa import ManifestSettings, DigitalSourceType
+assert trufo.__version__
+assert callable(trufo.sign_c2pa)
+assert ManifestSettings().thumbnail_settings is None
+"""
+    env = dict(os.environ, PYTHONPATH=str(Path(__file__).resolve().parents[2] / "src"))
+    subprocess.run([sys.executable, "-c", code], env=env, check=True)
