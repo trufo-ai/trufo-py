@@ -426,8 +426,12 @@ The certificate list returns the effective cutoff as `revocation_time`.
 ```
 
 This example sets the effective cutoff to `2026-09-10T18:30:00Z`.
-The time cannot be changed by submitting another revocation request: an
-already-revoked certificate returns `400 AlreadyRevoked`.
+To update the revocation time of an already-revoked certificate, submit
+`/cert/revoke` again with an explicit `revocation_time`. The time may be earlier
+or later than the current value, but must not be in the future. The original
+revocation reason and actor are preserved; `revocation_reason` remains required.
+Omitting the time returns `400 AlreadyRevoked`. A concurrent change returns
+`409 RevocationConflict`; re-list the certificate before retrying.
 
 **Revocation reasons:** `unspecified`, `key_compromise`, `affiliation_changed`,
 `superseded`, `cessation_of_operation`.
