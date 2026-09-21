@@ -142,7 +142,7 @@ process and the input asset has no provenance, `c2pa.created` with
 will be set.
 
 Before registering first-party operation, have an authorized organization owner
-or admin accept the **Created Assertion Agreement** in **Organization Settings →
+or admin accept the **Created Assertion Acknowledgement** in **Organization Settings →
 Agreements**. Acceptance is required at registration for both test and production
 keys, since the registration can be used in either signing flow.
 

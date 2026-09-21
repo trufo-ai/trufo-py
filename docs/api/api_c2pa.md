@@ -656,7 +656,7 @@ from the credential.
 | `software_agent_id` | string | When `first_party_operated` is `true` | Existing software-agent registration owned by your organization, identifying the generating application/service. |
 
 First-party registration requires an authorized organization owner/admin to accept
-the Created Assertion Agreement in **Organization Settings → Agreements**. This
+the Created Assertion Acknowledgement in **Organization Settings → Agreements**. This
 check applies to both API-key scopes because registrations are shared between
 test and production. Acceptance is checked at registration, not again at signing.
 
@@ -666,7 +666,7 @@ test and production. Acceptance is checked at registration, not again at signing
 
 | Code | Meaning |
 | ---- | ------- |
-| 403 | First-party operation requested before the organization accepted the Created Assertion Agreement. |
+| 403 | First-party operation requested before the organization accepted the Created Assertion Acknowledgement. |
 | 404 | The linked software agent does not exist, was deleted, or belongs to another organization. |
 | 422 | First-party operation was declared without a nonempty `software_agent_id`. |
 
