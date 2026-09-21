@@ -364,7 +364,7 @@ rejected.
 - Otherwise, sets `digitalSourceType = trainedAlgorithmicMedia` on the input
   ingredient. Support for this C2PA 2.4 ingredient field varies across validators.
 
-Distributed signing with first-party source-type marking requires `trufo-provenance>=1.4.1`.
+Distributed signing with first-party source-type marking requires `trufo-provenance>=1.5.0`.
 
 The first-party flag and software-agent link are registration metadata, not
 fields of the `c2pa.ai-disclosure` assertion or signing-request parameters.
