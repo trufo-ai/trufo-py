@@ -11,12 +11,10 @@ questions:
 | Signal | Question it answers | Where it lives |
 | ------ | ------------------- | -------------- |
 | `c2pa.ai-disclosure` assertion | *What model made this, and with how much human oversight?* | An assertion in your manifest |
-| `digitalSourceType` | *Is this asset itself AI-generated?* | A field on the ingredient |
+| `digitalSourceType` | *Is this asset itself AI-generated?* | A field on the creation action or ingredient |
 
-The assertion is what validators such as
-[Content Credentials](https://contentcredentials.org) read as an "AI generated"
-signal. `digitalSourceType` is newer and less widely supported — see the caveat
-below.
+The AI disclosure describes the model and human oversight. The source type
+identifies AI generation; see the registration-dependent behavior below.
 
 ## Requirements
 
@@ -45,8 +43,7 @@ signed_bytes = sign_c2pa(
 )
 ```
 
-This satisfies most AI-labeling requirements. Use it when you do not want to
-publish details about the model.
+Use this when you do not want to publish details about the model.
 
 ---
 
@@ -54,8 +51,7 @@ publish details about the model.
 
 To name the model, its framework, or the level of human oversight, register the
 disclosure once and reference it by id. Inline bodies are rejected at signing time —
-registering keeps the disclosure consistent across every asset you sign and lets you
-update the description in one place.
+registering lets you reuse the same disclosure across the assets you sign.
 
 ### Register it
 
@@ -110,9 +106,10 @@ signed_bytes = sign_c2pa(
 
 ## Marking the Source Type
 
-`set_source_type` additionally records `digitalSourceType = trainedAlgorithmicMedia`
-on the asset's ingredient — the C2PA field stating that the asset itself is
-AI-generated, rather than merely disclosing which model was involved.
+`set_source_type=True` records `digitalSourceType = trainedAlgorithmicMedia`.
+For first-party model operation registered as described below, it accompanies
+`c2pa.created` and the linked software agent. Otherwise, it is recorded on the
+input ingredient.
 
 ```python
 signed_bytes = sign_c2pa(
@@ -127,20 +124,55 @@ signed_bytes = sign_c2pa(
 It applies only when the input has no existing C2PA manifest — content you are
 signing for the first time.
 
-> **Caveat.** Setting `digitalSourceType` on an ingredient is new in C2PA 2.4
-> (§18.16.12.3) and most deployed validators do not yet support it; a manifest
-> carrying it may display as "invalid" in those tools. The `c2pa.ai-disclosure`
-> assertion alone satisfies AI-labeling requirements, so enable `set_source_type`
-> only if you want forward compatibility and can tolerate that display today.
+The ingredient form uses a C2PA 2.4 field; older validators may reject it.
 
 If the input already carries a manifest, or you are declaring an AI-generated asset
 as an input to something else, express it as an ingredient instead — see
 [5_ingredients.md](5_ingredients.md).
 
-Recording richer provenance — the editing history of a parent asset, and the
-software agents that acted on it — is available on the **Business tier**. Contact
-[support@trufo.ai](mailto:support@trufo.ai) to discuss the right configuration for
-your product.
+### First-party model operation
+
+If you are operating the model (i.e. running in-house as opposed to calling an API,
+or otherwise conducting "AI Provider" operations per the EU AI Act definitions),
+then you should declare `first_party_operated=True` and link a registered software
+agent with `software_agent_id={swagent_id}`. This is primarily for conformance-v0.1
+C2PA signing, where if you set `set_source_type=True` during the C2PA signing
+process and the input asset has no provenance, `c2pa.created` with
+`digitalSourceType=trainedAlgorithmicMedia` alongside the `softwareAgent` info
+will be set.
+
+Register the software agent first:
+
+```python
+from trufo.api.endpoints import TPS_C2PA_SOFTWARE_AGENT_ADD
+
+resp = requests.post(
+    TRUFO_API_URL + TPS_C2PA_SOFTWARE_AGENT_ADD,
+    headers={"X-API-Key": api_key},
+    json={"agent": {"name": "<generating application name>", "version": "<version>"}},
+    timeout=60,
+)
+resp.raise_for_status()
+swagent_id = resp.json()["software_agent_id"]
+```
+
+Include the following alongside `assertion` in your disclosure registration:
+
+```python
+"first_party_operated": True,
+"software_agent_id": swagent_id,
+```
+
+These registration fields are not embedded in the AI disclosure. The software
+agent's name and optional version/OS identify the application that created the
+media. The AI disclosure remains a gathered assertion.
+
+This creation workflow is for AI-generated output. It does not represent the
+history of a photograph subsequently edited with generative AI. The source type
+is fixed to `trainedAlgorithmicMedia`.
+
+See the [registration reference](../api/api_c2pa.md#post-c2paai-disclosureadd)
+for field requirements and errors.
 
 ---
 

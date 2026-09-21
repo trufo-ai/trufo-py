@@ -356,10 +356,20 @@ Marks content as AI-generated. With no parameters, the minimal body
 the body first (below) and pass the returned `ai_disclosure_id` — inline bodies are
 rejected.
 
-`set_source_type: true` additionally sets `digitalSourceType` to
-`trainedAlgorithmicMedia` on the parent ingredient, but only when the input has no
-existing manifest. This field is new in C2PA 2.4 and many validators still flag
-manifests carrying it, so leave it off unless you can tolerate that.
+`set_source_type: true` applies only when the input has no existing C2PA manifest:
+
+- For a disclosure registered with `first_party_operated: true`, emits
+  `c2pa.created` with `digitalSourceType = trainedAlgorithmicMedia` and the linked
+  registered software agent. The AI disclosure itself remains gathered.
+- Otherwise, sets `digitalSourceType = trainedAlgorithmicMedia` on the input
+  ingredient. Support for this C2PA 2.4 ingredient field varies across validators.
+
+Distributed signing with first-party source-type marking requires `trufo-provenance>=1.4.1`.
+
+The first-party flag and software-agent link are registration metadata, not
+fields of the `c2pa.ai-disclosure` assertion or signing-request parameters.
+An unavailable linked agent prevents creation signing; it does not prevent
+ordinary disclosure use or signing input that already carries a manifest.
 
 #### `cawg_metadata`
 
@@ -640,10 +650,19 @@ from the credential.
 
 | Field | Type | Required | Description |
 | ----- | ---- | -------- | ----------- |
-| `assertion` | object | Yes | A `c2pa.ai-disclosure` body (C2PA 2.4 §18.29.1) |
+| `assertion` | object | Yes | A `c2pa.ai-disclosure` body (C2PA 2.4 §18.28) |
 | `nickname` | string | No | Display label; never signed |
+| `first_party_operated` | boolean | No | Default `false`. Declares that your organization operates the model; private registration metadata, not embedded in the manifest. |
+| `software_agent_id` | string | When `first_party_operated` is `true` | Existing software-agent registration owned by your organization, identifying the generating application/service. |
 
 **Response (201):** `ai_disclosure_id`, shaped `aidisc_<uuid>`.
+
+**Errors:**
+
+| Code | Meaning |
+| ---- | ------- |
+| 404 | The linked software agent does not exist, was deleted, or belongs to another organization. |
+| 422 | First-party operation was declared without a nonempty `software_agent_id`. |
 
 `assertion` fields:
 
@@ -659,7 +678,8 @@ from the credential.
 ### `POST /c2pa/ai-disclosure/list`
 
 **Request:** `{}`. **Response (200):** `items[]` of
-`{ai_disclosure_id, nickname, assertion}`.
+`{ai_disclosure_id, nickname, assertion, first_party_operated, software_agent_id}`.
+Older registrations return `first_party_operated: false` and `software_agent_id: null`.
 
 ### `POST /c2pa/software-agent/add`
 
