@@ -407,7 +407,6 @@ without it they return `403 InvalidC2PACustomDomain`. See
 | -------- | ---- | ------- | -------- |
 | `POST /cert/list` | MFA, member+ | `{}` | `certs[]` with `serial_number`, `leaf_type`, `issue_time`, `expiry_time`, `revocation_status`, `revocation_reason`, `revocation_time`, `revocable`, and the issuing `gpi_id` / `gpi_name` / `gp_id` / `gp_name` where applicable |
 | `POST /cert/revoke` | MFA, owner/admin | `serial_number`, `revocation_reason`, optional `revocation_time` | `status` |
-| `POST /cert/revocation/amend` | MFA, owner/admin | `serial_number`, `revocation_time`, `amendment_reason` | `status` |
 
 `POST /cert/revoke` requires an MFA-verified user access token from an organization
 owner or admin. A developer API key alone is insufficient.
@@ -427,9 +426,13 @@ The certificate list returns the effective cutoff as `revocation_time`.
 ```
 
 This example sets the effective cutoff to `2026-09-10T18:30:00Z`.
-The time cannot be changed by submitting another revocation request: an
-already-revoked certificate returns `400 AlreadyRevoked`. Use
-`POST /cert/revocation/amend` below to move an existing cutoff earlier.
+To move an already-revoked certificate's cutoff earlier, submit `/cert/revoke`
+again with an explicit `revocation_time`. The original reason and revoking actor
+are preserved; `revocation_reason` remains required but does not replace the
+stored reason. Omitting the time returns `400 AlreadyRevoked`; equal or later
+times, or a concurrent change, return `409 RevocationTimeNotEarlier`.
+Ownership, MFA, and owner/admin requirements are unchanged. Existing signed OCSP
+responses cannot be rewritten; the new cutoff appears after responder refresh.
 
 **Revocation reasons:** `unspecified`, `key_compromise`, `affiliation_changed`,
 `superseded`, `cessation_of_operation`.
@@ -440,56 +443,6 @@ already-revoked certificate returns `400 AlreadyRevoked`. Use
 Revocation is permanent and propagates through OCSP. A `502` means the request did
 not complete and **must not be retried blindly** — re-list your certificates to
 check the outcome first.
-
-## `POST /cert/revocation/amend`
-
-Move an already-revoked certificate's effective cutoff earlier. The certificate
-must belong to the authenticated user's selected organization and be a supported
-subscriber signing certificate. Its revoked status, original revocation reason,
-and original revoking actor remain unchanged.
-
-**Auth:** MFA-verified user access token, owner/admin (`revoke_cert`). A developer
-API key alone is insufficient.
-
-| Field | Type | Required | Meaning |
-| ----- | ---- | -------- | ------- |
-| `serial_number` | string | yes | Certificate serial in lowercase hexadecimal |
-| `revocation_time` | string | yes | ISO 8601 timestamp with `Z` or an explicit UTC offset; strictly earlier than the current cutoff and not in the future |
-| `amendment_reason` | string | yes | Reason for the correction, 1–500 characters after trimming whitespace |
-
-```json
-{
-  "serial_number": "<certificate-serial-hex>",
-  "revocation_time": "2026-09-09T18:30:00Z",
-  "amendment_reason": "Confirmed the compromise occurred before the original cutoff."
-}
-```
-
-**Response (200):**
-
-```json
-{"status": "ok"}
-```
-
-**Errors:**
-
-| Code | Detail | Meaning |
-| ---- | ------ | ------- |
-| 401/403 | Authentication or permission error | Requires an MFA-verified owner/admin in the certificate's organization |
-| 404 | `NotFound` | Certificate does not exist |
-| 400 | `NotRevocable` | Certificate type does not support this operation |
-| 400 | `NotRevoked` | Certificate has not been revoked; use `/cert/revoke` |
-| 409 | `RevocationTimeNotEarlier` | Requested time is not earlier than the current cutoff, including after a concurrent amendment; re-list before resubmitting |
-| 422 | Validation error | Missing or invalid timestamp or correction reason |
-| 502 | `RevocationFailed` | Outcome may be unknown; re-list before retrying |
-
-The amendment records the actor, correction reason, previous and new cutoffs,
-and processing time. The certificate list returns the updated cutoff. Moving it
-later or restoring the certificate's validity is not supported.
-
-OCSP responses reflect the new cutoff after responder cache refresh; propagation
-is not instantaneous. Responses already issued or embedded in content cannot be
-rewritten, and validators may retain them according to their freshness rules.
 
 ---
 
