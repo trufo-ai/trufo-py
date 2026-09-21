@@ -141,6 +141,11 @@ process and the input asset has no provenance, `c2pa.created` with
 `digitalSourceType=trainedAlgorithmicMedia` alongside the `softwareAgent` info
 will be set.
 
+Before registering first-party operation, have an authorized organization owner
+or admin accept the **Created Assertion Agreement** in **Organization Settings →
+Agreements**. Acceptance is required at registration for both test and production
+keys, since the registration can be used in either signing flow.
+
 Register the software agent first:
 
 ```python
