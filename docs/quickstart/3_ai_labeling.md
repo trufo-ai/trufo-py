@@ -134,17 +134,20 @@ as an input to something else, express it as an ingredient instead — see
 
 If you are operating the model (i.e. running in-house as opposed to calling an API,
 or otherwise conducting "AI Provider" operations per the EU AI Act definitions),
-then you should declare `first_party_operated=True` and link a registered software
-agent with `software_agent_id={swagent_id}`. This is primarily for conformance-v0.1
-C2PA signing, where if you set `set_source_type=True` during the C2PA signing
-process and the input asset has no provenance, `c2pa.created` with
-`digitalSourceType=trainedAlgorithmicMedia` alongside the `softwareAgent` info
-will be set.
+then you may declare `c2pa.created` with `digitalSourceType=trainedAlgorithmicMedia`
+by (1) in the AI disclosure, setting `first_party_operated=True` and linking a
+registered software agent with `software_agent_id={swagent_id}`, and (2) setting
+`set_source_type=True` when making the C2PA signing call. This ensures that
+downstream validators (especially those that are not up to date) will reliably
+mark the content as AI-generated.
 
-Before registering first-party operation, have an authorized organization owner
-or admin accept the **Created Assertion Acknowledgement** in **Organization Settings →
-Agreements**. Acceptance is required at registration for both test and production
-keys, since the registration can be used in either signing flow.
+In order to use this feature, an authorized
+signatory must accept the Created Assertion Acknowledgement (in Organization
+Settings → Agreements) on behalf of the organization, as it is important that
+this feature is not used to write inaccurate information. Note that if C2PA
+security requirements increase in the future, this feature may be moved to the
+"branded-only" category that requires a bespoke Generator Product registration
+with the C2PA.
 
 Register the software agent first:
 
