@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.1] — 2026-09-22
+
+### Fixed
+
+- `TPS_C2PA_SOFTWARE_AGENT_ADD` and `TPS_C2PA_SOFTWARE_AGENT_LIST` endpoint
+  constants, which the AI-labeling guide imports.
+
 ## [1.5.0] — 2026-09-20
 
 ### Added
@@ -436,7 +443,8 @@ Minor-version bump marks the general availability of the production C2PA signing
 - `trufo.intf`: credential storage and loading (env vars + file), CLI entry point.
 - PyPI trusted publishing via GitHub Actions (OIDC, no API tokens required).
 
-[Unreleased]: https://github.com/trufo-ai/trufo-py/compare/v1.5.0...HEAD
+[Unreleased]: https://github.com/trufo-ai/trufo-py/compare/v1.5.1...HEAD
+[1.5.1]: https://github.com/trufo-ai/trufo-py/compare/v1.5.0...v1.5.1
 [1.5.0]: https://github.com/trufo-ai/trufo-py/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/trufo-ai/trufo-py/compare/v1.3.1...v1.4.0
 [1.3.1]: https://github.com/trufo-ai/trufo-py/compare/v1.3.0...v1.3.1
