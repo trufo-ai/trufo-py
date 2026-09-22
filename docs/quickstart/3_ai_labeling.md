@@ -139,18 +139,15 @@ by (1) in the AI disclosure, setting `first_party_operated=True` and linking a
 registered software agent with `software_agent_id={swagent_id}`, and (2) setting
 `set_source_type=True` when making the C2PA signing call. This ensures that
 downstream validators (especially those that are not up to date) will reliably
-mark the content as AI-generated.  In order to use this feature, an authorized
+mark the content as AI-generated.
+
+In order to use this feature, an authorized
 signatory must accept the Created Assertion Acknowledgement (in Organization
-Settings -> Agreements) on behalf of the organization, as it is important that
+Settings → Agreements) on behalf of the organization, as it is important that
 this feature is not used to write inaccurate information. Note that if C2PA
 security requirements increase in the future, this feature may be moved to the
-“branded-only”category that requires a bespoke Generator Product registration
+"branded-only" category that requires a bespoke Generator Product registration
 with the C2PA.
-
-Before registering first-party operation, have an authorized organization owner
-or admin accept the **Created Assertion Acknowledgement** in **Organization Settings →
-Agreements**. Acceptance is required at registration for both test and production
-keys, since the registration can be used in either signing flow.
 
 Register the software agent first:
 
