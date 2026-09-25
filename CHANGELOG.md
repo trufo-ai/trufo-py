@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.2] — 2026-09-25
+
+### Changed
+
+- Local-engine extras require trufo-provenance 1.6; `local-full` includes
+  trufo-pawprint 0.4 through that dependency.
+- Consolidate C2PA generation/validation and watermark embedding/recovery format
+  support in [Media format support](docs/api/media_format_support.md), including
+  image restrictions, audio/video codecs and track layouts.
+
 ## [1.5.1] — 2026-09-22
 
 ### Fixed
@@ -443,7 +453,8 @@ Minor-version bump marks the general availability of the production C2PA signing
 - `trufo.intf`: credential storage and loading (env vars + file), CLI entry point.
 - PyPI trusted publishing via GitHub Actions (OIDC, no API tokens required).
 
-[Unreleased]: https://github.com/trufo-ai/trufo-py/compare/v1.5.1...HEAD
+[Unreleased]: https://github.com/trufo-ai/trufo-py/compare/v1.5.2...HEAD
+[1.5.2]: https://github.com/trufo-ai/trufo-py/compare/v1.5.1...v1.5.2
 [1.5.1]: https://github.com/trufo-ai/trufo-py/compare/v1.5.0...v1.5.1
 [1.5.0]: https://github.com/trufo-ai/trufo-py/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/trufo-ai/trufo-py/compare/v1.3.1...v1.4.0

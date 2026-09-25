@@ -20,6 +20,7 @@ organization — see [Automatic assertions](../api/api_c2pa.md#automatic-asserti
   completed Organization Validation (OV) for production. See [0_setup.md](0_setup.md).
 - `pip install trufo` — simple and S3 signing need nothing else. Distributed
   signing additionally needs a local engine extra and a `tsa` key (below).
+- Input matching the [media format support policy](../api/media_format_support.md).
 
 ## Choosing a Mode
 

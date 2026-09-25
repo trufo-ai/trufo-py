@@ -43,8 +43,8 @@ def recover_content(
 ) -> RecoverContentResult:
     """Decode a Trufo watermark from media and return its provenance.
 
-    Accepts any parseable image or audio input; decoding is read-only and is
-    not limited to the formats supported for watermark encoding.
+    Decoding is read-only. Supported inputs and restrictions are documented
+    in ``docs/api/media_format_support.md`` under WM decode.
 
     Args:
         api_key: API key with scope ``content-recover-test`` or

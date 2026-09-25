@@ -22,8 +22,9 @@ from trufo.util.credentials import TrufoApiKey, load_api_key
 
 # --- configuration ---
 
-INPUT_FILE = Path("photo.jpg")       # a watermarkable format: JPEG, PNG, WebP,
-OUTPUT_FILE = Path("watermarked.jpg")  # TIFF, WAV, FLAC, MP3, M4A, or MP4
+# format eligibility: docs/api/media_format_support.md
+INPUT_FILE = Path("photo.jpg")
+OUTPUT_FILE = Path("watermarked.jpg")
 
 api_key = load_api_key(TrufoApiKey.C2PA_SIGN_TEST)
 assert api_key, (

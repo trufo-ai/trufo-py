@@ -109,5 +109,6 @@ The full reference documentation is spread across the following files:
 | ---------------------------------------------- | ------------------------------------------------------------------------- |
 | [docs/api/api_trufo.md](docs/api/api_trufo.md) | Accounts, organizations, MFA, API keys and scopes, Organization Validation, errors, regions |
 | [docs/api/api_c2pa.md](docs/api/api_c2pa.md)   | C2PA signing (hosted, S3, distributed), actions and assertions, standalone binding, watermark recovery, content records, assertion records |
+| [docs/api/media_format_support.md](docs/api/media_format_support.md) | C2PA and watermark format support, codecs, image and track restrictions |
 | [docs/api/api_certs.md](docs/api/api_certs.md) | Certificate enrollment (EST), OCSP, timestamping, and the Registration Authority |
 | [docs/cli.md](docs/cli.md)                     | CLI credential management                                                 |
