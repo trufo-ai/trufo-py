@@ -247,17 +247,9 @@ Organizations with a dedicated API or TSA pass those hosts explicitly via
 
 ### Supported media types
 
-| Category | MIME types |
-| -------- | ---------- |
-| Image | `image/jpeg`, `image/png`, `image/gif`, `image/webp`, `image/avif`, `image/tiff`, `image/jxl`, `image/x-adobe-dng`, `image/svg+xml` |
-| Audio | `audio/mpeg`, `audio/flac`, `audio/wav`, `audio/mp4` |
-| Video | `video/mp4`, `video/quicktime` |
-| Document | `application/pdf` |
-
-The type is detected from the bytes, not from any declared value. Common aliases
-resolve automatically (`audio/x-wav` → `audio/wav`, `audio/x-m4a` → `audio/mp4`);
-an MP4 with no video stream is treated as `audio/mp4`. Contact
-[support@trufo.ai](mailto:support@trufo.ai) about additional formats.
+See [Media format support](media_format_support.md) for C2PA generation and
+validation, watermark embedding and recovery, MIME detection, and subformat
+restrictions. Format eligibility is separate from [execution mode](#tasks).
 
 ### `actions`
 
@@ -299,7 +291,8 @@ unsupported on all hosts.
 | `"require_if_supported"` | Signs unwatermarked, with a warning | Error |
 | `"best_effort"` | Signs unwatermarked, with a warning | Signs unwatermarked, with a warning |
 
-Watermarkable formats: JPEG, PNG, WebP, TIFF, WAV, FLAC, MP3, M4A, MP4. See the
+Format eligibility and restrictions are listed in
+[Media format support](media_format_support.md). For examples, see the
 [watermarking quickstart](../quickstart/6_watermarking.md).
 
 #### `redact`
@@ -494,7 +487,7 @@ SDK: `bind_watermark()`, `bind_reserve()`, `watermark_media()`, `bind_commit()`
 | `cid` | string or null | Record id for `/bind/commit` |
 
 Bind has no effort tiers: the watermark is always required, and an
-unsupported format (outside the watermarkable table above) is an error.
+unsupported format is an error; see [Media format support](media_format_support.md).
 
 ### `POST /bind/reserve`
 
@@ -574,9 +567,9 @@ engine cannot decode bills the bytes only.
 | `manifest_json` | object or null | The same manifest parsed as JSON, only when `parse_manifest_json` was set; a convenience for callers without a local C2PA engine, not a validation result |
 | `oid` | string or null | Your organization ID, present only when the mark is your organization's |
 
-Decoding accepts any parseable image, video, or audio input, not only the formats
-supported for embedding. Provenance marks resolve through the content record;
-reserved and unknown prefixes return detection only.
+Recovery has its own format eligibility and restrictions; see
+[Media format support](media_format_support.md). Provenance marks resolve through
+the content record; reserved and unknown prefixes return detection only.
 
 **Errors:**
 

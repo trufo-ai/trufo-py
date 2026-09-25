@@ -18,6 +18,11 @@ Either way, the signed manifest declares the watermark per the C2PA specificatio
 
 ## Supported Formats
 
+See [Media format support](../api/media_format_support.md) for embedding and
+recovery eligibility, image restrictions, audio/video codecs, and track layouts.
+
+## Execution Mode
+
 Hosted REQUEST execution is limited to images up to 10 MB (10,000,000 bytes).
 For larger images, audio, or video, explicitly select `ExecutionMode.TASK` and
 pass `mime_type` to `sign_c2pa()` or `bind_watermark()`. The SDK uploads, submits,
@@ -25,16 +30,6 @@ polls, and downloads synchronously. `submit_bind_watermark()` accepts an existin
 Trufo upload reference and returns immediately with a task ID. A completed
 watermark task still requires signing and `bind_commit()`; it does not commit
 the content record itself. Test endpoints accept REQUEST only.
-
-| Modality | Formats |
-| -------- | ------- |
-| Image    | JPEG, PNG, WebP, TIFF |
-| Audio    | WAV, FLAC, MP3, M4A (`audio/mp4`) |
-| Video    | MP4 (`video/mp4`; H.264/HEVC, 8-bit) |
-
-For video, the same watermark ID is embedded in **every stream**: each frame of the video stream carries the full ID through the image watermark, and every audio stream carries it through the audio watermark — so the ID survives in an extracted audio track or a single surviving frame.
-
-Signing formats outside this list succeeds normally; the watermark is simply not embedded, which the `effort_policy` setting below lets you treat as an error or a warning.
 
 ## The `watermark` Action
 
@@ -220,13 +215,20 @@ In production, use a `content-recover-prod` key and omit `trufo_api_url`.
 
 `manifest_bytes` is the signed manifest store as captured. Per the C2PA specification a manifest obtained through soft-binding recovery must be validated like any other, so validate it against your own copy of the media (for example with `trufo-provenance` or c2patool) before relying on it. If you have no local C2PA engine and only need to read the manifest's contents, pass `parse_manifest_json=True` to also receive `manifest_json`, the server's parse; it is not a validation result.
 
-Decoding is read-only and accepts any parseable image, video, or audio input, not just the encode-supported formats; an input the engine cannot decode returns a 400 `UndecodableMedia` error. In production each call bills one watermark decode plus the bytes processed (an undecodable input bills the bytes only). See [api_c2pa.md](../api/api_c2pa.md#post-contentrecover) for the full schema.
+Decoding is read-only; eligible inputs are listed under WM decode in
+[Media format support](../api/media_format_support.md). In production each call
+bills one watermark decode plus the bytes processed (an undecodable input bills
+the bytes only). See [api_c2pa.md](../api/api_c2pa.md#post-contentrecover) for the
+full schema and errors.
 
 ## Troubleshooting
 
 **`Watermarking is not supported for <mime> media.`**
 
-You requested a watermark with `effort_policy: require` on a format outside the supported table above. Either transcode first, or use `require_if_supported` / `best_effort` to sign such formats unwatermarked.
+The input does not meet the [watermark format policy](../api/media_format_support.md).
+Convert it to a supported format, or use `require_if_supported` / `best_effort`
+to permit signing without a watermark. The input must still meet the C2PA
+generation policy.
 
 **`Watermarking failed: <engine error>`**
 

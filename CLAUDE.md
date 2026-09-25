@@ -18,7 +18,7 @@ certificate enrollment.
   setting failure tolerance (`WatermarkEffort` enum; `effort` is a deprecated alias)
   and `mode` = `provenance` (default) / `compliance` selecting the mark kind
   (`WatermarkMode`; compliance is a placeholder that raises `NotImplementedError`).
-  Supported: JPEG/PNG/WebP/TIFF, WAV/FLAC/MP3/M4A, MP4.
+  Format policy: see `docs/api/media_format_support.md`; do not duplicate its tables.
 - Routes are named by who embeds and who signs: tpts / lpts (Trufo signs; `sign_c2pa`,
   `sign_c2pa_distributed`) and tpls / lpls (the caller signs with their own certificate;
   `bind_watermark` → `bind_commit`, or `bind_reserve` → `watermark_media` →
@@ -68,6 +68,7 @@ certificate enrollment.
 | Watermarking | `docs/quickstart/6_watermarking.md` |
 | Platform API reference | `docs/api/api_trufo.md` |
 | C2PA API reference | `docs/api/api_c2pa.md` |
+| Media format support | `docs/api/media_format_support.md` |
 | Certificate API reference | `docs/api/api_certs.md` |
 | CLI reference | `docs/cli.md` |
 | Changelog | `CHANGELOG.md` |
