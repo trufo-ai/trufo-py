@@ -208,7 +208,7 @@ def watermark_media(media_bytes: bytes, wid_package: dict) -> bytes:
     except ImportError as exc:
         raise ImportError(_ENGINE_HINT) from exc
     package = pawprint_import.WatermarkIdPackage(**wid_package)
-    return pawprint_import.encode(media_bytes, package)
+    return pawprint_import.embed(media_bytes, package)
 
 
 def _manifest_store_from_media(signed_media_bytes: bytes) -> bytes:

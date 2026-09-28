@@ -95,11 +95,11 @@ class TestWatermarkMedia:
     def test_embeds_through_the_engine_boundary(self):
         engine = MagicMock()
         engine.WatermarkIdPackage.side_effect = lambda **kw: kw
-        engine.encode.return_value = b"marked"
+        engine.embed.return_value = b"marked"
         with patch.dict("sys.modules", {"tfprov.util.pawprint_import": engine}):
             with patch("tfprov.util.pawprint_import", engine, create=True):
                 assert watermark_media(b"media", {"wid": _WID, "expires_at": "x"}) == b"marked"
-        engine.encode.assert_called_once_with(b"media", {"wid": _WID, "expires_at": "x"})
+        engine.embed.assert_called_once_with(b"media", {"wid": _WID, "expires_at": "x"})
 
     def test_missing_engine_gives_the_install_hint(self):
         with patch.dict("sys.modules", {"tfprov.util.pawprint_import": None, "tfprov.util": None}):
