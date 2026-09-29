@@ -174,9 +174,40 @@ authenticates with a `tsa`-scoped API key in the `X-API-Key` header.
 **With trufo-py**, timestamping is automatic — the signing helpers fetch the key
 from your stored credentials.
 
-**With c2patool or another C2PA implementation**, point the tool at a TSA URL. Tools
-built on older c2pa-rs releases send no custom headers, so they cannot present an
-`X-API-Key`. Two options:
+### With c2pa-rs
+
+Send the key directly using `Signer::timestamp_request_headers()`. Add these
+methods to your existing `Signer` implementation, preserving its signing and
+OCSP-stapling methods:
+
+```rust
+// Inside your existing impl c2pa::Signer:
+fn time_authority_url(&self) -> Option<String> {
+    Some("https://tsa.trufo.ai/".to_owned())
+}
+
+fn timestamp_request_headers(&self) -> Option<Vec<(String, String)>> {
+    Some(vec![("X-API-Key".to_owned(), self.tsa_api_key.clone())])
+}
+```
+
+Initialize `tsa_api_key` from your signing process environment or secret manager
+(for example, `std::env::var("TRUFO_TSA_API_KEY")?`). Use the complete TSA-scoped
+key copied from the dashboard, including any existing `tsa:` prefix; do not add
+another prefix. Keep the key outside source control.
+
+The standard `create_signer::from_keys` helper accepts a TSA URL but no headers,
+so wrap that basic signer to add these methods. The
+[timestamping guide](https://trufo.ai/documentation#timestamping) provides a
+complete wrapper and signing example. `AsyncSigner` exposes the same header hook.
+c2pa-rs supplies `Content-Type` automatically; do not add it to the hook. See the
+[upstream Signer reference](https://docs.rs/c2pa/latest/c2pa/trait.Signer.html#method.timestamp_request_headers).
+If your SDK version lacks this hook, upgrade or use the private proxy below.
+
+### With c2patool or clients without custom headers
+
+Point the tool at a TSA URL (`ta_url` in a c2patool manifest definition). If your
+client cannot set `X-API-Key`, use one of these options:
 
 - **Use the keyless test endpoint** while developing:
   `https://test.tsa.trufo.ai/`. It speaks the same protocol with no credential, but
@@ -188,11 +219,13 @@ built on older c2pa-rs releases send no custom headers, so they cannot present a
   ```nginx
   location /tsa {
       proxy_pass https://tsa.trufo.ai/;
-      proxy_set_header X-API-Key "tsa:<your-api-key>";
+      proxy_set_header X-API-Key "<YOUR_TSA_API_KEY>";
   }
   ```
 
-  Keep the proxy inside your own network — it holds a credential.
+  Replace `<YOUR_TSA_API_KEY>` with the complete key copied from the dashboard.
+  Keep the proxy inside your own network — it holds a credential. For c2patool,
+  set `ta_url` to the proxy URL ending in `/tsa`.
 
 Organizations with a dedicated endpoint use `https://{your-host}.tsa.trufo.ai/`,
 which takes the same key.
@@ -202,7 +235,7 @@ Verify a timestamp response with OpenSSL:
 ```bash
 openssl ts -query -data file.jpg -sha256 -cert -out request.tsq
 curl -s -H "Content-Type: application/timestamp-query" \
-     -H "X-API-Key: tsa:<your-api-key>" \
+     -H "X-API-Key: <YOUR_TSA_API_KEY>" \
      --data-binary @request.tsq https://tsa.trufo.ai/ -o response.tsr
 openssl ts -reply -in response.tsr -text
 ```
