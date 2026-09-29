@@ -197,12 +197,73 @@ key copied from the dashboard, including any existing `tsa:` prefix; do not add
 another prefix. Keep the key outside source control.
 
 The standard `create_signer::from_keys` helper accepts a TSA URL but no headers,
-so wrap that basic signer to add these methods. The
-[timestamping guide](https://trufo.ai/documentation#timestamping) provides a
-complete wrapper and signing example. `AsyncSigner` exposes the same header hook.
+so wrap that basic signer to add these methods, as shown below.
+`AsyncSigner` exposes the same header hook.
 c2pa-rs supplies `Content-Type` automatically; do not add it to the hook. See the
 [upstream Signer reference](https://docs.rs/c2pa/latest/c2pa/trait.Signer.html#method.timestamp_request_headers).
 If your SDK version lacks this hook, upgrade or use the private proxy below.
+
+#### Complete basic-signer example
+
+Supply your ES256 signing certificate chain (`signing-chain.pem`), matching
+private key (`private-key.pem`), C2PA manifest definition (`manifest.json`), and
+input JPEG (`input.jpg`). Set `TRUFO_TSA_API_KEY` to the complete key before running.
+This example uses the c2pa-rs `Context` API and writes `signed.jpg`.
+
+```rust
+use c2pa::{create_signer, Builder, Context, Signer, SigningAlg};
+
+// Wrap the basic signer created below; keep custom signer extensions
+// (such as OCSP stapling) on your own Signer implementation.
+struct TsaSigner {
+    inner: Box<dyn Signer + Send + Sync>,
+    api_key: String,
+}
+
+impl Signer for TsaSigner {
+    fn sign(&self, data: &[u8]) -> c2pa::Result<Vec<u8>> {
+        self.inner.sign(data)
+    }
+    fn alg(&self) -> SigningAlg {
+        self.inner.alg()
+    }
+    fn certs(&self) -> c2pa::Result<Vec<Vec<u8>>> {
+        self.inner.certs()
+    }
+    fn reserve_size(&self) -> usize {
+        self.inner.reserve_size()
+    }
+    fn time_authority_url(&self) -> Option<String> {
+        Some("https://tsa.trufo.ai/".to_owned())
+    }
+    fn timestamp_request_headers(&self) -> Option<Vec<(String, String)>> {
+        Some(vec![("X-API-Key".to_owned(), self.api_key.clone())])
+    }
+}
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Store the complete key copied from Trufo, including any tsa: prefix.
+    let api_key = std::env::var("TRUFO_TSA_API_KEY")?;
+    if api_key.trim().is_empty() {
+        return Err("TRUFO_TSA_API_KEY must not be empty".into());
+    }
+    let signer = TsaSigner {
+        inner: create_signer::from_keys(
+            &std::fs::read("signing-chain.pem")?,
+            &std::fs::read("private-key.pem")?,
+            SigningAlg::Es256,
+            None,
+        )?,
+        api_key,
+    };
+    let mut builder = Builder::from_context(Context::new())
+        .with_definition(std::fs::read_to_string("manifest.json")?)?;
+    let mut input = std::fs::File::open("input.jpg")?;
+    let mut output = std::fs::File::create("signed.jpg")?;
+    builder.sign(&signer, "image/jpeg", &mut input, &mut output)?;
+    Ok(())
+}
+```
 
 ### With c2patool or clients without custom headers
 
