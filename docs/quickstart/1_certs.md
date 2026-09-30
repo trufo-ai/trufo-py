@@ -167,54 +167,94 @@ helpers use Trufo's signer, not yours.
 
 ## Timestamping
 
-C2PA signatures should carry an RFC 3161 timestamp so they remain verifiable after
-the signing certificate expires. Trufo's TSA is at `https://tsa.trufo.ai/` and
-authenticates with a `tsa`-scoped API key in the `X-API-Key` header.
+A timestamp authority (TSA) issues signed evidence that data existed by a given
+time. Your C2PA signing library embeds this timestamp so signatures can remain
+verifiable after the signing certificate expires.
 
-**With trufo-py**, timestamping is automatic — the signing helpers fetch the key
-from your stored credentials.
+Use `https://tsa.trufo.ai/` (or your assigned dedicated TSA URL). Authenticate with
+an HTTP `X-API-Key` header containing a `tsa`-scoped key from
+[dashboard → API Keys](https://app.trufo.ai/settings/org). Copy the complete key,
+including any `tsa:` prefix; do not add another. See [credential setup](0_setup.md#api-key-scopes).
+
+**Using Trufo's signing helpers?** Timestamping is automatic with your stored
+credentials. The instructions below are for your own signing toolchain.
 
 ### With c2pa-rs
 
-Send the key directly using `Signer::timestamp_request_headers()`. Add these
-methods to your existing `Signer` implementation, preserving its signing and
-OCSP-stapling methods:
+`create_signer::from_keys` accepts a TSA URL but no headers. This wrapper adds
+`timestamp_request_headers()`. Set `TRUFO_TSA_API_KEY` in your process environment
+or secret manager; keep it outside source control.
+
+Supply an ES256 certificate chain (`signing-chain.pem`), matching private key
+(`private-key.pem`), C2PA manifest definition (`manifest.json`), and `input.jpg`.
+The example writes `signed.jpg`.
 
 ```rust
-// Inside your existing impl c2pa::Signer:
-fn time_authority_url(&self) -> Option<String> {
-    Some("https://tsa.trufo.ai/".to_owned())
+use c2pa::{create_signer, Builder, Context, Signer, SigningAlg};
+
+struct TsaSigner {
+    inner: Box<dyn Signer + Send + Sync>,
+    api_key: String,
 }
 
-fn timestamp_request_headers(&self) -> Option<Vec<(String, String)>> {
-    Some(vec![("X-API-Key".to_owned(), self.tsa_api_key.clone())])
+impl Signer for TsaSigner {
+    fn sign(&self, data: &[u8]) -> c2pa::Result<Vec<u8>> {
+        self.inner.sign(data)
+    }
+    fn alg(&self) -> SigningAlg {
+        self.inner.alg()
+    }
+    fn certs(&self) -> c2pa::Result<Vec<Vec<u8>>> {
+        self.inner.certs()
+    }
+    fn reserve_size(&self) -> usize {
+        self.inner.reserve_size()
+    }
+    fn time_authority_url(&self) -> Option<String> {
+        Some("https://tsa.trufo.ai/".to_owned())
+    }
+    fn timestamp_request_headers(&self) -> Option<Vec<(String, String)>> {
+        Some(vec![("X-API-Key".to_owned(), self.api_key.clone())])
+    }
+}
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let api_key = std::env::var("TRUFO_TSA_API_KEY")?;
+    if api_key.trim().is_empty() {
+        return Err("TRUFO_TSA_API_KEY must not be empty".into());
+    }
+    let signer = TsaSigner {
+        inner: create_signer::from_keys(
+            &std::fs::read("signing-chain.pem")?,
+            &std::fs::read("private-key.pem")?,
+            SigningAlg::Es256,
+            None, // The wrapper supplies the TSA URL.
+        )?,
+        api_key,
+    };
+    let mut builder = Builder::from_context(Context::new())
+        .with_definition(std::fs::read_to_string("manifest.json")?)?;
+    let mut input = std::fs::File::open("input.jpg")?;
+    let mut output = std::fs::File::create("signed.jpg")?;
+    builder.sign(&signer, "image/jpeg", &mut input, &mut output)?;
+    Ok(())
 }
 ```
 
-Initialize `tsa_api_key` from your signing process environment or secret manager
-(for example, `std::env::var("TRUFO_TSA_API_KEY")?`). Use the complete TSA-scoped
-key copied from the dashboard, including any existing `tsa:` prefix; do not add
-another prefix. Keep the key outside source control.
-
-The standard `create_signer::from_keys` helper accepts a TSA URL but no headers,
-so wrap that basic signer to add these methods. The
-[timestamping guide](https://trufo.ai/documentation#timestamping) provides a
-complete wrapper and signing example. `AsyncSigner` exposes the same header hook.
-c2pa-rs supplies `Content-Type` automatically; do not add it to the hook. See the
-[upstream Signer reference](https://docs.rs/c2pa/latest/c2pa/trait.Signer.html#method.timestamp_request_headers).
-If your SDK version lacks this hook, upgrade or use the private proxy below.
+Already have a custom `Signer`? Add only the two timestamp methods, preserving
+its OCSP stapling and other extensions. `AsyncSigner` has the same header hook.
+c2pa-rs supplies `Content-Type` automatically. See the
+[Signer reference](https://docs.rs/c2pa/latest/c2pa/trait.Signer.html#method.timestamp_request_headers);
+upgrade or use the proxy below if your SDK lacks the hook.
 
 ### With c2patool or clients without custom headers
 
-Point the tool at a TSA URL (`ta_url` in a c2patool manifest definition). If your
-client cannot set `X-API-Key`, use one of these options:
+For clients that cannot set `X-API-Key`, set the TSA URL (`ta_url` in c2patool) to:
 
-- **Use the keyless test endpoint** while developing:
-  `https://test.tsa.trufo.ai/`. It speaks the same protocol with no credential, but
-  its tokens carry the Trufo test policy and are deliberately untrusted — never use
-  them for production content.
-- **Front the production TSA with a small proxy** that adds the header, and point
-  the tool at your proxy:
+- **Development:** `https://test.tsa.trufo.ai/` — no key required; timestamps are
+  deliberately untrusted and unsuitable for production.
+- **Production:** a private proxy that adds the header. Add this location to your
+  existing Nginx server configuration:
 
   ```nginx
   location /tsa {
@@ -223,22 +263,32 @@ client cannot set `X-API-Key`, use one of these options:
   }
   ```
 
-  Replace `<YOUR_TSA_API_KEY>` with the complete key copied from the dashboard.
-  Keep the proxy inside your own network — it holds a credential. For c2patool,
-  set `ta_url` to the proxy URL ending in `/tsa`.
+  Replace `<YOUR_TSA_API_KEY>` with your complete key and set `ta_url` to the proxy
+  URL ending in `/tsa`. Keep the proxy inside your network — it holds a credential.
 
-Organizations with a dedicated endpoint use `https://{your-host}.tsa.trufo.ai/`,
-which takes the same key.
+### Test the production TSA with OpenSSL
 
-Verify a timestamp response with OpenSSL:
+This checks timestamp requests and verification directly, not C2PA asset signing:
 
 ```bash
-openssl ts -query -data file.jpg -sha256 -cert -out request.tsq
+echo "Hello, C2PA world" > test_data.txt
+openssl ts -query -data test_data.txt -sha256 -cert -out request.tsq
 curl -s -H "Content-Type: application/timestamp-query" \
      -H "X-API-Key: <YOUR_TSA_API_KEY>" \
      --data-binary @request.tsq https://tsa.trufo.ai/ -o response.tsr
 openssl ts -reply -in response.tsr -text
 ```
+
+To verify the response against the TSA CA chain:
+
+```bash
+curl -fsS https://ca.trufo.ai/.well-known/est/ctsa/cacerts -o ca_chain.p7b
+base64 -d ca_chain.p7b > ca_chain.der
+openssl pkcs7 -in ca_chain.der -inform DER -print_certs -out ca_chain.pem
+openssl ts -verify -data test_data.txt -in response.tsr -CAfile ca_chain.pem
+```
+
+Expected output: `Verification: OK`.
 
 ## Revocation and Rotation
 
