@@ -176,39 +176,18 @@ from your stored credentials.
 
 ### With c2pa-rs
 
-Send the key directly using `Signer::timestamp_request_headers()`. Add these
-methods to your existing `Signer` implementation, preserving its signing and
-OCSP-stapling methods:
+Use `Signer::timestamp_request_headers()` to send `X-API-Key` directly to the
+TSA. The example below wraps the basic signer returned by
+`create_signer::from_keys`, which accepts a TSA URL but has no header parameter.
 
-```rust
-// Inside your existing impl c2pa::Signer:
-fn time_authority_url(&self) -> Option<String> {
-    Some("https://tsa.trufo.ai/".to_owned())
-}
-
-fn timestamp_request_headers(&self) -> Option<Vec<(String, String)>> {
-    Some(vec![("X-API-Key".to_owned(), self.tsa_api_key.clone())])
-}
-```
-
-Initialize `tsa_api_key` from your signing process environment or secret manager
-(for example, `std::env::var("TRUFO_TSA_API_KEY")?`). Use the complete TSA-scoped
-key copied from the dashboard, including any existing `tsa:` prefix; do not add
-another prefix. Keep the key outside source control.
-
-The standard `create_signer::from_keys` helper accepts a TSA URL but no headers,
-so wrap that basic signer to add these methods, as shown below.
-`AsyncSigner` exposes the same header hook.
-c2pa-rs supplies `Content-Type` automatically; do not add it to the hook. See the
-[upstream Signer reference](https://docs.rs/c2pa/latest/c2pa/trait.Signer.html#method.timestamp_request_headers).
-If your SDK version lacks this hook, upgrade or use the private proxy below.
-
-#### Complete basic-signer example
+Set `TRUFO_TSA_API_KEY` in your signing process environment or secret manager to
+the complete TSA-scoped key copied from the dashboard. Keep any existing `tsa:`
+prefix; do not add another. Keep the key outside source control.
 
 Supply your ES256 signing certificate chain (`signing-chain.pem`), matching
 private key (`private-key.pem`), C2PA manifest definition (`manifest.json`), and
-input JPEG (`input.jpg`). Set `TRUFO_TSA_API_KEY` to the complete key before running.
-This example uses the c2pa-rs `Context` API and writes `signed.jpg`.
+input JPEG (`input.jpg`). This example uses the c2pa-rs `Context` API and writes
+`signed.jpg`.
 
 ```rust
 use c2pa::{create_signer, Builder, Context, Signer, SigningAlg};
@@ -265,6 +244,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
+If you already have a custom `Signer`, add the `time_authority_url()` and
+`timestamp_request_headers()` methods from this example to it, preserving your
+existing signing, OCSP-stapling, and other extensions. You do not need the wrapper.
+`AsyncSigner` exposes the same header hook. c2pa-rs supplies `Content-Type`
+automatically; do not add it to the hook. See the
+[upstream Signer reference](https://docs.rs/c2pa/latest/c2pa/trait.Signer.html#method.timestamp_request_headers).
+If your SDK version lacks this hook, upgrade or use the private proxy below.
+
 ### With c2patool or clients without custom headers
 
 Point the tool at a TSA URL (`ta_url` in a c2patool manifest definition). If your
@@ -291,15 +278,29 @@ client cannot set `X-API-Key`, use one of these options:
 Organizations with a dedicated endpoint use `https://{your-host}.tsa.trufo.ai/`,
 which takes the same key.
 
-Verify a timestamp response with OpenSSL:
+### Test the endpoint with OpenSSL
+
+Generate a request for a local file, submit it, and inspect the response:
 
 ```bash
-openssl ts -query -data file.jpg -sha256 -cert -out request.tsq
+echo "Hello, C2PA world" > test_data.txt
+openssl ts -query -data test_data.txt -sha256 -cert -out request.tsq
 curl -s -H "Content-Type: application/timestamp-query" \
      -H "X-API-Key: <YOUR_TSA_API_KEY>" \
      --data-binary @request.tsq https://tsa.trufo.ai/ -o response.tsr
 openssl ts -reply -in response.tsr -text
 ```
+
+To verify the response against the TSA CA chain:
+
+```bash
+curl -fsS https://ca.trufo.ai/.well-known/est/ctsa/cacerts -o ca_chain.p7b
+base64 -d ca_chain.p7b > ca_chain.der
+openssl pkcs7 -in ca_chain.der -inform DER -print_certs -out ca_chain.pem
+openssl ts -verify -data test_data.txt -in response.tsr -CAfile ca_chain.pem
+```
+
+Expected output: `Verification: OK`.
 
 ## Revocation and Rotation
 
