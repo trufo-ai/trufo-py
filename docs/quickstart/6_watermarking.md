@@ -130,7 +130,7 @@ result = bind_watermark(api_key, media_bytes)
 # 2. sign result.media with YOUR certificate; the manifest must declare the
 #    mark: a c2pa.soft-binding assertion (alg "ai.trufo.pawprint.watermark",
 #    value = result.wid) paired with a c2pa.watermarked.bound action
-store_bytes = my_signer(result.media, wid=result.wid)  # the C2PA manifest store
+store_bytes = your_signer(result.media, wid=result.wid)  # the C2PA manifest store
 
 # 3. the commit verifies the declaration and completes the record
 bind_commit(api_key, result.cid, result.wid, manifest_bytes=store_bytes)
@@ -143,20 +143,24 @@ from trufo import bind_reserve, watermark_media, bind_commit
 
 reservation = bind_reserve(api_key, "image/jpeg")          # 1. Trufo issues the ID
 marked = watermark_media(media_bytes, reservation.wid_package)  # 2. you embed
-store_bytes = my_signer(marked, wid=reservation.wid)      # 3. you sign
+store_bytes = your_signer(marked, wid=reservation.wid)    # 3. you sign
 bind_commit(api_key, reservation.cid, reservation.wid, manifest_bytes=store_bytes)  # 4.
 ```
 
-The commit's manifest source is one of: `manifest_bytes=` (the store itself, what validators fetch), `signed_media_bytes=` (the signed file; the store is read out locally, which needs `trufo[local-sign-only]`), or `manifest_id=` with `manifest_endpoint=` when the manifest lives in your own C2PA manifest store and Trufo should only record its id. Add `manifest_endpoint=` to any form to have Trufo refer validators to your store instead of hosting the manifest:
+If you have `trufo[local-sign-only]` or `trufo[local-full]` installed, you can also directly pass in the media file `signed_media_bytes=` instead of manifest `manifest_bytes=`.
+
+### Custom Manifest Storage
+
+By default Trufo stores the committed manifest and serves it to validators that resolve the watermark. To keep manifests in your own C2PA manifest store instead, add `manifest_endpoint=` to the commit. This works the same way on the tpls and lpls routes:
 
 ```python
-bind_commit(api_key, result.cid, result.wid, manifest_bytes=store_bytes,
+bind_commit(api_key, cid, wid, manifest_bytes=store_bytes,
             manifest_endpoint="https://manifests.example.com/c2pa")
 ```
 
-The commit fails with a 400 — and the record stays incomplete — until the manifest declares the mark correctly; your certificate itself is not judged, only the declaration. A reservation lasts 24 hours (1 hour on the test host); an uncommitted mark never resolves.
+Trufo checks that the manifest declares the soft-binding correctly (an error is returned otherwise) and records only the manifest ID (required for soft-binding to work). If you prefer to not upload the manifest, you may commit with `manifest_id=` (the active manifest's urn) instead of `manifest_bytes=`.
 
-Bind has no `effort_policy`: the watermark is always required, and an unsupported format is an error. See the [API reference](../api/api_c2pa.md#standalone-binding) for schemas.
+When a validator resolves the watermark, Trufo's soft-binding resolution service returns the `manifestId` with your `manifest_endpoint` as the match's `endpoint`. Per the C2PA Soft Binding Resolution API, the validator then requests `GET {manifest_endpoint}/manifests/{manifestId}`. That request must return the C2PA manifest store you committed, the same bytes as `manifest_bytes`, for as long as the mark should resolve.
 
 ## Managing Your Marks
 
