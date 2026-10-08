@@ -228,12 +228,23 @@ signed_bytes = sign_c2pa_distributed_test(
 )
 ```
 
-Use `sign_c2pa_distributed()` with a `c2pa-sign-prod` key for production. Both
-helpers load the TSA key from the SDK credential path automatically; pass
+For production, swap the helper and the key:
+
+```python
+from trufo import sign_c2pa_distributed
+
+api_key = load_api_key(TrufoApiKey.C2PA_SIGN_PROD)
+signed_bytes = sign_c2pa_distributed(api_key, media_bytes)
+```
+
+Both helpers load the TSA key from the SDK credential path automatically; pass
 `tsa_api_key="..."` to override.
 
-Distributed signing does not support every feature — notably `transcode` — and
-runs only on Linux x86_64 with CPython 3.12.
+Note that some features are not yet available in distributed signing, such as
+`transcode`. The distributed signing package currently only runs on Linux x86_64
+with CPython 3.12, but we are adding support for others; if you have a specific
+request, email [support@trufo.ai](mailto:support@trufo.ai) and we will do our best
+to prioritize the release.
 
 ---
 
