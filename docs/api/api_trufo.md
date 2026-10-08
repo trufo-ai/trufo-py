@@ -11,10 +11,11 @@ endpoint: request format, errors, warnings, and regions.
 
 ## Common Declarations
 
-### Every endpoint is POST
+### Every endpoint is POST, except task status
 
-The Trufo API is uniformly `POST` with a JSON body, including read operations.
-Endpoints that take no parameters accept an empty object `{}`.
+The Trufo API is `POST` with a JSON body, including read operations; the one
+exception is `GET /tasks/{task_id}`. Endpoints that take no parameters accept an
+empty object `{}`.
 
 ### Authentication
 
