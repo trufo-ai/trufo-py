@@ -87,7 +87,9 @@ Beyond the platform-wide codes in [api_trufo.md](api_trufo.md):
 | 403 | `MissingOrganizationValidation` | Production signing before OV completes |
 | 403 | `InvalidC2PACustomDomain` | The label's domain is not domain-validated for your organization |
 | 403 | `NoEligiblePlan` | The organization lacks the required plan |
+| 403 | `BPVNotActive: <reason>` | Branded Product Validation (BPV) for the generator product is not active; the detail explains why |
 | 404 | *(message)* | Unknown `ai_disclosure_id` or `software_agent_id` |
+| 404 | `GProductNotFound` | No such generator product in your organization |
 
 **Retries and billing.** A sign is metered when it completes, so a failed request
 never bills. Retries are not deduplicated: if a request completed but its response
@@ -127,6 +129,7 @@ permanent signing record.
 | `manifest_title` | string | No | The manifest title of the signed output asset. Omitted from the manifest when unset. |
 | `ingredient_title` | string | No | The ingredient title assigned to the input asset (parent, via a `c2pa.opened` action). When unset: the input's manifest title, if it exists; otherwise, `input.{ext}`. |
 | `manifest_settings` | object | No | Structured titles, thumbnail settings, and `all_actions_included`. |
+| `gp_id` | string | No | One of your organization's branded generator products (`gp_...`); the content is signed as that product. Omit to sign with Trufo's own C2PA signer. |
 
 \* Provide exactly one: bytes for REQUEST, an S3 reference for TASK. There is no
 automatic fallback. REQUEST has a 10 MB (10,000,000-byte) input cap; audio/video

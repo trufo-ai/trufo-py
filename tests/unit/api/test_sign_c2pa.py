@@ -188,6 +188,7 @@ class TestDirectC2PASigning:
                     size=ThumbnailSize.HIGH,
                 ),
             ),
+            gp_id="gp_x",
         )
 
         assert result == signed
@@ -210,6 +211,7 @@ class TestDirectC2PASigning:
                         "size": "high",
                     },
                 },
+                "gp_id": "gp_x",
             },
             headers=_expected_headers("prod-key"),
             timeout=60,
@@ -485,6 +487,24 @@ class TestS3C2PASigning:
             headers=_expected_headers("prod-key"),
             timeout=60,
         )
+
+    @patch("trufo.api.tps.sign_c2pa._download_task_output")
+    @patch("trufo.api.tps.sign_c2pa.wait_for_task")
+    @patch("trufo.api.tps.sign_c2pa._upload_task_input")
+    @patch("trufo.api.tps.sign_c2pa.requests.post")
+    def test_sign_c2pa_task_submits_gp_id(self, mock_post, mock_upload, mock_wait, mock_download):
+        mock_post.return_value = _accepted_task()
+        mock_upload.return_value = "signed-input-reference"
+
+        sign_c2pa(
+            "prod-key",
+            b"input-media",
+            execution_mode=ExecutionMode.TASK,
+            mime_type="image/jpeg",
+            gp_id="gp_x",
+        )
+
+        assert mock_post.call_args.kwargs["json"]["gp_id"] == "gp_x"
 
     @patch("trufo.api.tps.sign_c2pa.requests.post")
     def test_s3_request_and_test_signing_reject_before_network(self, mock_post):
