@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.6.0] — 2026-10-09
+
+### Added
+
+- `gp_id` on `sign_c2pa`, `submit_c2pa_sign`, and `sign_c2pa_test`: the ID of one
+  of your organization's branded generator products; the content is signed as
+  that product. Omit it to sign with Trufo's own C2PA signer.
+- `request_c2pa_test_cert` accepts keyword-only `country`, the certificate
+  subject's country (C), and `record_id`, the product record UUID embedded in
+  the certificate.
+
+### Changed
+
+- Local-engine extras require trufo-provenance 1.8.
+
 ## [1.5.4] — 2026-10-09
 
 ### Changed
@@ -469,7 +484,8 @@ Minor-version bump marks the general availability of the production C2PA signing
 - `trufo.intf`: credential storage and loading (env vars + file), CLI entry point.
 - PyPI trusted publishing via GitHub Actions (OIDC, no API tokens required).
 
-[Unreleased]: https://github.com/trufo-ai/trufo-py/compare/v1.5.4...HEAD
+[Unreleased]: https://github.com/trufo-ai/trufo-py/compare/v1.6.0...HEAD
+[1.6.0]: https://github.com/trufo-ai/trufo-py/compare/v1.5.4...v1.6.0
 [1.5.4]: https://github.com/trufo-ai/trufo-py/compare/v1.5.3...v1.5.4
 [1.5.3]: https://github.com/trufo-ai/trufo-py/compare/v1.5.2...v1.5.3
 [1.5.2]: https://github.com/trufo-ai/trufo-py/compare/v1.5.1...v1.5.2
