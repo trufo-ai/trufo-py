@@ -291,7 +291,7 @@ def get_c2pa_s3_upload_url(
     Args:
         api_key: API key with scope ``c2pa-sign-prod`` or ``c2pa-sign-test``.
         mime_type: MIME type of the object to upload.
-        duration: Optional server-supported duration value. Currently ``"5m"``.
+        duration: Optional, ``"5m"`` or ``"standard"``; ignored by the server.
         trufo_api_url: Freeform Trufo API base URL. Defaults to production.
 
     Returns:
@@ -447,7 +447,7 @@ def sign_c2pa_via_s3(
         mime_type: MIME type of the media file.
         actions: Ordered list of ``[action_name, params]`` pairs (default ``[]``).
         assertions: List of ``[assertion_name, params]`` pairs (default ``[]``).
-        duration: Optional server-supported S3 URL duration. Currently ``"5m"``.
+        duration: Optional, ``"5m"`` or ``"standard"``; ignored by the server.
         manifest_title: Optional active-manifest title (``dc:title``); see the
             module docstring for when to set this explicitly.
         ingredient_title: Optional ``parentOf`` ingredient title (``dc:title``);

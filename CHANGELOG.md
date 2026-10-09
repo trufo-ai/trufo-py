@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.4] — 2026-10-09
+
+### Changed
+
+- The S3 upload `duration` (`"5m"` or `"standard"`) is ignored; responses report
+  it as `"standard"`. Uploads stay valid for 1 hour and outputs downloadable for
+  24 hours.
+- Documented the upload and download windows, and the S3 task flow with curl.
+
 ## [1.5.3] — 2026-09-27
 
 ### Changed
@@ -460,7 +469,8 @@ Minor-version bump marks the general availability of the production C2PA signing
 - `trufo.intf`: credential storage and loading (env vars + file), CLI entry point.
 - PyPI trusted publishing via GitHub Actions (OIDC, no API tokens required).
 
-[Unreleased]: https://github.com/trufo-ai/trufo-py/compare/v1.5.3...HEAD
+[Unreleased]: https://github.com/trufo-ai/trufo-py/compare/v1.5.4...HEAD
+[1.5.4]: https://github.com/trufo-ai/trufo-py/compare/v1.5.3...v1.5.4
 [1.5.3]: https://github.com/trufo-ai/trufo-py/compare/v1.5.2...v1.5.3
 [1.5.2]: https://github.com/trufo-ai/trufo-py/compare/v1.5.1...v1.5.2
 [1.5.1]: https://github.com/trufo-ai/trufo-py/compare/v1.5.0...v1.5.1

@@ -173,14 +173,24 @@ with the same request and response; use `/io/get-s3-upload-url` instead.
 | Field | Type | Required | Description |
 | ----- | ---- | -------- | ----------- |
 | `mime_type` | string | Yes | MIME type of the object you will upload |
-| `duration` | string | No | Currently `"5m"` |
+| `duration` | string | No | `"5m"` or `"standard"`; ignored |
 
 **Response (200):** `media_input_s3` (opaque reference), `upload_url` (presigned PUT
-— send the same `Content-Type`), `expires_at`, `duration`.
+— send the same `Content-Type`), `expires_at`, `duration` (always `"standard"`).
 
 Upload, then call `/c2pa/sign` or `/bind/watermark` with `media_input_s3` and
 `execution_mode: "task"`. Arbitrary S3 URLs are not accepted. Trufo checks the
 uploaded bytes rather than trusting the declared type.
+
+### Upload and download windows
+
+| Link | Valid for |
+| --- | --- |
+| `upload_url` and `media_input_s3` | 1 hour, until `expires_at` |
+| Output `download_url` | Up to 15 minutes; poll `GET /tasks/{task_id}` for a fresh link until `expires_ts`, 24 hours after the task finishes |
+
+Uploaded and output files are deleted automatically 1–2 days after they are created.
+A link works for anyone who holds it until it expires; treat links as secrets.
 
 ### Tasks
 
@@ -204,6 +214,35 @@ key for the same organization and operation. Status is `queued`, `running`,
 `download_url`; it is null after the retained output expires. Task info contains
 no media bytes. Polling does not retry a failed task. Watermark completion does
 not replace the subsequent `/bind/commit` step.
+
+### S3 task flow
+
+The full flow with curl, signing a video:
+
+```bash
+API=https://api.trufo.ai
+AUTH="X-API-Key: c2pa-sign-prod:<key>"
+
+# 1. allocate an upload
+curl -s -X POST "$API/io/get-s3-upload-url" -H "$AUTH" \
+  -H "Content-Type: application/json" -d '{"mime_type": "video/mp4"}'
+# {"media_input_s3": "trufos3://…", "upload_url": "https://…", "expires_at": …, "duration": "standard"}
+
+# 2. upload with the same Content-Type
+curl -s -X PUT "<upload_url>" -H "Content-Type: video/mp4" --data-binary @input.mp4
+
+# 3. submit the task (HTTP 202)
+curl -s -X POST "$API/c2pa/sign" -H "$AUTH" -H "Content-Type: application/json" \
+  -d '{"media_input_s3": "<media_input_s3>", "execution_mode": "task", "actions": [["publish", {}]]}'
+# {"task_id": "…", "task_type": "c2pa_sign", "status": "queued", …}
+
+# 4. poll until "status" is "succeeded" (or "failed" or "expired")
+curl -s "$API/tasks/<task_id>" -H "$AUTH"
+# {"status": "succeeded", "result": {"download_url": "https://…", "expires_ts": "…", …}, …}
+
+# 5. download the signed file
+curl -s -o signed.mp4 "<download_url>"
+```
 
 ### Distributed signing
 

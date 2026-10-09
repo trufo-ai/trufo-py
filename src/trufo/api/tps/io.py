@@ -35,7 +35,7 @@ def get_s3_upload_url(
 
     PUT the media bytes to ``upload_url`` with the supplied Content-Type.
     Submit ``media_input_s3`` to the same API region after the upload succeeds.
-    ``duration`` may be omitted or set to ``"5m"``.
+    ``duration`` may be omitted, ``"5m"`` or ``"standard"``; it is ignored.
     """
     body = {"mime_type": mime_type}
     if duration is not None:
