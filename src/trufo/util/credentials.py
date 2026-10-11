@@ -33,7 +33,7 @@ Environment variables (programmatic — CI/CD, containers):
 Each credential has exactly one source: env var OR file. The env var
 takes precedence — if set, the file is ignored for that credential.
 
-``TrufoApiKey`` values match the server-side ``ApiKeyScope`` wire names,
+``TrufoApiKey`` values match the server-side ``APIKeyScope`` wire names,
 so the enum doubles as the scope identifier when creating keys in the
 Trufo dashboard.
 """
@@ -54,7 +54,7 @@ _FILE_PERMISSIONS = stat.S_IRUSR | stat.S_IWUSR  # 0o600
 
 
 class TrufoApiKey(str, Enum):
-    """API key types. Values match the server-side ``ApiKeyScope``."""
+    """API key types. Values match the server-side ``APIKeyScope``."""
 
     TRUFO_API = "trufo-api"
     C2PA_SIGN_PROD = "c2pa-sign-prod"
