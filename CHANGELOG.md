@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.6.0] — 2026-10-09
+## [2.0.0] — 2026-10-11
 
 ### Added
 
@@ -20,7 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Local-engine extras require trufo-provenance 1.8.
+- Local-engine extras require trufo-provenance 2.0.
 
 ### Deprecated
 
@@ -491,8 +491,8 @@ Minor-version bump marks the general availability of the production C2PA signing
 - `trufo.intf`: credential storage and loading (env vars + file), CLI entry point.
 - PyPI trusted publishing via GitHub Actions (OIDC, no API tokens required).
 
-[Unreleased]: https://github.com/trufo-ai/trufo-py/compare/v1.6.0...HEAD
-[1.6.0]: https://github.com/trufo-ai/trufo-py/compare/v1.5.4...v1.6.0
+[Unreleased]: https://github.com/trufo-ai/trufo-py/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/trufo-ai/trufo-py/compare/v1.5.4...v2.0.0
 [1.5.4]: https://github.com/trufo-ai/trufo-py/compare/v1.5.3...v1.5.4
 [1.5.3]: https://github.com/trufo-ai/trufo-py/compare/v1.5.2...v1.5.3
 [1.5.2]: https://github.com/trufo-ai/trufo-py/compare/v1.5.1...v1.5.2
