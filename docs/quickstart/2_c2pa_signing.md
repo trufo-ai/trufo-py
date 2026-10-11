@@ -64,6 +64,15 @@ signed_bytes = sign_c2pa(api_key, media_bytes)
 Production signing requires completed OV; without it the API returns
 `403 MissingOrganizationValidation`.
 
+To sign as one of your organization's branded generator products, pass its ID. The ID (`gp_...`)
+is on the dashboard's C2PA Signing API page, **Manage** tab, on the product's card; keeping it in a
+named setting makes it easy to reuse:
+
+```python
+BRANDED_GP_ID = "gp_..."  # dashboard: C2PA Signing API > Manage
+signed_bytes = sign_c2pa(api_key, media_bytes, branded_gp_id=BRANDED_GP_ID)
+```
+
 ---
 
 ## Manifest Settings
