@@ -46,6 +46,7 @@ from trufo.api.headers import sdk_headers
 from trufo.api.tps.io import _upload_task_input
 from trufo.api.tps.tasks import ExecutionMode, TaskReceipt, _submit_task, wait_for_task, _download_task_output
 from trufo.c2pa.watermark import WatermarkMode
+from trufo.util.deprecation import deprecated_aliases
 
 _ENGINE_HINT = (
     "Local watermarking requires the Trufo engine. Install it with: "
@@ -59,7 +60,7 @@ _C2PA_HINT = (
 
 
 @dataclass(frozen=True)
-class BindWatermark:
+class BindWatermarkResult:
     """Result of :func:`bind_watermark`.
 
     ``cid`` addresses the record for the commit step.
@@ -71,7 +72,7 @@ class BindWatermark:
 
 
 @dataclass(frozen=True)
-class BindReservation:
+class BindReserveResult:
     """Result of :func:`bind_reserve`: the record and the watermark ID to embed.
 
     ``wid_package`` is what :func:`watermark_media` consumes; ``expires_at`` is
@@ -83,10 +84,6 @@ class BindReservation:
     expires_at: str
     # the package exactly as the server issued it, so fields added later pass through
     wid_package: dict = field(default_factory=dict)
-
-
-BindWatermarkResult = BindWatermark
-BindReserveResult = BindReservation
 
 
 def _post(api_key: str, url: str, body: dict) -> dict:
@@ -339,3 +336,8 @@ def bind_commit_test(
         signed_media_bytes=signed_media_bytes,
         trufo_api_url=trufo_api_url,
     )
+
+
+__getattr__ = deprecated_aliases(
+    globals(), {"BindWatermark": "BindWatermarkResult", "BindReservation": "BindReserveResult"}
+)

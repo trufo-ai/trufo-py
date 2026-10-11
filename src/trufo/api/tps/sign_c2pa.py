@@ -37,7 +37,7 @@ from trufo.api.endpoints import (
     TRUFO_TSA_URL,
 )
 from trufo.api.headers import sdk_headers
-from trufo.api.tps.io import C2PAS3Upload, GetS3UploadURLResult, get_s3_upload_url, _upload_task_input
+from trufo.api.tps.io import GetS3UploadURLResult, get_s3_upload_url, _upload_task_input
 from trufo.api.tps.tasks import (
     ExecutionMode, TaskReceipt, _submit_task, wait_for_task, _download_task_output,
 )
@@ -47,12 +47,13 @@ from trufo.c2pa.manifest import ManifestSettings
 from trufo.c2pa.redactions import RedactableAssertion, RedactionReason
 from trufo.c2pa.watermark import WatermarkEffort, WatermarkMode
 from trufo.util.credentials import TrufoAPIKey, load_api_key
+from trufo.util.deprecation import deprecated_aliases
 from trufo.util.optional_imports import require_provenance_module
 from trufo.util.warnings import emit_server_warnings
 
 
 @dataclass(frozen=True)
-class C2PAS3SignedOutput:
+class SignC2PAS3Result:
     """Ephemeral S3 signed output reference."""
 
     media_output_s3: str
@@ -60,9 +61,6 @@ class C2PAS3SignedOutput:
     task_id: str | None = None
     cid: str | None = None
     wid: str | None = None
-
-
-SignC2PAS3Result = C2PAS3SignedOutput
 
 
 def _manifest_settings_payload(settings: ManifestSettings) -> dict:
@@ -824,3 +822,8 @@ def sign_c2pa_distributed(
         ),
     )
     return signed
+
+
+__getattr__ = deprecated_aliases(
+    globals(), {"C2PAS3SignedOutput": "SignC2PAS3Result", "C2PAS3Upload": "GetS3UploadURLResult"}
+)

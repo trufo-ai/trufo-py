@@ -41,12 +41,11 @@ Trufo dashboard.
 import json
 import os
 import stat
-import warnings
 from enum import Enum
 from pathlib import Path
-from typing import Any
 
 from trufo.api.session import TrufoSession
+from trufo.util.deprecation import deprecated_aliases
 
 CONFIG_DIR = Path.home() / ".trufo"
 CREDENTIALS_DIR = CONFIG_DIR / "credentials"
@@ -219,11 +218,4 @@ def clear_session() -> None:
         SESSION_FILE.unlink()
 
 
-def __getattr__(name: str) -> Any:
-    """Serve ``TrufoApiKey``, the deprecated name of :class:`TrufoAPIKey`."""
-    if name == "TrufoApiKey":
-        warnings.warn(
-            "TrufoApiKey is deprecated; use TrufoAPIKey.", DeprecationWarning, stacklevel=2
-        )
-        return TrufoAPIKey
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+__getattr__ = deprecated_aliases(globals(), {"TrufoApiKey": "TrufoAPIKey"})

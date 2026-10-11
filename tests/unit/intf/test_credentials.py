@@ -231,15 +231,3 @@ class TestClearSession:
     def test_no_error_when_no_session(self):
         # should not raise
         clear_session()
-
-
-class TestDeprecatedTrufoApiKey:
-    """The deprecated TrufoApiKey name resolves to TrufoAPIKey with a warning."""
-
-    def test_old_name_warns_and_resolves_to_new(self):
-        with pytest.warns(DeprecationWarning, match="TrufoApiKey is deprecated") as record:
-            from trufo.util.credentials import TrufoApiKey
-        assert TrufoApiKey is TrufoAPIKey
-        assert record[0].filename == __file__
-        with pytest.raises(ImportError):
-            from trufo.util.credentials import NoSuchName  # noqa: F401

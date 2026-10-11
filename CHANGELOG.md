@@ -25,6 +25,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Deprecated
 
 - `TrufoApiKey`: use `TrufoAPIKey`.
+- `C2PAS3Upload`, `ContentRecovery`, `BindWatermark`, `BindReservation`, and
+  `C2PAS3SignedOutput`: use `GetS3UploadURLResult`, `RecoverContentResult`,
+  `BindWatermarkResult`, `BindReserveResult`, and `SignC2PAS3Result`.
 
 ## [1.5.4] — 2026-10-09
 
