@@ -33,7 +33,7 @@ Environment variables (programmatic — CI/CD, containers):
 Each credential has exactly one source: env var OR file. The env var
 takes precedence — if set, the file is ignored for that credential.
 
-``TrufoApiKey`` values match the server-side ``APIKeyScope`` wire names,
+``TrufoAPIKey`` values match the server-side ``APIKeyScope`` wire names,
 so the enum doubles as the scope identifier when creating keys in the
 Trufo dashboard.
 """
@@ -41,8 +41,10 @@ Trufo dashboard.
 import json
 import os
 import stat
+import warnings
 from enum import Enum
 from pathlib import Path
+from typing import Any
 
 from trufo.api.session import TrufoSession
 
@@ -53,7 +55,7 @@ SESSION_FILE = CONFIG_DIR / "session"
 _FILE_PERMISSIONS = stat.S_IRUSR | stat.S_IWUSR  # 0o600
 
 
-class TrufoApiKey(str, Enum):
+class TrufoAPIKey(str, Enum):
     """API key types. Values match the server-side ``APIKeyScope``."""
 
     TRUFO_API = "trufo-api"
@@ -72,24 +74,24 @@ _SESSION_REFRESH_TOKEN_ENV_VAR = "TRUFO_REFRESH_TOKEN"
 
 # "trufo-api" uses a short env var to avoid the awkward TRUFO_TRUFO_API_API_KEY
 _API_KEY_ENV_VARS = {
-    TrufoApiKey.TRUFO_API: "TRUFO_API_KEY",
-    TrufoApiKey.C2PA_SIGN_PROD: "TRUFO_C2PA_SIGN_PROD_API_KEY",
-    TrufoApiKey.C2PA_SIGN_TEST: "TRUFO_C2PA_SIGN_TEST_API_KEY",
-    TrufoApiKey.CONTENT_RECOVER_TEST: "TRUFO_CONTENT_RECOVER_TEST_API_KEY",
-    TrufoApiKey.CONTENT_RECOVER_PROD: "TRUFO_CONTENT_RECOVER_PROD_API_KEY",
-    TrufoApiKey.WATERMARK_TEST: "TRUFO_WATERMARK_TEST_API_KEY",
-    TrufoApiKey.WATERMARK_PROD: "TRUFO_WATERMARK_PROD_API_KEY",
-    TrufoApiKey.TSA: "TRUFO_TSA_API_KEY",
+    TrufoAPIKey.TRUFO_API: "TRUFO_API_KEY",
+    TrufoAPIKey.C2PA_SIGN_PROD: "TRUFO_C2PA_SIGN_PROD_API_KEY",
+    TrufoAPIKey.C2PA_SIGN_TEST: "TRUFO_C2PA_SIGN_TEST_API_KEY",
+    TrufoAPIKey.CONTENT_RECOVER_TEST: "TRUFO_CONTENT_RECOVER_TEST_API_KEY",
+    TrufoAPIKey.CONTENT_RECOVER_PROD: "TRUFO_CONTENT_RECOVER_PROD_API_KEY",
+    TrufoAPIKey.WATERMARK_TEST: "TRUFO_WATERMARK_TEST_API_KEY",
+    TrufoAPIKey.WATERMARK_PROD: "TRUFO_WATERMARK_PROD_API_KEY",
+    TrufoAPIKey.TSA: "TRUFO_TSA_API_KEY",
 }
 _API_KEY_FILES = {
-    TrufoApiKey.TRUFO_API: CREDENTIALS_DIR / "trufo_api_key",
-    TrufoApiKey.C2PA_SIGN_PROD: CREDENTIALS_DIR / "c2pa_sign_prod_api_key",
-    TrufoApiKey.C2PA_SIGN_TEST: CREDENTIALS_DIR / "c2pa_sign_test_api_key",
-    TrufoApiKey.CONTENT_RECOVER_TEST: CREDENTIALS_DIR / "content_recover_test_api_key",
-    TrufoApiKey.CONTENT_RECOVER_PROD: CREDENTIALS_DIR / "content_recover_prod_api_key",
-    TrufoApiKey.WATERMARK_TEST: CREDENTIALS_DIR / "watermark_test_api_key",
-    TrufoApiKey.WATERMARK_PROD: CREDENTIALS_DIR / "watermark_prod_api_key",
-    TrufoApiKey.TSA: CREDENTIALS_DIR / "tsa_api_key",
+    TrufoAPIKey.TRUFO_API: CREDENTIALS_DIR / "trufo_api_key",
+    TrufoAPIKey.C2PA_SIGN_PROD: CREDENTIALS_DIR / "c2pa_sign_prod_api_key",
+    TrufoAPIKey.C2PA_SIGN_TEST: CREDENTIALS_DIR / "c2pa_sign_test_api_key",
+    TrufoAPIKey.CONTENT_RECOVER_TEST: CREDENTIALS_DIR / "content_recover_test_api_key",
+    TrufoAPIKey.CONTENT_RECOVER_PROD: CREDENTIALS_DIR / "content_recover_prod_api_key",
+    TrufoAPIKey.WATERMARK_TEST: CREDENTIALS_DIR / "watermark_test_api_key",
+    TrufoAPIKey.WATERMARK_PROD: CREDENTIALS_DIR / "watermark_prod_api_key",
+    TrufoAPIKey.TSA: CREDENTIALS_DIR / "tsa_api_key",
 }
 
 
@@ -100,29 +102,29 @@ def _write_private(path: Path, content: str) -> None:
     path.chmod(_FILE_PERMISSIONS)
 
 
-def _resolve_api_key_type(key_type: str | TrufoApiKey) -> TrufoApiKey:
-    """Resolve a string or TrufoApiKey to TrufoApiKey.
+def _resolve_api_key_type(key_type: str | TrufoAPIKey) -> TrufoAPIKey:
+    """Resolve a string or TrufoAPIKey to TrufoAPIKey.
 
     Raises:
         ValueError: If *key_type* is not a valid API key type.
     """
-    if isinstance(key_type, TrufoApiKey):
+    if isinstance(key_type, TrufoAPIKey):
         return key_type
     try:
-        return TrufoApiKey(key_type)
+        return TrufoAPIKey(key_type)
     except ValueError:
-        valid = ", ".join(k.value for k in TrufoApiKey)
+        valid = ", ".join(k.value for k in TrufoAPIKey)
         raise ValueError(f"Invalid API key type: {key_type!r} (expected {valid})") from None
 
 
 # --- API key ---
 
 
-def load_api_key(key_type: str | TrufoApiKey) -> str | None:
+def load_api_key(key_type: str | TrufoAPIKey) -> str | None:
     """Load an API key from env var or credentials file.
 
     Args:
-        key_type: A ``TrufoApiKey`` member or its string value (e.g.
+        key_type: A ``TrufoAPIKey`` member or its string value (e.g.
             ``"trufo-api"``, ``"c2pa-sign-prod"``, ``"c2pa-sign-test"``,
             ``"tsa"``).
 
@@ -147,11 +149,11 @@ def load_api_key(key_type: str | TrufoApiKey) -> str | None:
     return None
 
 
-def save_api_key(key_type: str | TrufoApiKey, api_key: str) -> None:
+def save_api_key(key_type: str | TrufoAPIKey, api_key: str) -> None:
     """Write an API key to ``~/.trufo/credentials/``.
 
     Args:
-        key_type: A ``TrufoApiKey`` member or its string value.
+        key_type: A ``TrufoAPIKey`` member or its string value.
         api_key: The API key value.
 
     Raises:
@@ -215,3 +217,13 @@ def clear_session() -> None:
     """Remove ~/.trufo/session if it exists."""
     if SESSION_FILE.exists():
         SESSION_FILE.unlink()
+
+
+def __getattr__(name: str) -> Any:
+    """Serve ``TrufoApiKey``, the deprecated name of :class:`TrufoAPIKey`."""
+    if name == "TrufoApiKey":
+        warnings.warn(
+            "TrufoApiKey is deprecated; use TrufoAPIKey.", DeprecationWarning, stacklevel=2
+        )
+        return TrufoAPIKey
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

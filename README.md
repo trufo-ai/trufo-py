@@ -18,9 +18,9 @@ With a `c2pa-sign-test` API key from [app.trufo.ai](https://app.trufo.ai) (see t
 from pathlib import Path
 
 from trufo import sign_c2pa_test
-from trufo.util.credentials import TrufoApiKey, load_api_key
+from trufo.util.credentials import TrufoAPIKey, load_api_key
 
-api_key = load_api_key(TrufoApiKey.C2PA_SIGN_TEST)
+api_key = load_api_key(TrufoAPIKey.C2PA_SIGN_TEST)
 
 signed_bytes = sign_c2pa_test(api_key, Path("input.jpg").read_bytes())
 Path("signed.jpg").write_bytes(signed_bytes)

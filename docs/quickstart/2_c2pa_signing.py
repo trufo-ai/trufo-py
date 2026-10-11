@@ -20,14 +20,14 @@ from trufo import (
     TrufoServerWarning,
     sign_c2pa_test,
 )
-from trufo.util.credentials import TrufoApiKey, load_api_key
+from trufo.util.credentials import TrufoAPIKey, load_api_key
 
 # --- configuration ---
 
 INPUT_FILE = Path("photo.jpg")
 OUTPUT_FILE = Path("signed.jpg")
 
-api_key = load_api_key(TrufoApiKey.C2PA_SIGN_TEST)
+api_key = load_api_key(TrufoAPIKey.C2PA_SIGN_TEST)
 assert api_key, (
     "Set TRUFO_C2PA_SIGN_TEST_API_KEY or run: trufo set-api-key c2pa-sign-test <KEY>"
 )

@@ -105,9 +105,9 @@ distributed signing.
 
 ```python
 from trufo import sign_c2pa
-from trufo.util.credentials import TrufoApiKey, load_api_key
+from trufo.util.credentials import TrufoAPIKey, load_api_key
 
-api_key = load_api_key(TrufoApiKey.C2PA_SIGN_PROD)
+api_key = load_api_key(TrufoAPIKey.C2PA_SIGN_PROD)
 
 signed_bytes = sign_c2pa(
     api_key,

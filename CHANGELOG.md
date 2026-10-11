@@ -22,6 +22,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Local-engine extras require trufo-provenance 1.8.
 
+### Deprecated
+
+- `TrufoApiKey`: use `TrufoAPIKey`.
+
 ## [1.5.4] — 2026-10-09
 
 ### Changed

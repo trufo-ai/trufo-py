@@ -46,7 +46,7 @@ from trufo.c2pa.assertions import UserAssertion
 from trufo.c2pa.manifest import ManifestSettings
 from trufo.c2pa.redactions import RedactableAssertion, RedactionReason
 from trufo.c2pa.watermark import WatermarkEffort, WatermarkMode
-from trufo.util.credentials import TrufoApiKey, load_api_key
+from trufo.util.credentials import TrufoAPIKey, load_api_key
 from trufo.util.optional_imports import require_provenance_module
 from trufo.util.warnings import emit_server_warnings
 
@@ -674,7 +674,7 @@ def _resolve_tsa_api_key(tsa_api_key: str | None) -> str:
             raise ValueError("tsa_api_key cannot be empty.")
         return resolved_key
 
-    configured_key = load_api_key(TrufoApiKey.TSA)
+    configured_key = load_api_key(TrufoAPIKey.TSA)
     if configured_key is None:
         raise RuntimeError(
             "A TSA API key is required for remote C2PA signing. Pass tsa_api_key "
@@ -740,7 +740,7 @@ def sign_c2pa_distributed_test(
             api_key=resolved_tsa_api_key,
             url=trufo_tsa_url,
         ),
-        ocsp_stapler=ocsp_stapler_mod.OcspStapler(),
+        ocsp_stapler=ocsp_stapler_mod.OCSPStapler(),
         trufo_api_url=trufo_api_url,
         test=True,
         manifest_title=manifest_title,
@@ -812,7 +812,7 @@ def sign_c2pa_distributed(
             api_key=resolved_tsa_api_key,
             url=trufo_tsa_url,
         ),
-        ocsp_stapler=ocsp_stapler_mod.OcspStapler(),
+        ocsp_stapler=ocsp_stapler_mod.OCSPStapler(),
         trufo_api_url=trufo_api_url,
         test=False,
         manifest_title=manifest_title,

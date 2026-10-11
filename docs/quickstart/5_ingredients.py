@@ -15,14 +15,14 @@ Requires INPUT_FILE to already have a C2PA manifest.
 from pathlib import Path
 
 from trufo import sign_c2pa
-from trufo.util.credentials import TrufoApiKey, load_api_key
+from trufo.util.credentials import TrufoAPIKey, load_api_key
 
 # --- configuration ---
 
 INPUT_FILE = Path("signed_photo.jpg")
 OUTPUT_FILE = Path("redacted.jpg")
 
-api_key = load_api_key(TrufoApiKey.C2PA_SIGN_PROD)
+api_key = load_api_key(TrufoAPIKey.C2PA_SIGN_PROD)
 assert api_key, (
     "Set TRUFO_C2PA_SIGN_PROD_API_KEY or run: trufo set-api-key c2pa-sign-prod <KEY>"
 )

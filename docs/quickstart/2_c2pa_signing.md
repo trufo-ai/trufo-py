@@ -42,9 +42,9 @@ The test output is not recognized by conformant C2PA validators.
 from pathlib import Path
 
 from trufo import sign_c2pa_test
-from trufo.util.credentials import TrufoApiKey, load_api_key
+from trufo.util.credentials import TrufoAPIKey, load_api_key
 
-api_key = load_api_key(TrufoApiKey.C2PA_SIGN_TEST)
+api_key = load_api_key(TrufoAPIKey.C2PA_SIGN_TEST)
 
 media_bytes = Path("input.jpg").read_bytes()
 signed_bytes = sign_c2pa_test(api_key, media_bytes)
@@ -57,7 +57,7 @@ For production, swap the helper and the key:
 ```python
 from trufo import sign_c2pa
 
-api_key = load_api_key(TrufoApiKey.C2PA_SIGN_PROD)
+api_key = load_api_key(TrufoAPIKey.C2PA_SIGN_PROD)
 signed_bytes = sign_c2pa(api_key, media_bytes)
 ```
 
@@ -127,7 +127,7 @@ upload → submit task → poll → download for you. This call blocks until com
 ```python
 from trufo import ExecutionMode, sign_c2pa
 
-api_key = load_api_key(TrufoApiKey.C2PA_SIGN_PROD)
+api_key = load_api_key(TrufoAPIKey.C2PA_SIGN_PROD)
 signed_bytes = sign_c2pa(
     api_key, media_bytes, mime_type="image/jpeg", execution_mode=ExecutionMode.TASK,
 )
@@ -167,9 +167,9 @@ from pathlib import Path
 
 import requests
 from trufo import get_s3_upload_url, submit_c2pa_sign, get_task, wait_for_task
-from trufo.util.credentials import TrufoApiKey, load_api_key
+from trufo.util.credentials import TrufoAPIKey, load_api_key
 
-api_key = load_api_key(TrufoApiKey.C2PA_SIGN_PROD)
+api_key = load_api_key(TrufoAPIKey.C2PA_SIGN_PROD)
 upload = get_s3_upload_url(api_key, mime_type="image/tiff")
 with Path("input.tiff").open("rb") as source:
     response = requests.put(
@@ -220,7 +220,7 @@ trufo set-api-key tsa <your-api-key>
 ```python
 from trufo import sign_c2pa_distributed_test
 
-api_key = load_api_key(TrufoApiKey.C2PA_SIGN_TEST)
+api_key = load_api_key(TrufoAPIKey.C2PA_SIGN_TEST)
 signed_bytes = sign_c2pa_distributed_test(
     api_key,
     media_bytes,
@@ -233,7 +233,7 @@ For production, swap the helper and the key:
 ```python
 from trufo import sign_c2pa_distributed
 
-api_key = load_api_key(TrufoApiKey.C2PA_SIGN_PROD)
+api_key = load_api_key(TrufoAPIKey.C2PA_SIGN_PROD)
 signed_bytes = sign_c2pa_distributed(api_key, media_bytes)
 ```
 

@@ -47,7 +47,7 @@ from trufo.c2pa import (
     ThumbnailSettings,
     ThumbnailSize,
 )
-from trufo.util.credentials import TrufoApiKey
+from trufo.util.credentials import TrufoAPIKey
 
 
 def _expected_headers(api_key: str) -> dict[str, str]:
@@ -111,7 +111,7 @@ def _install_fake_remote_stack(
             case "tfprov.c2pa_generator.remote_orchestrator":
                 return types.SimpleNamespace(generate_claim_remote=fake_generate_claim_remote)
             case "tfprov.c2pa_py.helpers.ocsp_stapler":
-                return types.SimpleNamespace(OcspStapler=fake_ocsp_stapler)
+                return types.SimpleNamespace(OCSPStapler=fake_ocsp_stapler)
             case "tfprov.c2pa_py.helpers.timestamper":
                 return types.SimpleNamespace(TrufoTimestamper=fake_timestamper)
         raise AssertionError(f"Unexpected optional import: {module_name}")
@@ -386,7 +386,7 @@ class TestRemoteC2PASigning:
         )
 
         assert signer("remote-sign-key", b"input-media") == b"signed"
-        assert key_types == [TrufoApiKey.TSA]
+        assert key_types == [TrufoAPIKey.TSA]
         assert calls["timestampers"][0].api_key == "configured-tsa-key"
 
     @pytest.mark.parametrize("signer", _REMOTE_SIGNERS)
