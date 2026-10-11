@@ -241,7 +241,7 @@ def _sign_c2pa_direct(
     ingredient_title: str | None = None,
     *,
     manifest_settings: ManifestSettings | None = None,
-    gp_id: str | None = None,
+    branded_gp_id: str | None = None,
     trufo_api_url: str = TRUFO_API_URL,
 ) -> bytes:
     """Sign media bytes through a C2PA signing endpoint."""
@@ -260,8 +260,8 @@ def _sign_c2pa_direct(
         body["ingredient_title"] = ingredient_title
     if manifest_settings is not None:
         body["manifest_settings"] = _manifest_settings_payload(manifest_settings)
-    if gp_id is not None:
-        body["gp_id"] = gp_id
+    if branded_gp_id is not None:
+        body["branded_gp_id"] = branded_gp_id
 
     resp = requests.post(
         trufo_api_url + endpoint,
@@ -315,7 +315,7 @@ def submit_c2pa_sign(
     ingredient_title: str | None = None,
     *,
     manifest_settings: ManifestSettings | None = None,
-    gp_id: str | None = None,
+    branded_gp_id: str | None = None,
     trufo_api_url: str = TRUFO_API_URL,
 ) -> TaskReceipt:
     """Submit an existing Trufo upload reference for signing without waiting.
@@ -338,8 +338,8 @@ def submit_c2pa_sign(
         body["ingredient_title"] = ingredient_title
     if manifest_settings is not None:
         body["manifest_settings"] = _manifest_settings_payload(manifest_settings)
-    if gp_id is not None:
-        body["gp_id"] = gp_id
+    if branded_gp_id is not None:
+        body["branded_gp_id"] = branded_gp_id
 
     return _submit_task(api_key, TPS_C2PA_SIGN, body, trufo_api_url=trufo_api_url)
 
@@ -548,7 +548,7 @@ def sign_c2pa(
     ingredient_title: str | None = None,
     *,
     manifest_settings: ManifestSettings | None = None,
-    gp_id: str | None = None,
+    branded_gp_id: str | None = None,
     execution_mode: ExecutionMode = ExecutionMode.REQUEST,
     mime_type: str | None = None,
     wait_seconds: float = 600,
@@ -569,9 +569,9 @@ def sign_c2pa(
         ingredient_title: Optional ``parentOf`` ingredient title (``dc:title``);
             see the module docstring for when to set this explicitly.
         manifest_settings: Optional structured C2PA manifest settings.
-        gp_id: Generator product ID (``gp_...``) of one of your organization's
-            branded generator products; the content is signed as that product.
-            Omit to sign with Trufo's own C2PA signer.
+        branded_gp_id: ID (``gp_...``) of one of your organization's branded
+            generator products; the content is signed as that product. Omit to
+            sign with Trufo's own C2PA signer.
         trufo_api_url: Freeform Trufo API base URL. Defaults to production.
 
     Returns:
@@ -595,7 +595,8 @@ def sign_c2pa(
         reference = _upload_task_input(api_key, media_bytes, mime_type, trufo_api_url=trufo_api_url)
         receipt = submit_c2pa_sign(
             api_key, reference, actions, assertions, manifest_title, ingredient_title,
-            manifest_settings=manifest_settings, gp_id=gp_id, trufo_api_url=trufo_api_url,
+            manifest_settings=manifest_settings, branded_gp_id=branded_gp_id,
+            trufo_api_url=trufo_api_url,
         )
         task = wait_for_task(api_key, receipt.task_id, wait_seconds=wait_seconds, trufo_api_url=trufo_api_url)
         return _download_task_output(task)
@@ -608,7 +609,7 @@ def sign_c2pa(
         manifest_title=manifest_title,
         ingredient_title=ingredient_title,
         manifest_settings=manifest_settings,
-        gp_id=gp_id,
+        branded_gp_id=branded_gp_id,
         trufo_api_url=trufo_api_url,
     )
 
@@ -622,7 +623,7 @@ def sign_c2pa_test(
     ingredient_title: str | None = None,
     *,
     manifest_settings: ManifestSettings | None = None,
-    gp_id: str | None = None,
+    branded_gp_id: str | None = None,
     execution_mode: ExecutionMode = ExecutionMode.REQUEST,
     trufo_api_url: str = TRUFO_API_URL_TEST,
 ) -> bytes:
@@ -638,9 +639,9 @@ def sign_c2pa_test(
         ingredient_title: Optional ``parentOf`` ingredient title (``dc:title``);
             see the module docstring for when to set this explicitly.
         manifest_settings: Optional structured C2PA manifest settings.
-        gp_id: Generator product ID (``gp_...``) of one of your organization's
-            branded generator products; the content is signed as that product.
-            Omit to sign with Trufo's own C2PA signer.
+        branded_gp_id: ID (``gp_...``) of one of your organization's branded
+            generator products; the content is signed as that product. Omit to
+            sign with Trufo's own C2PA signer.
         trufo_api_url: Trufo API base URL. Defaults to the Trufo test host (test.api.trufo.ai).
 
     Returns:
@@ -659,7 +660,7 @@ def sign_c2pa_test(
         manifest_title=manifest_title,
         ingredient_title=ingredient_title,
         manifest_settings=manifest_settings,
-        gp_id=gp_id,
+        branded_gp_id=branded_gp_id,
         trufo_api_url=trufo_api_url,
     )
 

@@ -11,9 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- `gp_id` on `sign_c2pa`, `submit_c2pa_sign`, and `sign_c2pa_test`: the ID of one
-  of your organization's branded generator products; the content is signed as
-  that product. Omit it to sign with Trufo's own C2PA signer.
+- `branded_gp_id` on `sign_c2pa`, `submit_c2pa_sign`, and `sign_c2pa_test`: the
+  ID of one of your organization's branded generator products; the content is
+  signed as that product. Omit it to sign with Trufo's own C2PA signer.
 - `request_c2pa_test_cert` accepts keyword-only `country`, the certificate
   subject's country (C), and `record_id`, the product record UUID embedded in
   the certificate.

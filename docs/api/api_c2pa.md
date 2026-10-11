@@ -129,7 +129,7 @@ permanent signing record.
 | `manifest_title` | string | No | The manifest title of the signed output asset. Omitted from the manifest when unset. |
 | `ingredient_title` | string | No | The ingredient title assigned to the input asset (parent, via a `c2pa.opened` action). When unset: the input's manifest title, if it exists; otherwise, `input.{ext}`. |
 | `manifest_settings` | object | No | Structured titles, thumbnail settings, and `all_actions_included`. |
-| `gp_id` | string | No | One of your organization's branded generator products (`gp_...`); the content is signed as that product. Omit to sign with Trufo's own C2PA signer. |
+| `branded_gp_id` | string | No | One of your organization's branded generator products (`gp_...`); the content is signed as that product. Omit to sign with Trufo's own C2PA signer. |
 
 \* Provide exactly one: bytes for REQUEST, an S3 reference for TASK. There is no
 automatic fallback. REQUEST has a 10 MB (10,000,000-byte) input cap; audio/video
