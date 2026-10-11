@@ -29,7 +29,7 @@ signed_bytes = sign_c2pa(
 
 ## Branded provenance declarations
 
-The forms below require a branded business product. The API rejects them when
+The forms below require a branded generator product. The API rejects them when
 the signing organization is not authorized.
 
 Use `parentOf` when asset A was edited into the supplied asset B. Record the

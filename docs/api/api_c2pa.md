@@ -372,7 +372,7 @@ existing history, never the output of a transform in the same call.
 
 Ordered `[name, params]` pairs. Assertions are gathered unless their documented
 schema fixes or permits created placement. Created declarations require an
-authorized branded business product.
+authorized branded generator product.
 
 | Assertion | Params | C2PA label |
 | --------- | ------ | ---------- |
