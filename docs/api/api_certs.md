@@ -239,6 +239,9 @@ mechanically but are **not** trusted for production or C2PA use, and the endpoin
 carries no availability guarantee. Use it to exercise an integration before
 obtaining a `tsa` key.
 
+`POST https://test.tsa.trufo.ai/api-key` returns the same test responses and
+requires `X-API-Key: test-api-key-header`, so a client can test sending the header.
+
 ---
 
 ## Registration Authority
