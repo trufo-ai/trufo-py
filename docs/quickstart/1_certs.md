@@ -183,7 +183,9 @@ credentials. The instructions below are for your own signing toolchain.
 
 `create_signer::from_keys` accepts a TSA URL but no headers. This wrapper adds
 `timestamp_request_headers()`. Set `TRUFO_TSA_API_KEY` in your process environment
-or secret manager; keep it outside source control.
+or secret manager; keep it outside source control. To try the wrapper before you have
+a key, use `https://test.tsa.trufo.ai/api-key` with the key `test-api-key-header`
+([test endpoint](../api/api_certs.md#test-endpoint)).
 
 Supply an ES256 certificate chain (`signing-chain.pem`), matching private key
 (`private-key.pem`), C2PA manifest definition (`manifest.json`), and `input.jpg`.
