@@ -27,7 +27,7 @@ guarantee detection or recovery of an ID.
 | WAV, FLAC, MP3, M4A | `audio/wav`, `audio/flac`, `audio/mpeg`, `audio/mp4` | Yes | Yes | Yes | Yes |
 | MP4, MOV | `video/mp4`, `video/quicktime` | Yes | Yes | Yes | Yes |
 | AVIF, JPEG XL, DNG, PDF | `image/avif`, `image/jxl`, `image/x-adobe-dng`, `application/pdf` | Yes | Yes | No | No |
-| Raw AAC (ADTS) | `audio/aac` | Yes | Yes | No | Yes |
+| Raw AAC (ADTS) | `audio/aac` | No | No | No | Yes |
 | HEIC/HEIF, GIF, BMP | `image/heic`, `image/heif`, `image/gif`, `image/bmp` | No | No | No | Yes |
 | SVG, WebM, AVI | `image/svg+xml`, `video/webm`, `video/avi`, `video/x-msvideo` | No | No | No | No |
 
