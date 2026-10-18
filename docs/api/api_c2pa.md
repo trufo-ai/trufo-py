@@ -109,7 +109,7 @@ of them, except where noted.
 | | Hosted | Hosted (S3) | Distributed |
 | --- | --- | --- | --- |
 | Entry | `POST /c2pa/sign` | `/io/get-s3-upload-url` → upload → `POST /c2pa/sign` with TASK | `sign_c2pa_distributed()` (SDK only) |
-| Media reaches Trufo | Yes, in the body | Yes, via ephemeral S3 | **No** — only the claim hash |
+| Media reaches Trufo | Yes, in the body | Yes, via ephemeral S3 | **No** — the original media file is not sent |
 | Manifest assembled by | Trufo | Trufo | Your process (`trufo-provenance`) |
 | Signing key | Trufo | Trufo | Trufo |
 | Extra requirements | — | — | Local engine extra, `tsa` key, Linux x86_64 + CPython 3.12 |
@@ -251,9 +251,9 @@ curl -s -o signed.mp4 "<download_url>"
 
 ### Distributed signing
 
-Distributed signing keeps media entirely on your machine: `trufo-provenance`
-assembles and hashes the C2PA claim locally, and only the claim hash is sent to
-Trufo to be signed.
+Distributed signing keeps media on your machine: `trufo-provenance` assembles
+and hashes the C2PA claim locally for Trufo to sign; the original media file is
+not sent.
 
 This flow is available **exclusively through the SDK**. It is a multi-step protocol
 in which the client and server exchange state that must stay consistent for the

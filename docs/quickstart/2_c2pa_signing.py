@@ -61,8 +61,8 @@ for notice in caught:
 
 
 # --- 3. distributed signing --------------------------------------------------
-# The manifest is assembled locally and only the claim hash reaches Trufo, so
-# the media never leaves this machine.
+# The manifest is assembled locally and Trufo signs its claim; the original
+# media file is not sent.
 #
 # Requires:  pip install "trufo[local-sign-only]"   (or "trufo[local-full]")
 #            plus a tsa API key for RFC 3161 timestamping.

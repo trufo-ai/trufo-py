@@ -37,6 +37,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `C2PAS3Upload`, `ContentRecovery`, `BindWatermark`, `BindReservation`, and
   `C2PAS3SignedOutput`: use `GetS3UploadURLResult`, `RecoverContentResult`,
   `BindWatermarkResult`, `BindReserveResult`, and `SignC2PAS3Result`.
+- Distributed signing from `trufo-py` 1.x (`trufo-provenance` ≤1.7) is refused
+  by the Trufo API from 2026-12-31; upgrade to 2.0.0 before then.
 
 ## [1.5.4] — 2026-10-09
 

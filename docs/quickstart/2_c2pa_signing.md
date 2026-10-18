@@ -28,7 +28,7 @@ organization — see [Automatic assertions](../api/api_c2pa.md#automatic-asserti
 | ---- | -------- | ------------------- | ------------------ |
 | Simple | Default choice | Yes, in the request body | None |
 | S3 | Media is large | Yes, via an ephemeral upload | None |
-| Distributed | Media must not leave your infrastructure | No — only the claim hash | `trufo[local-sign-only]` or `[local-full]`, a `tsa` key, Linux x86_64 + CPython 3.12 |
+| Distributed | Media must not leave your infrastructure | No — the original media file is not sent | `trufo[local-sign-only]` or `[local-full]`, a `tsa` key, Linux x86_64 + CPython 3.12 |
 
 The test helpers target the test host (`test.api.trufo.ai`) and need no OV; you can use
 them to test basic API functions before making a production-signed asset.
@@ -216,7 +216,7 @@ expired task; its `.task` contains the status and error code. Increasing
 ## Distributed Signing
 
 `sign_c2pa_distributed()` builds the C2PA claim inside your own process and calls
-Trufo only to sign the claim hash. The media file never leaves your machine.
+Trufo to sign the claim hash. The original media file is not sent.
 
 Install a local engine extra (see the [README](../../README.md#optional-local-engine)
 for the private-index setup) and configure a `tsa` key for RFC 3161 timestamping:

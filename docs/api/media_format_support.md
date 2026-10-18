@@ -34,8 +34,9 @@ guarantee detection or recovery of an ID.
 Types not listed as eligible are unsupported. C2PA operations still require a
 parseable file and a compatible native backend. For example, TIFF/DNG directory
 structures, offsets, and existing C2PA tags must pass backend validation;
-MIME eligibility does not bypass those guards. The watermark restrictions below
-do not define C2PA codec or pixel-depth limits.
+MIME eligibility does not bypass those guards. C2PA signing and watermark
+operations accept images of at most 400 million pixels. The watermark
+restrictions below do not define C2PA codec or pixel-depth limits.
 
 Media type is detected from the content. Supplying a MIME type does not bypass
 file checks. Common aliases are normalized: `audio/x-wav` and `audio/vnd.wave`
@@ -47,8 +48,8 @@ DNG identity tags distinguish DNG from ordinary TIFF.
 
 ## Image restrictions
 
-These restrictions apply to watermark operations. Images must be static, with
-at most 400 million pixels. Animation and image sequences are unsupported;
+These restrictions apply to watermark operations. Images must be static.
+Animation and image sequences are unsupported;
 JPEG gain maps identified by Adobe HDR gain-map XMP are rejected.
 Supported alpha is straight (unassociated); watermark processing
 retains alpha and fully transparent source pixels. Lossy re-encoding can still
