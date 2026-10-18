@@ -18,7 +18,7 @@ from pathlib import Path
 from trufo import TrufoServerWarning, recover_content, sign_c2pa_test
 from trufo.api.endpoints import TRUFO_API_URL_TEST
 from trufo.c2pa import WatermarkEffort
-from trufo.util.credentials import TrufoApiKey, load_api_key
+from trufo.util.credentials import TrufoAPIKey, load_api_key
 
 # --- configuration ---
 
@@ -26,7 +26,7 @@ from trufo.util.credentials import TrufoApiKey, load_api_key
 INPUT_FILE = Path("photo.jpg")
 OUTPUT_FILE = Path("watermarked.jpg")
 
-api_key = load_api_key(TrufoApiKey.C2PA_SIGN_TEST)
+api_key = load_api_key(TrufoAPIKey.C2PA_SIGN_TEST)
 assert api_key, (
     "Set TRUFO_C2PA_SIGN_TEST_API_KEY or run: trufo set-api-key c2pa-sign-test <KEY>"
 )
@@ -73,7 +73,7 @@ else:
 # Works even after the C2PA manifest has been stripped — re-encoded, screenshot,
 # or run through a metadata-scrubbing pipeline.
 
-recover_key = load_api_key(TrufoApiKey.CONTENT_RECOVER_TEST)
+recover_key = load_api_key(TrufoAPIKey.CONTENT_RECOVER_TEST)
 if recover_key:
     # test keys recover against the test host; recover_content defaults to prod
     result = recover_content(

@@ -37,7 +37,7 @@ from trufo.api.endpoints import (
     TRUFO_TSA_URL,
 )
 from trufo.api.headers import sdk_headers
-from trufo.api.tps.io import C2PAS3Upload, GetS3UploadURLResult, get_s3_upload_url, _upload_task_input
+from trufo.api.tps.io import GetS3UploadURLResult, get_s3_upload_url, _upload_task_input
 from trufo.api.tps.tasks import (
     ExecutionMode, TaskReceipt, _submit_task, wait_for_task, _download_task_output,
 )
@@ -46,13 +46,14 @@ from trufo.c2pa.assertions import UserAssertion
 from trufo.c2pa.manifest import ManifestSettings
 from trufo.c2pa.redactions import RedactableAssertion, RedactionReason
 from trufo.c2pa.watermark import WatermarkEffort, WatermarkMode
-from trufo.util.credentials import TrufoApiKey, load_api_key
+from trufo.util.credentials import TrufoAPIKey, load_api_key
+from trufo.util.deprecation import deprecated_aliases
 from trufo.util.optional_imports import require_provenance_module
 from trufo.util.warnings import emit_server_warnings
 
 
 @dataclass(frozen=True)
-class C2PAS3SignedOutput:
+class SignC2PAS3Result:
     """Ephemeral S3 signed output reference."""
 
     media_output_s3: str
@@ -60,9 +61,6 @@ class C2PAS3SignedOutput:
     task_id: str | None = None
     cid: str | None = None
     wid: str | None = None
-
-
-SignC2PAS3Result = C2PAS3SignedOutput
 
 
 def _manifest_settings_payload(settings: ManifestSettings) -> dict:
@@ -243,6 +241,7 @@ def _sign_c2pa_direct(
     ingredient_title: str | None = None,
     *,
     manifest_settings: ManifestSettings | None = None,
+    branded_gp_id: str | None = None,
     trufo_api_url: str = TRUFO_API_URL,
 ) -> bytes:
     """Sign media bytes through a C2PA signing endpoint."""
@@ -261,6 +260,8 @@ def _sign_c2pa_direct(
         body["ingredient_title"] = ingredient_title
     if manifest_settings is not None:
         body["manifest_settings"] = _manifest_settings_payload(manifest_settings)
+    if branded_gp_id is not None:
+        body["branded_gp_id"] = branded_gp_id
 
     resp = requests.post(
         trufo_api_url + endpoint,
@@ -314,6 +315,7 @@ def submit_c2pa_sign(
     ingredient_title: str | None = None,
     *,
     manifest_settings: ManifestSettings | None = None,
+    branded_gp_id: str | None = None,
     trufo_api_url: str = TRUFO_API_URL,
 ) -> TaskReceipt:
     """Submit an existing Trufo upload reference for signing without waiting.
@@ -336,6 +338,8 @@ def submit_c2pa_sign(
         body["ingredient_title"] = ingredient_title
     if manifest_settings is not None:
         body["manifest_settings"] = _manifest_settings_payload(manifest_settings)
+    if branded_gp_id is not None:
+        body["branded_gp_id"] = branded_gp_id
 
     return _submit_task(api_key, TPS_C2PA_SIGN, body, trufo_api_url=trufo_api_url)
 
@@ -544,6 +548,7 @@ def sign_c2pa(
     ingredient_title: str | None = None,
     *,
     manifest_settings: ManifestSettings | None = None,
+    branded_gp_id: str | None = None,
     execution_mode: ExecutionMode = ExecutionMode.REQUEST,
     mime_type: str | None = None,
     wait_seconds: float = 600,
@@ -564,6 +569,9 @@ def sign_c2pa(
         ingredient_title: Optional ``parentOf`` ingredient title (``dc:title``);
             see the module docstring for when to set this explicitly.
         manifest_settings: Optional structured C2PA manifest settings.
+        branded_gp_id: ID (``gp_...``) of one of your organization's branded
+            generator products; the content is signed as that product. Omit to
+            sign with Trufo's own C2PA signer.
         trufo_api_url: Freeform Trufo API base URL. Defaults to production.
 
     Returns:
@@ -587,7 +595,8 @@ def sign_c2pa(
         reference = _upload_task_input(api_key, media_bytes, mime_type, trufo_api_url=trufo_api_url)
         receipt = submit_c2pa_sign(
             api_key, reference, actions, assertions, manifest_title, ingredient_title,
-            manifest_settings=manifest_settings, trufo_api_url=trufo_api_url,
+            manifest_settings=manifest_settings, branded_gp_id=branded_gp_id,
+            trufo_api_url=trufo_api_url,
         )
         task = wait_for_task(api_key, receipt.task_id, wait_seconds=wait_seconds, trufo_api_url=trufo_api_url)
         return _download_task_output(task)
@@ -600,6 +609,7 @@ def sign_c2pa(
         manifest_title=manifest_title,
         ingredient_title=ingredient_title,
         manifest_settings=manifest_settings,
+        branded_gp_id=branded_gp_id,
         trufo_api_url=trufo_api_url,
     )
 
@@ -613,6 +623,7 @@ def sign_c2pa_test(
     ingredient_title: str | None = None,
     *,
     manifest_settings: ManifestSettings | None = None,
+    branded_gp_id: str | None = None,
     execution_mode: ExecutionMode = ExecutionMode.REQUEST,
     trufo_api_url: str = TRUFO_API_URL_TEST,
 ) -> bytes:
@@ -628,6 +639,9 @@ def sign_c2pa_test(
         ingredient_title: Optional ``parentOf`` ingredient title (``dc:title``);
             see the module docstring for when to set this explicitly.
         manifest_settings: Optional structured C2PA manifest settings.
+        branded_gp_id: ID (``gp_...``) of one of your organization's branded
+            generator products; the content is signed as that product. Omit to
+            sign with Trufo's own C2PA signer.
         trufo_api_url: Trufo API base URL. Defaults to the Trufo test host (test.api.trufo.ai).
 
     Returns:
@@ -646,6 +660,7 @@ def sign_c2pa_test(
         manifest_title=manifest_title,
         ingredient_title=ingredient_title,
         manifest_settings=manifest_settings,
+        branded_gp_id=branded_gp_id,
         trufo_api_url=trufo_api_url,
     )
 
@@ -658,7 +673,7 @@ def _resolve_tsa_api_key(tsa_api_key: str | None) -> str:
             raise ValueError("tsa_api_key cannot be empty.")
         return resolved_key
 
-    configured_key = load_api_key(TrufoApiKey.TSA)
+    configured_key = load_api_key(TrufoAPIKey.TSA)
     if configured_key is None:
         raise RuntimeError(
             "A TSA API key is required for remote C2PA signing. Pass tsa_api_key "
@@ -724,7 +739,7 @@ def sign_c2pa_distributed_test(
             api_key=resolved_tsa_api_key,
             url=trufo_tsa_url,
         ),
-        ocsp_stapler=ocsp_stapler_mod.OcspStapler(),
+        ocsp_stapler=ocsp_stapler_mod.OCSPStapler(),
         trufo_api_url=trufo_api_url,
         test=True,
         manifest_title=manifest_title,
@@ -796,7 +811,7 @@ def sign_c2pa_distributed(
             api_key=resolved_tsa_api_key,
             url=trufo_tsa_url,
         ),
-        ocsp_stapler=ocsp_stapler_mod.OcspStapler(),
+        ocsp_stapler=ocsp_stapler_mod.OCSPStapler(),
         trufo_api_url=trufo_api_url,
         test=False,
         manifest_title=manifest_title,
@@ -808,3 +823,8 @@ def sign_c2pa_distributed(
         ),
     )
     return signed
+
+
+__getattr__ = deprecated_aliases(
+    globals(), {"C2PAS3SignedOutput": "SignC2PAS3Result", "C2PAS3Upload": "GetS3UploadURLResult"}
+)

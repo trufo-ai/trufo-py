@@ -9,19 +9,17 @@ import requests
 
 from trufo.api.endpoints import TPS_GET_S3_UPLOAD_URL, TRUFO_API_URL
 from trufo.api.headers import sdk_headers
+from trufo.util.deprecation import deprecated_aliases
 
 
 @dataclass(frozen=True)
-class C2PAS3Upload:
+class GetS3UploadURLResult:
     """An upload URL and the Trufo reference to use after uploading."""
 
     upload_url: str
     media_input_s3: str
     expires_at: int
     duration: str
-
-
-GetS3UploadURLResult = C2PAS3Upload
 
 
 def get_s3_upload_url(
@@ -65,3 +63,6 @@ def _upload_task_input(api_key: str, media_bytes: bytes, mime_type: str | None, 
                             headers={"Content-Type": mime_type}, timeout=120)
     response.raise_for_status()
     return upload.media_input_s3
+
+
+__getattr__ = deprecated_aliases(globals(), {"C2PAS3Upload": "GetS3UploadURLResult"})

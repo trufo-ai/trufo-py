@@ -10,10 +10,11 @@ import requests
 
 from trufo.api.endpoints import TPS_CONTENT_RECOVER, TRUFO_API_URL
 from trufo.api.headers import sdk_headers
+from trufo.util.deprecation import deprecated_aliases
 
 
 @dataclass(frozen=True)
-class ContentRecovery:
+class RecoverContentResult:
     """Result of a watermark recovery call.
 
     A provenance mark carries the stored C2PA manifest store as ``manifest_bytes``
@@ -29,9 +30,6 @@ class ContentRecovery:
     manifest_bytes: bytes | None = None
     manifest_json: dict | None = None
     oid: str | None = None
-
-
-RecoverContentResult = ContentRecovery
 
 
 def recover_content(
@@ -87,3 +85,6 @@ def recover_content(
         manifest_json=payload.get("manifest_json"),
         oid=payload.get("oid"),
     )
+
+
+__getattr__ = deprecated_aliases(globals(), {"ContentRecovery": "RecoverContentResult"})

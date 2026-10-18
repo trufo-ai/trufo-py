@@ -14,11 +14,11 @@ Requires TRUFO_API_KEY env var or ~/.trufo/credentials/trufo_api_key.
 """
 
 from trufo.api.session import TrufoSession
-from trufo.util.credentials import TrufoApiKey, load_api_key, load_session, save_session
+from trufo.util.credentials import TrufoAPIKey, load_api_key, load_session, save_session
 
 # --- load api key ---
 
-api_key = load_api_key(TrufoApiKey.TRUFO_API)
+api_key = load_api_key(TrufoAPIKey.TRUFO_API)
 assert api_key, "trufo-api key not found. Set TRUFO_API_KEY or run: trufo set-api-key trufo-api <KEY>"
 
 # --- device authorization flow ---

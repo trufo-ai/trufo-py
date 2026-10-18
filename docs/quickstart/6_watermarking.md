@@ -50,9 +50,9 @@ Watermark, failing the sign if it cannot be embedded:
 
 ```python
 from trufo import sign_c2pa
-from trufo.util.credentials import TrufoApiKey, load_api_key
+from trufo.util.credentials import TrufoAPIKey, load_api_key
 
-api_key = load_api_key(TrufoApiKey.C2PA_SIGN_PROD)
+api_key = load_api_key(TrufoAPIKey.C2PA_SIGN_PROD)
 
 signed_bytes = sign_c2pa(
     api_key,
@@ -114,15 +114,15 @@ Additional notes for local embedding:
 
 ## Binding Without Trufo Signing (tpls and lpls)
 
-Requires an API key with the `watermark-prod` scope, an active C2PA Signing or Watermark API plan, and completed Organization Validation (`watermark-test` on the test host, where nothing is billed and no validation is needed). Store it with `trufo set-api-key watermark-prod <KEY>` and load it with `load_api_key(TrufoApiKey.WATERMARK_PROD)`. Production bills each bound asset as one watermark encode plus the bytes processed, and every committed record accrues soft-binding resolution maintenance (the watermark-to-manifest link kept for C2PA soft-binding resolution) per ID per day — see [billing](../api/api_c2pa.md#standalone-binding).
+Requires an API key with the `watermark-prod` scope, an active C2PA Signing or Watermark API plan, and completed Organization Validation (`watermark-test` on the test host, where nothing is billed and no validation is needed). Store it with `trufo set-api-key watermark-prod <KEY>` and load it with `load_api_key(TrufoAPIKey.WATERMARK_PROD)`. Production bills each bound asset as one watermark encode plus the bytes processed, and every committed record accrues soft-binding resolution maintenance (the watermark-to-manifest link kept for C2PA soft-binding resolution) per ID per day — see [billing](../api/api_c2pa.md#standalone-binding).
 
 If you sign C2PA manifests yourself (your own certificate and signing pipeline), bind gives you a Trufo watermark without handing Trufo the signature step. On the **tpls** route Trufo embeds the mark:
 
 ```python
 from trufo import bind_watermark, bind_commit
-from trufo.util.credentials import TrufoApiKey, load_api_key
+from trufo.util.credentials import TrufoAPIKey, load_api_key
 
-api_key = load_api_key(TrufoApiKey.WATERMARK_PROD)
+api_key = load_api_key(TrufoAPIKey.WATERMARK_PROD)
 
 # 1. Trufo embeds the mark and opens a record
 result = bind_watermark(api_key, media_bytes)
@@ -206,9 +206,9 @@ See [api_c2pa.md](../api/api_c2pa.md#signing-modes) for the full flow comparison
 ```python
 from trufo import recover_content
 from trufo.api.endpoints import TRUFO_API_URL_TEST
-from trufo.util.credentials import TrufoApiKey, load_api_key
+from trufo.util.credentials import TrufoAPIKey, load_api_key
 
-recover_key = load_api_key(TrufoApiKey.CONTENT_RECOVER_TEST)
+recover_key = load_api_key(TrufoAPIKey.CONTENT_RECOVER_TEST)
 
 result = recover_content(recover_key, media_bytes, trufo_api_url=TRUFO_API_URL_TEST)
 if result.detected:

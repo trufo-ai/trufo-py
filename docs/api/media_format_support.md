@@ -27,15 +27,16 @@ guarantee detection or recovery of an ID.
 | WAV, FLAC, MP3, M4A | `audio/wav`, `audio/flac`, `audio/mpeg`, `audio/mp4` | Yes | Yes | Yes | Yes |
 | MP4, MOV | `video/mp4`, `video/quicktime` | Yes | Yes | Yes | Yes |
 | AVIF, JPEG XL, DNG, PDF | `image/avif`, `image/jxl`, `image/x-adobe-dng`, `application/pdf` | Yes | Yes | No | No |
-| Raw AAC (ADTS) | `audio/aac` | Yes | Yes | No | Yes |
+| Raw AAC (ADTS) | `audio/aac` | No | No | No | Yes |
 | HEIC/HEIF, GIF, BMP | `image/heic`, `image/heif`, `image/gif`, `image/bmp` | No | No | No | Yes |
 | SVG, WebM, AVI | `image/svg+xml`, `video/webm`, `video/avi`, `video/x-msvideo` | No | No | No | No |
 
 Types not listed as eligible are unsupported. C2PA operations still require a
 parseable file and a compatible native backend. For example, TIFF/DNG directory
 structures, offsets, and existing C2PA tags must pass backend validation;
-MIME eligibility does not bypass those guards. The watermark restrictions below
-do not define C2PA codec or pixel-depth limits.
+MIME eligibility does not bypass those guards. C2PA signing and watermark
+operations accept images of at most 400 million pixels. The watermark
+restrictions below do not define C2PA codec or pixel-depth limits.
 
 Media type is detected from the content. Supplying a MIME type does not bypass
 file checks. Common aliases are normalized: `audio/x-wav` and `audio/vnd.wave`
@@ -47,8 +48,8 @@ DNG identity tags distinguish DNG from ordinary TIFF.
 
 ## Image restrictions
 
-These restrictions apply to watermark operations. Images must be static, with
-at most 400 million pixels. Animation and image sequences are unsupported;
+These restrictions apply to watermark operations. Images must be static.
+Animation and image sequences are unsupported;
 JPEG gain maps identified by Adobe HDR gain-map XMP are rejected.
 Supported alpha is straight (unassociated); watermark processing
 retains alpha and fully transparent source pixels. Lossy re-encoding can still

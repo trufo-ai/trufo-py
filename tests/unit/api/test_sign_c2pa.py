@@ -4,17 +4,11 @@
 """Unit tests for TPS C2PA signing helpers."""
 
 import base64
-import pickle
 import types
 from unittest.mock import MagicMock, patch
 
 import pytest
-from trufo import (
-    BindReserveResult, BindWatermarkResult, GetS3UploadURLResult,
-    RecoverContentResult, SignC2PAS3Result,
-)
-from trufo.api.tps.bind import BindReservation, BindWatermark
-from trufo.api.tps.recover import ContentRecovery
+from trufo import GetS3UploadURLResult, SignC2PAS3Result
 from trufo.api.endpoints import (
     TPS_GET_S3_UPLOAD_URL,
     TPS_C2PA_SIGN,
@@ -25,8 +19,6 @@ from trufo.api.endpoints import (
 from trufo.api.headers import sdk_headers
 from trufo.api.tps.tasks import ExecutionMode
 from trufo.api.tps.sign_c2pa import (
-    C2PAS3SignedOutput,
-    C2PAS3Upload,
     _validate_actions,
     _validate_assertions,
     _validate_redact_action,
@@ -47,7 +39,7 @@ from trufo.c2pa import (
     ThumbnailSettings,
     ThumbnailSize,
 )
-from trufo.util.credentials import TrufoApiKey
+from trufo.util.credentials import TrufoAPIKey
 
 
 def _expected_headers(api_key: str) -> dict[str, str]:
@@ -111,7 +103,7 @@ def _install_fake_remote_stack(
             case "tfprov.c2pa_generator.remote_orchestrator":
                 return types.SimpleNamespace(generate_claim_remote=fake_generate_claim_remote)
             case "tfprov.c2pa_py.helpers.ocsp_stapler":
-                return types.SimpleNamespace(OcspStapler=fake_ocsp_stapler)
+                return types.SimpleNamespace(OCSPStapler=fake_ocsp_stapler)
             case "tfprov.c2pa_py.helpers.timestamper":
                 return types.SimpleNamespace(TrufoTimestamper=fake_timestamper)
         raise AssertionError(f"Unexpected optional import: {module_name}")
@@ -188,6 +180,7 @@ class TestDirectC2PASigning:
                     size=ThumbnailSize.HIGH,
                 ),
             ),
+            branded_gp_id="gp_x",
         )
 
         assert result == signed
@@ -210,6 +203,7 @@ class TestDirectC2PASigning:
                         "size": "high",
                     },
                 },
+                "branded_gp_id": "gp_x",
             },
             headers=_expected_headers("prod-key"),
             timeout=60,
@@ -384,7 +378,7 @@ class TestRemoteC2PASigning:
         )
 
         assert signer("remote-sign-key", b"input-media") == b"signed"
-        assert key_types == [TrufoApiKey.TSA]
+        assert key_types == [TrufoAPIKey.TSA]
         assert calls["timestampers"][0].api_key == "configured-tsa-key"
 
     @pytest.mark.parametrize("signer", _REMOTE_SIGNERS)
@@ -418,19 +412,6 @@ class TestRemoteC2PASigning:
         assert caplog.records == []
 
 
-@pytest.mark.parametrize("current,legacy,module,name", [
-    (BindWatermarkResult, BindWatermark, "bind", "BindWatermark"),
-    (BindReserveResult, BindReservation, "bind", "BindReservation"),
-    (RecoverContentResult, ContentRecovery, "recover", "ContentRecovery"),
-    (GetS3UploadURLResult, C2PAS3Upload, "sign_c2pa", "C2PAS3Upload"),
-    (SignC2PAS3Result, C2PAS3SignedOutput, "sign_c2pa", "C2PAS3SignedOutput"),
-])
-def test_standard_result_names_preserve_published_class_identity(current, legacy, module, name):
-    assert current is legacy
-    # old pickles resolve their original module and class name
-    assert pickle.loads(f"ctrufo.api.tps.{module}\n{name}\n.".encode()) is current
-
-
 class TestS3C2PASigning:
     """Ephemeral S3 C2PA signing helpers."""
 
@@ -448,7 +429,7 @@ class TestS3C2PASigning:
         with pytest.warns(DeprecationWarning, match="use get_s3_upload_url"):
             upload = get_c2pa_s3_upload_url("api-key", "image/jpeg", duration="5m")
 
-        assert upload == C2PAS3Upload(
+        assert upload == GetS3UploadURLResult(
             upload_url="https://upload.example",
             media_input_s3="signed-input-reference",
             expires_at=1770000000,
@@ -486,6 +467,26 @@ class TestS3C2PASigning:
             timeout=60,
         )
 
+    @patch("trufo.api.tps.sign_c2pa._download_task_output")
+    @patch("trufo.api.tps.sign_c2pa.wait_for_task")
+    @patch("trufo.api.tps.sign_c2pa._upload_task_input")
+    @patch("trufo.api.tps.sign_c2pa.requests.post")
+    def test_sign_c2pa_task_submits_branded_gp_id(
+        self, mock_post, mock_upload, mock_wait, mock_download
+    ):
+        mock_post.return_value = _accepted_task()
+        mock_upload.return_value = "signed-input-reference"
+
+        sign_c2pa(
+            "prod-key",
+            b"input-media",
+            execution_mode=ExecutionMode.TASK,
+            mime_type="image/jpeg",
+            branded_gp_id="gp_x",
+        )
+
+        assert mock_post.call_args.kwargs["json"]["branded_gp_id"] == "gp_x"
+
     @patch("trufo.api.tps.sign_c2pa.requests.post")
     def test_s3_request_and_test_signing_reject_before_network(self, mock_post):
         with pytest.warns(DeprecationWarning, match="use submit_c2pa_sign"), \
@@ -508,13 +509,13 @@ class TestS3C2PASigning:
         mock_put,
         mock_get,
     ):
-        mock_get_upload_url.return_value = C2PAS3Upload(
+        mock_get_upload_url.return_value = GetS3UploadURLResult(
             upload_url="https://upload.example",
             media_input_s3="signed-input-reference",
             expires_at=1770000000,
             duration="5m",
         )
-        mock_sign_s3.return_value = C2PAS3SignedOutput(media_output_s3="output-reference", download_url="https://download.example")
+        mock_sign_s3.return_value = SignC2PAS3Result(media_output_s3="output-reference", download_url="https://download.example")
         mock_get.return_value.content = b"signed-media"
 
         result = sign_c2pa_via_s3(

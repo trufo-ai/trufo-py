@@ -94,9 +94,9 @@ export TRUFO_TSA_API_KEY=<your-api-key>
 **Load in code (automatically configured in this library):**
 
 ```python
-from trufo.util.credentials import TrufoApiKey, load_api_key
+from trufo.util.credentials import TrufoAPIKey, load_api_key
 
-api_key = load_api_key(TrufoApiKey.TRUFO_API)
+api_key = load_api_key(TrufoAPIKey.TRUFO_API)
 assert api_key, "Set TRUFO_API_KEY or run: trufo set-api-key trufo-api <KEY>"
 ```
 
@@ -144,9 +144,9 @@ The CLI falls back to this automatically if it cannot open a local listener, so
 
 ```python
 from trufo.api.session import TrufoSession
-from trufo.util.credentials import TrufoApiKey, load_api_key, save_session
+from trufo.util.credentials import TrufoAPIKey, load_api_key, save_session
 
-api_key = load_api_key(TrufoApiKey.TRUFO_API)
+api_key = load_api_key(TrufoAPIKey.TRUFO_API)
 
 session = TrufoSession()
 session.init_session(api_key=api_key)
@@ -189,10 +189,10 @@ For endpoints that accept an API key directly (e.g. the TPS signing endpoints), 
 
 ```python
 import requests
-from trufo.util.credentials import TrufoApiKey, load_api_key
+from trufo.util.credentials import TrufoAPIKey, load_api_key
 
 # the test host requires a c2pa-sign-test key
-test_key = load_api_key(TrufoApiKey.C2PA_SIGN_TEST)
+test_key = load_api_key(TrufoAPIKey.C2PA_SIGN_TEST)
 resp = requests.post(
     "https://test.api.trufo.ai/c2pa/sign",
     json={"media_input": "...", "actions": [], "assertions": []},

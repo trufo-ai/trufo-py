@@ -76,6 +76,21 @@ class TestRequestC2paTestCert:
         est_call_args = mock_enroll.call_args[0]
         assert est_call_args[2] == "c2pa-l2-test"
 
+    @patch("trufo.api.tca.certs_test.extract_cert_chain")
+    @patch("trufo.api.tca.certs_test.est_enroll")
+    @patch("trufo.api.tca.certs_test.build_csr")
+    def test_country_and_record_id_reach_csr_jwt(self, mock_csr, mock_enroll, mock_extract_chain):
+        mock_csr.return_value = b"c"
+        mock_enroll.return_value = b"e"
+        mock_extract_chain.return_value = b"ch"
+
+        request_c2pa_test_cert("O", "CN", b"k", country="US", record_id="rid-1")
+
+        csr_jwt = mock_enroll.call_args[0][0]
+        payload = pyjwt.decode(csr_jwt, TEST_HMAC_SECRET, algorithms=["HS256"], audience="tca-est")
+        assert payload["distinguished_name"]["C"] == "US"
+        assert payload["record_id"] == "rid-1"
+
 
 class TestRequestCawgTestCert:
     """request_cawg_test_cert orchestrates CAWG interim test enrollment."""

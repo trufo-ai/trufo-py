@@ -35,19 +35,19 @@ def _patch_config_paths(tmp_path, monkeypatch):
         tmp_path / ".trufo" / "session",
     )
     # patch the file lookup dict so it points into tmp_path
-    from trufo.util.credentials import TrufoApiKey
+    from trufo.util.credentials import TrufoAPIKey
 
     monkeypatch.setattr(
         "trufo.util.credentials._API_KEY_FILES",
         {
-            TrufoApiKey.TRUFO_API: creds_dir / "trufo_api_key",
-            TrufoApiKey.C2PA_SIGN_PROD: creds_dir / "c2pa_sign_prod_api_key",
-            TrufoApiKey.C2PA_SIGN_TEST: creds_dir / "c2pa_sign_test_api_key",
-            TrufoApiKey.CONTENT_RECOVER_TEST: creds_dir / "content_recover_test_api_key",
-            TrufoApiKey.CONTENT_RECOVER_PROD: creds_dir / "content_recover_prod_api_key",
-            TrufoApiKey.WATERMARK_TEST: creds_dir / "watermark_test_api_key",
-            TrufoApiKey.WATERMARK_PROD: creds_dir / "watermark_prod_api_key",
-            TrufoApiKey.TSA: creds_dir / "tsa_api_key",
+            TrufoAPIKey.TRUFO_API: creds_dir / "trufo_api_key",
+            TrufoAPIKey.C2PA_SIGN_PROD: creds_dir / "c2pa_sign_prod_api_key",
+            TrufoAPIKey.C2PA_SIGN_TEST: creds_dir / "c2pa_sign_test_api_key",
+            TrufoAPIKey.CONTENT_RECOVER_TEST: creds_dir / "content_recover_test_api_key",
+            TrufoAPIKey.CONTENT_RECOVER_PROD: creds_dir / "content_recover_prod_api_key",
+            TrufoAPIKey.WATERMARK_TEST: creds_dir / "watermark_test_api_key",
+            TrufoAPIKey.WATERMARK_PROD: creds_dir / "watermark_prod_api_key",
+            TrufoAPIKey.TSA: creds_dir / "tsa_api_key",
         },
     )
     # clear any real env vars so they don't leak into tests
@@ -56,7 +56,7 @@ def _patch_config_paths(tmp_path, monkeypatch):
 
 
 from trufo.util.credentials import (
-    TrufoApiKey,
+    TrufoAPIKey,
     clear_session,
     load_api_key,
     load_session,
@@ -66,22 +66,22 @@ from trufo.util.credentials import (
 
 # (enum, env var, credential file name) — the full scope matrix
 _ALL_SCOPES = [
-    (TrufoApiKey.TRUFO_API, "TRUFO_API_KEY", "trufo_api_key"),
-    (TrufoApiKey.C2PA_SIGN_PROD, "TRUFO_C2PA_SIGN_PROD_API_KEY", "c2pa_sign_prod_api_key"),
-    (TrufoApiKey.C2PA_SIGN_TEST, "TRUFO_C2PA_SIGN_TEST_API_KEY", "c2pa_sign_test_api_key"),
+    (TrufoAPIKey.TRUFO_API, "TRUFO_API_KEY", "trufo_api_key"),
+    (TrufoAPIKey.C2PA_SIGN_PROD, "TRUFO_C2PA_SIGN_PROD_API_KEY", "c2pa_sign_prod_api_key"),
+    (TrufoAPIKey.C2PA_SIGN_TEST, "TRUFO_C2PA_SIGN_TEST_API_KEY", "c2pa_sign_test_api_key"),
     (
-        TrufoApiKey.CONTENT_RECOVER_TEST,
+        TrufoAPIKey.CONTENT_RECOVER_TEST,
         "TRUFO_CONTENT_RECOVER_TEST_API_KEY",
         "content_recover_test_api_key",
     ),
     (
-        TrufoApiKey.CONTENT_RECOVER_PROD,
+        TrufoAPIKey.CONTENT_RECOVER_PROD,
         "TRUFO_CONTENT_RECOVER_PROD_API_KEY",
         "content_recover_prod_api_key",
     ),
-    (TrufoApiKey.WATERMARK_TEST, "TRUFO_WATERMARK_TEST_API_KEY", "watermark_test_api_key"),
-    (TrufoApiKey.WATERMARK_PROD, "TRUFO_WATERMARK_PROD_API_KEY", "watermark_prod_api_key"),
-    (TrufoApiKey.TSA, "TRUFO_TSA_API_KEY", "tsa_api_key"),
+    (TrufoAPIKey.WATERMARK_TEST, "TRUFO_WATERMARK_TEST_API_KEY", "watermark_test_api_key"),
+    (TrufoAPIKey.WATERMARK_PROD, "TRUFO_WATERMARK_PROD_API_KEY", "watermark_prod_api_key"),
+    (TrufoAPIKey.TSA, "TRUFO_TSA_API_KEY", "tsa_api_key"),
 ]
 
 
@@ -99,7 +99,7 @@ class TestLoadApiKey:
 
     def test_env_var_strips_whitespace(self, monkeypatch):
         monkeypatch.setenv("TRUFO_API_KEY", "  key  ")
-        assert load_api_key(TrufoApiKey.TRUFO_API) == "key"
+        assert load_api_key(TrufoAPIKey.TRUFO_API) == "key"
 
     @pytest.mark.parametrize("kt,_env,_fname", _ALL_SCOPES)
     def test_reads_from_file(self, kt, _env, _fname):
@@ -107,9 +107,9 @@ class TestLoadApiKey:
         assert load_api_key(kt) == f"file-{kt.value}"
 
     def test_env_var_takes_precedence(self, monkeypatch):
-        save_api_key(TrufoApiKey.TRUFO_API, "file-key")
+        save_api_key(TrufoAPIKey.TRUFO_API, "file-key")
         monkeypatch.setenv("TRUFO_API_KEY", "env-key")
-        assert load_api_key(TrufoApiKey.TRUFO_API) == "env-key"
+        assert load_api_key(TrufoAPIKey.TRUFO_API) == "env-key"
 
     def test_scopes_are_independent(self):
         for kt, _env, _fname in _ALL_SCOPES:

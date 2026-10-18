@@ -8,7 +8,7 @@ import sys
 
 from trufo.api.session import TrufoSession
 from trufo.util.credentials import (
-    TrufoApiKey,
+    TrufoAPIKey,
     clear_session,
     load_api_key,
     save_api_key,
@@ -30,7 +30,7 @@ def cmd_set_api_key(args: argparse.Namespace) -> None:
 
 def cmd_login(args: argparse.Namespace) -> None:
     """Authenticate, preferring the same-machine loopback flow."""
-    api_key = load_api_key(TrufoApiKey.TRUFO_API)
+    api_key = load_api_key(TrufoAPIKey.TRUFO_API)
     if not api_key:
         print(
             "No trufo-api key configured. Run: trufo set-api-key trufo-api <KEY>",
@@ -55,8 +55,8 @@ def register_subcommands(sub: argparse._SubParsersAction) -> None:
     p = sub.add_parser("set-api-key", help="Save an API key.")
     p.add_argument(
         "key_type",
-        choices=[k.value for k in TrufoApiKey],
-        help="API key scope (" + ", ".join(k.value for k in TrufoApiKey) + ").",
+        choices=[k.value for k in TrufoAPIKey],
+        help="API key scope (" + ", ".join(k.value for k in TrufoAPIKey) + ").",
     )
     p.add_argument("key", help="API key value.")
     p.set_defaults(func=cmd_set_api_key)

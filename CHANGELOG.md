@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.0] — 2026-10-11
+
+### Added
+
+- `branded_gp_id` on `sign_c2pa`, `submit_c2pa_sign`, and `sign_c2pa_test`: the
+  ID of one of your organization's branded generator products; the content is
+  signed as that product. Omit it to sign with Trufo's own C2PA signer.
+- `request_c2pa_test_cert` accepts keyword-only `country`, the certificate
+  subject's country (C), and `record_id`, the product record UUID embedded in
+  the certificate.
+
+### Changed
+
+- Local-engine extras require trufo-provenance 2.0.
+- First-party source-type marking (`set_source_type` with a first-party AI
+  disclosure) requires hosted signing; distributed signing returns
+  `400 UnsupportedDistributedFirstPartyAI`.
+- Created declarations (creation, `parentOf`, action history, or a created
+  placement) require hosted signing with `branded_gp_id`, limited to the source
+  types the branded generator product is approved for. A created C2PA action
+  requires a `digitalSourceType` unless its action is
+  [exempt](docs/api/api_c2pa.md#assertions). Other requests return
+  `403 C2PACreatedUserAssertionsNotAuthorized`.
+
+### Deprecated
+
+- `TrufoApiKey`: use `TrufoAPIKey`.
+- `C2PAS3Upload`, `ContentRecovery`, `BindWatermark`, `BindReservation`, and
+  `C2PAS3SignedOutput`: use `GetS3UploadURLResult`, `RecoverContentResult`,
+  `BindWatermarkResult`, `BindReserveResult`, and `SignC2PAS3Result`.
+- Distributed signing from `trufo-py` 1.x (`trufo-provenance` ≤1.7) is refused
+  by the Trufo API from 2026-12-31; upgrade to 2.0.0 before then.
+
 ## [1.5.4] — 2026-10-09
 
 ### Changed
@@ -469,7 +502,8 @@ Minor-version bump marks the general availability of the production C2PA signing
 - `trufo.intf`: credential storage and loading (env vars + file), CLI entry point.
 - PyPI trusted publishing via GitHub Actions (OIDC, no API tokens required).
 
-[Unreleased]: https://github.com/trufo-ai/trufo-py/compare/v1.5.4...HEAD
+[Unreleased]: https://github.com/trufo-ai/trufo-py/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/trufo-ai/trufo-py/compare/v1.5.4...v2.0.0
 [1.5.4]: https://github.com/trufo-ai/trufo-py/compare/v1.5.3...v1.5.4
 [1.5.3]: https://github.com/trufo-ai/trufo-py/compare/v1.5.2...v1.5.3
 [1.5.2]: https://github.com/trufo-ai/trufo-py/compare/v1.5.1...v1.5.2
