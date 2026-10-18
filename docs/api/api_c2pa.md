@@ -84,10 +84,12 @@ Beyond the platform-wide codes in [api_trufo.md](api_trufo.md):
 | 400 | *(message)* | Request validation — malformed `actions`/`assertions`, watermark contract violations, an unsatisfiable redaction |
 | 400 | `InvalidCawgIdentityId` | Unknown `cawg_identity_id` |
 | 400 | `MissingC2PACustomDomain` | A `custom` assertion without a label |
+| 400 | `UnsupportedDistributedFirstPartyAI` | First-party source-type marking in distributed signing; use hosted signing |
 | 403 | `MissingOrganizationValidation` | Production signing before OV completes |
 | 403 | `InvalidC2PACustomDomain` | The label's domain is not domain-validated for your organization |
 | 403 | `NoEligiblePlan` | The organization lacks the required plan |
 | 403 | `BPVNotActive: <reason>` | Branded Product Validation (BPV) for the generator product is not active; the detail explains why |
+| 403 | `C2PACreatedUserAssertionsNotAuthorized: <reason>` | A created declaration this request is not authorized to make (see [`assertions`](#assertions)); the detail explains why |
 | 404 | *(message)* | Unknown `ai_disclosure_id` or `software_agent_id` |
 | 404 | `GProductNotFound` | No such generator product in your organization |
 
@@ -102,7 +104,7 @@ delivery on the same terms; `/bind/commit` is idempotent for an identical retry.
 ## Signing Modes
 
 Three flows, one operation shape. `actions` and `assertions` behave identically in all
-of them.
+of them, except where noted.
 
 | | Hosted | Hosted (S3) | Distributed |
 | --- | --- | --- | --- |
@@ -371,8 +373,14 @@ existing history, never the output of a transform in the same call.
 ### `assertions`
 
 Ordered `[name, params]` pairs. Assertions are gathered unless their documented
-schema fixes or permits created placement. Created declarations require an
-authorized branded generator product.
+schema fixes or permits created placement. Created declarations require hosted
+signing with an authorized branded generator product (`branded_gp_id`), limited
+to the source types the product is approved for. A created C2PA action requires
+a `digitalSourceType`, except `c2pa.converted`, `c2pa.edited.metadata`,
+`c2pa.enhanced`, `c2pa.opened`, `c2pa.placed`, `c2pa.published`,
+`c2pa.redacted`, `c2pa.repackaged`, `c2pa.resized.proportional`,
+`c2pa.transcoded`, `c2pa.watermarked`, `c2pa.watermarked.bound`, and
+`c2pa.watermarked.unbound`.
 
 | Assertion | Params | C2PA label |
 | --------- | ------ | ---------- |
@@ -399,7 +407,8 @@ rejected.
 - Otherwise, sets `digitalSourceType = trainedAlgorithmicMedia` on the input
   ingredient. Support for this C2PA 2.4 ingredient field varies across validators.
 
-Distributed signing with first-party source-type marking requires `trufo-provenance>=1.5.0`.
+First-party source-type marking requires hosted signing; distributed signing
+returns `400 UnsupportedDistributedFirstPartyAI`.
 
 The first-party flag and software-agent link are registration metadata, not
 fields of the `c2pa.ai-disclosure` assertion or signing-request parameters.
@@ -459,7 +468,7 @@ of the asset, not a Trufo attestation.
 | `digital_source_type` | string | No | The IPTC `trainedAlgorithmicMedia` or `compositeWithTrainedAlgorithmicMedia` URI |
 | `media` | string | For `componentOf` | base64 bytes; must be a thumbnail-capable image (JPEG, PNG, WebP, GIF, TIFF) |
 | `placement` | string | No | `gathered` (default) or, when eligible and authorized, `created`; `parentOf` is always created |
-| `action_history` | list | No | Actions between a `parentOf` source and the supplied input; entries may independently set `placement` |
+| `action_history` | list | No | Actions between a `parentOf` source and the supplied input; entries may independently set `placement` and `digitalSourceType` |
 
 Media carrying its own C2PA manifest is validated and referenced; manifest-free
 media is thumbnailed as a described visual record, not a cryptographic binding, and

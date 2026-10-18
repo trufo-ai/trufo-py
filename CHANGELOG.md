@@ -21,6 +21,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Local-engine extras require trufo-provenance 2.0.
+- First-party source-type marking (`set_source_type` with a first-party AI
+  disclosure) requires hosted signing; distributed signing returns
+  `400 UnsupportedDistributedFirstPartyAI`.
+- Created declarations (creation, `parentOf`, action history, or a created
+  placement) require hosted signing with `branded_gp_id`, limited to the source
+  types the branded generator product is approved for. A created C2PA action
+  requires a `digitalSourceType` unless its action is
+  [exempt](docs/api/api_c2pa.md#assertions). Other requests return
+  `403 C2PACreatedUserAssertionsNotAuthorized`.
 
 ### Deprecated
 

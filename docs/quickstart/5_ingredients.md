@@ -29,14 +29,19 @@ signed_bytes = sign_c2pa(
 
 ## Branded provenance declarations
 
-The forms below require a branded generator product. The API rejects them when
-the signing organization is not authorized.
+The forms below require hosted signing with a branded generator product
+(`branded_gp_id`), limited to the source types the product is approved for. A
+created C2PA action needs a `digitalSourceType` unless its action is
+[exempt](../api/api_c2pa.md#assertions). Otherwise the API returns
+`403 C2PACreatedUserAssertionsNotAuthorized`.
 
 Use `parentOf` when asset A was edited into the supplied asset B. Record the
 operations between A and B in that ingredient's `action_history`; individual
 eligible entries can use `placement="created"`:
 
 ```python
+from trufo.c2pa import DigitalSourceType
+
 assertions = [[
     "ingredient",
     {
@@ -45,7 +50,11 @@ assertions = [[
         "media": source_a_base64,
         "action_history": [
             {"action": "c2pa.cropped"},
-            {"action": "c2pa.resized", "placement": "created"},
+            {
+                "action": "c2pa.resized",
+                "digitalSourceType": DigitalSourceType.ALGORITHMICALLY_ENHANCED.value,
+                "placement": "created",
+            },
         ],
     },
 ]]
