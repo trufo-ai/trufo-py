@@ -19,7 +19,7 @@ organization — see [Automatic assertions](../api/api_c2pa.md#automatic-asserti
 - A `c2pa-sign-test` API key for test signing, or a `c2pa-sign-prod` key plus
   completed Organization Validation (OV) for production. See [0_setup.md](0_setup.md).
 - `pip install trufo` — simple and S3 signing need nothing else. Distributed
-  signing additionally needs a local engine extra and a `tsa` key (below).
+  signing additionally needs a local engine extra (below).
 - Input matching the [media format support policy](../api/media_format_support.md).
 
 ## Choosing a Mode
@@ -28,7 +28,7 @@ organization — see [Automatic assertions](../api/api_c2pa.md#automatic-asserti
 | ---- | -------- | ------------------- | ------------------ |
 | Simple | Default choice | Yes, in the request body | None |
 | S3 | Media is large | Yes, via an ephemeral upload | None |
-| Distributed | Media must not leave your infrastructure | No — the original media file is not sent | `trufo[local-sign-only]` or `[local-full]`, a `tsa` key, Linux x86_64 + CPython 3.12 |
+| Distributed | Media must not leave your infrastructure | No — the original media file is not sent | `trufo[local-sign-only]` or `[local-full]`, Linux x86_64 + CPython 3.12 |
 
 The test helpers target the test host (`test.api.trufo.ai`) and need no OV; you can use
 them to test basic API functions before making a production-signed asset.
@@ -219,11 +219,10 @@ expired task; its `.task` contains the status and error code. Increasing
 Trufo to sign the claim hash. The original media file is not sent.
 
 Install a local engine extra (see the [README](../../README.md#optional-local-engine)
-for the private-index setup) and configure a `tsa` key for RFC 3161 timestamping:
+for the private-index setup):
 
 ```bash
 pip install "trufo[local-sign-only]"     # add watermarking with "trufo[local-full]"
-trufo set-api-key tsa <your-api-key>
 ```
 
 ```python
@@ -246,8 +245,7 @@ api_key = load_api_key(TrufoAPIKey.C2PA_SIGN_PROD)
 signed_bytes = sign_c2pa_distributed(api_key, media_bytes)
 ```
 
-Both helpers load the TSA key from the SDK credential path automatically; pass
-`tsa_api_key="..."` to override.
+Both helpers accept `branded_gp_id`, as `sign_c2pa()` does.
 
 Note that some features are not yet available in distributed signing, such as
 `transcode`. The distributed signing package currently only runs on Linux x86_64
@@ -267,9 +265,8 @@ from trufo.api.endpoints import TRUFO_API_URL_EUROPE
 signed_bytes = sign_c2pa(api_key, media_bytes, trufo_api_url=TRUFO_API_URL_EUROPE)
 ```
 
-Organizations with a dedicated API or TSA can set them explicitly via
-`trufo_api_url` / `trufo_tsa_url`. See
-[what is region-scoped](../api/api_trufo.md#regions).
+Organizations with a dedicated API can set it explicitly via `trufo_api_url`.
+See [what is region-scoped](../api/api_trufo.md#regions).
 
 ---
 
@@ -307,9 +304,6 @@ for production, `c2pa-sign-test` for test.
 
 **`ImportError: The optional trufo-provenance dependency is required`** — install
 `trufo[local-sign-only]` (or `[local-full]`) for distributed signing.
-
-**`A TSA API key is required for remote C2PA signing`** — store a `tsa` key or pass
-`tsa_api_key` explicitly.
 
 **The sign succeeded but something was skipped** — check the response `warnings`;
 the SDK re-emits them as `TrufoServerWarning`. See
