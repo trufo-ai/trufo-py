@@ -34,7 +34,6 @@ from trufo.api.endpoints import (
     TPS_C2PA_SIGN,
     TRUFO_API_URL,
     TRUFO_API_URL_TEST,
-    TRUFO_TSA_URL,
 )
 from trufo.api.headers import sdk_headers
 from trufo.api.tps.io import GetS3UploadURLResult, get_s3_upload_url, _upload_task_input
@@ -46,7 +45,6 @@ from trufo.c2pa.assertions import UserAssertion
 from trufo.c2pa.manifest import ManifestSettings
 from trufo.c2pa.redactions import RedactableAssertion, RedactionReason
 from trufo.c2pa.watermark import WatermarkEffort, WatermarkMode
-from trufo.util.credentials import TrufoAPIKey, load_api_key
 from trufo.util.deprecation import deprecated_aliases
 from trufo.util.optional_imports import require_provenance_module
 from trufo.util.warnings import emit_server_warnings
@@ -665,21 +663,15 @@ def sign_c2pa_test(
     )
 
 
-def _resolve_tsa_api_key(tsa_api_key: str | None) -> str:
-    """Return explicit TSA API key or load the configured SDK TSA key."""
-    if tsa_api_key is not None:
-        resolved_key = tsa_api_key.strip()
-        if not resolved_key:
-            raise ValueError("tsa_api_key cannot be empty.")
-        return resolved_key
-
-    configured_key = load_api_key(TrufoAPIKey.TSA)
-    if configured_key is None:
-        raise RuntimeError(
-            "A TSA API key is required for remote C2PA signing. Pass tsa_api_key "
-            "or configure TRUFO_TSA_API_KEY."
-        )
-    return configured_key
+def _warn_deprecated_tsa_args(tsa_api_key: str | None, trufo_tsa_url: str | None) -> None:
+    """Warn for each deprecated TSA argument passed to a distributed signer."""
+    for name, value in (("tsa_api_key", tsa_api_key), ("trufo_tsa_url", trufo_tsa_url)):
+        if value is not None:
+            warnings.warn(
+                f"{name} is deprecated and ignored; Trufo timestamps distributed signatures.",
+                DeprecationWarning,
+                stacklevel=3,
+            )
 
 
 def sign_c2pa_distributed_test(
@@ -689,11 +681,12 @@ def sign_c2pa_distributed_test(
     actions: list | None = None,
     assertions: list | None = None,
     tsa_api_key: str | None = None,
-    trufo_tsa_url: str = TRUFO_TSA_URL,
+    trufo_tsa_url: str | None = None,
     trufo_api_url: str = TRUFO_API_URL_TEST,
     manifest_title: str | None = None,
     ingredient_title: str | None = None,
     manifest_settings: ManifestSettings | None = None,
+    branded_gp_id: str | None = None,
 ) -> bytes:
     """Sign media locally using the Trufo test remote-signing endpoint.
 
@@ -706,9 +699,8 @@ def sign_c2pa_distributed_test(
         media_bytes: Raw bytes of the media file to sign.
         actions: Ordered list of ``[action_name, params]`` pairs (default ``[]``).
         assertions: List of ``[assertion_name, params]`` pairs (default ``[]``).
-        tsa_api_key: TSA API key. Falls back to the ``TRUFO_TSA_API_KEY``
-            environment variable or the SDK configured key.
-        trufo_tsa_url: Trufo TSA URL. Defaults to ``TRUFO_TSA_URL``.
+        tsa_api_key: Deprecated and ignored; Trufo timestamps distributed signatures.
+        trufo_tsa_url: Deprecated and ignored; Trufo timestamps distributed signatures.
         trufo_api_url: Base URL for the Trufo API. Controls the preprocess,
             claim-sign, and CAWG identity-sign endpoints. Defaults to the Trufo
             test host (``test.api.trufo.ai``).
@@ -717,33 +709,30 @@ def sign_c2pa_distributed_test(
         ingredient_title: Optional ``parentOf`` ingredient title (``dc:title``);
             see the module docstring for when to set this explicitly.
         manifest_settings: Optional structured C2PA manifest settings.
+        branded_gp_id: ID (``gp_...``) of one of your organization's branded
+            generator products; the content is signed as that product. Omit to
+            sign with Trufo's own C2PA signer.
 
     Returns:
         Signed media bytes.
     """
+    _warn_deprecated_tsa_args(tsa_api_key, trufo_tsa_url)
     _validate_actions(actions)
     _validate_assertions(assertions)
     _validate_manifest_setting_aliases(manifest_settings, manifest_title, ingredient_title)
 
-    resolved_tsa_api_key = _resolve_tsa_api_key(tsa_api_key)
     remote_orchestrator = require_provenance_module("tfprov.c2pa_generator.remote_orchestrator")
-    ocsp_stapler_mod = require_provenance_module("tfprov.c2pa_py.helpers.ocsp_stapler")
-    timestamper_mod = require_provenance_module("tfprov.c2pa_py.helpers.timestamper")
 
     signed, _ = remote_orchestrator.generate_claim_remote(
         api_key,
         media_bytes,
         actions=actions or [],
         assertions=assertions or [],
-        timestamper=timestamper_mod.TrufoTimestamper(
-            api_key=resolved_tsa_api_key,
-            url=trufo_tsa_url,
-        ),
-        ocsp_stapler=ocsp_stapler_mod.OCSPStapler(),
         trufo_api_url=trufo_api_url,
         test=True,
         manifest_title=manifest_title,
         ingredient_title=ingredient_title,
+        branded_gp_id=branded_gp_id,
         **(
             {"manifest_settings": _manifest_settings_payload(manifest_settings)}
             if manifest_settings is not None
@@ -760,11 +749,12 @@ def sign_c2pa_distributed(
     actions: list | None = None,
     assertions: list | None = None,
     tsa_api_key: str | None = None,
-    trufo_tsa_url: str = TRUFO_TSA_URL,
+    trufo_tsa_url: str | None = None,
     trufo_api_url: str = TRUFO_API_URL,
     manifest_title: str | None = None,
     ingredient_title: str | None = None,
     manifest_settings: ManifestSettings | None = None,
+    branded_gp_id: str | None = None,
 ) -> bytes:
     """Sign media locally using the Trufo production remote-signing endpoint.
 
@@ -779,9 +769,8 @@ def sign_c2pa_distributed(
         media_bytes: Raw bytes of the media file to sign.
         actions: Ordered list of ``[action_name, params]`` pairs (default ``[]``).
         assertions: List of ``[assertion_name, params]`` pairs (default ``[]``).
-        tsa_api_key: TSA API key. Falls back to the ``TRUFO_TSA_API_KEY``
-            environment variable or the SDK configured key.
-        trufo_tsa_url: Trufo TSA URL. Defaults to ``TRUFO_TSA_URL``.
+        tsa_api_key: Deprecated and ignored; Trufo timestamps distributed signatures.
+        trufo_tsa_url: Deprecated and ignored; Trufo timestamps distributed signatures.
         trufo_api_url: Base URL for the Trufo API. Controls the preprocess,
             claim-sign, and CAWG identity-sign endpoints.
         manifest_title: Optional active-manifest title (``dc:title``); see the
@@ -789,33 +778,30 @@ def sign_c2pa_distributed(
         ingredient_title: Optional ``parentOf`` ingredient title (``dc:title``);
             see the module docstring for when to set this explicitly.
         manifest_settings: Optional structured C2PA manifest settings.
+        branded_gp_id: ID (``gp_...``) of one of your organization's branded
+            generator products; the content is signed as that product. Omit to
+            sign with Trufo's own C2PA signer.
 
     Returns:
         Signed media bytes.
     """
+    _warn_deprecated_tsa_args(tsa_api_key, trufo_tsa_url)
     _validate_actions(actions)
     _validate_assertions(assertions)
     _validate_manifest_setting_aliases(manifest_settings, manifest_title, ingredient_title)
 
-    resolved_tsa_api_key = _resolve_tsa_api_key(tsa_api_key)
     remote_orchestrator = require_provenance_module("tfprov.c2pa_generator.remote_orchestrator")
-    ocsp_stapler_mod = require_provenance_module("tfprov.c2pa_py.helpers.ocsp_stapler")
-    timestamper_mod = require_provenance_module("tfprov.c2pa_py.helpers.timestamper")
 
     signed, _ = remote_orchestrator.generate_claim_remote(
         api_key,
         media_bytes,
         actions=actions or [],
         assertions=assertions or [],
-        timestamper=timestamper_mod.TrufoTimestamper(
-            api_key=resolved_tsa_api_key,
-            url=trufo_tsa_url,
-        ),
-        ocsp_stapler=ocsp_stapler_mod.OCSPStapler(),
         trufo_api_url=trufo_api_url,
         test=False,
         manifest_title=manifest_title,
         ingredient_title=ingredient_title,
+        branded_gp_id=branded_gp_id,
         **(
             {"manifest_settings": _manifest_settings_payload(manifest_settings)}
             if manifest_settings is not None

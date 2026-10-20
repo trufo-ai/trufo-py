@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `branded_gp_id` on `sign_c2pa_distributed` and `sign_c2pa_distributed_test`:
+  the ID of one of your organization's branded generator products; the content
+  is signed as that product. Omit it to sign with Trufo's own C2PA signer.
+
+### Changed
+
+- Trufo timestamps distributed signatures; distributed signing needs a
+  `c2pa-sign-prod` key (`c2pa-sign-test` on the test host) and no `tsa` key.
+- First-party source-type marking, and created declarations with
+  `branded_gp_id`, work in distributed signing.
+
+### Deprecated
+
+- `tsa_api_key` and `trufo_tsa_url` on `sign_c2pa_distributed` and
+  `sign_c2pa_distributed_test`: ignored, with a `DeprecationWarning`.
+
 ## [2.0.0] — 2026-10-19
 
 ### Added

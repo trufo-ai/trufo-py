@@ -29,7 +29,7 @@ signed_bytes = sign_c2pa(
 
 ## Branded provenance declarations
 
-The forms below require hosted signing with a branded generator product
+The forms below require a branded generator product
 (`branded_gp_id`), limited to the source types the product is approved for. A
 created C2PA action needs a `digitalSourceType` unless its action is
 [exempt](../api/api_c2pa.md#assertions). Otherwise the API returns
