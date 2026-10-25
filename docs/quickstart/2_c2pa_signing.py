@@ -65,7 +65,6 @@ for notice in caught:
 # media file is not sent.
 #
 # Requires:  pip install "trufo[local-sign-only]"   (or "trufo[local-full]")
-#            plus a tsa API key for RFC 3161 timestamping.
 # Runs on Linux x86_64 with CPython 3.12.
 
 try:
@@ -78,9 +77,6 @@ try:
     )
     print(f"Signed locally ({len(signed_locally)} bytes)")
 except ImportError as exc:
-    print(f"Skipping distributed signing: {exc}")
-except RuntimeError as exc:
-    # raised when no tsa key is configured
     print(f"Skipping distributed signing: {exc}")
 
 

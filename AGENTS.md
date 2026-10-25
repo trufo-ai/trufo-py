@@ -34,9 +34,9 @@ certificate enrollment.
   resolution maintenance charge from the next UTC day. Production hosts only; no plan
   required.
 - `sign_c2pa_distributed()` uses the production remote signing endpoint and requires
-  completed Organization Validation plus `c2pa-sign-prod` and `tsa` API keys.
+  completed Organization Validation plus a `c2pa-sign-prod` API key.
 - `sign_c2pa_distributed_test()` uses the test remote signing endpoint and requires
-  `c2pa-sign-test` and `tsa` API keys.
+  a `c2pa-sign-test` API key.
 - Test signing runs on its own host (`test.api.trufo.ai`, `TRUFO_API_URL_TEST`) with the
   same routes as production; the legacy `/test/c2pa/sign` path remains during deprecation.
 

@@ -84,7 +84,6 @@ Beyond the platform-wide codes in [api_trufo.md](api_trufo.md):
 | 400 | *(message)* | Request validation — malformed `actions`/`assertions`, watermark contract violations, an unsatisfiable redaction |
 | 400 | `InvalidCawgIdentityId` | Unknown `cawg_identity_id` |
 | 400 | `MissingC2PACustomDomain` | A `custom` assertion without a label |
-| 400 | `UnsupportedDistributedFirstPartyAI` | First-party source-type marking in distributed signing; use hosted signing |
 | 403 | `MissingOrganizationValidation` | Production signing before OV completes |
 | 403 | `InvalidC2PACustomDomain` | The label's domain is not domain-validated for your organization |
 | 403 | `NoEligiblePlan` | The organization lacks the required plan |
@@ -112,7 +111,7 @@ of them, except where noted.
 | Media reaches Trufo | Yes, in the body | Yes, via ephemeral S3 | **No** — the original media file is not sent |
 | Manifest assembled by | Trufo | Trufo | Your process (`trufo-provenance`) |
 | Signing key | Trufo | Trufo | Trufo |
-| Extra requirements | — | — | Local engine extra, `tsa` key, Linux x86_64 + CPython 3.12 |
+| Extra requirements | — | — | Local engine extra, Linux x86_64 + CPython 3.12 |
 
 Direct and distributed signing have test variants: use a `c2pa-sign-test` key against
 `test.api.trufo.ai`. Test signing skips OV and billing, produces manifests signed by
@@ -268,8 +267,11 @@ signed_bytes = sign_c2pa_distributed(api_key, media_bytes, actions=actions)
 ```
 
 Requirements: a local engine extra (`trufo[local-sign-only]` or
-`trufo[local-full]`), a `tsa` key for timestamping, a `c2pa-sign-prod` key, and
-completed OV. See the [signing quickstart](../quickstart/2_c2pa_signing.md).
+`trufo[local-full]`), a `c2pa-sign-prod` key, and completed OV. See the
+[signing quickstart](../quickstart/2_c2pa_signing.md).
+
+`sign_c2pa_distributed()` and `sign_c2pa_distributed_test()` accept
+`branded_gp_id`, as `sign_c2pa()` does.
 
 ---
 
@@ -286,8 +288,7 @@ from trufo.api.endpoints import TRUFO_API_URL_EUROPE
 signed_bytes = sign_c2pa(api_key, media_bytes, trufo_api_url=TRUFO_API_URL_EUROPE)
 ```
 
-Organizations with a dedicated API or TSA pass those hosts explicitly via
-`trufo_api_url` and `trufo_tsa_url`.
+Organizations with a dedicated API pass its host explicitly via `trufo_api_url`.
 
 ### Supported media types
 
@@ -373,9 +374,9 @@ existing history, never the output of a transform in the same call.
 ### `assertions`
 
 Ordered `[name, params]` pairs. Assertions are gathered unless their documented
-schema fixes or permits created placement. Created declarations require hosted
-signing with an authorized branded generator product (`branded_gp_id`), limited
-to the source types the product is approved for. A created C2PA action requires
+schema fixes or permits created placement. Created declarations require an
+authorized branded generator product (`branded_gp_id`), limited to the source
+types the product is approved for. A created C2PA action requires
 a `digitalSourceType`, except `c2pa.converted`, `c2pa.edited.metadata`,
 `c2pa.enhanced`, `c2pa.opened`, `c2pa.placed`, `c2pa.published`,
 `c2pa.redacted`, `c2pa.repackaged`, `c2pa.resized.proportional`,
@@ -406,9 +407,6 @@ rejected.
   registered software agent. The AI disclosure itself remains gathered.
 - Otherwise, sets `digitalSourceType = trainedAlgorithmicMedia` on the input
   ingredient. Support for this C2PA 2.4 ingredient field varies across validators.
-
-First-party source-type marking requires hosted signing; distributed signing
-returns `400 UnsupportedDistributedFirstPartyAI`.
 
 The first-party flag and software-agent link are registration metadata, not
 fields of the `c2pa.ai-disclosure` assertion or signing-request parameters.

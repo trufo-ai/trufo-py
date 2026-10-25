@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.0] — 2026-10-25
+
+### Added
+
+- `branded_gp_id` on `sign_c2pa_distributed` and `sign_c2pa_distributed_test`:
+  the ID of one of your organization's branded generator products; the content
+  is signed as that product. Omit it to sign with Trufo's own C2PA signer.
+
+### Changed
+
+- Local-engine extras require trufo-provenance 2.1.
+- Trufo timestamps distributed signatures; distributed signing needs a
+  `c2pa-sign-prod` key (`c2pa-sign-test` on the test host) and no `tsa` key.
+- First-party source-type marking, and created declarations with
+  `branded_gp_id`, work in distributed signing.
+
+### Deprecated
+
+- `tsa_api_key` and `trufo_tsa_url` on `sign_c2pa_distributed` and
+  `sign_c2pa_distributed_test`: ignored, with a `DeprecationWarning`.
+
 ## [2.0.0] — 2026-10-19
 
 ### Added
@@ -502,7 +523,8 @@ Minor-version bump marks the general availability of the production C2PA signing
 - `trufo.intf`: credential storage and loading (env vars + file), CLI entry point.
 - PyPI trusted publishing via GitHub Actions (OIDC, no API tokens required).
 
-[Unreleased]: https://github.com/trufo-ai/trufo-py/compare/v2.0.0...HEAD
+[Unreleased]: https://github.com/trufo-ai/trufo-py/compare/v2.1.0...HEAD
+[2.1.0]: https://github.com/trufo-ai/trufo-py/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/trufo-ai/trufo-py/compare/v1.5.4...v2.0.0
 [1.5.4]: https://github.com/trufo-ai/trufo-py/compare/v1.5.3...v1.5.4
 [1.5.3]: https://github.com/trufo-ai/trufo-py/compare/v1.5.2...v1.5.3
