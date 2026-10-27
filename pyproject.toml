@@ -38,7 +38,7 @@ trufo = "trufo.intf.cli:main"
 where = ["src"]
 
 [tool.pytest.ini_options]
-pythonpath = ["src"]
+pythonpath = ["src", "trufo-local"]
 
 [tool.black]
 line-length = 100
