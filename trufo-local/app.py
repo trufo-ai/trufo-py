@@ -49,8 +49,8 @@ class C2PASignRequest(BaseModel):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Read the settings once, at start."""
-    app.state.input_dirs = parse_folder_list("TRUFO_LOCAL_INPUT_DIRS")
-    app.state.output_dirs = parse_folder_list("TRUFO_LOCAL_OUTPUT_DIRS")
+    app.state.input_dirs = parse_folder_list("TRUFO_LOCAL_INPUT_DIRS", "read")
+    app.state.output_dirs = parse_folder_list("TRUFO_LOCAL_OUTPUT_DIRS", "write to")
     app.state.trufo_api_url = os.environ.get("TRUFO_API_URL", TRUFO_API_URL)
     app.state.version = os.environ["TRUFO_LOCAL_VERSION"]
     app.state.sign_slots = asyncio.BoundedSemaphore(_SIGN_SLOTS)

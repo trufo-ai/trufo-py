@@ -1,0 +1,33 @@
+trufo-local
+Copyright 2025-2026 Trufo Inc. All rights reserved.
+
+trufo-local and the trufo package are distributed under the Apache License 2.0.
+
+The Trufo provenance engine (trufo-provenance) is not part of this image. The
+container downloads it at start with your sdk-download key. It is distributed
+under the Trufo Library License v1.0.0
+(https://trufo.ai/legal/trufo_library_license/v_1_0_0.html).
+
+This image contains third-party software under its own licenses, including
+software under the GNU GPL and LGPL: FFmpeg, which runs as a separate program,
+and the FFmpeg and libquadmath libraries bundled with opencv-python-headless
+and numpy. The copyright and license of each Debian package are in
+/usr/share/doc/.
+
+The complete corresponding source code of the GPL/LGPL-licensed software in
+this image is published in ghcr.io/trufo-ai/trufo-local under this image's full
+version plus "-source" (for example, 2.1.0-source). The image's
+ai.trufo.trufo-local.source label names it.
+
+Trufo also offers this source code on request. For at least three years after
+Trufo last distributes an image version, Trufo Inc. will give any third party a
+complete machine-readable copy of the corresponding source code of the
+GPL/LGPL-licensed software in that version, on a medium customarily used for
+software interchange, for no more than Trufo's cost of physically performing
+the distribution. Send requests to legal@trufo.ai and name the image version
+(for example, 2.1.0).
+
+Trufo grants no license under any third-party patent that may cover the audio
+and video formats this software handles, such as H.264, HEVC and AAC. You are
+responsible for determining and obtaining any patent licenses your use
+requires.
