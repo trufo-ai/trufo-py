@@ -28,7 +28,7 @@ organization — see [Automatic assertions](../api/api_c2pa.md#automatic-asserti
 | ---- | -------- | ------------------- | ------------------ |
 | Simple | Default choice | Yes, in the request body | None |
 | S3 | Media is large | Yes, via an ephemeral upload | None |
-| Distributed | Media must not leave your infrastructure | No — the original media file is not sent | `trufo[local-sign-only]` or `[local-full]`, Linux x86_64 + CPython 3.12 |
+| Distributed | Media must not leave your infrastructure | No — the original media file is not sent | `trufo[local-sign-only]` or `[local-full]`, Linux x86_64 or arm64 + CPython 3.12 |
 
 The test helpers target the test host (`test.api.trufo.ai`) and need no OV; you can use
 them to test basic API functions before making a production-signed asset.
@@ -249,9 +249,9 @@ Both helpers accept `branded_gp_id`, as `sign_c2pa()` does.
 
 Note that some features are not yet available in distributed signing, such as
 `transcode`. The distributed signing package currently only runs on Linux x86_64
-with CPython 3.12, but we are adding support for others; if you have a specific
-request, email [support@trufo.ai](mailto:support@trufo.ai) and we will do our best
-to prioritize the release.
+or arm64 with CPython 3.12, but we are adding support for others; if you have a
+specific request, email [support@trufo.ai](mailto:support@trufo.ai) and we will do
+our best to prioritize the release.
 
 ---
 

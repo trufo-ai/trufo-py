@@ -11,8 +11,8 @@ under the Trufo Library License v1.0.0
 This image contains third-party software under its own licenses, including
 software under the GNU GPL and LGPL: FFmpeg, which runs as a separate program,
 and the FFmpeg and libquadmath libraries bundled with opencv-python-headless
-and numpy. The copyright and license of each Debian package are in
-/usr/share/doc/.
+and numpy (libquadmath on amd64 only). The copyright and license of each Debian
+package are in /usr/share/doc/.
 
 The complete corresponding source code of the GPL/LGPL-licensed software in
 this image is published in ghcr.io/trufo-ai/trufo-local under this image's full

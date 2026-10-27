@@ -53,7 +53,7 @@ pip install "trufo[local-full]"
 
 Pick `local-sign-only` unless you need watermarking in distributed signing: the watermark engine's dependencies are heavy (PyTorch), and a `local-sign-only` installation signs normally — but a watermark request without the engine always fails with an install hint (see the [Watermarking Quickstart](docs/quickstart/6_watermarking.md)). The legacy `provenance` extra is an alias of `local-sign-only`.
 
-*Note: the local-engine installation currently requires Linux on x86_64 (glibc 2.28+) with CPython 3.12 — the `trufo-provenance` native wheel is published only as `cp312-manylinux_2_28_x86_64`. The base `trufo` package is pure Python and runs on any platform with Python 3.10+.*
+*Note: the local-engine installation currently requires Linux on x86_64 or arm64 (glibc 2.28+) with CPython 3.12 — the `trufo-provenance` native wheel is published only as `cp312-manylinux_2_28_x86_64` and `cp312-manylinux_2_28_aarch64`. The base `trufo` package is pure Python and runs on any platform with Python 3.10+.*
 
 ### Private Package Index
 
