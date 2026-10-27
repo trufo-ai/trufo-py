@@ -25,16 +25,13 @@ RUN --mount=type=secret,id=TRUFO_PACKAGES_INDEX_KEY,required=true \
        numpy==2.5.4 opencv-python-headless==5.0.0.93 \
     && pip uninstall -y trufo-provenance
 
-# Any user can add the engine; none can remove what another user installed
-RUN chmod 1777 /usr/local/lib/python3.12/site-packages
-
 COPY app.py entrypoint.py ./
 COPY NOTICE /usr/share/doc/trufo-local/NOTICE
 
 LABEL ai.trufo.trufo-local.source=ghcr.io/trufo-ai/trufo-local:${VERSION}-source \
       org.opencontainers.image.source=https://github.com/trufo-ai/trufo-py
 
-# Environment defaults; HOME for a user with no passwd entry
+# Environment defaults; HOME serves a user with no passwd entry and holds the engine
 ENV HOME=/tmp
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1

@@ -129,6 +129,7 @@ jobs:
           docker exec -i trufo-local-check python - <<'EOF'
           import importlib.metadata
           import re
+          import site
           import subprocess
           import sys
           from pathlib import Path
@@ -170,7 +171,9 @@ jobs:
           ).stdout.splitlines()
           problems += [f"non-free: {line}" for line in packages if " non-free" in line]
           ffmpeg_libraries = [
-              path for path in Path("/usr").rglob("lib*.so*")
+              path
+              for root in (Path("/usr"), Path(site.getusersitepackages()))
+              for path in root.rglob("lib*.so*")
               if not path.is_symlink() and re.match(rf"{ffmpeg_library}[-.]", path.name)
           ]
           problems += [

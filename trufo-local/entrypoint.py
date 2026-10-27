@@ -126,6 +126,8 @@ def _install_engine(api_key: str) -> None:
         "-m",
         "pip",
         "install",
+        # into HOME (/tmp), so a read-only root filesystem needs only /tmp mounted
+        "--user",
         "--quiet",
         "--no-deps",
         "--require-hashes",
