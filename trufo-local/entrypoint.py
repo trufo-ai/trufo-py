@@ -61,7 +61,7 @@ def parse_mount_points(mountinfo: str) -> set[Path]:
 
 
 def is_mounted(folder: Path, mount_points: set[Path]) -> bool:
-    """Return whether ``folder`` or a folder above it is one of ``mount_points``, other than ``/``."""
+    """Return whether ``folder`` or a folder above it, other than ``/``, is in ``mount_points``."""
     # / is the container's own filesystem, not shared with the host
     return any(path in mount_points for path in (folder, *folder.parents) if path != Path("/"))
 
