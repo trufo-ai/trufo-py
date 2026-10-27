@@ -60,6 +60,12 @@ def parse_mount_points(mountinfo: str) -> set[Path]:
     }
 
 
+def is_mounted(folder: Path, mount_points: set[Path]) -> bool:
+    """Return whether ``folder`` or a folder above it is one of ``mount_points``, other than ``/``."""
+    # / is the container's own filesystem, not shared with the host
+    return any(path in mount_points for path in (folder, *folder.parents) if path != Path("/"))
+
+
 def is_trufo_api_url(url: str) -> bool:
     """Return whether ``url`` is an https:// address on trufo.ai or one of its subdomains."""
     try:
@@ -148,7 +154,7 @@ def main() -> None:
         ("TRUFO_LOCAL_OUTPUT_DIRS", output_dirs),
     ):
         for folder in folders:
-            if folder not in mount_points:
+            if not is_mounted(folder, mount_points):
                 sys.exit(
                     f"{name}: {folder} is not mounted. "
                     "Mount it at the same path inside the container."

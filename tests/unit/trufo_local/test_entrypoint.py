@@ -6,7 +6,7 @@
 from pathlib import Path
 
 import pytest
-from entrypoint import is_trufo_api_url, parse_folder_list, parse_mount_points
+from entrypoint import is_mounted, is_trufo_api_url, parse_folder_list, parse_mount_points
 
 
 def test_folder_list_is_resolved(tmp_path, monkeypatch):
@@ -47,6 +47,19 @@ def test_mount_points_decode_octal_escapes():
         Path("/srv/my media"),
         Path("/srv/tab\tand\\slash"),
     }
+
+
+@pytest.mark.parametrize(
+    "folder, mounted",
+    [
+        ("/srv/media", True),
+        ("/srv/media/in", True),
+        ("/srv", False),
+        ("/tmp", False),
+    ],
+)
+def test_folder_must_be_on_a_mounted_volume(folder, mounted):
+    assert is_mounted(Path(folder), {Path("/"), Path("/srv/media")}) is mounted
 
 
 @pytest.mark.parametrize(
