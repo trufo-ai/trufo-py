@@ -116,6 +116,9 @@ def _install_engine(api_key: str) -> None:
     if installed_version == version:
         print(f"trufo-provenance {version} is already installed.", file=sys.stderr)
         return
+    # the engine's native bridge library cannot load from a noexec mount; tfprov loads without it
+    if os.statvfs("/tmp").f_flag & os.ST_NOEXEC:
+        sys.exit(f"trufo-provenance {version} cannot run from /tmp. Mount /tmp without noexec.")
     print(f"Installing trufo-provenance {version} from packages.trufo.ai.", file=sys.stderr)
     _check_index_access(api_key)
     # the key reaches pip through its environment only, never its arguments; --quiet keeps
@@ -174,6 +177,8 @@ def main() -> None:
                 f"Cannot write to output folder {folder} as user {user}. "
                 f"See {_DOCS_URL}#folder-permissions"
             )
+    if not os.access("/tmp", os.W_OK | os.X_OK):
+        sys.exit(f"Cannot write to /tmp as user {user}. Mount a writable folder at /tmp.")
     api_key = os.environ.get("TRUFO_SDK_DOWNLOAD_API_KEY", "")
     if not api_key:
         sys.exit("TRUFO_SDK_DOWNLOAD_API_KEY is not set. Set it to your sdk-download key.")
