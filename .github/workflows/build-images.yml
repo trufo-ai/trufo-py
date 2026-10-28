@@ -1,12 +1,13 @@
 name: build-images
 
-# Build the trufo-local image on a release tag push, check it, push a private
-# copy to ECR for vulnerability scanning, then push it to GHCR with its source
-# image.
+# Build the trufo-local image on a release tag push, natively for linux/amd64 and
+# linux/arm64, and check each build on its own runner. Then join both builds into
+# one image index and push it: a private copy to ECR for vulnerability scanning,
+# then to GHCR with its source image.
 # This workflow does NOT create a GitHub Release (a Release would also run
 # publish.yml) and does NOT change the GHCR package's visibility. The checks and
-# the source image come before the first push, so a run that fails one of them
-# pushes nothing.
+# the source image come before the first push to ECR or GHCR, so a run that fails
+# one of them, on either architecture, pushes nothing.
 #
 # Trigger: push a tag  trufo-local-X.Y.Z
 #   e.g.  git tag trufo-local-2.1.0   &&  git push origin trufo-local-2.1.0
@@ -26,15 +27,20 @@ concurrency:
 
 permissions:
   contents: read
-  packages: write   # push to GHCR with GITHUB_TOKEN
-  id-token: write   # required to request the OIDC token
+
+env:
+  IMAGE: ghcr.io/trufo-ai/trufo-local
 
 jobs:
-  build:
+  release:
     runs-on: ubuntu-latest
-    environment: trufo-local
-    env:
-      IMAGE: ghcr.io/trufo-ai/trufo-local
+    permissions:
+      contents: read
+      packages: read
+    outputs:
+      version: ${{ steps.release.outputs.version }}
+      tags: ${{ steps.release.outputs.tags }}
+      moved: ${{ steps.release.outputs.moved }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -87,15 +93,36 @@ jobs:
             if [ "$(jq length "$versions")" -lt 100 ]; then break; fi
           done
 
+  build:
+    needs: release
+    strategy:
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-latest
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    environment: trufo-local
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
       - name: Build image
         id: build
         env:
           TRUFO_PACKAGES_INDEX_KEY: ${{ secrets.TRUFO_PACKAGES_INDEX_KEY }}
-          VERSION: ${{ steps.release.outputs.version }}
+          VERSION: ${{ needs.release.outputs.version }}
+          ARCH: ${{ matrix.arch }}
         run: |
           set -euo pipefail
           # the index key enters the build as a secret mount only, never as a build arg
-          docker build --secret id=TRUFO_PACKAGES_INDEX_KEY --build-arg VERSION="$VERSION" \
+          # no provenance attestation: on the containerd image store it makes the build an index,
+          # which the staged config-digest check refuses; this keeps it one manifest on either store
+          docker build --platform "linux/$ARCH" --provenance=false \
+            --secret id=TRUFO_PACKAGES_INDEX_KEY --build-arg VERSION="$VERSION" \
             --metadata-file "$RUNNER_TEMP/build.json" -t "$IMAGE:$VERSION" trufo-local
           config_digest=$(jq -er '."containerimage.config.digest"' "$RUNNER_TEMP/build.json")
           echo "config_digest=$config_digest" >> "$GITHUB_OUTPUT"
@@ -103,7 +130,7 @@ jobs:
       - name: Check image
         env:
           TRUFO_SDK_DOWNLOAD_API_KEY: ${{ secrets.TRUFO_PACKAGES_INDEX_KEY }}
-          VERSION: ${{ steps.release.outputs.version }}
+          VERSION: ${{ needs.release.outputs.version }}
         run: |
           set -euo pipefail
           # folders owned by the user the container runs as, each mounted at its own path
@@ -143,7 +170,7 @@ jobs:
               problems.append("pid 1 has not loaded the engine")
           if not re.search(r"/site-packages/[^/]+\.libs/libavcodec-", maps):
               problems.append("pid 1 has not loaded a wheel's bundled FFmpeg")
-          debian_library = rf"/usr/lib/x86_64-linux-gnu/(?:{ffmpeg_library}|libx26[45])\.so\S*"
+          debian_library = rf"/usr/lib/(?:x86_64|aarch64)-linux-gnu/(?:{ffmpeg_library}|libx26[45])\.so\S*"
           problems += [
               f"in the app's process: {path}" for path in sorted(set(re.findall(debian_library, maps)))
           ]
@@ -189,19 +216,94 @@ jobs:
           sys.exit(1 if problems else 0)
           EOF
 
-      - name: Build source image
+      - name: Save image
         env:
-          VERSION: ${{ steps.release.outputs.version }}
+          VERSION: ${{ needs.release.outputs.version }}
           CONFIG_DIGEST: ${{ steps.build.outputs.config_digest }}
         run: |
           set -euo pipefail
+          # what the publish job needs from the image, read here on the image's own architecture
+          image_dir="$RUNNER_TEMP/image"
+          mkdir "$image_dir"
+          echo "$CONFIG_DIGEST" > "$image_dir/config-digest.txt"
+          docker run --rm --entrypoint python "$IMAGE:$VERSION" -V > "$image_dir/python-version.txt"
+          docker run --rm --entrypoint sh "$IMAGE:$VERSION" -c '. /etc/os-release && echo "$VERSION_CODENAME"' \
+            > "$image_dir/debian-codename.txt"
+          docker run --rm --entrypoint dpkg-query "$IMAGE:$VERSION" \
+            -W -f '${source:Package}=${source:Version}\n' | sort -u > "$image_dir/sources.txt"
+          docker run --rm --entrypoint pip "$IMAGE:$VERSION" list --format=freeze > "$image_dir/python-packages.txt"
+          docker save -o "$image_dir/image.tar" "$IMAGE:$VERSION"
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: image-${{ matrix.arch }}
+          path: ${{ runner.temp }}/image
+          retention-days: 1
+
+  publish:
+    needs: [release, build]
+    runs-on: ubuntu-latest
+    environment: trufo-local
+    permissions:
+      contents: read
+      packages: write   # push to GHCR with GITHUB_TOKEN
+      id-token: write   # required to request the OIDC token
+    env:
+      STAGED_IMAGE: localhost:5000/trufo-local
+    services:
+      # a throwaway registry, gone with this job, where both checked images are joined into one index
+      registry:
+        image: registry:2@sha256:a3d8aaa63ed8681a604f1dea0aa03f100d5895b6a58ace528858a7b332415373
+        ports:
+          - 5000:5000
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v8
+        with:
+          pattern: image-*
+          path: ${{ runner.temp }}
+
+      - name: Stage images
+        env:
+          VERSION: ${{ needs.release.outputs.version }}
+        run: |
+          set -euo pipefail
+          # both builds load under the same tag, so each takes its staging name as it loads; the
+          # index is made of the staged copies, so each must have its checked build's config digest
+          for arch in amd64 arm64; do
+            docker load -i "$RUNNER_TEMP/image-$arch/image.tar"
+            docker tag "$IMAGE:$VERSION" "$STAGED_IMAGE:$arch"
+            docker push "$STAGED_IMAGE:$arch"
+            staged=$(docker buildx imagetools inspect --raw "$STAGED_IMAGE:$arch" | jq -er .config.digest)
+            checked=$(cat "$RUNNER_TEMP/image-$arch/config-digest.txt")
+            if [ "$staged" != "$checked" ]; then
+              echo "::error::The staged $arch image has config $staged, not the checked $checked."; exit 1
+            fi
+          done
+
+      - name: Build source image
+        env:
+          VERSION: ${{ needs.release.outputs.version }}
+        run: |
+          set -euo pipefail
+          # one source image serves both builds, so they must share the Python and Debian release
+          # (CPython's source, the base Dockerfile) and the Python packages (extra-sources.txt)
+          for file in python-version.txt debian-codename.txt python-packages.txt; do
+            if ! diff "$RUNNER_TEMP"/image-{amd64,arm64}/"$file"; then
+              echo "::error::The amd64 and arm64 builds differ in ${file%.txt}."; exit 1
+            fi
+          done
           src="$RUNNER_TEMP/sources"
           mkdir -p "$src/debian" "$src/extra"
-          # the source package of every installed Debian package at its installed version, fetched
-          # with the image's own apt config; apt checks each file against the signed Sources index
-          docker run --rm --entrypoint dpkg-query "$IMAGE:$VERSION" \
-            -W -f '${source:Package}=${source:Version}\n' | sort -u > "$src/debian/sources.txt"
-          docker run --rm -i --user 0 -v "$src/debian:/out" -w /out --entrypoint sh "$IMAGE:$VERSION" -s <<'EOF'
+          # the source package of every installed Debian package of either build at its installed
+          # version, fetched with the amd64 image's apt config (source packages are not per
+          # architecture); apt checks each file against the signed Sources index
+          sort -u "$RUNNER_TEMP"/image-{amd64,arm64}/sources.txt > "$src/debian/sources.txt"
+          docker run --rm -i --user 0 -v "$src/debian:/out" -w /out --entrypoint sh "$STAGED_IMAGE:amd64" -s <<'EOF'
           set -e
           sed -i 's/^Types: deb$/Types: deb deb-src/' /etc/apt/sources.list.d/debian.sources
           apt-get update -qq
@@ -214,10 +316,10 @@ jobs:
             fetch "$url"
             echo "$sum  ${url#https://}" | sha256sum -c -
           done < "$GITHUB_WORKSPACE/trufo-local/extra-sources.txt"
-          # CPython's source and the base image's Dockerfile, for the image's Python and Debian release
-          python_version=$(docker run --rm --entrypoint python "$IMAGE:$VERSION" -V)
+          # CPython's source and the base image's Dockerfile, for the images' Python and Debian release
+          python_version=$(cat "$RUNNER_TEMP/image-amd64/python-version.txt")
           python_version="${python_version#Python }"
-          codename=$(docker run --rm --entrypoint sh "$IMAGE:$VERSION" -c '. /etc/os-release && echo "$VERSION_CODENAME"')
+          codename=$(cat "$RUNNER_TEMP/image-amd64/debian-codename.txt")
           dockerfile_url="https://raw.githubusercontent.com/docker-library/python/master/${python_version%.*}/slim-$codename/Dockerfile"
           dockerfile="${dockerfile_url#https://}"
           fetch "$dockerfile_url"
@@ -230,7 +332,8 @@ jobs:
           cd "$src"
           find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS
           printf 'FROM scratch\nCOPY . /sources/\n' | docker build -f - \
-            --label "ai.trufo.trufo-local.image-config=$CONFIG_DIGEST" -t "$IMAGE:$VERSION-source" "$src"
+            --label "ai.trufo.trufo-local.image-config=$(paste -d ' ' "$RUNNER_TEMP"/image-{amd64,arm64}/config-digest.txt)" \
+            -t "$IMAGE:$VERSION-source" "$src"
 
       - name: Configure AWS credentials (OIDC, keyless)
         uses: aws-actions/configure-aws-credentials@v4
@@ -245,15 +348,13 @@ jobs:
       - name: Push to ECR
         env:
           ECR_IMAGE: ${{ steps.ecr.outputs.registry }}/trufo-local
-          VERSION: ${{ steps.release.outputs.version }}
-          TAGS: ${{ steps.release.outputs.tags }}
+          TAGS: ${{ needs.release.outputs.tags }}
         run: |
           set -euo pipefail
           # the same image under the same tags, kept private, for vulnerability scanning; first,
           # so a run that fails here or on GHCR can be rerun
           for tag in $TAGS; do
-            docker tag "$IMAGE:$VERSION" "$ECR_IMAGE:$tag"
-            docker push "$ECR_IMAGE:$tag"
+            docker buildx imagetools create -t "$ECR_IMAGE:$tag" "$STAGED_IMAGE:amd64" "$STAGED_IMAGE:arm64"
           done
 
       - name: Login to GHCR
@@ -263,33 +364,35 @@ jobs:
 
       - name: Push to GHCR
         env:
-          VERSION: ${{ steps.release.outputs.version }}
-          TAGS: ${{ steps.release.outputs.tags }}
+          VERSION: ${{ needs.release.outputs.version }}
+          TAGS: ${{ needs.release.outputs.tags }}
         run: |
           set -euo pipefail
           # the source first, so a pushed image always has its source
           docker push "$IMAGE:$VERSION-source"
           for tag in $TAGS; do
-            docker tag "$IMAGE:$VERSION" "$IMAGE:$tag"
-            docker push "$IMAGE:$tag"
+            docker buildx imagetools create -t "$IMAGE:$tag" "$STAGED_IMAGE:amd64" "$STAGED_IMAGE:arm64"
           done
 
       - name: Report
         env:
           ECR_IMAGE: ${{ steps.ecr.outputs.registry }}/trufo-local
-          VERSION: ${{ steps.release.outputs.version }}
-          MOVED: ${{ steps.release.outputs.moved }}
+          VERSION: ${{ needs.release.outputs.version }}
+          MOVED: ${{ needs.release.outputs.moved }}
         run: |
           set -euo pipefail
           digest() { docker buildx imagetools inspect --format '{{.Manifest.Digest}}' "$1"; }
           image_digest=$(digest "$IMAGE:$VERSION")
           source_digest=$(digest "$IMAGE:$VERSION-source")
           ecr_digest=$(digest "$ECR_IMAGE:$VERSION")
+          platform_digests=$(docker buildx imagetools inspect --raw "$IMAGE:$VERSION" \
+            | jq -r '.manifests[] | "  - \(.platform.os)/\(.platform.architecture): `\(.digest)`"')
           {
             echo "## Built image"
             echo ""
             echo "- git tag: \`${GITHUB_REF_NAME}\`"
             echo "- \`$IMAGE:$VERSION\`: \`$image_digest\`"
+            echo "$platform_digests"
             echo "- \`$IMAGE:$VERSION-source\`: \`$source_digest\`"
             echo "- ECR \`trufo-local:$VERSION\`: \`$ecr_digest\`"
             echo "- moved: $MOVED"

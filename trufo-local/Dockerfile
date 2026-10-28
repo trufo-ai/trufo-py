@@ -2,7 +2,7 @@
 # Build from the trufo-py root, with the package index key in TRUFO_PACKAGES_INDEX_KEY:
 # docker build --secret id=TRUFO_PACKAGES_INDEX_KEY --build-arg VERSION=2.1.0 trufo-local
 
-FROM --platform=linux/amd64 python:3.12-slim
+FROM python:3.12-slim
 
 ARG VERSION
 ENV TRUFO_LOCAL_VERSION=${VERSION}
