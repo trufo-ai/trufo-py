@@ -113,23 +113,23 @@ jobs:
       - name: Build image
         id: build
         env:
-          TRUFO_PACKAGES_INDEX_KEY: ${{ secrets.TRUFO_PACKAGES_INDEX_KEY }}
+          TRUFO_SDK_DOWNLOAD_API_KEY: ${{ secrets.TRUFO_SDK_DOWNLOAD_API_KEY }}
           VERSION: ${{ needs.release.outputs.version }}
           ARCH: ${{ matrix.arch }}
         run: |
           set -euo pipefail
-          # the index key enters the build as a secret mount only, never as a build arg
+          # the key enters the build as a secret mount only, never as a build arg
           # no provenance attestation: on the containerd image store it makes the build an index,
           # which the staged config-digest check refuses; this keeps it one manifest on either store
           docker build --platform "linux/$ARCH" --provenance=false \
-            --secret id=TRUFO_PACKAGES_INDEX_KEY --build-arg VERSION="$VERSION" \
+            --secret id=TRUFO_SDK_DOWNLOAD_API_KEY --build-arg VERSION="$VERSION" \
             --metadata-file "$RUNNER_TEMP/build.json" -t "$IMAGE:$VERSION" trufo-local
           config_digest=$(jq -er '."containerimage.config.digest"' "$RUNNER_TEMP/build.json")
           echo "config_digest=$config_digest" >> "$GITHUB_OUTPUT"
 
       - name: Check image
         env:
-          TRUFO_SDK_DOWNLOAD_API_KEY: ${{ secrets.TRUFO_PACKAGES_INDEX_KEY }}
+          TRUFO_SDK_DOWNLOAD_API_KEY: ${{ secrets.TRUFO_SDK_DOWNLOAD_API_KEY }}
           VERSION: ${{ needs.release.outputs.version }}
         run: |
           set -euo pipefail

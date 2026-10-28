@@ -1,6 +1,6 @@
 # trufo-local Dockerfile
-# Build from the trufo-py root, with the package index key in TRUFO_PACKAGES_INDEX_KEY:
-# docker build --secret id=TRUFO_PACKAGES_INDEX_KEY --build-arg VERSION=2.1.0 trufo-local
+# Build from the trufo-py root, with an sdk-download key in TRUFO_SDK_DOWNLOAD_API_KEY:
+# docker build --secret id=TRUFO_SDK_DOWNLOAD_API_KEY --build-arg VERSION=2.1.0 trufo-local
 
 FROM python:3.12-slim
 
@@ -16,10 +16,10 @@ RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-reco
 WORKDIR /app
 
 # Install the engine's dependencies as the engine itself declares them, then remove the engine;
-# each container installs it at start. The index key exists only within this step
+# each container installs it at start. The sdk-download key exists only within this step
 COPY requirements.txt ./
-RUN --mount=type=secret,id=TRUFO_PACKAGES_INDEX_KEY,required=true \
-    PIP_INDEX_URL="https://__token__:$(cat /run/secrets/TRUFO_PACKAGES_INDEX_KEY)@packages.trufo.ai/simple/" \
+RUN --mount=type=secret,id=TRUFO_SDK_DOWNLOAD_API_KEY,required=true \
+    PIP_INDEX_URL="https://__token__:$(cat /run/secrets/TRUFO_SDK_DOWNLOAD_API_KEY)@packages.trufo.ai/simple/" \
        pip install --no-cache-dir --no-deps --require-hashes -r requirements.txt \
     && pip install --no-cache-dir trufo==2.1.0 fastapi uvicorn 'trufo-provenance[c2pa]' \
        numpy==2.5.4 opencv-python-headless==5.0.0.93 \
