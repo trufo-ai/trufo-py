@@ -336,7 +336,9 @@ jobs:
           echo "$(sed -n 's/^ENV PYTHON_SHA256 //p' "$dockerfile")  ${python_url#https://}" | sha256sum -c -
           cd "$src"
           find . -type f ! -name SHA256SUMS -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS
-          printf 'FROM scratch\nCOPY . /sources/\n' | docker build -f - -t "$IMAGE:$VERSION-source" "$src"
+          # no provenance attestation, so the image stays one manifest that either architecture can pull
+          printf 'FROM scratch\nCOPY . /sources/\n' \
+            | docker build --provenance=false -f - -t "$IMAGE:$VERSION-source" "$src"
 
       - name: Configure AWS credentials (OIDC, keyless)
         uses: aws-actions/configure-aws-credentials@v4
