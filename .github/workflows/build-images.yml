@@ -229,8 +229,12 @@ jobs:
           docker run --rm --entrypoint python "$IMAGE:$VERSION" -V > "$image_dir/python-version.txt"
           docker run --rm --entrypoint sh "$IMAGE:$VERSION" -c '. /etc/os-release && echo "$VERSION_CODENAME"' \
             > "$image_dir/debian-codename.txt"
+          # every installed source package, plus each Built-Using source package ("name (= version), ...")
+          # as name=version, since a binary's complete source includes them
           docker run --rm --entrypoint dpkg-query "$IMAGE:$VERSION" \
-            -W -f '${source:Package}=${source:Version}\n' | sort -u > "$image_dir/sources.txt"
+            -W -f '${source:Package}=${source:Version}\n${Built-Using}\n' \
+            | sed -E 's/ \(= ([^)]+)\)/=\1/g; s/, /\n/g' \
+            | sed '/^$/d' | sort -u > "$image_dir/sources.txt"
           docker run --rm --entrypoint pip "$IMAGE:$VERSION" list --format=freeze > "$image_dir/python-packages.txt"
           docker save -o "$image_dir/image.tar" "$IMAGE:$VERSION"
 
@@ -300,7 +304,8 @@ jobs:
           src="$RUNNER_TEMP/sources"
           mkdir -p "$src/debian" "$src/extra"
           # the source package of every installed Debian package of either build at its installed
-          # version, fetched with the amd64 image's apt config (source packages are not per
+          # version, and every source package Debian lists as built into one of them (Built-Using) at its
+          # listed version, fetched with the amd64 image's apt config (source packages are not per
           # architecture); apt checks each file against the signed Sources index
           sort -u "$RUNNER_TEMP"/image-{amd64,arm64}/sources.txt > "$src/debian/sources.txt"
           docker run --rm -i --user 0 -v "$src/debian:/out" -w /out --entrypoint sh "$STAGED_IMAGE:amd64" -s <<'EOF'
