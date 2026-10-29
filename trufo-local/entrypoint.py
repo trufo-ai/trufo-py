@@ -20,7 +20,7 @@ from urllib.parse import quote, urlsplit
 
 from trufo.api.endpoints import TRUFO_API_URL
 
-_DOCS_URL = "https://github.com/trufo-ai/trufo-py/blob/main/docs/trufo_local.md"
+_DOCS_URL = "https://github.com/trufo-ai/trufo-py/blob/main/docs/local/docker.md"
 _REQUIREMENTS_FILE = Path(__file__).with_name("requirements.txt")
 
 
