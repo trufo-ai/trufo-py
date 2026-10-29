@@ -16,7 +16,9 @@ RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-reco
 WORKDIR /app
 
 # Install the engine's dependencies as the engine itself declares them, then remove the engine;
-# each container installs it at start. The sdk-download key exists only within this step
+# each container installs it at start. The sdk-download key exists only within this step;
+# extra-sources.txt lists the sources of the libraries the numpy and opencv-python-headless
+# wheels bundle, so change it with these pins
 COPY requirements.txt ./
 RUN --mount=type=secret,id=TRUFO_SDK_DOWNLOAD_API_KEY,required=true \
     PIP_INDEX_URL="https://__token__:$(cat /run/secrets/TRUFO_SDK_DOWNLOAD_API_KEY)@packages.trufo.ai/simple/" \
