@@ -12,7 +12,11 @@ pip install trufo
 
 ## Sign a File
 
-With a `c2pa-sign-test` API key from [app.trufo.ai](https://app.trufo.ai) (see the [Auth Quickstart](docs/quickstart/0_setup.md)):
+With a `c2pa-sign-test` API key from [app.trufo.ai](https://app.trufo.ai) (see the [Auth Quickstart](docs/quickstart/0_setup.md)), stored first:
+
+```bash
+trufo set-api-key c2pa-sign-test <your-api-key>
+```
 
 ```python
 from pathlib import Path
@@ -30,7 +34,7 @@ That is a complete C2PA signature — Trufo assembles and signs the manifest, so
 
 ## What You Can Do
 
-- **Sign C2PA manifests** — hosted, or [distributed](docs/quickstart/2_c2pa_signing.md) so media never leaves your machine
+- **Sign C2PA manifests** — in [Cloud mode](docs/quickstart/2_c2pa_signing.md), or in [Local mode](#c2pa-signing-local) so media never leaves your machine
 - **Label AI-generated content** with [C2PA AI disclosures](docs/quickstart/3_ai_labeling.md)
 - **Stamp organization identity and metadata** via [CAWG](docs/quickstart/4_cawg_publish.md)
 - **Embed and recover watermarks** that [survive manifest stripping](docs/quickstart/6_watermarking.md), with Trufo signing or your own
@@ -38,50 +42,12 @@ That is a complete C2PA signature — Trufo assembles and signs the manifest, so
 - **Declare source assets, or redact** from provenance history ([ingredients](docs/quickstart/5_ingredients.md))
 - **Enrol your own C2PA certificates** for a generator product ([CSRs](docs/quickstart/1_certs.md))
 
-## Optional Local Engine
+## C2PA Signing, Local
 
-When using the standard C2PA Signing API, the raw digital media content is sent to the Trufo server for processing. In cases where data privacy is important or where the content file is large, a distributed API is available where media processing — including watermark embedding — is local (and signing is remote, on Trufo servers). Two local-engine tiers are available:
+In Local mode, your media stays on your machine: Trufo's engine builds the manifest locally, and only the claim goes to Trufo, which signs it. Two ways to run it:
 
-```bash
-# distributed C2PA signing only — lightweight, no watermark engine
-pip install "trufo[local-sign-only]"
-
-# distributed signing + local watermark embedding — adds trufo-pawprint
-# and its ML dependencies (torch; a substantially heavier install)
-pip install "trufo[local-full]"
-```
-
-Pick `local-sign-only` unless you need watermarking in distributed signing: the watermark engine's dependencies are heavy (PyTorch), and a `local-sign-only` installation signs normally — but a watermark request without the engine always fails with an install hint (see the [Watermarking Quickstart](docs/quickstart/6_watermarking.md)). The legacy `provenance` extra is an alias of `local-sign-only`.
-
-*Note: the local-engine installation currently requires Linux on x86_64 or arm64 (glibc 2.28+) with CPython 3.12 — the `trufo-provenance` native wheel is published only as `cp312-manylinux_2_28_x86_64` and `cp312-manylinux_2_28_aarch64`. The base `trufo` package is pure Python and runs on any platform with Python 3.10+.*
-
-### Private Package Index
-
-New releases of `trufo-provenance` and `trufo-pawprint` are distributed through Trufo's private package index at `packages.trufo.ai` rather than public PyPI. Installing the `local-sign-only` (or `local-full`) extra requires an `sdk-download` API key, created at [app.trufo.ai/settings/org](https://app.trufo.ai/settings/org) under *API Keys* (requires an active C2PA Signing or Watermark API plan).
-
-Store the key in `~/.netrc` rather than in the index URL. pip sends it as an HTTP basic-auth credential either way, but a URL-embedded key also lands in your shell history, the process list, and pip and CI logs:
-
-```bash
-cat >> ~/.netrc <<'EOF'
-machine packages.trufo.ai
-  login __token__
-  password <your-sdk-download-key>
-EOF
-chmod 600 ~/.netrc
-```
-
-The literal `__token__` goes in the login field and the key in the password field — the same convention PyPI uses. Keep that order: a Trufo API key contains a colon, which is also the separator in an HTTP basic-auth credential, so putting the key in the login field makes it ambiguous to parse.
-
-Then point pip at the index — no credential in the URL — and install normally:
-
-```bash
-export PIP_EXTRA_INDEX_URL="https://packages.trufo.ai/simple/"
-pip install "trufo[local-sign-only]"   # or "trufo[local-full]"
-```
-
-In CI, write the `~/.netrc` from your secret store as a build step instead of committing it or exporting the key into the environment.
-
-The `trufo` package itself resolves from public PyPI; only the engine packages come from the private index. Treat the key like any other credential: keep it out of committed lockfiles and logs, and revoke it from the dashboard if it is exposed.
+- **Python SDK:** `sign_c2pa_distributed()` with the `trufo[local-sign-only]` or `trufo[local-full]` extra; `local-full` adds local watermark embedding. See [Local mode with the Python SDK](docs/local/python.md).
+- **Docker image:** `ghcr.io/trufo-ai/trufo-local`, an HTTP service on your machine that signs files by path, for callers in any language. See [Local mode with the Docker image](docs/local/docker.md).
 
 ## Workflow Examples (Quickstart)
 
@@ -108,7 +74,9 @@ The full reference documentation is spread across the following files:
 | Document                                       | Covers                                                                    |
 | ---------------------------------------------- | ------------------------------------------------------------------------- |
 | [docs/api/api_trufo.md](docs/api/api_trufo.md) | Accounts, organizations, MFA, API keys and scopes, Organization Validation, errors, regions |
-| [docs/api/api_c2pa.md](docs/api/api_c2pa.md)   | C2PA signing (hosted, S3, distributed), actions and assertions, standalone binding, watermark recovery, content records, assertion records |
+| [docs/api/api_c2pa.md](docs/api/api_c2pa.md)   | C2PA signing in Cloud and Local modes, actions and assertions, standalone binding, watermark recovery, content records, assertion records |
+| [docs/local/python.md](docs/local/python.md)   | C2PA Signing in Local mode with the Python SDK: extras, private package index, system packages |
+| [docs/local/docker.md](docs/local/docker.md)   | C2PA Signing in Local mode with the Docker image: setup, settings, folders, errors, operations |
 | [docs/api/media_format_support.md](docs/api/media_format_support.md) | C2PA and watermark format support, codecs, image and track restrictions |
 | [docs/api/api_certs.md](docs/api/api_certs.md) | Certificate enrollment (EST), OCSP, timestamping, and the Registration Authority |
 | [docs/cli.md](docs/cli.md)                     | CLI credential management                                                 |

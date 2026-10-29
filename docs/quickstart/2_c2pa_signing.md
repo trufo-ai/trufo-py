@@ -1,8 +1,10 @@
 # Quickstart: C2PA Signing
 
-Sign media with a C2PA manifest — the core of the Trufo Provenance Service. Three
-modes: simple (media sent to Trufo), S3 (for large media), and distributed (media
-stays on your machine).
+Sign media with a C2PA manifest — the core of the Trufo Provenance Service. This
+quickstart covers Cloud mode, where you send the media to Trufo directly or via S3.
+To keep the media on your machine, see
+[Local mode with the Python SDK](../local/python.md) or
+[Local mode with the Docker image](../local/docker.md).
 
 ## What This Does
 
@@ -16,19 +18,19 @@ organization — see [Automatic assertions](../api/api_c2pa.md#automatic-asserti
 
 ## Requirements
 
-- A `c2pa-sign-test` API key for test signing, or a `c2pa-sign-prod` key plus
-  completed Organization Validation (OV) for production. See [0_setup.md](0_setup.md).
-- `pip install trufo` — simple and S3 signing need nothing else. Distributed
-  signing additionally needs a local engine extra (below).
+- A `c2pa-sign-test` API key for test signing, or for production a `c2pa-sign-prod`
+  key, which needs the C2PA Signing plan, plus completed Organization Validation (OV).
+  See [0_setup.md](0_setup.md).
+- `pip install trufo`; Cloud mode needs nothing else.
 - Input matching the [media format support policy](../api/media_format_support.md).
 
 ## Choosing a Mode
 
 | Mode | Use when | Media sent to Trufo | Extra requirements |
 | ---- | -------- | ------------------- | ------------------ |
-| Simple | Default choice | Yes, in the request body | None |
-| S3 | Media is large | Yes, via an ephemeral upload | None |
-| Distributed | Media must not leave your infrastructure | No — the original media file is not sent | `trufo[local-sign-only]` or `[local-full]`, Linux x86_64 or arm64 + CPython 3.12 |
+| Cloud, direct | Default choice | Yes, in the request body | None |
+| Cloud, via S3 | Media is large | Yes, via an ephemeral upload | None |
+| Local | Media must not leave your infrastructure | No — the original media file is not sent | See [Local mode with the Python SDK](../local/python.md#requirements) or [Local mode with the Docker image](../local/docker.md#before-you-start) |
 
 The test helpers target the test host (`test.api.trufo.ai`) and need no OV; you can use
 them to test basic API functions before making a production-signed asset.
@@ -36,7 +38,7 @@ The test output is not recognized by conformant C2PA validators.
 
 ---
 
-## Simple Signing
+## Direct Signing
 
 ```python
 from pathlib import Path
@@ -78,10 +80,8 @@ signed_bytes = sign_c2pa(api_key, media_bytes, branded_gp_id=BRANDED_GP_ID)
 ## Manifest Settings
 
 Manifests and their ingredients carry display names (`dc:title`) that validator
-UIs show prominently. Pass them explicitly — typically the asset's filename:
-
-Legacy `manifest_title` and `ingredient_title` keyword arguments remain
-supported. New code can group them with thumbnail and action-completeness
+UIs show prominently. Pass them explicitly — typically the asset's filename — in
+`ManifestSettings`, which also groups the thumbnail and action-completeness
 settings:
 
 ```python
@@ -213,45 +213,10 @@ expired task; its `.task` contains the status and error code. Increasing
 
 ---
 
-## Distributed Signing
+## Local Mode
 
-`sign_c2pa_distributed()` builds the C2PA claim inside your own process and calls
-Trufo to sign the claim hash. The original media file is not sent.
-
-Install a local engine extra (see the [README](../../README.md#optional-local-engine)
-for the private-index setup):
-
-```bash
-pip install "trufo[local-sign-only]"     # add watermarking with "trufo[local-full]"
-```
-
-```python
-from trufo import sign_c2pa_distributed_test
-
-api_key = load_api_key(TrufoAPIKey.C2PA_SIGN_TEST)
-signed_bytes = sign_c2pa_distributed_test(
-    api_key,
-    media_bytes,
-    assertions=[["cawg_identity", {"cawg_identity_id": "test"}]],
-)
-```
-
-For production, swap the helper and the key:
-
-```python
-from trufo import sign_c2pa_distributed
-
-api_key = load_api_key(TrufoAPIKey.C2PA_SIGN_PROD)
-signed_bytes = sign_c2pa_distributed(api_key, media_bytes)
-```
-
-Both helpers accept `branded_gp_id`, as `sign_c2pa()` does.
-
-Note that some features are not yet available in distributed signing, such as
-`transcode`. The distributed signing package currently only runs on Linux x86_64
-or arm64 with CPython 3.12, but we are adding support for others; if you have a
-specific request, email [support@trufo.ai](mailto:support@trufo.ai) and we will do
-our best to prioritize the release.
+To keep media on your machine, use Local mode through the
+[Python SDK](../local/python.md) or the [Docker image](../local/docker.md).
 
 ---
 
@@ -302,8 +267,8 @@ Use the test helpers until OV is complete.
 **`403 APIKeyScopeNotAllowed`** — the key's scope doesn't match: `c2pa-sign-prod`
 for production, `c2pa-sign-test` for test.
 
-**`ImportError: The optional trufo-provenance dependency is required`** — install
-`trufo[local-sign-only]` (or `[local-full]`) for distributed signing.
+**Local mode errors** (`ImportError`, `ffprobe`, package index) — see
+[Troubleshooting](../local/python.md#troubleshooting) in Local mode with the Python SDK.
 
 **The sign succeeded but something was skipped** — check the response `warnings`;
 the SDK re-emits them as `TrufoServerWarning`. See
@@ -315,4 +280,5 @@ the SDK re-emits them as `TrufoServerWarning`. See
 
 - Setup and credentials: [0_setup.md](0_setup.md)
 - C2PA signing API reference: [../api/api_c2pa.md](../api/api_c2pa.md)
+- Local mode: [Python SDK](../local/python.md), [Docker image](../local/docker.md)
 - Complete runnable example: [2_c2pa_signing.py](2_c2pa_signing.py)

@@ -1,8 +1,8 @@
 # Trufo C2PA Signing API
 
-C2PA manifest generation: hosted signing (direct or via S3), distributed signing
-that keeps media on your machine, watermark recovery, and the assertion records
-reused across signing requests.
+C2PA manifest generation in Cloud mode (direct or via S3) and in Local mode, which
+keeps media on your machine; watermark recovery; and the assertion records reused
+across signing requests.
 
 - **Global API:** `https://api.trufo.ai`
 - **Europe API:** `https://eu.api.trufo.ai`
@@ -30,12 +30,22 @@ An account access token with the `c2pa_sign` permission may be used instead of a
 API key on the signing, assertion-record, and content-record endpoints;
 `/content/recover` and the `/bind/*` endpoints require an API key.
 
-Distributed signing is performed by the SDK over a dedicated protocol whose
-endpoints are an internal detail of that protocol, not a public interface. Use
-`sign_c2pa_distributed()` — see [Signing modes](#signing-modes).
+Local mode: see [Signing Modes](#signing-modes).
 
 Production signing additionally requires completed Organization Validation —
 without it, production signing returns `403 MissingOrganizationValidation`.
+
+### Routes
+
+Every production sign or bind creates a [content record](#content-records) whose
+`origin` names its route:
+
+| Route | SDK functions | `origin` |
+| ----- | ------------- | -------- |
+| C2PA Signing, Cloud (direct or via S3) | `sign_c2pa()`, `submit_c2pa_sign()` | `c2pa_hosted` |
+| C2PA Signing, Local | `sign_c2pa_distributed()`, or the [Docker image](../local/docker.md) | `c2pa_distributed` |
+| Watermarking, Cloud | `bind_watermark()`, then `bind_commit()` | `bind_hosted` |
+| Watermarking, Local | `bind_reserve()`, `watermark_media()`, then `bind_commit()` | `bind_distributed` |
 
 ### Automatic assertions
 
@@ -50,8 +60,9 @@ injected server-side and not suppressible by the caller:
 ### Response warnings
 
 Sign responses include a `warnings` list of non-fatal notices — work the server
-completed differently than requested. The Python SDK re-emits each as a
-`TrufoServerWarning`:
+completed differently than requested. In Cloud mode, the Python SDK re-emits each as
+a `TrufoServerWarning`; in Local mode, the engine emits each as a plain `UserWarning`,
+the base class of `TrufoServerWarning`, so filter on `UserWarning` to catch both:
 
 ```python
 import warnings
@@ -73,7 +84,9 @@ routes them to the `py.warnings` logger.
 
 Messages you may see: a declined watermark
 (`Watermarking is not supported for '<mime>' media…`), a best-effort watermark
-failure (`Watermarking failed: …`), and SDK-version deprecation notices.
+failure (`Watermarking failed: …`), and, in Local mode, SDK-version deprecation
+notices, which give the date after which signing with that version returns
+`400 UnsupportedSDKVersion`.
 
 ### Errors
 
@@ -84,6 +97,7 @@ Beyond the platform-wide codes in [api_trufo.md](api_trufo.md):
 | 400 | *(message)* | Request validation — malformed `actions`/`assertions`, watermark contract violations, an unsatisfiable redaction |
 | 400 | `InvalidCawgIdentityId` | Unknown `cawg_identity_id` |
 | 400 | `MissingC2PACustomDomain` | A `custom` assertion without a label |
+| 400 | `UnsupportedSDKVersion: …` | Local mode: the SDK or engine version is below the supported minimum; the detail names the package (`trufo-py` or `trufo-provenance`) and asks you to upgrade |
 | 403 | `MissingOrganizationValidation` | Production signing before OV completes |
 | 403 | `InvalidC2PACustomDomain` | The label's domain is not domain-validated for your organization |
 | 403 | `NoEligiblePlan` | The organization lacks the required plan |
@@ -105,15 +119,15 @@ delivery on the same terms; `/bind/commit` is idempotent for an identical retry.
 Three flows, one operation shape. `actions` and `assertions` behave identically in all
 of them, except where noted.
 
-| | Hosted | Hosted (S3) | Distributed |
+| | Cloud, direct | Cloud, via S3 | Local |
 | --- | --- | --- | --- |
-| Entry | `POST /c2pa/sign` | `/io/get-s3-upload-url` → upload → `POST /c2pa/sign` with TASK | `sign_c2pa_distributed()` (SDK only) |
+| Entry | `POST /c2pa/sign` | `/io/get-s3-upload-url` → upload → `POST /c2pa/sign` with TASK | `sign_c2pa_distributed()` in the [Python SDK](../local/python.md), or `POST /c2pa/sign` with file paths on the [Docker image](../local/docker.md) |
 | Media reaches Trufo | Yes, in the body | Yes, via ephemeral S3 | **No** — the original media file is not sent |
-| Manifest assembled by | Trufo | Trufo | Your process (`trufo-provenance`) |
+| Manifest assembled by | Trufo | Trufo | Your machine (`trufo-provenance`) |
 | Signing key | Trufo | Trufo | Trufo |
-| Extra requirements | — | — | Local engine extra, Linux x86_64 or arm64 + CPython 3.12 |
+| Extra requirements | — | — | See [Local mode with the Python SDK](../local/python.md#requirements) or [Local mode with the Docker image](../local/docker.md#before-you-start) |
 
-Direct and distributed signing have test variants: use a `c2pa-sign-test` key against
+Cloud mode (direct) and Local mode have test variants: use a `c2pa-sign-test` key against
 `test.api.trufo.ai`. Test signing skips OV and billing, produces manifests signed by
 the test certificate (not accepted by conformant validators), and creates no
 permanent signing record.
@@ -146,7 +160,7 @@ output — typically the asset's filename.
 `manifest_title` and `ingredient_title` remain supported for compatibility. Do
 not supply a title both directly and inside `manifest_settings`.
 
-Manifest settings have the same shape in hosted, S3, and distributed signing:
+Manifest settings have the same shape in all three flows:
 
 ```python
 from trufo.c2pa import ManifestSettings, ThumbnailPolicy, ThumbnailSettings, ThumbnailSize
@@ -248,17 +262,17 @@ curl -s "$API/tasks/<task_id>" -H "$AUTH"
 curl -s -o signed.mp4 "<download_url>"
 ```
 
-### Distributed signing
+### Local mode
 
-Distributed signing keeps media on your machine: `trufo-provenance` assembles
-and hashes the C2PA claim locally for Trufo to sign; the original media file is
-not sent.
+Local mode keeps media on your machine: Trufo's engine, `trufo-provenance`,
+assembles and hashes the C2PA claim locally for Trufo to sign; the original media
+file is not sent.
 
-This flow is available **exclusively through the SDK**. It is a multi-step protocol
-in which the client and server exchange state that must stay consistent for the
-resulting manifest to be valid, so the individual calls are not a supported public
-interface and are not documented here — driving them directly produces invalid
-manifests and unusable signing records.
+This flow runs **through Trufo's engine**, in the Python SDK or the Docker image. It
+is a multi-step protocol in which the client and server exchange state that must
+stay consistent for the resulting manifest to be valid, so the individual calls are
+not a supported public interface and are not documented here — driving them directly
+produces invalid manifests and unusable signing records.
 
 ```python
 from trufo import sign_c2pa_distributed
@@ -266,9 +280,16 @@ from trufo import sign_c2pa_distributed
 signed_bytes = sign_c2pa_distributed(api_key, media_bytes, actions=actions)
 ```
 
-Requirements: a local engine extra (`trufo[local-sign-only]` or
-`trufo[local-full]`), a `c2pa-sign-prod` key, and completed OV. See the
-[signing quickstart](../quickstart/2_c2pa_signing.md).
+Requirements: a `c2pa-sign-prod` key and completed OV, plus a local engine extra
+(`trufo[local-sign-only]` or `trufo[local-full]`) for the
+[Python SDK](../local/python.md), or Docker for the
+[Docker image](../local/docker.md).
+
+In both, unless set, the input's ingredient title follows the
+[`ingredient_title`](#post-c2pasign) fallback, ending in `input.<ext>`; set it
+through `manifest_settings` to record the file's name. The generator info records
+the host's operating system and kernel release as `operating_system`, for example
+`Linux 6.8.0-45-generic`.
 
 `sign_c2pa_distributed()` and `sign_c2pa_distributed_test()` accept
 `branded_gp_id`, as `sign_c2pa()` does.
@@ -312,7 +333,7 @@ Ordered `[name, params]` pairs. Each media-transforming action feeds the next.
 Converts within a media class; cross-class conversion is rejected. The input must
 already carry a C2PA manifest. Targets: `image/jpeg`, `image/png`, `image/webp`,
 `image/avif`, `image/tiff`, `image/gif`, `audio/flac`, `audio/wav`, `audio/mp4`,
-`audio/mpeg`, `video/mp4`, `video/quicktime`. Not available in distributed signing.
+`audio/mpeg`, `video/mp4`, `video/quicktime`.
 
 #### `watermark`
 
@@ -502,17 +523,19 @@ Bind embeds a Trufo watermark **without** Trufo signing: you sign the
 watermarked media with your own certificate and complete the record with
 `/bind/commit`, which maps the mark to your manifest for soft-binding
 resolution. Two routes share the commit (see the routes table in the
-[watermarking quickstart](../quickstart/6_watermarking.md#routes)): **tpls**,
-where `/bind/watermark` embeds the mark on Trufo's servers, and **lpls**, where
-`/bind/reserve` issues the watermark id and you embed with the local engine.
+[watermarking quickstart](../quickstart/6_watermarking.md#routes)): **Watermarking,
+Cloud**, where `/bind/watermark` embeds the mark on Trufo's servers, and
+**Watermarking, Local**, where `/bind/reserve` issues the watermark id and you embed
+with the local engine.
 Compliance mode (a single `/bind/watermark` call embedding your organization's
 mark for a declared AI class, 🟠 **test only**) has nothing to commit.
 
 Production requires a `watermark-prod` key, an active C2PA Signing or Watermark
-API plan, and completed organization validation. Billing: tpls bills one
-watermark encode plus the media bytes at `/bind/watermark` and the manifest
-bytes at commit; lpls bills one encode at commit plus the manifest bytes. Every
-committed production record, on any route, then accrues soft-binding resolution maintenance:
+API plan, and completed organization validation. Billing: Watermarking, Cloud bills
+one watermark encode plus the media bytes at `/bind/watermark` and the manifest
+bytes at commit; Watermarking, Local bills one encode at commit plus the manifest
+bytes. Every committed production record, on any route, then accrues soft-binding
+resolution maintenance:
 Trufo keeps the link between the watermark and its manifest id for C2PA public
 soft-binding resolution, metered as one active-ID day per day and billed as ID-years.
 SDK: `bind_watermark()`, `bind_reserve()`, `watermark_media()`, `bind_commit()`
@@ -646,9 +669,9 @@ subscriber can still deactivate its marks.
 
 **The record:** `cid` (record id, returned by every sign and bind call), `wid`
 (once the mark is embedded and, on the bind routes, committed), `mid` (once a
-manifest is captured), `status` (`active` or `inactive`), `origin`
-(`c2pa_hosted`, `c2pa_distributed`, `bind_hosted`, `bind_distributed`),
-`mime_type`, `create_ts`, `commit_ts`. Fields only ever gain members.
+manifest is captured), `status` (`active` or `inactive`), `origin` (the route;
+see [Routes](#routes)), `mime_type`, `create_ts`, `commit_ts`. Fields only ever
+gain members.
 
 ### `POST /content/get`
 

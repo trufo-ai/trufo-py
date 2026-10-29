@@ -12,7 +12,7 @@ For supported image, audio, and video formats, Trufo can embed a **Trufo Pawprin
 There are two ways to get a provenance watermark:
 
 - **As part of C2PA signing** — a `["watermark", {...}]` action in a `sign_c2pa*` call; Trufo embeds the mark and signs the manifest in one step. **Off by default** — the action requests it.
-- **Standalone binding** — `bind_watermark()` embeds the mark and *you* sign the media with your own certificate; see [Binding Without Trufo Signing](#binding-without-trufo-signing-bind).
+- **Standalone binding** — `bind_watermark()` embeds the mark and *you* sign the media with your own certificate; see [Binding Without Trufo Signing](#binding-without-trufo-signing).
 
 Either way, the signed manifest declares the watermark per the C2PA specification: a `c2pa.watermarked.bound` action plus a `c2pa.soft-binding` assertion with algorithm `ai.trufo.pawprint.watermark`, Trufo's entry in the official C2PA soft-binding algorithm registry — Trufo writes these for you in the signing flow, while bind requires your manifest to carry them.
 
@@ -23,7 +23,7 @@ recovery eligibility, image restrictions, audio/video codecs, and track layouts.
 
 ## Execution Mode
 
-Hosted REQUEST execution is limited to images up to 10 MB (10,000,000 bytes).
+In Cloud mode, REQUEST execution is limited to images up to 10 MB (10,000,000 bytes).
 For larger images, audio, or video, explicitly select `ExecutionMode.TASK` and
 pass `mime_type` to `sign_c2pa()` or `bind_watermark()`. The SDK uploads, submits,
 polls, and downloads synchronously. `submit_bind_watermark()` accepts an existing
@@ -91,32 +91,31 @@ The `trufo.c2pa` enums `WatermarkEffort` and `WatermarkMode` define the values.
 
 ## Routes
 
-Four routes produce a signed, watermarked asset. They differ in who embeds the mark (*processing*) and who signs the manifest (*signing*), and the names combine the two: **tpts** = trufo-processing + trufo-signing, **lpts** = local-processing + trufo-signing, **tpls** = trufo-processing + local-signing, **lpls** = local-processing + local-signing. tpts and lpts are the hosted and distributed C2PA Signing products; tpls and lpls are the standalone Watermark APIs.
+Four routes produce a signed, watermarked asset. They differ in where the mark is embedded and who signs the manifest: on the **Cloud** routes Trufo embeds the mark, and on the **Local** routes you embed it on your machine with Trufo's engine; on the **C2PA Signing** routes Trufo signs, and on the **Watermarking** routes you sign with your own certificate.
 
 | Route | Step 1 | Step 2 | Step 3 | Step 4 | trufo-py |
 | ----- | ------ | ------ | ------ | ------ | -------- |
-| **tpts** | `POST /c2pa/sign`: Trufo embeds the mark (when the `watermark` action is present) and signs; the record is complete | | | | `sign_c2pa` |
-| **lpts** | SDK-internal protocol: Trufo reserves the watermark ID and opens the record | you embed locally (Trufo engine) and build the manifest | Trufo signs the claim | Trufo stamps the ID and stores the manifest | `sign_c2pa_distributed` runs all four |
-| **tpls** | `POST /bind/watermark`: Trufo embeds the mark, reserves the ID, opens the record, returns the marked media | you sign with your own certificate | | `POST /bind/commit`: Trufo checks the manifest declares the ID, stamps, stores or refers | `bind_watermark`, then `bind_commit` |
-| **lpls** | `POST /bind/reserve`: Trufo reserves the ID and opens the record for a MIME type | you embed locally (Trufo engine) | you sign with your own certificate | `POST /bind/commit`, as above | `bind_reserve`, `watermark_media`, then `bind_commit` |
+| **C2PA Signing, Cloud** | `POST /c2pa/sign`: Trufo embeds the mark (when the `watermark` action is present) and signs; the record is complete | | | | `sign_c2pa` |
+| **C2PA Signing, Local** | Trufo reserves the watermark ID and opens the record | you embed locally (Trufo engine) and build the manifest | Trufo signs the claim | Trufo stamps the ID and stores the manifest | `sign_c2pa_distributed` runs all four |
+| **Watermarking, Cloud** | `POST /bind/watermark`: Trufo embeds the mark, reserves the ID, opens the record, returns the marked media | you sign with your own certificate | | `POST /bind/commit`: Trufo checks the manifest declares the ID, stamps, stores or refers | `bind_watermark`, then `bind_commit` |
+| **Watermarking, Local** | `POST /bind/reserve`: Trufo reserves the ID and opens the record for a MIME type | you embed locally (Trufo engine) | you sign with your own certificate | `POST /bind/commit`, as above | `bind_reserve`, `watermark_media`, then `bind_commit` |
 
-Whoever embeds needs the engine: the local routes require the `trufo[local-full]` installation (see [README](../../README.md#optional-local-engine)); the Trufo-processing routes need nothing beyond the API. Whoever signs needs a certificate: the Trufo-signing routes use Trufo's; the local-signing routes use yours, and the manifest you sign must declare the mark (a `c2pa.soft-binding` assertion with algorithm `ai.trufo.pawprint.watermark` and the watermark ID as its block value, paired with a `c2pa.watermarked.bound` action) — Trufo writes these for you on the Trufo-signing routes.
+Whoever embeds needs the engine: the Local routes require the `trufo[local-full]` installation (see [Local mode with the Python SDK](../local/python.md)); the Cloud routes need nothing beyond the API. Whoever signs needs a certificate: the C2PA Signing routes use Trufo's; the Watermarking routes use yours, and the manifest you sign must declare the mark (a `c2pa.soft-binding` assertion with algorithm `ai.trufo.pawprint.watermark` and the watermark ID as its block value, paired with a `c2pa.watermarked.bound` action) — Trufo writes these for you on the C2PA Signing routes.
 
-Every route except tpts ends in a commit, because the record cannot be completed until the manifest exists; the mark resolves publicly only once it is committed, so complete the flow before publishing a marked asset.
+Every route except C2PA Signing, Cloud ends in a commit, because the record cannot be completed until the manifest exists; the mark resolves publicly only once it is committed, so complete the flow before publishing a marked asset.
 
-**Without the watermark engine** (a `local-sign-only` or legacy `provenance` installation), lpts signing works normally — but a watermark request **always fails immediately** with an install hint (`ImportError`: the trufo-pawprint dependency is required), regardless of `effort_policy`, before anything is sent to the server. The `effort_policy` levels govern what happens when the *installed* engine cannot watermark a particular input; requesting a watermark without the engine installed is refused outright.
+**Without the watermark engine** (a `local-sign-only` or legacy `provenance` installation), C2PA Signing in Local mode works normally — but a watermark request **always fails immediately** with an install hint (`ImportError`: the trufo-pawprint dependency is required), regardless of `effort_policy`, before anything is sent to the server. The `effort_policy` levels govern what happens when the *installed* engine cannot watermark a particular input; requesting a watermark without the engine installed is refused outright.
 
 Additional notes for local embedding:
 
 - The engine runs on CPU by default; an NVIDIA GPU (CUDA) is used automatically when available.
-- File-type detection uses `python-magic`, which requires the `libmagic` system library on Linux and macOS.
 - M4A watermarking uses the FFmpeg suite: install `ffmpeg` and `ffprobe` on the PATH, or point the `PAWPRINT_FFMPEG` and `PAWPRINT_FFPROBE` environment variables at the binaries.
 
-## Binding Without Trufo Signing (tpls and lpls)
+## Binding Without Trufo Signing
 
 Requires an API key with the `watermark-prod` scope, an active C2PA Signing or Watermark API plan, and completed Organization Validation (`watermark-test` on the test host, where nothing is billed and no validation is needed). Store it with `trufo set-api-key watermark-prod <KEY>` and load it with `load_api_key(TrufoAPIKey.WATERMARK_PROD)`. Production bills each bound asset as one watermark encode plus the bytes processed, and every committed record accrues soft-binding resolution maintenance (the watermark-to-manifest link kept for C2PA soft-binding resolution) per ID per day — see [billing](../api/api_c2pa.md#standalone-binding).
 
-If you sign C2PA manifests yourself (your own certificate and signing pipeline), bind gives you a Trufo watermark without handing Trufo the signature step. On the **tpls** route Trufo embeds the mark:
+If you sign C2PA manifests yourself (your own certificate and signing pipeline), bind gives you a Trufo watermark without handing Trufo the signature step. On the **Watermarking, Cloud** route Trufo embeds the mark:
 
 ```python
 from trufo import bind_watermark, bind_commit
@@ -136,7 +135,7 @@ store_bytes = your_signer(result.media, wid=result.wid)  # the C2PA manifest sto
 bind_commit(api_key, result.cid, result.wid, manifest_bytes=store_bytes)
 ```
 
-On the **lpls** route you embed locally with the engine (`trufo[local-full]`):
+On the **Watermarking, Local** route you embed locally with the engine (`trufo[local-full]`):
 
 ```python
 from trufo import bind_reserve, watermark_media, bind_commit
@@ -151,7 +150,7 @@ If you have `trufo[local-sign-only]` or `trufo[local-full]` installed, you can a
 
 ### Custom Manifest Storage
 
-By default Trufo stores the committed manifest and serves it to validators that resolve the watermark. To keep manifests in your own C2PA manifest store instead, add `manifest_endpoint=` to the commit. This works the same way on the tpls and lpls routes:
+By default Trufo stores the committed manifest and serves it to validators that resolve the watermark. To keep manifests in your own C2PA manifest store instead, add `manifest_endpoint=` to the commit. This works the same way on both Watermarking routes:
 
 ```python
 bind_commit(api_key, cid, wid, manifest_bytes=store_bytes,
@@ -240,7 +239,7 @@ The embed step failed at runtime. Under `require` and `require_if_supported` thi
 
 **A sign succeeded — was it actually watermarked?**
 
-Under `require_if_supported` and `best_effort` a skipped watermark is a warning, not an error. Catch `TrufoServerWarning` to detect it — see [`warnings`](../api/api_c2pa.md#response-warnings) in the response reference.
+Under `require_if_supported` and `best_effort` a skipped watermark is a warning, not an error. Catch `UserWarning` to detect it (in Cloud mode it arrives as its subclass `TrufoServerWarning`) — see [`warnings`](../api/api_c2pa.md#response-warnings) in the response reference.
 
 **`At most one watermark action is allowed per request.`**
 
@@ -248,7 +247,11 @@ Combine your watermark preferences into a single `["watermark", {...}]` entry.
 
 **`ImportError` mentioning trufo-pawprint or the local engine**
 
-Distributed watermarking requires the full local engine. Install `trufo[local-full]` (see [README](../../README.md#optional-local-engine)).
+Embedding a watermark locally, in C2PA Signing, Local or Watermarking, Local, requires `trufo[local-full]`; see [Local mode with the Python SDK](../local/python.md).
+
+**`400 WatermarkNotAvailable` from the Docker image**
+
+The Docker image signs without watermarking; see [Local mode with the Docker image](../local/docker.md). To embed a watermark while signing, use Cloud mode or `trufo[local-full]`.
 
 ---
 
@@ -256,5 +259,6 @@ Distributed watermarking requires the full local engine. Install `trufo[local-fu
 
 - Authentication setup: [0_setup.md](0_setup.md)
 - C2PA signing API reference: [../api/api_c2pa.md](../api/api_c2pa.md)
-- Distributed signing quickstart: [2_c2pa_signing.md](2_c2pa_signing.md)
+- C2PA signing quickstart: [2_c2pa_signing.md](2_c2pa_signing.md)
+- Local mode with the Python SDK: [../local/python.md](../local/python.md)
 - Complete runnable example: [6_watermarking.py](6_watermarking.py)

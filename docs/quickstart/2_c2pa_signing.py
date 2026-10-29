@@ -3,10 +3,10 @@
 
 """Quickstart: sign a media file with a C2PA manifest.
 
-Demonstrates the three signing modes:
-  - simple       (media sent in the request body)
-  - TASK via S3  (production only; see the companion guide)
-  - distributed  (media never leaves this machine)
+Demonstrates Cloud mode and Local mode:
+  - Cloud, direct  (media sent in the request body)
+  - Cloud, via S3  (TASK; production only; see the companion guide)
+  - Local          (media never leaves this machine)
 
 See docs/quickstart/2_c2pa_signing.md for details.
 Requires a c2pa-sign-test API key — set TRUFO_C2PA_SIGN_TEST_API_KEY
@@ -35,7 +35,7 @@ assert api_key, (
 media_bytes = INPUT_FILE.read_bytes()
 
 
-# --- 1. simple signing -------------------------------------------------------
+# --- 1. Cloud mode, direct ---------------------------------------------------
 # The default choice. Media is sent in the request body.
 
 with warnings.catch_warnings(record=True) as caught:
@@ -55,17 +55,17 @@ for notice in caught:
     print(f"  notice: {notice.message}")
 
 
-# --- 2. signing large media via S3 -------------------------------------------
+# --- 2. Cloud mode, large media via S3 ---------------------------------------
 # TASK is not available on the test host. For production, use sign_c2pa(...,
 # execution_mode=ExecutionMode.TASK, mime_type="image/jpeg"); see the guide.
 
 
-# --- 3. distributed signing --------------------------------------------------
+# --- 3. Local mode -----------------------------------------------------------
 # The manifest is assembled locally and Trufo signs its claim; the original
 # media file is not sent.
 #
 # Requires:  pip install "trufo[local-sign-only]"   (or "trufo[local-full]")
-# Runs on Linux x86_64 or arm64 with CPython 3.12.
+# Platform and setup: see docs/local/python.md.
 
 try:
     from trufo import sign_c2pa_distributed_test
@@ -77,7 +77,7 @@ try:
     )
     print(f"Signed locally ({len(signed_locally)} bytes)")
 except ImportError as exc:
-    print(f"Skipping distributed signing: {exc}")
+    print(f"Skipping Local mode: {exc}")
 
 
 # --- going to production -----------------------------------------------------

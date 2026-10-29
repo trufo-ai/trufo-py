@@ -1,9 +1,8 @@
 # Media format support
 
 This reference defines media eligibility for C2PA generation and validation, and
-Trufo watermark encoding and decoding (recovery). It covers the current hosted
-APIs and local operations using Trufo SDK 1.5.2 with Provenance 1.6.0 and
-Pawprint 0.4.0.
+Trufo watermark encoding and decoding (recovery). It covers the Cloud-mode APIs and
+local operations as of Trufo SDK 1.5.2 with Provenance 1.6.0 and Pawprint 0.4.0.
 
 Support has two layers: the MIME type must be eligible for the operation, and the
 file must pass that operation's parser, codec, layout, and preservation checks.
@@ -118,7 +117,7 @@ signal; it is not guaranteed.
 
 ## Unsupported inputs
 
-Hosted watermark recovery returns `400 UndecodableMedia` for inputs outside
+Watermark recovery (`POST /content/recover`) returns `400 UndecodableMedia` for inputs outside
 the supported types or per-file restrictions. For watermark actions during signing, see
 [`effort_policy`](api_c2pa.md#watermark); a lenient watermark policy does not
 make an unsupported C2PA format signable. Contact
