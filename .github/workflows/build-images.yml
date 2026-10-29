@@ -110,6 +110,35 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libmagic1
+
+      - name: Install trufo-provenance
+        env:
+          PIP_INDEX_URL: https://__token__:${{ secrets.TRUFO_SDK_DOWNLOAD_API_KEY }}@packages.trufo.ai/simple/
+        run: |
+          set -euo pipefail
+          # the engine pin the image installs, from Trufo's index; the key is in this step's env only
+          pip install --no-cache-dir --no-deps --require-hashes -r trufo-local/requirements.txt
+
+      - name: Install test dependencies
+        run: |
+          set -euo pipefail
+          # from PyPI; the engine is installed, so its c2pa extra adds only its dependencies
+          pip install -e '.[test]' fastapi httpx 'trufo-provenance[c2pa]'
+
+      - name: Run unit tests
+        run: |
+          set -euo pipefail
+          # the tests skip without fastapi or the engine, so a missing one fails here instead
+          python -c "import fastapi, tfprov"
+          python -m pytest tests/unit/trufo_local -v
+
       - name: Build image
         id: build
         env:
