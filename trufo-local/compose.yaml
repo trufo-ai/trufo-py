@@ -1,0 +1,20 @@
+# trufo-local: Trufo C2PA signing for files in your own folders.
+# Copy .env.example to .env and add your key, set the folders and user: below,
+# then run: docker compose up -d
+# Docs: https://github.com/trufo-ai/trufo-py/blob/main/docs/trufo_local.md
+
+services:
+  trufo-local:
+    image: ghcr.io/trufo-ai/trufo-local:2.1
+    user: "1000:1000"   # owner of the folders below; on the host: id -u and id -g
+    env_file: .env
+    environment:
+      TRUFO_API_URL: https://api.trufo.ai   # EU: https://eu.api.trufo.ai · test: https://test.api.trufo.ai
+      TRUFO_LOCAL_INPUT_DIRS: /srv/media/in   # folders it may read; separate several with ":"
+      TRUFO_LOCAL_OUTPUT_DIRS: /srv/media/out   # folders it may write to
+    volumes:   # each folder above, at the same path; :ro for folders it only reads
+      - /srv/media/in:/srv/media/in:ro
+      - /srv/media/out:/srv/media/out
+    ports:
+      - "127.0.0.1:8080:8080"   # reachable from this machine only
+    restart: unless-stopped

@@ -21,8 +21,8 @@ pip install "trufo[local-full]"
 
 The local-engine packages come from Trufo's private package index and need an
 `sdk-download` key — see the [README](../../README.md#private-package-index).
-They require Linux x86_64 with CPython 3.12; the base package is pure Python and
-runs anywhere with Python 3.10+.
+They require Linux x86_64 or arm64 with CPython 3.12; the base package is pure
+Python and runs anywhere with Python 3.10+.
 
 Verify the install:
 

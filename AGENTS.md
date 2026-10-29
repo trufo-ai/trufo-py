@@ -7,12 +7,12 @@ certificate enrollment.
 ## Key facts for AI assistants
 
 - Current version: see `pyproject.toml` (`version = "X.Y.Z"`).
-- The local-engine extras require **Linux x86_64 (glibc 2.28+) + CPython 3.12** — the
-  trufo-provenance native wheel is published only as `cp312-manylinux_2_28_x86_64`. The
-  base `trufo` package is pure Python (3.10+, any platform). Two tiers:
-  `local-sign-only` (distributed signing, no watermark engine, no torch) and
-  `local-full` (adds `trufo-pawprint` + torch for local watermark embedding);
-  `provenance` is the legacy alias of `local-sign-only`.
+- The local-engine extras require **Linux x86_64 or arm64 (glibc 2.28+) + CPython 3.12**
+  — the trufo-provenance native wheel is published only as `cp312-manylinux_2_28_x86_64`
+  and `cp312-manylinux_2_28_aarch64`. The base `trufo` package is pure Python (3.10+,
+  any platform). Two tiers: `local-sign-only` (distributed signing, no watermark engine,
+  no torch) and `local-full` (adds `trufo-pawprint` + torch for local watermark
+  embedding); `provenance` is the legacy alias of `local-sign-only`.
 - Watermarking is **off by default**; a `["watermark", {...}]` action requests it, with
   `effort_policy` = `require` (bare default) / `require_if_supported` / `best_effort`
   setting failure tolerance (`WatermarkEffort` enum; `effort` is a deprecated alias)

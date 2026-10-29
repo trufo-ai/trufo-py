@@ -111,7 +111,7 @@ of them, except where noted.
 | Media reaches Trufo | Yes, in the body | Yes, via ephemeral S3 | **No** — the original media file is not sent |
 | Manifest assembled by | Trufo | Trufo | Your process (`trufo-provenance`) |
 | Signing key | Trufo | Trufo | Trufo |
-| Extra requirements | — | — | Local engine extra, Linux x86_64 + CPython 3.12 |
+| Extra requirements | — | — | Local engine extra, Linux x86_64 or arm64 + CPython 3.12 |
 
 Direct and distributed signing have test variants: use a `c2pa-sign-test` key against
 `test.api.trufo.ai`. Test signing skips OV and billing, produces manifests signed by

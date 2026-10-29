@@ -65,7 +65,7 @@ for notice in caught:
 # media file is not sent.
 #
 # Requires:  pip install "trufo[local-sign-only]"   (or "trufo[local-full]")
-# Runs on Linux x86_64 with CPython 3.12.
+# Runs on Linux x86_64 or arm64 with CPython 3.12.
 
 try:
     from trufo import sign_c2pa_distributed_test
