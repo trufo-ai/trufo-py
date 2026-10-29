@@ -13,6 +13,9 @@ RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-reco
     ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
+# Upgrade the base image's pip, which each container also uses to install the engine at start
+RUN pip install --no-cache-dir pip==26.2.2
+
 WORKDIR /app
 
 # Install the engine's dependencies as the engine itself declares them, then remove the engine;
