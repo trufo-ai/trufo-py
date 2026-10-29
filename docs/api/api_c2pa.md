@@ -489,9 +489,9 @@ of the asset, not a Trufo attestation.
 | `placement` | string | No | `gathered` (default) or, when eligible and authorized, `created`; `parentOf` is always created |
 | `action_history` | list | No | Actions between a `parentOf` source and the supplied input; entries may independently set `placement` and `digitalSourceType` |
 
-Media carrying its own C2PA manifest is validated and referenced; manifest-free
-media is thumbnailed as a described visual record, not a cryptographic binding, and
-cannot also declare `digital_source_type`.
+Media carrying its own C2PA manifest is validated and referenced, and cannot also
+declare `digital_source_type`. Manifest-free media is thumbnailed as a described
+visual record, not a cryptographic binding.
 
 At most one `parentOf` ingredient is allowed, it requires media, and it cannot be
 combined with `creation`. A signed supplied input cannot be relabeled as newly
