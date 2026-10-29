@@ -103,12 +103,11 @@ Redaction removes whole assertions; individual fields within an assertion cannot
 [0_setup.md](0_setup.md).
 - The input file must already have a C2PA manifest — redacting a file with no existing
 provenance history fails.
-- The `redact` action is available on the hosted signers (`sign_c2pa`,
-`sign_c2pa_test`, and `submit_c2pa_sign` for TASK submissions)
-and the distributed signers (`sign_c2pa_distributed`, `sign_c2pa_distributed_test`), which
-redact locally without sending media to Trufo. Distributed redaction requires the
-`trufo[local-sign-only]` (or `local-full`) optional installation, same as any
-distributed signing.
+- The `redact` action works in Cloud mode (`sign_c2pa`, `sign_c2pa_test`, and
+`submit_c2pa_sign` for TASK submissions) and in Local mode, which redacts without
+sending media to Trufo: `sign_c2pa_distributed` and `sign_c2pa_distributed_test`
+([Local mode with the Python SDK](../local/python.md)) or the Docker image
+([Local mode with the Docker image](../local/docker.md)).
 
 ### Minimal Example
 

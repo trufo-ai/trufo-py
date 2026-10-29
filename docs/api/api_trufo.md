@@ -36,8 +36,8 @@ completed differently than requested, such as a watermark that could not be
 embedded under a lenient effort. They are informational, never fatal.
 
 The Python SDK re-emits each as a `TrufoServerWarning` (a `UserWarning` subclass
-exported as `trufo.TrufoServerWarning`), so they surface identically across signing
-modes and can be caught, filtered, or routed into logging. See
+exported as `trufo.TrufoServerWarning`), and in Local mode the engine emits each as a
+`UserWarning`, so they can be caught, filtered, or routed into logging. See
 [Response warnings](api_c2pa.md#response-warnings).
 
 ### Error envelope
@@ -105,7 +105,7 @@ no automatic routing between them.
 | Data | Scope |
 | ---- | ----- |
 | Accounts, organizations, API keys | Shared — the same credentials work on either endpoint |
-| Media submitted for hosted signing | Processed by the endpoint you call; EU calls stay in EU infrastructure |
+| Media submitted in Cloud mode | Processed by the endpoint you call; EU calls stay in EU infrastructure |
 | Signing records and watermark IDs | Shared — content signed via either endpoint is recoverable from either |
 | Stored assertion records (AI disclosures, software agents) | Regional — a record registered via one endpoint is not visible from the other |
 | Request logs | Regional |
@@ -209,15 +209,29 @@ Two facts matter for programmatic use:
 - **Organization Validation (OV) gates production.** Production C2PA signing and
   production certificate enrollment require completed OV, and your organization's
   validated legal name is what appears in issued certificates and in the automatic
-  `ai.trufo.identity` assertion. Until OV completes, production endpoints return
+  `ai.trufo.identity` assertion. An owner or admin with MFA submits OV at
+  [app.trufo.ai/settings/org/ov](https://app.trufo.ai/settings/org/ov), and Trufo
+  reviews it. Until OV completes, production endpoints return
   `403 MissingOrganizationValidation` — use the test host meanwhile.
+
+### Agreements
+
+An organization owner or admin accepts agreements for the organization at
+[Organization Settings → Agreements](https://app.trufo.ai/settings/org#agreements).
+These features each need one:
+
+| Agreement | Required for |
+| --------- | ------------ |
+| Trufo Library License | Creating `sdk-download` keys |
+| Created Assertion Acknowledgement | Registering [first-party AI disclosures](api_c2pa.md#post-c2paai-disclosureadd) |
 
 ---
 
 ## API Keys
 
-API keys authenticate programmatic access. Each key carries exactly one scope, and
-keys are created and revoked in the dashboard under *Settings → API Keys*.
+API keys authenticate programmatic access. Each key carries exactly one scope. An
+organization owner or admin with MFA creates and revokes keys at
+[Organization Settings → API Access → API Keys](https://app.trufo.ai/settings/org#api-access).
 
 | Scope | Grants | Requires |
 | ----- | ------ | -------- |
@@ -229,10 +243,11 @@ keys are created and revoked in the dashboard under *Settings → API Keys*.
 | `watermark-test` | Standalone binding (`/bind/*`, test host) | — |
 | `watermark-prod` | Standalone binding (`/bind/*`, production hosts) | C2PA Signing or Watermark API plan |
 | `tsa` | RFC 3161 timestamping (`tsa.trufo.ai`) | C2PA TSA plan |
-| `sdk-download` | Downloading the local engine packages from Trufo's private package index | C2PA Signing or Watermark API plan |
+| `sdk-download` | Downloading the local engine packages from Trufo's private package index, for the [Python SDK](../local/python.md) or the [Docker image](../local/docker.md) | C2PA Signing or Watermark API plan, and the Trufo Library License accepted ([Agreements](#agreements)) |
 
 Keys are issued as `{scope}:{key}`; Trufo stores only a hash and shows the full key
-once, at creation. Keys expire — the dashboard shows each key's expiry and last use.
+once, at creation. Keys last up to 390 days — the dashboard shows each key's expiry
+and last use.
 
 **Rotation.** Create the replacement key first, move traffic to it, then revoke the
 old one. Revocation propagates within the hour.
