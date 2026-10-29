@@ -12,7 +12,7 @@ from types import SimpleNamespace
 import pytest
 
 pytest.importorskip("fastapi")
-pytest.importorskip("tfprov")
+pytest.importorskip("tfprov", minversion="2.1.1")
 
 import app as service  # noqa: E402
 import tfprov  # noqa: E402
