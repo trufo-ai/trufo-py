@@ -3,7 +3,7 @@ name: build-images
 # Build the trufo-local image on a release tag push, natively for linux/amd64 and
 # linux/arm64, and check each build on its own runner. Then join both builds into
 # one image index and push it: a private copy to ECR for vulnerability scanning,
-# then to GHCR with its source image.
+# with a backup of its source image, then to GHCR with its source image.
 # This workflow does NOT create a GitHub Release (a Release would also run
 # publish.yml) and does NOT change the GHCR package's visibility. The checks and
 # the source image come before the first push to ECR or GHCR, so a run that fails
@@ -381,8 +381,10 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Push to ECR
+        id: ecr_push
         env:
           ECR_IMAGE: ${{ steps.ecr.outputs.registry }}/trufo-local
+          VERSION: ${{ needs.release.outputs.version }}
           TAGS: ${{ needs.release.outputs.tags }}
         run: |
           set -euo pipefail
@@ -391,6 +393,19 @@ jobs:
           for tag in $TAGS; do
             docker buildx imagetools create -t "$ECR_IMAGE:$tag" "$STAGED_IMAGE:amd64" "$STAGED_IMAGE:arm64"
           done
+          # a second copy of the source, so the NOTICE's written offer can be met even if GHCR's is lost
+          docker tag "$IMAGE:$VERSION-source" "$ECR_IMAGE:$VERSION-source"
+          docker push "$ECR_IMAGE:$VERSION-source"
+          # the digests from ECR's API, read here so every AWS call comes before GHCR: imagetools
+          # inspect also reads the config blob, which this role may not download
+          ecr_tag_digest() {
+            aws ecr describe-images --repository-name trufo-local --image-ids imageTag="$1" \
+              --query 'imageDetails[0].imageDigest' --output text
+          }
+          digest=$(ecr_tag_digest "$VERSION")
+          source_digest=$(ecr_tag_digest "$VERSION-source")
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+          echo "source_digest=$source_digest" >> "$GITHUB_OUTPUT"
 
       - name: Login to GHCR
         env:
@@ -411,7 +426,8 @@ jobs:
 
       - name: Report
         env:
-          ECR_IMAGE: ${{ steps.ecr.outputs.registry }}/trufo-local
+          ECR_DIGEST: ${{ steps.ecr_push.outputs.digest }}
+          ECR_SOURCE_DIGEST: ${{ steps.ecr_push.outputs.source_digest }}
           VERSION: ${{ needs.release.outputs.version }}
           MOVED: ${{ needs.release.outputs.moved }}
         run: |
@@ -419,7 +435,6 @@ jobs:
           digest() { docker buildx imagetools inspect --format '{{.Manifest.Digest}}' "$1"; }
           image_digest=$(digest "$IMAGE:$VERSION")
           source_digest=$(digest "$IMAGE:$VERSION-source")
-          ecr_digest=$(digest "$ECR_IMAGE:$VERSION")
           platform_digests=$(docker buildx imagetools inspect --raw "$IMAGE:$VERSION" \
             | jq -r '.manifests[] | "  - \(.platform.os)/\(.platform.architecture): `\(.digest)`"')
           {
@@ -429,6 +444,7 @@ jobs:
             echo "- \`$IMAGE:$VERSION\`: \`$image_digest\`"
             echo "$platform_digests"
             echo "- \`$IMAGE:$VERSION-source\`: \`$source_digest\`"
-            echo "- ECR \`trufo-local:$VERSION\`: \`$ecr_digest\`"
+            echo "- ECR \`trufo-local:$VERSION\`: \`$ECR_DIGEST\`"
+            echo "- ECR \`trufo-local:$VERSION-source\`: \`$ECR_SOURCE_DIGEST\`"
             echo "- moved: $MOVED"
           } >> "$GITHUB_STEP_SUMMARY"

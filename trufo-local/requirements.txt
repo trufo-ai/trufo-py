@@ -1,1 +1,1 @@
-trufo-provenance[c2pa]==2.1.1 --hash=sha256:<TBD at release>
+trufo-provenance[c2pa]==2.1.1 --hash=sha256:f219aa9eb859b8db35d8d94f5f5583dec93735d7b68cb4dd2274146efac28316 --hash=sha256:97596153d04a93498d17db7aadbd8b7dd494ad50033701742d70bb4f963153d0
