@@ -343,8 +343,9 @@ jobs:
       - name: Configure AWS credentials (OIDC, keyless)
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ vars.ECR_PUSH_ROLE_ARN }}
+          role-to-assume: ${{ secrets.ECR_PUSH_ROLE_ARN }}
           aws-region: us-east-1
+          mask-aws-account-id: true
 
       - name: Login to Amazon ECR
         id: ecr
