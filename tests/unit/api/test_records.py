@@ -38,13 +38,16 @@ def _response(payload, status=200):
 class TestGetContent:
     @patch(f"{_M}.requests.post")
     def test_looks_up_by_one_key(self, mock_post):
-        mock_post.return_value = _response(_ITEM)
-        record = get_content("key", wid="v1.001a1b2c3d4")
+        mock_post.return_value = _response(
+            {**_ITEM, "wid": None, "ai_system_wid": "v1.00001a2b3c4"}
+        )
+        record = get_content("key", cid="0199-0001")
         assert (record.cid, record.mid, record.status) == ("0199-0001", "urn:c2pa:1", "active")
+        assert record.ai_system_wid == "v1.00001a2b3c4"
         call = mock_post.call_args
         assert call.args[0] == f"{TRUFO_API_URL}/content/get"
         assert call.kwargs["headers"] == sdk_headers("key")
-        assert call.kwargs["json"] == {"wid": "v1.001a1b2c3d4"}
+        assert call.kwargs["json"] == {"cid": "0199-0001"}
 
     def test_exactly_one_key(self):
         with pytest.raises(ValueError):

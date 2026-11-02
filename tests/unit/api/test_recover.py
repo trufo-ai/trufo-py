@@ -79,6 +79,18 @@ class TestRecoverContent:
         assert result.confidence is None
 
     @patch(f"{_M}.requests.post")
+    def test_per_ai_system_fields_parsed(self, mock_post):
+        ai_system = {"name": "Example Model"}
+        mock_post.return_value = _response(
+            {"detected": True, "wid_allocation_mode": "per_ai_system",
+             "ai_involvement": "ai_generated", "ai_system": ai_system}
+        )
+        result = recover_content("key", b"media-bytes")
+        assert (result.wid_allocation_mode, result.ai_involvement, result.ai_system) == (
+            "per_ai_system", "ai_generated", ai_system
+        )
+
+    @patch(f"{_M}.requests.post")
     def test_http_error_raises(self, mock_post):
         mock_post.return_value = _response({"detail": "Forbidden"}, status=403)
 

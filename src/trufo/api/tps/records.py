@@ -23,8 +23,9 @@ class ContentRecord:
     ``wid`` is the watermark ID once a mark is embedded (and, on the bind
     routes, committed) and ``mid`` the manifest ID once a manifest is captured;
     a record with both is what public soft-binding resolution serves and what
-    soft-binding resolution maintenance charges for. ``status`` is ``"active"``
-    or ``"inactive"``. Unknown future fields are ignored.
+    soft-binding resolution maintenance charges for. A per-AI-system embed sets
+    ``ai_system_wid``, your AI system's watermark ID, instead of ``wid``.
+    ``status`` is ``"active"`` or ``"inactive"``. Unknown future fields are ignored.
     """
 
     cid: str
@@ -35,6 +36,7 @@ class ContentRecord:
     wid: str | None = None
     mid: str | None = None
     commit_ts: str | None = None
+    ai_system_wid: str | None = None
 
 
 @dataclass(frozen=True)
@@ -55,6 +57,7 @@ def _record(payload: dict) -> ContentRecord:
         wid=payload.get("wid"),
         mid=payload.get("mid"),
         commit_ts=payload.get("commit_ts"),
+        ai_system_wid=payload.get("ai_system_wid"),
     )
 
 
