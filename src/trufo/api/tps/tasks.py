@@ -68,13 +68,14 @@ class SignC2PATaskResult:
 
 @dataclass(frozen=True)
 class BindWatermarkTaskResult:
-    """Watermarked output references and identifiers; no media bytes."""
+    """Watermarked output references, identifiers, and warnings; no media bytes."""
 
     media_output_s3: str
     download_url: str | None
     expires_ts: str
     wid: str
     cid: str | None = None
+    warnings: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -172,8 +173,7 @@ def wait_for_task(api_key: str, task_id: str, *, wait_seconds: float = 600,
         if task.status == TaskStatus.SUCCEEDED:
             if task.result is None:
                 raise ValueError(f"Succeeded task {task_id} has no output reference.")
-            if isinstance(task.result, SignC2PATaskResult):
-                emit_server_warnings({"warnings": task.result.warnings})
+            emit_server_warnings({"warnings": task.result.warnings})
             return task
         if task.status in (TaskStatus.FAILED, TaskStatus.EXPIRED):
             raise TaskFailedError(task)

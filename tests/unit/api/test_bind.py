@@ -20,11 +20,15 @@ from trufo.api.tps.bind import (
     bind_watermark_test,
     watermark_media,
 )
+from trufo.api.tps.tasks import ExecutionMode
+from trufo.util.warnings import TrufoServerWarning
 
 _M = "trufo.api.tps.bind"
 
 _MARKED_B64 = base64.b64encode(b"marked").decode()
 _WID = "v1.001abcdef12"
+_PER_AI_SYSTEM = {"wid_allocation_mode": "per_ai_system", "ai_system_id": "aisys_1",
+                  "ai_involvement": "ai_generated"}
 
 
 def _response(payload, status=200):
@@ -38,7 +42,7 @@ def _response(payload, status=200):
 
 class TestBindWatermark:
     @patch(f"{_M}.requests.post")
-    def test_provenance_posts_and_parses(self, mock_post):
+    def test_default_bind_sends_no_mode(self, mock_post):
         mock_post.return_value = _response({"media_output": _MARKED_B64, "wid": _WID, "cid": "c_1"})
 
         result = bind_watermark("key", b"media-bytes")
@@ -51,14 +55,46 @@ class TestBindWatermark:
         assert call.kwargs["headers"] == sdk_headers("key")
         assert call.kwargs["json"] == {
             "media_input": base64.b64encode(b"media-bytes").decode(),
-            "mode": "provenance",
         }
 
+    @pytest.mark.parametrize("bind, arg, kwargs", [
+        (bind_watermark, b"media-bytes", {}),
+        (bind_watermark, b"media-bytes",
+         {"execution_mode": ExecutionMode.TASK, "mime_type": "image/jpeg"}),
+        (bind_watermark_test, b"media-bytes", {}),
+        (bind_reserve_test, "image/jpeg", {}),
+    ])
+    @patch(f"{_M}._download_task_output", return_value=b"marked")
+    @patch(f"{_M}.wait_for_task")
+    @patch(f"{_M}._upload_task_input", return_value="s3-ref")
+    @patch(f"{_M}.requests.post")
+    def test_allocation_keys_sent_when_set(
+        self, post, _upload, _wait, _download, bind, arg, kwargs
+    ):
+        post.return_value = _response({
+            "media_output": _MARKED_B64, "wid": _WID, "cid": "c_1", "task_id": "t_1",
+            "wid_package": {"wid": _WID, "expires_at": "x"}, "task_type": "watermark",
+            "status": "queued", "startby_ts": "x", "timeout_seconds": 60,
+        }, status=202)
+        bind("key", arg, **kwargs, **_PER_AI_SYSTEM)
+        assert post.call_args.kwargs["json"].items() >= _PER_AI_SYSTEM.items()
+
+    @patch(f"{_M}.requests.post")
+    def test_deprecated_mode_is_sent_and_server_warnings_reemitted(self, mock_post):
+        mock_post.return_value = _response(
+            {"media_output": _MARKED_B64, "wid": _WID, "warnings": ["'mode' is deprecated."]}
+        )
+        with pytest.warns(TrufoServerWarning, match="'mode' is deprecated"):
+            bind_watermark("key", b"media-bytes", mode="provenance")
+        assert mock_post.call_args.kwargs["json"]["mode"] == "provenance"
 
     @pytest.mark.parametrize("kwargs, error", [
         ({"mode": "compliance"}, NotImplementedError),
         ({"ai_compliance_label": "ai_generated"}, TypeError),
         ({"mode": "attestation"}, ValueError),
+        ({"mode": "provenance", "wid_allocation_mode": "per_embed"}, ValueError),
+        ({"wid_allocation_mode": "per_asset"}, NotImplementedError),
+        ({"ai_involvement": "ai_assisted"}, ValueError),
     ])
     @patch(f"{_M}.requests.post")
     def test_unsupported_options_do_not_send_request(self, post, kwargs, error):

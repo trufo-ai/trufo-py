@@ -22,6 +22,11 @@ Two routes share the commit step:
   the mark locally with the Trufo engine (``trufo[local-full]``), you sign,
   then :func:`bind_commit`.
 
+A per-AI-system bind (``wid_allocation_mode="per_ai_system"`` with
+``ai_system_id`` and ``ai_involvement``) embeds your AI system's watermark ID
+for that AI involvement instead of a new one. It is not a C2PA soft binding,
+and there is nothing to commit.
+
 Production requires a ``watermark-prod`` key, an active C2PA Signing or
 Watermark API plan, and completed organization validation; the ``_test``
 variants target the Trufo test host with a ``watermark-test`` key, where marks
@@ -45,8 +50,10 @@ from trufo.api.endpoints import (
 from trufo.api.headers import sdk_headers
 from trufo.api.tps.io import _upload_task_input
 from trufo.api.tps.tasks import ExecutionMode, TaskReceipt, _submit_task, wait_for_task, _download_task_output
-from trufo.c2pa.watermark import WatermarkMode
+from trufo.c2pa.ai_system import AIInvolvement
+from trufo.c2pa.watermark import WatermarkIDAllocationMode, WatermarkMode
 from trufo.util.deprecation import deprecated_aliases
+from trufo.util.warnings import emit_server_warnings
 
 _ENGINE_HINT = (
     "Local watermarking requires the Trufo engine. Install it with: "
@@ -63,7 +70,8 @@ _C2PA_HINT = (
 class BindWatermarkResult:
     """Result of :func:`bind_watermark`.
 
-    ``cid`` addresses the record for the commit step.
+    ``cid`` addresses the record for the commit step; a per-AI-system bind has
+    nothing to commit.
     """
 
     media: bytes
@@ -92,11 +100,44 @@ def _post(api_key: str, url: str, body: dict) -> dict:
     return resp.json()
 
 
+def _allocation_fields(
+    *,
+    wid_allocation_mode: WatermarkIDAllocationMode | str | None,
+    ai_system_id: str | None,
+    ai_involvement: AIInvolvement | str | None,
+    mode: str | None = None,
+) -> dict:
+    """Validate the watermark ID allocation arguments and return the set ones as request keys."""
+    fields: dict = {}
+    if mode is not None:
+        # TODO(sunset-2026-12-31): WatermarkMode and the watermark 'mode' parameter go;
+        # successor WatermarkIDAllocationMode
+        if wid_allocation_mode is not None:
+            raise ValueError(
+                "Provide the watermark 'wid_allocation_mode' parameter or the deprecated "
+                "'mode', not both."
+            )
+        WatermarkMode.validate(mode)
+        fields["mode"] = mode
+    if wid_allocation_mode is not None:
+        fields["wid_allocation_mode"] = WatermarkIDAllocationMode.validate(
+            wid_allocation_mode
+        ).value
+    if ai_system_id is not None:
+        fields["ai_system_id"] = ai_system_id
+    if ai_involvement is not None:
+        fields["ai_involvement"] = AIInvolvement.validate(ai_involvement).value
+    return fields
+
+
 def bind_watermark(
     api_key: str,
     media_bytes: bytes,
     *,
-    mode: str = "provenance",
+    wid_allocation_mode: WatermarkIDAllocationMode | str | None = None,
+    ai_system_id: str | None = None,
+    ai_involvement: AIInvolvement | str | None = None,
+    mode: str | None = None,
     execution_mode: ExecutionMode = ExecutionMode.REQUEST,
     mime_type: str | None = None,
     wait_seconds: float = 600,
@@ -108,8 +149,12 @@ def bind_watermark(
         api_key: API key with scope ``watermark-prod`` (``X-API-Key`` header);
             ``watermark-test`` on the test host.
         media_bytes: Raw bytes of the media file to watermark.
-        mode: ``"provenance"`` (default). ``"compliance"`` is unsupported
-            and raises NotImplementedError before sending a request.
+        wid_allocation_mode: ``"per_embed"`` (default when omitted) or ``"per_ai_system"``.
+        ai_system_id: ID (``aisys_...``) of your AI system; required for ``"per_ai_system"``.
+        ai_involvement: ``"ai_generated"`` or ``"ai_modified"``; required for ``"per_ai_system"``.
+        mode: Deprecated: use ``wid_allocation_mode`` (``"per_embed"`` replaces
+            ``"provenance"``). ``"compliance"`` is unsupported and raises
+            NotImplementedError before sending a request.
         execution_mode: REQUEST (default) or explicit TASK; no automatic fallback.
         mime_type: Required for TASK bytes uploaded to S3.
         wait_seconds: Local TASK waiting budget (default 600), not the server
@@ -119,26 +164,42 @@ def bind_watermark(
             the test host.
 
     Returns:
-        The watermarked media, the embedded watermark ID, and (provenance
-        mode) the record ID for :func:`bind_commit`.
+        The watermarked media, the embedded watermark ID, and the record ID
+        for :func:`bind_commit`.
 
     Raises:
-        ValueError: On invalid mode, execution settings, or missing MIME type.
+        ValueError: On invalid or conflicting modes, invalid AI involvement,
+            execution settings, or missing MIME type.
+        NotImplementedError: For ``"per_asset"`` allocation or ``"compliance"`` mode.
         requests.HTTPError: If the API returns a non-2xx response.
     """
-    WatermarkMode.validate(mode)
+    allocation = _allocation_fields(
+        wid_allocation_mode=wid_allocation_mode,
+        ai_system_id=ai_system_id,
+        ai_involvement=ai_involvement,
+        mode=mode,
+    )
     if ExecutionMode.validate(execution_mode) == ExecutionMode.TASK:
         if wait_seconds <= 0:
             raise ValueError("Wait duration must be positive.")
         reference = _upload_task_input(api_key, media_bytes, mime_type, trufo_api_url=trufo_api_url)
-        receipt = submit_bind_watermark(api_key, reference, mode=mode, trufo_api_url=trufo_api_url)
+        receipt = submit_bind_watermark(
+            api_key,
+            reference,
+            wid_allocation_mode=wid_allocation_mode,
+            ai_system_id=ai_system_id,
+            ai_involvement=ai_involvement,
+            mode=mode,
+            trufo_api_url=trufo_api_url,
+        )
         task = wait_for_task(api_key, receipt.task_id, wait_seconds=wait_seconds, trufo_api_url=trufo_api_url)
         return BindWatermarkResult(_download_task_output(task), task.result.wid, task.result.cid)
     body: dict = {
         "media_input": base64.b64encode(media_bytes).decode(),
-        "mode": mode,
+        **allocation,
     }
     payload = _post(api_key, trufo_api_url + TPS_BIND_WATERMARK, body)
+    emit_server_warnings(payload)
     return BindWatermarkResult(
         media=base64.b64decode(payload["media_output"]),
         wid=payload["wid"],
@@ -146,22 +207,40 @@ def bind_watermark(
     )
 
 
-def submit_bind_watermark(api_key: str, media_input_s3: str, *, mode: str = "provenance",
-                          trufo_api_url: str = TRUFO_API_URL) -> TaskReceipt:
+def submit_bind_watermark(
+    api_key: str,
+    media_input_s3: str,
+    *,
+    wid_allocation_mode: WatermarkIDAllocationMode | str | None = None,
+    ai_system_id: str | None = None,
+    ai_involvement: AIInvolvement | str | None = None,
+    mode: str | None = None,
+    trufo_api_url: str = TRUFO_API_URL,
+) -> TaskReceipt:
     """Submit a Trufo upload reference for watermarking without waiting.
 
     Poll with get_task() or wait_for_task(). Completion does not replace the
     separate bind_commit() step after signing the watermarked media.
     """
-    WatermarkMode.validate(mode)
-    return _submit_task(api_key, TPS_BIND_WATERMARK,
-                        {"media_input_s3": media_input_s3, "mode": mode}, trufo_api_url=trufo_api_url)
+    body = {
+        "media_input_s3": media_input_s3,
+        **_allocation_fields(
+            wid_allocation_mode=wid_allocation_mode,
+            ai_system_id=ai_system_id,
+            ai_involvement=ai_involvement,
+            mode=mode,
+        ),
+    }
+    return _submit_task(api_key, TPS_BIND_WATERMARK, body, trufo_api_url=trufo_api_url)
 
 
 def bind_reserve(
     api_key: str,
     mime_type: str,
     *,
+    wid_allocation_mode: WatermarkIDAllocationMode | str | None = None,
+    ai_system_id: str | None = None,
+    ai_involvement: AIInvolvement | str | None = None,
     trufo_api_url: str = TRUFO_API_URL,
 ) -> BindReserveResult:
     """lpls step 1: reserve a watermark ID for media you will watermark locally.
@@ -171,15 +250,28 @@ def bind_reserve(
             the test host).
         mime_type: MIME type of the media (it must be an encode-supported
             format).
+        wid_allocation_mode: ``"per_embed"`` (default when omitted) or ``"per_ai_system"``.
+        ai_system_id: ID (``aisys_...``) of your AI system; required for ``"per_ai_system"``.
+        ai_involvement: ``"ai_generated"`` or ``"ai_modified"``; required for ``"per_ai_system"``.
         trufo_api_url: Trufo API base URL. Defaults to production.
 
     Returns:
         The record ID and the reservation to pass to :func:`watermark_media`.
 
     Raises:
+        ValueError: On invalid allocation mode or AI involvement.
+        NotImplementedError: For ``"per_asset"`` allocation.
         requests.HTTPError: If the API returns a non-2xx response.
     """
-    payload = _post(api_key, trufo_api_url + TPS_BIND_RESERVE, {"mime_type": mime_type})
+    body = {
+        "mime_type": mime_type,
+        **_allocation_fields(
+            wid_allocation_mode=wid_allocation_mode,
+            ai_system_id=ai_system_id,
+            ai_involvement=ai_involvement,
+        ),
+    }
+    payload = _post(api_key, trufo_api_url + TPS_BIND_RESERVE, body)
     package = payload["wid_package"]
     return BindReserveResult(
         cid=payload["cid"], wid=package["wid"], expires_at=package["expires_at"], wid_package=dict(package)
@@ -290,7 +382,10 @@ def bind_watermark_test(
     api_key: str,
     media_bytes: bytes,
     *,
-    mode: str = "provenance",
+    wid_allocation_mode: WatermarkIDAllocationMode | str | None = None,
+    ai_system_id: str | None = None,
+    ai_involvement: AIInvolvement | str | None = None,
+    mode: str | None = None,
     execution_mode: ExecutionMode = ExecutionMode.REQUEST,
     trufo_api_url: str = TRUFO_API_URL_TEST,
 ) -> BindWatermarkResult:
@@ -299,6 +394,9 @@ def bind_watermark_test(
     return bind_watermark(
         api_key,
         media_bytes,
+        wid_allocation_mode=wid_allocation_mode,
+        ai_system_id=ai_system_id,
+        ai_involvement=ai_involvement,
         mode=mode,
         trufo_api_url=trufo_api_url,
     )
@@ -308,10 +406,20 @@ def bind_reserve_test(
     api_key: str,
     mime_type: str,
     *,
+    wid_allocation_mode: WatermarkIDAllocationMode | str | None = None,
+    ai_system_id: str | None = None,
+    ai_involvement: AIInvolvement | str | None = None,
     trufo_api_url: str = TRUFO_API_URL_TEST,
 ) -> BindReserveResult:
     """:func:`bind_reserve` against the Trufo test host (``watermark-test`` key)."""
-    return bind_reserve(api_key, mime_type, trufo_api_url=trufo_api_url)
+    return bind_reserve(
+        api_key,
+        mime_type,
+        wid_allocation_mode=wid_allocation_mode,
+        ai_system_id=ai_system_id,
+        ai_involvement=ai_involvement,
+        trufo_api_url=trufo_api_url,
+    )
 
 
 def bind_commit_test(
