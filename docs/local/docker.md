@@ -77,7 +77,7 @@ appears, and create them before the first start. Set `user:` to their owner. Kee
 docker compose up -d
 docker compose ps    # wait for "(healthy)"
 curl -s http://127.0.0.1:8080/health
-# {"status":"healthy","version":"2.1.1","engine_version":"2.1.1"}
+# {"status":"healthy","version":"2.1.2","engine_version":"2.1.2"}
 ```
 
 A new container first downloads and installs the engine, and is healthy after about
@@ -280,10 +280,11 @@ never changes. `/health` reports the image's `version` and its `engine_version`.
 
 | Image | Engine (trufo-provenance) | Source image |
 | ----- | ------------------------- | ------------ |
+| `2.1.2` | 2.1.2 | `2.1.2-source` |
 | `2.1.1` | 2.1.1 | `2.1.1-source` |
 
 To upgrade, run `docker compose pull && docker compose up -d`. To stay on one image,
-set `image: ghcr.io/trufo-ai/trufo-local:2.1.1`. When a signing response's `warnings`
+set `image: ghcr.io/trufo-ai/trufo-local:2.1.2`. When a signing response's `warnings`
 says a version is deprecated, move to a newer image before the date it gives; after
 that date, signing returns 400 `UnsupportedSDKVersion: …`.
 
@@ -359,8 +360,8 @@ plus `-source`, holding the complete corresponding source code of its GPL-, LGPL
 MPL-licensed software (about 1.2 GB). To extract it:
 
 ```bash
-docker create --platform linux/amd64 --name trufo-local-source ghcr.io/trufo-ai/trufo-local:2.1.1-source none
-docker cp trufo-local-source:/sources ./trufo-local-2.1.1-source
+docker create --platform linux/amd64 --name trufo-local-source ghcr.io/trufo-ai/trufo-local:2.1.2-source none
+docker cp trufo-local-source:/sources ./trufo-local-2.1.2-source
 docker rm trufo-local-source
 ```
 

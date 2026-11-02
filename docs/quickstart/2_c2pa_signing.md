@@ -102,8 +102,9 @@ falls back to the input's own manifest title, then a generic name. Fallbacks
 are derived, not authored — see
 [title fallbacks](../api/api_c2pa.md#post-c2pasign) for the exact order.
 
-Thumbnail generation is automatic. The default `MEDIUM` preset uses 512 px
-WebP thumbnails at quality 80. Use `HIGH` when validator previews need more
+Thumbnail generation is automatic. The default `MEDIUM` preset makes WebP
+thumbnails at quality 80, scaled down to at most 512 px in height plus width;
+smaller images keep their size. Use `HIGH` when validator previews need more
 detail:
 
 ```python

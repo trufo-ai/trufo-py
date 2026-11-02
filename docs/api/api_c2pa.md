@@ -180,8 +180,9 @@ signed_bytes = sign_c2pa(api_key, media_bytes, manifest_settings=settings)
 that do not already carry one. `AUTO_NO_INGREDIENT` generates only the claim
 thumbnail, while preserving inherited ingredient thumbnails. `NONE` generates
 no thumbnails, while also preserving inherited ingredient thumbnails. The
-`MEDIUM` preset is 512 px at WebP quality 80; `HIGH` is 1024 px at quality
-90. Image alpha transparency is preserved.
+`MEDIUM` preset scales thumbnails down to at most 512 px in height plus width,
+at WebP quality 80; `HIGH` to at most 1024 px, at quality 90. Image alpha
+transparency is preserved.
 
 ### `POST /io/get-s3-upload-url`
 
@@ -333,7 +334,10 @@ Ordered `[name, params]` pairs. Each media-transforming action feeds the next.
 Converts within a media class; cross-class conversion is rejected. The input must
 already carry a C2PA manifest. Targets: `image/jpeg`, `image/png`, `image/webp`,
 `image/avif`, `image/tiff`, `image/gif`, `audio/flac`, `audio/wav`, `audio/mp4`,
-`audio/mpeg`, `video/mp4`, `video/quicktime`.
+`audio/mpeg`, `video/mp4`, `video/quicktime`. An animated GIF, PNG, WebP or AVIF
+keeps every frame, so its target must be `image/gif`, `image/png`, `image/webp`
+or `image/avif`; it may hold up to 10,000 frames and 400 megapixels across
+frames.
 
 #### `watermark`
 
@@ -485,7 +489,7 @@ of the asset, not a Trufo attestation.
 | `title` | string | No | The ingredient title (`dc:title`). When unset: the media's manifest title, if it exists; otherwise, `ingredient_{n}.{ext}` (media-less entries: `ingredient_{n}`). |
 | `data_types` | list | No | `[{"type": "c2pa.types.<kind>", "version": "…"}]` |
 | `digital_source_type` | string | No | The IPTC `trainedAlgorithmicMedia` or `compositeWithTrainedAlgorithmicMedia` URI |
-| `media` | string | For `componentOf` | base64 bytes; must be a thumbnail-capable image (JPEG, PNG, WebP, GIF, TIFF) |
+| `media` | string | For `componentOf` | base64 bytes; must be a thumbnail-capable image (JPEG, PNG, WebP, GIF, TIFF, HEIC/HEIF) |
 | `placement` | string | No | `gathered` (default) or, when eligible and authorized, `created`; `parentOf` is always created |
 | `action_history` | list | No | Actions between a `parentOf` source and the supplied input; entries may independently set `placement` and `digitalSourceType` |
 
