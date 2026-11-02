@@ -44,7 +44,7 @@ That is a complete C2PA signature — Trufo assembles and signs the manifest, so
 
 ## C2PA Signing, Local
 
-In Local mode, your media stays on your machine: Trufo's engine builds the manifest locally, and only the claim goes to Trufo, which signs it. Two ways to run it:
+In Local mode, your media stays on your machine: Trufo's engine builds the manifest locally, and Trufo receives the signing instructions and signs the claim. Two ways to run it:
 
 - **Python SDK:** `sign_c2pa_distributed()` with the `trufo[local-sign-only]` or `trufo[local-full]` extra; `local-full` adds local watermark embedding. See [Local mode with the Python SDK](docs/local/python.md).
 - **Docker image:** `ghcr.io/trufo-ai/trufo-local`, an HTTP service on your machine that signs files by path, for callers in any language. See [Local mode with the Docker image](docs/local/docker.md).
