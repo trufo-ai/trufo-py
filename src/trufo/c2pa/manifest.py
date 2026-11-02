@@ -38,8 +38,6 @@ class SignedInputPolicy(str, Enum):
 
     # the input's manifest becomes the parentOf ingredient
     KEEP = "keep"
-    # the input's manifest is discarded and the media is signed as unsigned
-    DROP = "drop"
     # Trufo's best practice; the default when no policy is sent
     AUTO = "auto"
 

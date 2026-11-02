@@ -34,7 +34,6 @@ STR_ENUMS = {
     },
     SignedInputPolicy: {
         "KEEP": "keep",
-        "DROP": "drop",
         "AUTO": "auto",
     },
     TrufoAction: {

@@ -447,11 +447,11 @@ class TestS3C2PASigning:
             execution_mode=ExecutionMode.TASK,
             mime_type="image/jpeg",
             branded_gp_id="gp_x",
-            signed_input_policy="drop",
+            signed_input_policy="keep",
         )
 
         assert mock_post.call_args.kwargs["json"]["branded_gp_id"] == "gp_x"
-        assert mock_post.call_args.kwargs["json"]["signed_input_policy"] == "drop"
+        assert mock_post.call_args.kwargs["json"]["signed_input_policy"] == "keep"
 
     @patch("trufo.api.tps.sign_c2pa.requests.post")
     def test_s3_request_and_test_signing_reject_before_network(self, mock_post):
