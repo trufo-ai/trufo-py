@@ -4,6 +4,7 @@
 """Public settings for C2PA manifest construction."""
 
 from dataclasses import dataclass
+from enum import Enum
 
 from trufo.c2pa.thumbnails import ThumbnailSettings
 
@@ -30,3 +31,16 @@ class ManifestSettings:
             self.all_actions_included, bool
         ):
             raise TypeError("all_actions_included must be bool or None.")
+
+
+class SignedInputPolicy(str, Enum):
+    """What Trufo does when the input file already carries a C2PA manifest."""
+
+    # the input's manifest becomes the parentOf ingredient
+    KEEP = "keep"
+    # Trufo's best practice; the default when no policy is sent
+    AUTO = "auto"
+
+    @staticmethod
+    def validate(policy: str) -> "SignedInputPolicy":
+        return SignedInputPolicy(policy)

@@ -52,6 +52,7 @@ TPS_CONTENT_STATUS = "/content/status"
 TPS_BIND_WATERMARK = "/bind/watermark"
 TPS_BIND_RESERVE = "/bind/reserve"
 TPS_BIND_COMMIT = "/bind/commit"
+# TODO(sunset-2026-12-31): the ai-disclosure endpoints go; successor /ai-system/add and /list
 TPS_C2PA_AI_DISCLOSURE_ADD = "/c2pa/ai-disclosure/add"
 TPS_C2PA_AI_DISCLOSURE_LIST = "/c2pa/ai-disclosure/list"
 TPS_C2PA_SOFTWARE_AGENT_ADD = "/c2pa/software-agent/add"

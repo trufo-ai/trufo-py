@@ -4,23 +4,27 @@
 """Public C2PA types for the Trufo SDK."""
 
 from trufo.c2pa.actions import TrufoAction
+from trufo.c2pa.ai_system import AIInvolvement
 from trufo.c2pa.assertions import UserAssertion
-from trufo.c2pa.manifest import ManifestSettings
+from trufo.c2pa.manifest import ManifestSettings, SignedInputPolicy
 from trufo.c2pa.redactions import RedactableAssertion, RedactionReason
 from trufo.c2pa.source_types import DigitalSourceType
 from trufo.c2pa.thumbnails import ThumbnailPolicy, ThumbnailSettings, ThumbnailSize
-from trufo.c2pa.watermark import WatermarkEffort, WatermarkMode
+from trufo.c2pa.watermark import WatermarkEffort, WatermarkIDAllocationMode, WatermarkMode
 
 __all__ = [
+    "AIInvolvement",
     "DigitalSourceType",
     "ManifestSettings",
     "RedactableAssertion",
     "RedactionReason",
+    "SignedInputPolicy",
     "ThumbnailPolicy",
     "ThumbnailSettings",
     "ThumbnailSize",
     "TrufoAction",
     "UserAssertion",
     "WatermarkEffort",
+    "WatermarkIDAllocationMode",
     "WatermarkMode",
 ]

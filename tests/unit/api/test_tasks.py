@@ -9,7 +9,7 @@ import pytest
 import requests
 
 from trufo import (
-    ExecutionMode, TaskFailedError, TaskWaitTimeoutError, bind_watermark,
+    ExecutionMode, TaskFailedError, TaskWaitTimeoutError, TrufoServerWarning, bind_watermark,
     bind_watermark_test, sign_c2pa, sign_c2pa_test, wait_for_task,
 )
 
@@ -38,13 +38,15 @@ def test_bytes_task_uploads_submits_polls_downloads_without_leaking_api_key(oper
     # additive server fields must not break existing SDK clients
     completed["additional_status_field"] = "ignored"
     completed["result"]["additional_result_field"] = "ignored"
+    completed["result"]["warnings"] = ["server notice"]
     upload = {"upload_url": "https://input.example", "media_input_s3": "input-reference",
               "expires_at": 1770000000, "duration": "5m"}
     with patch("requests.post", side_effect=[response(upload), response(accepted, status=202)]) as post, \
          patch("requests.put", return_value=response()) as put, \
          patch("requests.get", side_effect=[response(completed), response(content=b"output")]) as get:
-        result = operation("secret-key", b"input", execution_mode=ExecutionMode.TASK,
-                           mime_type="image/jpeg", trufo_api_url="https://selected.example")
+        with pytest.warns(TrufoServerWarning, match="server notice"):
+            result = operation("secret-key", b"input", execution_mode=ExecutionMode.TASK,
+                               mime_type="image/jpeg", trufo_api_url="https://selected.example")
     assert (result if task_type == "c2pa_sign" else result.media) == b"output"
     if task_type == "watermark":
         assert (result.wid, result.cid) == ("watermark-1", "content-1")
@@ -52,6 +54,7 @@ def test_bytes_task_uploads_submits_polls_downloads_without_leaking_api_key(oper
     assert post.call_args.kwargs["json"]["execution_mode"] == "task"
     assert post.call_args.kwargs["json"]["media_input_s3"] == "input-reference"
     assert "media_input" not in post.call_args.kwargs["json"]
+    assert "mode" not in post.call_args.kwargs["json"]
     assert get.call_args_list[0].args[0] == "https://selected.example/tasks/task-1"
     assert put.call_args.kwargs["headers"] == {"Content-Type": "image/jpeg"}
     assert "headers" not in get.call_args.kwargs

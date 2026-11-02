@@ -20,6 +20,9 @@ class RecoverContentResult:
     A provenance mark carries the stored C2PA manifest store as ``manifest_bytes``
     when one has been captured (validate it against your own copy of the
     media; ``manifest_json`` is its parse, present only when requested).
+    A per-AI-system mark (``wid_allocation_mode="per_ai_system"``) carries the
+    AI system's public information (``ai_system``) and the type of AI
+    involvement (``ai_involvement``), not a manifest.
     ``oid`` is set only when the mark belongs to your own
     organization. Unknown future fields are ignored.
     """
@@ -30,6 +33,9 @@ class RecoverContentResult:
     manifest_bytes: bytes | None = None
     manifest_json: dict | None = None
     oid: str | None = None
+    wid_allocation_mode: str | None = None
+    ai_involvement: str | None = None
+    ai_system: dict | None = None
 
 
 def recover_content(
@@ -84,6 +90,9 @@ def recover_content(
         manifest_bytes=base64.b64decode(manifest_b64) if manifest_b64 else None,
         manifest_json=payload.get("manifest_json"),
         oid=payload.get("oid"),
+        wid_allocation_mode=payload.get("wid_allocation_mode"),
+        ai_involvement=payload.get("ai_involvement"),
+        ai_system=payload.get("ai_system"),
     )
 
 
