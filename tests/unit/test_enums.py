@@ -9,6 +9,7 @@ These checks run without needing tfprov installed.
 
 import pytest
 
+from trufo.c2pa import AIInvolvement
 from trufo.c2pa.actions import TrufoAction
 from trufo.c2pa.assertions import UserAssertion
 from trufo.c2pa.watermark import WatermarkEffort, WatermarkMode
@@ -19,12 +20,17 @@ from trufo.crypt.algorithms import LeafType, SigningAlgorithm
 STR_ENUMS = {
     UserAssertion: {
         "AI_DISCLOSURE": "ai_disclosure",
+        "AI_SYSTEM": "ai_system",
         "CAWG_IDENTITY": "cawg_identity",
         "CAWG_METADATA": "cawg_metadata",
         "CAWG_TRAINING": "cawg_training",
         "CUSTOM": "custom",
         "CREATION": "creation",
         "INGREDIENT": "ingredient",
+    },
+    AIInvolvement: {
+        "AI_GENERATED": "ai_generated",
+        "AI_MODIFIED": "ai_modified",
     },
     TrufoAction: {
         "TRANSCODE": "transcode",

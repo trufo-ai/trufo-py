@@ -9,7 +9,9 @@ from enum import Enum
 class UserAssertion(str, Enum):
     """User-facing C2PA assertion type."""
 
+    # TODO(sunset-2026-12-31): the 'ai_disclosure' entry goes; successor UserAssertion.AI_SYSTEM
     AI_DISCLOSURE = "ai_disclosure"
+    AI_SYSTEM = "ai_system"
     CAWG_IDENTITY = "cawg_identity"
     CAWG_METADATA = "cawg_metadata"
     CAWG_TRAINING = "cawg_training"
