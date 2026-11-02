@@ -491,11 +491,11 @@ of the asset, not a Trufo attestation.
 | `digital_source_type` | string | No | The IPTC `trainedAlgorithmicMedia` or `compositeWithTrainedAlgorithmicMedia` URI |
 | `media` | string | For `componentOf` | base64 bytes; must be a thumbnail-capable image (JPEG, PNG, WebP, GIF, TIFF, HEIC/HEIF) |
 | `placement` | string | No | `gathered` (default) or, when eligible and authorized, `created`; `parentOf` is always created |
-| `action_history` | list | No | Actions between a `parentOf` source and the supplied input; entries may independently set `placement` and `digitalSourceType` |
+| `action_history` | list | No | Actions between a `parentOf` source and the supplied input; entries may independently set `placement`, `digitalSourceType` and `description`. An entry's action is a C2PA action or a custom one in a domain your organization has validated (for example `com.example.upscaled`) |
 
-Media carrying its own C2PA manifest is validated and referenced; manifest-free
-media is thumbnailed as a described visual record, not a cryptographic binding, and
-cannot also declare `digital_source_type`.
+Media carrying its own C2PA manifest is validated and referenced, and cannot also
+declare `digital_source_type`; manifest-free media is recorded as a described
+record, not a cryptographic binding, with a thumbnail when it is an image.
 
 At most one `parentOf` ingredient is allowed, it requires media, and it cannot be
 combined with `creation`. A signed supplied input cannot be relabeled as newly

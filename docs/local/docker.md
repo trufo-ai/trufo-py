@@ -6,7 +6,9 @@ file by path, and the service signs one into the other:
 
 - the media stays on your machine;
 - Trufo's engine builds the manifest locally, inside the container;
-- only the claim goes to Trufo, which signs it with Trufo's certificate.
+- Trufo receives the signing instructions, signs the claim with Trufo's certificate,
+  and (if elected) stores the finished manifest for soft-binding recovery and general
+  audit records.
 
 Any language that can send an HTTP request can call it.
 
