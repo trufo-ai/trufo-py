@@ -109,7 +109,7 @@ Every route except C2PA Signing, Cloud ends in a commit, because the record cann
 Additional notes for local embedding:
 
 - The engine runs on CPU by default; an NVIDIA GPU (CUDA) is used automatically when available.
-- M4A watermarking uses the FFmpeg suite: install `ffmpeg` and `ffprobe` on the PATH, or point the `PAWPRINT_FFMPEG` and `PAWPRINT_FFPROBE` environment variables at the binaries.
+- Watermarking M4A, raw AAC (ADTS), MP4 or MOV needs FFmpeg, and HEIC/HEIF or AVIF needs libheif's `heif-enc`. On Debian or Ubuntu: `apt install ffmpeg libheif-examples libheif-plugin-x265 libheif-plugin-aomenc`.
 
 ## Binding Without Trufo Signing
 
