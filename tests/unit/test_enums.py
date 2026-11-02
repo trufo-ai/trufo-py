@@ -9,7 +9,7 @@ These checks run without needing tfprov installed.
 
 import pytest
 
-from trufo.c2pa import AIInvolvement
+from trufo.c2pa import AIInvolvement, SignedInputPolicy
 from trufo.c2pa.actions import TrufoAction
 from trufo.c2pa.assertions import UserAssertion
 from trufo.c2pa.watermark import WatermarkEffort, WatermarkMode
@@ -31,6 +31,11 @@ STR_ENUMS = {
     AIInvolvement: {
         "AI_GENERATED": "ai_generated",
         "AI_MODIFIED": "ai_modified",
+    },
+    SignedInputPolicy: {
+        "KEEP": "keep",
+        "DROP": "drop",
+        "AUTO": "auto",
     },
     TrufoAction: {
         "TRANSCODE": "transcode",
