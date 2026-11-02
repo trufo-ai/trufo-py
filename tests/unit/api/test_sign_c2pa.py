@@ -681,6 +681,7 @@ class TestRequestValidation:
             {"effort_policy": "best_effort"},
             {"effort": "require"},  # deprecated alias, still accepted
             {"mode": "provenance"},
+            {"wid_allocation_mode": "per_ai_system"},
         ],
     )
     def test_valid_watermark_action_accepted(self, params):
@@ -695,6 +696,8 @@ class TestRequestValidation:
             ({"effort": "require", "effort_policy": "require"}, "not both"),
             ({"apply": True}, "replaced by 'effort_policy'"),
             ({"mode": "attestation"}, "mode"),
+            ({"wid_allocation_mode": "provenance"}, "WatermarkIDAllocationMode"),
+            ({"mode": "provenance", "wid_allocation_mode": "per_embed"}, "'mode', not both"),
             ({"ai_compliance_label": "ai_generated"}, "Unsupported watermark parameter"),
             (
                 {"mode": "provenance", "ai_compliance_label": "ai_generated"},
@@ -716,6 +719,10 @@ class TestRequestValidation:
     def test_unsupported_mode_is_not_tolerated(self, effort):
         with pytest.raises(NotImplementedError, match="Compliance watermarking"):
             _validate_actions([["watermark", {"mode": "compliance", "effort_policy": effort}]])
+
+    def test_per_asset_allocation_rejected(self):
+        with pytest.raises(NotImplementedError, match="Per-asset watermark ID allocation"):
+            _validate_actions([["watermark", {"wid_allocation_mode": "per_asset"}]])
 
     def test_duplicate_watermark_action_rejected(self):
         with pytest.raises(ValueError, match="At most one watermark action"):

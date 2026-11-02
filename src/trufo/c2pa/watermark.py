@@ -23,11 +23,36 @@ class WatermarkEffort(str, Enum):
     BEST_EFFORT = "best_effort"
 
 
-class WatermarkMode(str, Enum):
-    """What the embedded watermark ID resolves to.
+class WatermarkIDAllocationMode(str, Enum):
+    """How the embedded watermark ID is allocated.
 
-    A watermark action's ``mode`` selects the kind of mark. A bare action
-    defaults to ``PROVENANCE``.
+    A watermark action's ``wid_allocation_mode`` selects it. A bare watermark
+    action defaults to ``PER_EMBED``.
+    """
+
+    # a new watermark ID for this embed
+    PER_EMBED = "per_embed"
+    # the watermark ID of a registered AI system for the request's AI involvement
+    PER_AI_SYSTEM = "per_ai_system"
+    # reserved; requesting this mode raises NotImplementedError
+    PER_ASSET = "per_asset"
+
+    @staticmethod
+    def validate(mode: str) -> "WatermarkIDAllocationMode":
+        selected = WatermarkIDAllocationMode(mode)
+        if selected == WatermarkIDAllocationMode.PER_ASSET:
+            raise NotImplementedError("Per-asset watermark ID allocation is not supported.")
+        return selected
+
+
+# TODO(sunset-2026-12-31): WatermarkMode and the watermark 'mode' parameter go;
+# successor WatermarkIDAllocationMode
+class WatermarkMode(str, Enum):
+    """Deprecated: use WatermarkIDAllocationMode.
+
+    What the embedded watermark ID resolves to. A watermark action's ``mode``
+    selects the kind of mark; ``WatermarkIDAllocationMode.PER_EMBED`` replaces
+    ``PROVENANCE``.
     """
 
     # a per-content mark linked to this signing record

@@ -9,7 +9,7 @@ These checks run without needing tfprov installed.
 
 import pytest
 
-from trufo.c2pa import AIInvolvement, SignedInputPolicy
+from trufo.c2pa import AIInvolvement, SignedInputPolicy, WatermarkIDAllocationMode
 from trufo.c2pa.actions import TrufoAction
 from trufo.c2pa.assertions import UserAssertion
 from trufo.c2pa.watermark import WatermarkEffort, WatermarkMode
@@ -47,6 +47,11 @@ STR_ENUMS = {
         "REQUIRE": "require",
         "REQUIRE_IF_SUPPORTED": "require_if_supported",
         "BEST_EFFORT": "best_effort",
+    },
+    WatermarkIDAllocationMode: {
+        "PER_EMBED": "per_embed",
+        "PER_AI_SYSTEM": "per_ai_system",
+        "PER_ASSET": "per_asset",
     },
     WatermarkMode: {
         "PROVENANCE": "provenance",

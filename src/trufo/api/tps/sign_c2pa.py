@@ -44,7 +44,7 @@ from trufo.c2pa.actions import TrufoAction
 from trufo.c2pa.assertions import UserAssertion
 from trufo.c2pa.manifest import ManifestSettings, SignedInputPolicy
 from trufo.c2pa.redactions import RedactableAssertion, RedactionReason
-from trufo.c2pa.watermark import WatermarkEffort, WatermarkMode
+from trufo.c2pa.watermark import WatermarkEffort, WatermarkIDAllocationMode, WatermarkMode
 from trufo.util.deprecation import deprecated_aliases
 from trufo.util.optional_imports import require_provenance_module
 from trufo.util.warnings import emit_server_warnings
@@ -154,11 +154,22 @@ def _validate_watermark_action(entry: Any) -> None:
         raise ValueError("The watermark action requires a parameter object.")
     if "apply" in params:
         raise ValueError("The watermark 'apply' parameter has been replaced by 'effort_policy'.")
-    WatermarkMode.validate(params.get("mode", WatermarkMode.PROVENANCE.value))
+    if "mode" in params:
+        # TODO(sunset-2026-12-31): WatermarkMode and the watermark 'mode' parameter go;
+        # successor WatermarkIDAllocationMode
+        if "wid_allocation_mode" in params:
+            raise ValueError(
+                "Provide the watermark 'wid_allocation_mode' parameter or the deprecated "
+                "'mode', not both."
+            )
+        WatermarkMode.validate(params["mode"])
+    if "wid_allocation_mode" in params:
+        WatermarkIDAllocationMode.validate(params["wid_allocation_mode"])
     unsupported = set(params) - {
         "effort_policy",
         "effort",
         "mode",
+        "wid_allocation_mode",
     }
     if unsupported:
         raise ValueError(f"Unsupported watermark parameter(s): {', '.join(sorted(unsupported))}.")
