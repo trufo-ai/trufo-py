@@ -20,14 +20,14 @@ WORKDIR /app
 
 # Install the engine's dependencies as the engine itself declares them, then remove the engine;
 # each container installs it at start. The sdk-download key exists only within this step;
-# extra-sources.txt lists the sources of the libraries the numpy and opencv-python-headless
-# wheels bundle, so change it with these pins
+# extra-sources.txt lists the sources of the libraries the numpy, opencv-python-headless and
+# pi-heif wheels bundle, so change it with these pins
 COPY requirements.txt ./
 RUN --mount=type=secret,id=TRUFO_SDK_DOWNLOAD_API_KEY,required=true \
     PIP_INDEX_URL="https://__token__:$(cat /run/secrets/TRUFO_SDK_DOWNLOAD_API_KEY)@packages.trufo.ai/simple/" \
        pip install --no-cache-dir --no-deps --require-hashes -r requirements.txt \
     && pip install --no-cache-dir trufo==2.1.0 fastapi uvicorn 'trufo-provenance[c2pa]' \
-       numpy==2.5.4 opencv-python-headless==5.0.0.93 \
+       numpy==2.5.4 opencv-python-headless==5.0.0.93 pi-heif==1.4.0 \
     && pip uninstall -y trufo-provenance
 
 COPY app.py entrypoint.py ./
