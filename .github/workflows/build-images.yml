@@ -134,9 +134,12 @@ jobs:
           pip install --no-cache-dir --no-deps --require-hashes -r trufo-local/requirements.txt
 
       - name: Install test dependencies
+        env:
+          PIP_EXTRA_INDEX_URL: https://__token__:${{ secrets.TRUFO_SDK_DOWNLOAD_API_KEY }}@packages.trufo.ai/simple/
         run: |
           set -euo pipefail
           # from PyPI; the engine is installed, so its c2pa extra adds only its dependencies
+          # (pillow-heif from Trufo's index)
           pip install -e '.[test]' fastapi httpx 'trufo-provenance[c2pa]'
 
       - name: Run unit tests
