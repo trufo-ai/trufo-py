@@ -26,6 +26,7 @@ from tfprov.c2pa_generator.sb_watermark import is_watermark_entry
 from tfprov.c2pa_py.errors import RedactionError, RemoteSignError
 
 from trufo.api.endpoints import TRUFO_API_URL
+from trufo.c2pa.manifest import SignedIngredientPolicy, SignedInputPolicy
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +45,8 @@ class C2PASignRequest(BaseModel):
     ingredient_title: str | None = None
     manifest_settings: dict[str, Any] | None = None
     branded_gp_id: str | None = None
+    signed_input_policy: SignedInputPolicy | None = None
+    signed_ingredient_policy: SignedIngredientPolicy | None = None
 
 
 @asynccontextmanager
@@ -107,6 +110,8 @@ async def sign(body: C2PASignRequest, request: Request) -> dict | Response:
                 ingredient_title=body.ingredient_title,
                 manifest_settings=body.manifest_settings,
                 branded_gp_id=body.branded_gp_id,
+                signed_input_policy=body.signed_input_policy,
+                signed_ingredient_policy=body.signed_ingredient_policy,
             )
         except RemoteSignError as exc:
             # trufo's own 4xx errors pass through; any other trufo failure is upstream's

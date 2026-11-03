@@ -129,6 +129,8 @@ def test_accepted(sign, folders, engine):
         "ingredient_title": "photo.jpg",
         "manifest_settings": {"all_actions_included": True},
         "branded_gp_id": "gp_1",
+        "signed_input_policy": "keep",
+        "signed_ingredient_policy": "auto",
     }
     response = sign(
         **{IN: f"{folders}/in/link.jpg", OUT: f"{folders}/both/signed.jpg"},
@@ -148,6 +150,12 @@ def test_accepted(sign, folders, engine):
             **fields,
         }
     ]
+
+
+@pytest.mark.parametrize("field", ["signed_input_policy", "signed_ingredient_policy"])
+def test_bad_policy(sign, engine, field):
+    assert sign(**{field: "bogus"}).status_code == 422
+    assert engine.calls == []
 
 
 @pytest.mark.parametrize(
