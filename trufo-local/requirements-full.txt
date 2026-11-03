@@ -1,0 +1,2 @@
+trufo-provenance[c2pa,pawprint]==2.1.2 --hash=sha256:ee4005ee56fa1232ca3986998ae236727214eaf7b55f248522cc1bc82cbc1323 --hash=sha256:fccc343f9696b06285ac47ba953740b1ca258842b77c7e6fc450d338eec1f50c
+trufo-pawprint==0.5.2 --hash=sha256:f7f712b82e6d3334fb031c2a3a5cd9eb835335e0cac857d9e9301c5111d62d9e

@@ -4,6 +4,7 @@
 """Tests for the trufo-local start checks."""
 
 import importlib.metadata
+import re
 import subprocess
 from pathlib import Path
 from unittest.mock import Mock
@@ -129,3 +130,12 @@ def test_installs_unless_every_pin_is_installed(
     entrypoint._install_pinned_packages("key")
     assert capsys.readouterr().err == f"{line}\n"
     assert run.call_count == pip_runs
+
+
+def test_both_images_pin_the_same_engine():
+    folder = entrypoint._REQUIREMENTS_FILE.parent
+    signing_only, full = (
+        re.sub(r"\[.*?\]", "", (folder / name).read_text().splitlines()[0])
+        for name in ("requirements.txt", "requirements-full.txt")
+    )
+    assert signing_only == full

@@ -1,0 +1,42 @@
+# trufo-local Dockerfile.full: the signing-only image, plus watermarking
+# Build the signing-only image (Dockerfile) first, then this one on it, from the trufo-py root,
+# with an sdk-download key in TRUFO_SDK_DOWNLOAD_API_KEY:
+# docker build -f trufo-local/Dockerfile.full --build-arg BASE_IMAGE=<signing-only image> \
+#   --secret id=TRUFO_SDK_DOWNLOAD_API_KEY --build-arg VERSION=2.2.0 trufo-local
+
+ARG BASE_IMAGE
+FROM ${BASE_IMAGE}
+
+ARG VERSION
+ENV TRUFO_LOCAL_VERSION=${VERSION}-full
+
+USER root
+
+# Install heif-enc and its x265 (HEIC, HEIF) and libaom (AVIF) encoders, which re-encode
+# watermarked HEIC, HEIF and AVIF images
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libheif-examples \
+    libheif-plugin-x265 \
+    libheif-plugin-aomenc \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install CPU torch from PyTorch's CPU index, always, since this image runs on CPU only;
+# setuptools first, from PyPI, so torch takes no older one from that index
+RUN pip install --no-cache-dir setuptools==84.2.1 \
+    && pip install --no-cache-dir torch==2.13.0 torchaudio==2.11.0 \
+       --index-url https://download.pytorch.org/whl/cpu
+
+# As in Dockerfile: install the engine's and the watermark engine's dependencies, then remove
+# both; each container installs them at start. requirements-full.txt replaces the signing-only
+# image's pins, which entrypoint.py reads. extra-sources-full.txt lists the sources of
+# the libraries the torch, imagecodecs and soundfile wheels bundle, so change it with these pins
+COPY requirements-full.txt /app/requirements.txt
+RUN --mount=type=secret,id=TRUFO_SDK_DOWNLOAD_API_KEY,required=true \
+    PIP_INDEX_URL="https://__token__:$(cat /run/secrets/TRUFO_SDK_DOWNLOAD_API_KEY)@packages.trufo.ai/simple/" \
+       pip install --no-cache-dir --no-deps --require-hashes -r requirements.txt \
+    && pip install --no-cache-dir 'trufo-provenance[c2pa,pawprint]' imagecodecs==2026.10.10 soundfile==0.14.0 \
+    && pip uninstall -y trufo-provenance trufo-pawprint
+
+LABEL ai.trufo.trufo-local.source=ghcr.io/trufo-ai/trufo-local:${VERSION}-full-source
+
+USER 10001
