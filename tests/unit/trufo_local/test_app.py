@@ -214,6 +214,7 @@ def test_bad_policy(sign, engine, field):
         pytest.param(_remove_input, 404, "MediaInputPathNotFound", id="input removed"),
         pytest.param(FileNotFoundError(), 500, "Internal server error.", id="other file"),
         pytest.param(RuntimeError(), 500, "Internal server error.", id="unexpected"),
+        pytest.param(NotImplementedError(), 500, "Internal server error.", id="not implemented"),
     ],
 )
 def test_engine_errors(sign, engine, side_effect, status, detail):
@@ -227,6 +228,24 @@ def test_watermark_engine_installed(watermark_engine, client, sign, engine):
     assert sign(actions=actions).status_code == 200
     assert engine.calls[0]["actions"] == actions
     assert client.get("/health").json()["watermark_engine_version"] == "0.5.2"
+
+
+@pytest.mark.parametrize(
+    "params, status, detail",
+    [
+        pytest.param(
+            {"wid_allocation_mode": "per_asset"},
+            501,
+            "Per-asset watermark ID allocation is not supported.",
+            id="per asset",
+        ),
+        pytest.param({"mode": "bogus"}, 400, "Invalid watermark mode.", id="bad mode"),
+    ],
+)
+def test_watermark_refused(watermark_engine, sign, engine, params, status, detail):
+    response = sign(actions=[["watermark", params]])
+    assert (response.status_code, response.json()) == (status, {"detail": detail})
+    assert engine.calls == []
 
 
 def test_unimportable_watermark_engine_fails_the_start(watermark_engine, folders, monkeypatch):

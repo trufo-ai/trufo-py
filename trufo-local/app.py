@@ -24,7 +24,11 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel
 from tfprov.c2pa_generator.remote_orchestrator import generate_claim_remote
-from tfprov.c2pa_generator.sb_watermark import is_watermark_entry, require_watermark_engine
+from tfprov.c2pa_generator.sb_watermark import (
+    is_watermark_entry,
+    require_watermark_engine,
+    validate_and_strip_watermark,
+)
 from tfprov.c2pa_generator.trufo_actions import WatermarkApplyError
 from tfprov.c2pa_py.errors import RedactionError, RemoteSignError
 
@@ -97,6 +101,14 @@ async def sign(body: C2PASignRequest, request: Request) -> dict | Response:
     if any(is_watermark_entry(entry) for entry in body.actions):
         if state.watermark_engine_version is None:
             raise HTTPException(status_code=400, detail="WatermarkNotAvailable")
+        # only validate_and_strip_watermark's NotImplementedError is a 501; the engine
+        # validates again
+        try:
+            validate_and_strip_watermark(body.actions)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        except NotImplementedError as exc:
+            raise HTTPException(status_code=501, detail=str(exc)) from exc
     # in a thread, so a stalled folder mount cannot stall the server
     media_input_path, media_output_path = await asyncio.to_thread(
         _check_paths, body, state.input_dirs, state.output_dirs
