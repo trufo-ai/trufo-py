@@ -1,19 +1,24 @@
 name: build-images
 
-# Build the trufo-local image on a release tag push, natively for linux/amd64 and
-# linux/arm64, and check each build on its own runner. Then join both builds into
-# one image index and push it: a private copy to ECR for vulnerability scanning,
-# with a backup of its source image, then to GHCR with its source image.
+# Build both trufo-local images on a release tag push, the signing-only image and the
+# full image on it (which adds watermarking), natively for linux/amd64 and linux/arm64,
+# and check each build on its own runner. Then join each image's two builds into one
+# image index and push both: a private copy to ECR for vulnerability scanning, with a
+# backup of their source images, then to GHCR with their source images.
 # This workflow does NOT create a GitHub Release (a Release would also run
 # publish.yml) and does NOT change the GHCR package's visibility. The checks and
-# the source image come before the first push to ECR or GHCR, so a run that fails
+# the source images come before the first push to ECR or GHCR, so a run that fails
 # one of them, on either architecture, pushes nothing.
 #
 # Trigger: push a tag  trufo-local-X.Y.Z
 #   e.g.  git tag trufo-local-2.1.0   &&  git push origin trufo-local-2.1.0
-# On GHCR, X.Y.Z-source is pushed first, then X.Y.Z. X.Y.Z never moves: the run
-# fails if GHCR already has it. X.Y moves only when this is the highest
-# trufo-local-X.Y.Z tag.
+# On GHCR, X.Y.Z-source and X.Y.Z-full-source are pushed first, then X.Y.Z-full, then
+# X.Y.Z. X.Y.Z and X.Y.Z-full never move: the run fails if GHCR already has either.
+# X.Y and X.Y-full move only when this is the highest trufo-local-X.Y.Z tag.
+# If publishing fails, "Re-run failed jobs" pushes the same checked images, with the
+# same digests; it rebuilds the source images, so the -source tags get new digests over
+# the same sources. After the build artifacts' one-day retention, the fix is the next
+# patch.
 
 on:
   push:
@@ -87,9 +92,11 @@ jobs:
               echo "::error::Listing the package versions answered HTTP $status: $(cat "$versions")"; exit 1
             fi
             tags=$(jq -r '.[].metadata.container.tags[]' "$versions")
-            if grep -qxF "$VERSION" <<< "$tags"; then
-              echo "::error::$IMAGE:$VERSION already exists."; exit 1
-            fi
+            for tag in "$VERSION" "$VERSION-full"; do
+              if grep -qxF "$tag" <<< "$tags"; then
+                echo "::error::$IMAGE:$tag already exists."; exit 1
+              fi
+            done
             if [ "$(jq length "$versions")" -lt 100 ]; then break; fi
           done
 
@@ -139,7 +146,7 @@ jobs:
           python -c "import fastapi, tfprov"
           python -m pytest tests/unit/trufo_local -v
 
-      - name: Build image
+      - name: Build images
         id: build
         env:
           TRUFO_SDK_DOWNLOAD_API_KEY: ${{ secrets.TRUFO_SDK_DOWNLOAD_API_KEY }}
@@ -147,16 +154,30 @@ jobs:
           ARCH: ${{ matrix.arch }}
         run: |
           set -euo pipefail
-          # the key enters the build as a secret mount only, never as a build arg
+          # the key enters each build as a secret mount only, never as a build arg
           # no provenance attestation: on the containerd image store it makes the build an index,
           # which the staged config-digest check refuses; this keeps it one manifest on either store
           docker build --platform "linux/$ARCH" --provenance=false \
             --secret id=TRUFO_SDK_DOWNLOAD_API_KEY --build-arg VERSION="$VERSION" \
             --metadata-file "$RUNNER_TEMP/build.json" -t "$IMAGE:$VERSION" trufo-local
+          # the full image, on the signing-only image just built
+          docker build --platform "linux/$ARCH" --provenance=false \
+            --secret id=TRUFO_SDK_DOWNLOAD_API_KEY --build-arg VERSION="$VERSION" \
+            --build-arg BASE_IMAGE="$IMAGE:$VERSION" -f trufo-local/Dockerfile.full \
+            --metadata-file "$RUNNER_TEMP/build-full.json" -t "$IMAGE:$VERSION-full" trufo-local
+          # the full source image rests on the signing-only one, so the full image's layers must
+          # start with the signing-only image's
+          layers=$(docker image inspect -f '{{json .RootFS.Layers}}' "$IMAGE:$VERSION")
+          full_layers=$(docker image inspect -f '{{json .RootFS.Layers}}' "$IMAGE:$VERSION-full")
+          if ! jq -e --argjson layers "$layers" '.[:($layers | length)] == $layers' <<< "$full_layers"; then
+            echo "::error::$IMAGE:$VERSION-full is not built on $IMAGE:$VERSION."; exit 1
+          fi
           config_digest=$(jq -er '."containerimage.config.digest"' "$RUNNER_TEMP/build.json")
+          full_config_digest=$(jq -er '."containerimage.config.digest"' "$RUNNER_TEMP/build-full.json")
           echo "config_digest=$config_digest" >> "$GITHUB_OUTPUT"
+          echo "full_config_digest=$full_config_digest" >> "$GITHUB_OUTPUT"
 
-      - name: Check image
+      - name: Check images
         env:
           TRUFO_SDK_DOWNLOAD_API_KEY: ${{ secrets.TRUFO_SDK_DOWNLOAD_API_KEY }}
           VERSION: ${{ needs.release.outputs.version }}
@@ -169,20 +190,36 @@ jobs:
           run=(docker run --user "$(id -u):$(id -g)"
             -e TRUFO_LOCAL_INPUT_DIRS="$input_dir" -e TRUFO_LOCAL_OUTPUT_DIRS="$output_dir"
             -v "$input_dir:$input_dir:ro" -v "$output_dir:$output_dir")
-          # without a key: exit 1 with the start line
-          status=0
-          line=$("${run[@]}" --rm "$IMAGE:$VERSION" 2>&1) || status=$?
-          if [ "$status" != 1 ] || [ "$line" != "TRUFO_SDK_DOWNLOAD_API_KEY is not set. Set it to your sdk-download key." ]; then
-            echo "::error::Start without a key: exit $status: $line"; exit 1
+          # each image ("" or -full) under its own container name and port: without a key, exit 1
+          # with the start line; with the key, the engine installs and /health passes the jq
+          # filter, given with its jq arguments
+          start() {
+            local suffix=$1 name=$2 port=$3 filter=$4 status=0 line health
+            shift 4
+            line=$("${run[@]}" --rm "$IMAGE:$VERSION$suffix" 2>&1) || status=$?
+            if [ "$status" != 1 ] || [ "$line" != "TRUFO_SDK_DOWNLOAD_API_KEY is not set. Set it to your sdk-download key." ]; then
+              echo "::error::Start of $IMAGE:$VERSION$suffix without a key: exit $status: $line"; exit 1
+            fi
+            "${run[@]}" -d --name "$name" -p "127.0.0.1:$port:8080" -e TRUFO_SDK_DOWNLOAD_API_KEY "$IMAGE:$VERSION$suffix"
+            if ! health=$(curl -fsS --retry 60 --retry-delay 2 --retry-all-errors "http://127.0.0.1:$port/health"); then
+              docker logs "$name"; exit 1
+            fi
+            if ! jq -e "$@" "$filter" <<< "$health"; then
+              echo "::error::$IMAGE:$VERSION$suffix reports $health"; exit 1
+            fi
+          }
+          if ! watermark_engine_version=$(grep -oP '^trufo-pawprint==\K[^ ]+' trufo-local/requirements-full.txt); then
+            echo "::error::trufo-local/requirements-full.txt has no trufo-pawprint== pin."; exit 1
           fi
-          # with the key: the engine installs and /health reports this version
-          "${run[@]}" -d --name trufo-local-check -p 127.0.0.1:8080:8080 -e TRUFO_SDK_DOWNLOAD_API_KEY "$IMAGE:$VERSION"
-          if ! health=$(curl -fsS --retry 60 --retry-delay 2 --retry-all-errors http://127.0.0.1:8080/health); then
-            docker logs trufo-local-check; exit 1
-          fi
-          jq -e --arg version "$VERSION" '.version == $version' <<< "$health"
-          # in-process check, on the running service
-          docker exec -i trufo-local-check python - <<'EOF'
+          # /health reports each image's version, and the pinned watermark engine's in the full image only
+          start "" trufo-local-check 8080 \
+            '.version == $version and (has("watermark_engine_version") | not)' --arg version "$VERSION"
+          start -full trufo-local-full-check 8081 \
+            '.version == $version and .watermark_engine_version == $watermark_engine_version' \
+            --arg version "$VERSION-full" --arg watermark_engine_version "$watermark_engine_version"
+          # in-process check, on each running service
+          for name in trufo-local-check trufo-local-full-check; do
+            docker exec -i "$name" python - <<'EOF'
           import importlib.metadata
           import re
           import site
@@ -244,28 +281,110 @@ jobs:
               print(f"::error::{problem}")
           sys.exit(1 if problems else 0)
           EOF
+          done
 
-      - name: Save image
+      - name: Check full image
+        run: |
+          set -euo pipefail
+          docker exec -i trufo-local-full-check python - <<'EOF'
+          import importlib.metadata
+          import re
+          import shutil
+          import subprocess
+          import sys
+          import tempfile
+          import time
+          from datetime import datetime, timedelta, timezone
+          from pathlib import Path
+
+          import numpy as np
+          import torch
+          from PIL import Image
+          from tfprov.util.pawprint_import import WatermarkIdPackage, embed, extract
+
+          problems = []
+          # the app's process has loaded CPU torch, and nothing for CUDA is installed
+          if "/site-packages/torch/lib/libtorch_cpu.so" not in Path("/proc/1/maps").read_text():
+              problems.append("pid 1 has not loaded torch")
+          if torch.version.cuda is not None:
+              problems.append(f"torch is built for CUDA {torch.version.cuda}")
+          for dist in importlib.metadata.distributions():
+              name = re.sub(r"[-_.]+", "-", dist.name).lower()
+              if name.startswith("nvidia-") or name == "torchcodec":
+                  problems.append(f"installed: {dist.name}")
+          with tempfile.TemporaryDirectory() as folder:
+              # heif-enc and its x265 and aom encoders, which re-encode watermarked HEIC, HEIF and
+              # AVIF, each write a tiny image
+              tiny_path = Path(folder, "tiny.png")
+              Image.new("RGB", (64, 64)).save(tiny_path)
+              if shutil.which("heif-enc") is None:
+                  problems.append("heif-enc is not on PATH")
+              else:
+                  for suffix in (".heic", ".avif"):
+                      result = subprocess.run(
+                          ["heif-enc", tiny_path, "-o", tiny_path.with_suffix(suffix)],
+                          stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+                      )
+                      if result.returncode != 0:
+                          problems.append(f"heif-enc cannot write {suffix}: {result.stdout.strip()}")
+              # an offline embed-and-extract round trip on a smooth gradient plus noise, as in the
+              # watermark engine's own tests, timed but with no time limit; the unmarked image must
+              # read as unmarked
+              rng = np.random.default_rng(11)
+              yy, xx = np.mgrid[0:512, 0:512].astype(np.float32) / 512.0
+              gradient = np.stack([120 + 80 * xx, 100 + 60 * yy, 90 + 70 * xx * yy], axis=-1)
+              noise = rng.normal(0.0, 12.0, (512, 512, 3)).astype(np.float32)
+              unmarked_path = Path(folder, "unmarked.png")
+              marked_path = Path(folder, "marked.png")
+              Image.fromarray(np.clip(gradient + noise, 0, 255).astype(np.uint8)).save(unmarked_path)
+              wid = "v1.0123456789a"
+              expires_at = datetime.now(timezone.utc) + timedelta(hours=1)
+              package = WatermarkIdPackage(wid=wid, expires_at=expires_at)
+              start = time.monotonic()
+              embed(unmarked_path, package, out_file=marked_path)
+              embedded = time.monotonic()
+              marked = extract(marked_path)
+              extracted = time.monotonic()
+              unmarked = extract(unmarked_path)
+          print(f"Embedded in {embedded - start:.1f} s and extracted in {extracted - embedded:.1f} s.")
+          if not marked.detected or marked.wid != wid:
+              problems.append(f"the marked image reads {marked}, not {wid}")
+          if unmarked.detected:
+              problems.append(f"the unmarked image reads {unmarked}")
+          for problem in problems:
+              print(f"::error::{problem}")
+          sys.exit(1 if problems else 0)
+          EOF
+
+      - name: Save images
         env:
           VERSION: ${{ needs.release.outputs.version }}
           CONFIG_DIGEST: ${{ steps.build.outputs.config_digest }}
+          FULL_CONFIG_DIGEST: ${{ steps.build.outputs.full_config_digest }}
         run: |
           set -euo pipefail
-          # what the publish job needs from the image, read here on the image's own architecture
+          # what the publish job needs from the images, read here on the images' own architecture
           image_dir="$RUNNER_TEMP/image"
           mkdir "$image_dir"
           echo "$CONFIG_DIGEST" > "$image_dir/config-digest.txt"
+          echo "$FULL_CONFIG_DIGEST" > "$image_dir/config-digest-full.txt"
+          # once: the full image has the signing-only image's Python and Debian release
           docker run --rm --entrypoint python "$IMAGE:$VERSION" -V > "$image_dir/python-version.txt"
           docker run --rm --entrypoint sh "$IMAGE:$VERSION" -c '. /etc/os-release && echo "$VERSION_CODENAME"' \
             > "$image_dir/debian-codename.txt"
-          # every installed source package, plus each Built-Using source package ("name (= version), ...")
-          # as name=version, since a binary's complete source includes them
-          docker run --rm --entrypoint dpkg-query "$IMAGE:$VERSION" \
-            -W -f '${source:Package}=${source:Version}\n${Built-Using}\n' \
-            | sed -E 's/ \(= ([^)]+)\)/=\1/g; s/, /\n/g' \
-            | sed '/^$/d' | sort -u > "$image_dir/sources.txt"
-          docker run --rm --entrypoint pip "$IMAGE:$VERSION" list --format=freeze > "$image_dir/python-packages.txt"
-          docker save -o "$image_dir/image.tar" "$IMAGE:$VERSION"
+          # for each image, every installed source package, plus each Built-Using source package
+          # ("name (= version), ...") as name=version, since a binary's complete source includes
+          # them; and its Python packages
+          for suffix in "" -full; do
+            docker run --rm --entrypoint dpkg-query "$IMAGE:$VERSION$suffix" \
+              -W -f '${source:Package}=${source:Version}\n${Built-Using}\n' \
+              | sed -E 's/ \(= ([^)]+)\)/=\1/g; s/, /\n/g' \
+              | sed '/^$/d' | sort -u > "$image_dir/sources$suffix.txt"
+            docker run --rm --entrypoint pip "$IMAGE:$VERSION$suffix" list --format=freeze \
+              > "$image_dir/python-packages$suffix.txt"
+          done
+          # both images in one tar, so their shared layers are stored once
+          docker save -o "$image_dir/images.tar" "$IMAGE:$VERSION" "$IMAGE:$VERSION-full"
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v7
@@ -305,52 +424,69 @@ jobs:
           VERSION: ${{ needs.release.outputs.version }}
         run: |
           set -euo pipefail
-          # both builds load under the same tag, so each takes its staging name as it loads; the
-          # index is made of the staged copies, so each must have its checked build's config digest
+          # the free disk, here and after each large step, since this job holds both images
+          df -h
+          # both builds load under the same tags, so each takes its staging names as it loads; the
+          # indexes are made of the staged copies, so each must have its checked build's config digest
           for arch in amd64 arm64; do
-            docker load -i "$RUNNER_TEMP/image-$arch/image.tar"
-            docker tag "$IMAGE:$VERSION" "$STAGED_IMAGE:$arch"
-            docker push "$STAGED_IMAGE:$arch"
-            staged=$(docker buildx imagetools inspect --raw "$STAGED_IMAGE:$arch" | jq -er .config.digest)
-            checked=$(cat "$RUNNER_TEMP/image-$arch/config-digest.txt")
-            if [ "$staged" != "$checked" ]; then
-              echo "::error::The staged $arch image has config $staged, not the checked $checked."; exit 1
-            fi
+            docker load -i "$RUNNER_TEMP/image-$arch/images.tar"
+            rm "$RUNNER_TEMP/image-$arch/images.tar"
+            for suffix in "" -full; do
+              docker tag "$IMAGE:$VERSION$suffix" "$STAGED_IMAGE:$arch$suffix"
+              docker push "$STAGED_IMAGE:$arch$suffix"
+              staged=$(docker buildx imagetools inspect --raw "$STAGED_IMAGE:$arch$suffix" | jq -er .config.digest)
+              checked=$(cat "$RUNNER_TEMP/image-$arch/config-digest$suffix.txt")
+              if [ "$staged" != "$checked" ]; then
+                echo "::error::The staged $arch$suffix image has config $staged, not the checked $checked."; exit 1
+              fi
+            done
+            df -h
           done
 
-      - name: Build source image
+      - name: Build source images
         env:
           VERSION: ${{ needs.release.outputs.version }}
         run: |
           set -euo pipefail
-          # one source image serves both builds, so they must share the Python and Debian release
-          # (CPython's source, the base Dockerfile) and the Python packages (extra-sources.txt)
-          for file in python-version.txt debian-codename.txt python-packages.txt; do
+          # each source image serves both builds, so they must share the Python and Debian release
+          # (CPython's source, the base Dockerfile) and the Python packages (extra-sources.txt,
+          # extra-sources-full.txt)
+          for file in python-version.txt debian-codename.txt python-packages.txt python-packages-full.txt; do
             if ! diff "$RUNNER_TEMP"/image-{amd64,arm64}/"$file"; then
               echo "::error::The amd64 and arm64 builds differ in ${file%.txt}."; exit 1
             fi
           done
           src="$RUNNER_TEMP/sources"
-          mkdir -p "$src/debian" "$src/extra"
+          mkdir -p "$src/debian" "$src/extra" "$src-full/debian" "$src-full/extra"
           # the source package of every installed Debian package of either build at its installed
           # version, and every source package Debian lists as built into one of them (Built-Using) at its
           # listed version, fetched with the amd64 image's apt config (source packages are not per
           # architecture); apt checks each file against the signed Sources index
           sort -u "$RUNNER_TEMP"/image-{amd64,arm64}/sources.txt > "$src/debian/sources.txt"
-          docker run --rm -i --user 0 -v "$src/debian:/out" -w /out --entrypoint sh "$STAGED_IMAGE:amd64" -s <<'EOF'
+          # the full source image adds only the source packages of the full builds that the
+          # signing-only builds lack, listed in its debian/sources-full.txt
+          sort -u "$RUNNER_TEMP"/image-{amd64,arm64}/sources-full.txt \
+            | comm -23 - "$src/debian/sources.txt" > "$src-full/debian/sources-full.txt"
+          docker run --rm -i --user 0 -v "$src/debian:/out" -v "$src-full/debian:/out-full" -w /out \
+            --entrypoint sh "$STAGED_IMAGE:amd64" -s <<'EOF'
           set -e
           sed -i 's/^Types: deb$/Types: deb deb-src/' /etc/apt/sources.list.d/debian.sources
           apt-get update -qq
           xargs -a sources.txt apt-get source --download-only -qq
+          cd /out-full
+          xargs -r -a sources-full.txt apt-get source --download-only -qq
           EOF
           # every other source is saved under extra/ at its URL's host and path
-          cd "$src/extra"
           fetch() { curl -fsSL --create-dirs -o "${1#https://}" "$1"; }
-          while read -r sum url; do
-            fetch "$url"
-            echo "$sum  ${url#https://}" | sha256sum -c -
-          done < "$GITHUB_WORKSPACE/trufo-local/extra-sources.txt"
+          for suffix in "" -full; do
+            cd "$src$suffix/extra"
+            while read -r sum url; do
+              fetch "$url"
+              echo "$sum  ${url#https://}" | sha256sum -c -
+            done < "$GITHUB_WORKSPACE/trufo-local/extra-sources$suffix.txt"
+          done
           # CPython's source and the base image's Dockerfile, for the images' Python and Debian release
+          cd "$src/extra"
           python_version=$(cat "$RUNNER_TEMP/image-amd64/python-version.txt")
           python_version="${python_version#Python }"
           codename=$(cat "$RUNNER_TEMP/image-amd64/debian-codename.txt")
@@ -368,6 +504,14 @@ jobs:
           # no provenance attestation, so the image stays one manifest that either architecture can pull
           printf 'FROM scratch\nCOPY . /sources/\n' \
             | docker build --provenance=false -f - -t "$IMAGE:$VERSION-source" "$src"
+          # the full source image's files merge into the same /sources/ tree, and its SHA256SUMS
+          # replaces the signing-only one's with both images' files
+          cd "$src-full"
+          { cat "$src/SHA256SUMS"; find . -type f ! -name SHA256SUMS -print0 | xargs -0 sha256sum; } \
+            | sort -k 2 > SHA256SUMS
+          printf 'FROM %s\nCOPY . /sources/\n' "$IMAGE:$VERSION-source" \
+            | docker build --provenance=false -f - -t "$IMAGE:$VERSION-full-source" "$src-full"
+          df -h
 
       - name: Configure AWS credentials (OIDC, keyless)
         uses: aws-actions/configure-aws-credentials@v4
@@ -388,14 +532,17 @@ jobs:
           TAGS: ${{ needs.release.outputs.tags }}
         run: |
           set -euo pipefail
-          # the same image under the same tags, kept private, for vulnerability scanning; first,
+          # the same images under the same tags, kept private, for vulnerability scanning; first,
           # so a run that fails here or on GHCR can be rerun
           for tag in $TAGS; do
             docker buildx imagetools create -t "$ECR_IMAGE:$tag" "$STAGED_IMAGE:amd64" "$STAGED_IMAGE:arm64"
+            docker buildx imagetools create -t "$ECR_IMAGE:$tag-full" "$STAGED_IMAGE:amd64-full" "$STAGED_IMAGE:arm64-full"
           done
-          # a second copy of the source, so the NOTICE's written offer can be met even if GHCR's is lost
+          # a second copy of each source, so each NOTICE's written offer can be met even if GHCR's is lost
           docker tag "$IMAGE:$VERSION-source" "$ECR_IMAGE:$VERSION-source"
+          docker tag "$IMAGE:$VERSION-full-source" "$ECR_IMAGE:$VERSION-full-source"
           docker push "$ECR_IMAGE:$VERSION-source"
+          docker push "$ECR_IMAGE:$VERSION-full-source"
           # the digests from ECR's API, read here so every AWS call comes before GHCR: imagetools
           # inspect also reads the config blob, which this role may not download
           ecr_tag_digest() {
@@ -403,9 +550,15 @@ jobs:
               --query 'imageDetails[0].imageDigest' --output text
           }
           digest=$(ecr_tag_digest "$VERSION")
+          full_digest=$(ecr_tag_digest "$VERSION-full")
           source_digest=$(ecr_tag_digest "$VERSION-source")
-          echo "digest=$digest" >> "$GITHUB_OUTPUT"
-          echo "source_digest=$source_digest" >> "$GITHUB_OUTPUT"
+          full_source_digest=$(ecr_tag_digest "$VERSION-full-source")
+          {
+            echo "digest=$digest"
+            echo "full_digest=$full_digest"
+            echo "source_digest=$source_digest"
+            echo "full_source_digest=$full_source_digest"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Login to GHCR
         env:
@@ -418,8 +571,16 @@ jobs:
           TAGS: ${{ needs.release.outputs.tags }}
         run: |
           set -euo pipefail
-          # the source first, so a pushed image always has its source
+          # the sources first, so a pushed image always has its source; then the full image's tags
+          # and last the signing-only ones, so a run that fails between them has moved no
+          # signing-only tag; "Re-run failed jobs" pushes the same checked images again, with the
+          # same digests, but rebuilds the source images, so the -source tags get new digests over
+          # the same sources
           docker push "$IMAGE:$VERSION-source"
+          docker push "$IMAGE:$VERSION-full-source"
+          for tag in $TAGS; do
+            docker buildx imagetools create -t "$IMAGE:$tag-full" "$STAGED_IMAGE:amd64-full" "$STAGED_IMAGE:arm64-full"
+          done
           for tag in $TAGS; do
             docker buildx imagetools create -t "$IMAGE:$tag" "$STAGED_IMAGE:amd64" "$STAGED_IMAGE:arm64"
           done
@@ -427,24 +588,45 @@ jobs:
       - name: Report
         env:
           ECR_DIGEST: ${{ steps.ecr_push.outputs.digest }}
+          ECR_FULL_DIGEST: ${{ steps.ecr_push.outputs.full_digest }}
           ECR_SOURCE_DIGEST: ${{ steps.ecr_push.outputs.source_digest }}
+          ECR_FULL_SOURCE_DIGEST: ${{ steps.ecr_push.outputs.full_source_digest }}
           VERSION: ${{ needs.release.outputs.version }}
           MOVED: ${{ needs.release.outputs.moved }}
         run: |
           set -euo pipefail
           digest() { docker buildx imagetools inspect --format '{{.Manifest.Digest}}' "$1"; }
+          # each platform image of an image ("" or -full): its digest, compressed size (its manifest's
+          # layers) and unpacked size (the staged image loaded here)
+          platforms() {
+            local suffix=$1
+            docker buildx imagetools inspect --raw "$IMAGE:$VERSION$suffix" \
+              | jq -r '.manifests[] | "\(.platform.os)/\(.platform.architecture) \(.digest)"' \
+              | while read -r platform platform_digest; do
+                  compressed=$(docker buildx imagetools inspect --raw "$IMAGE@$platform_digest" | jq -e '[.layers[].size] | add')
+                  unpacked=$(docker image inspect -f '{{.Size}}' "$STAGED_IMAGE:${platform#*/}$suffix")
+                  echo "  - $platform: \`$platform_digest\`, $((compressed / 1000000)) MB compressed, $((unpacked / 1000000)) MB unpacked"
+                done
+          }
           image_digest=$(digest "$IMAGE:$VERSION")
+          full_digest=$(digest "$IMAGE:$VERSION-full")
           source_digest=$(digest "$IMAGE:$VERSION-source")
-          platform_digests=$(docker buildx imagetools inspect --raw "$IMAGE:$VERSION" \
-            | jq -r '.manifests[] | "  - \(.platform.os)/\(.platform.architecture): `\(.digest)`"')
+          full_source_digest=$(digest "$IMAGE:$VERSION-full-source")
+          image_platforms=$(platforms "")
+          full_platforms=$(platforms -full)
           {
-            echo "## Built image"
+            echo "## Built images"
             echo ""
             echo "- git tag: \`${GITHUB_REF_NAME}\`"
             echo "- \`$IMAGE:$VERSION\`: \`$image_digest\`"
-            echo "$platform_digests"
+            echo "$image_platforms"
+            echo "- \`$IMAGE:$VERSION-full\`: \`$full_digest\`"
+            echo "$full_platforms"
             echo "- \`$IMAGE:$VERSION-source\`: \`$source_digest\`"
+            echo "- \`$IMAGE:$VERSION-full-source\`: \`$full_source_digest\`"
             echo "- ECR \`trufo-local:$VERSION\`: \`$ECR_DIGEST\`"
+            echo "- ECR \`trufo-local:$VERSION-full\`: \`$ECR_FULL_DIGEST\`"
             echo "- ECR \`trufo-local:$VERSION-source\`: \`$ECR_SOURCE_DIGEST\`"
-            echo "- moved: $MOVED"
+            echo "- ECR \`trufo-local:$VERSION-full-source\`: \`$ECR_FULL_SOURCE_DIGEST\`"
+            if [ "$MOVED" = none ]; then echo "- moved: none"; else echo "- moved: $MOVED, $MOVED-full"; fi
           } >> "$GITHUB_STEP_SUMMARY"
