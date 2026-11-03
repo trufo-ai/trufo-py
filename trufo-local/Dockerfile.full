@@ -37,6 +37,9 @@ RUN --mount=type=secret,id=TRUFO_SDK_DOWNLOAD_API_KEY,required=true \
     && pip install --no-cache-dir 'trufo-provenance[c2pa,pawprint]' imagecodecs==2026.10.10 soundfile==0.14.0 \
     && pip uninstall -y trufo-provenance trufo-pawprint
 
+COPY NOTICE-full /usr/share/doc/trufo-local/NOTICE
+COPY licenses /usr/share/doc/trufo-local/licenses
+
 LABEL ai.trufo.trufo-local.source=ghcr.io/trufo-ai/trufo-local:${VERSION}-full-source
 
 USER 10001
