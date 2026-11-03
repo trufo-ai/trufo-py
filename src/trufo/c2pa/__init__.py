@@ -6,7 +6,7 @@
 from trufo.c2pa.actions import TrufoAction
 from trufo.c2pa.ai_system import AIInvolvement
 from trufo.c2pa.assertions import UserAssertion
-from trufo.c2pa.manifest import ManifestSettings, SignedInputPolicy
+from trufo.c2pa.manifest import ManifestSettings, SignedIngredientPolicy, SignedInputPolicy
 from trufo.c2pa.redactions import RedactableAssertion, RedactionReason
 from trufo.c2pa.source_types import DigitalSourceType
 from trufo.c2pa.thumbnails import ThumbnailPolicy, ThumbnailSettings, ThumbnailSize
@@ -18,6 +18,7 @@ __all__ = [
     "ManifestSettings",
     "RedactableAssertion",
     "RedactionReason",
+    "SignedIngredientPolicy",
     "SignedInputPolicy",
     "ThumbnailPolicy",
     "ThumbnailSettings",

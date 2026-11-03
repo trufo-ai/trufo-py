@@ -4,6 +4,7 @@
 """Unit tests for TPS C2PA signing helpers."""
 
 import base64
+import functools
 import types
 from unittest.mock import MagicMock, patch
 
@@ -34,6 +35,7 @@ from trufo.api.tps.sign_c2pa import (
 )
 from trufo.c2pa import (
     ManifestSettings,
+    SignedIngredientPolicy,
     SignedInputPolicy,
     ThumbnailPolicy,
     ThumbnailSettings,
@@ -164,6 +166,7 @@ class TestDirectC2PASigning:
             ),
             branded_gp_id="gp_x",
             signed_input_policy=SignedInputPolicy.KEEP,
+            signed_ingredient_policy=SignedIngredientPolicy.KEEP,
         )
 
         assert result == signed
@@ -188,6 +191,7 @@ class TestDirectC2PASigning:
                 },
                 "branded_gp_id": "gp_x",
                 "signed_input_policy": "keep",
+                "signed_ingredient_policy": "keep",
             },
             headers=_expected_headers("prod-key"),
             timeout=60,
@@ -262,6 +266,7 @@ class TestRemoteC2PASigning:
             ),
             branded_gp_id="gp_x",
             signed_input_policy="keep",
+            signed_ingredient_policy="keep",
         )
 
         assert result == b"signed-test"
@@ -279,6 +284,7 @@ class TestRemoteC2PASigning:
             "branded_gp_id": "gp_x",
             "manifest_settings": {"thumbnail_settings": {"policy": "auto", "size": "high"}},
             "signed_input_policy": "keep",
+            "signed_ingredient_policy": "keep",
         }
 
     def test_prod_signing_delegates_with_endpoint_overrides(self, monkeypatch):
@@ -310,6 +316,7 @@ class TestRemoteC2PASigning:
         assert kwargs["test"] is False
         assert kwargs["trufo_api_url"] == TRUFO_API_URL
         assert "signed_input_policy" not in kwargs
+        assert "signed_ingredient_policy" not in kwargs
 
     @pytest.mark.parametrize("signer", _REMOTE_SIGNERS)
     def test_returns_signed_bytes_discarding_orchestrator_warnings(self, monkeypatch, signer):
@@ -448,10 +455,12 @@ class TestS3C2PASigning:
             mime_type="image/jpeg",
             branded_gp_id="gp_x",
             signed_input_policy="keep",
+            signed_ingredient_policy="keep",
         )
 
         assert mock_post.call_args.kwargs["json"]["branded_gp_id"] == "gp_x"
         assert mock_post.call_args.kwargs["json"]["signed_input_policy"] == "keep"
+        assert mock_post.call_args.kwargs["json"]["signed_ingredient_policy"] == "keep"
 
     @patch("trufo.api.tps.sign_c2pa.requests.post")
     def test_s3_request_and_test_signing_reject_before_network(self, mock_post):
@@ -517,6 +526,7 @@ class TestS3C2PASigning:
             ingredient_title=None,
             manifest_settings=None,
             signed_input_policy=None,
+            signed_ingredient_policy=None,
             execution_mode=ExecutionMode.TASK,
             wait_seconds=600,
             trufo_api_url=TRUFO_API_URL,
@@ -568,6 +578,7 @@ class TestS3C2PASigning:
                 trufo_api_url=trufo_api_url,
                 execution_mode=ExecutionMode.TASK,
                 signed_input_policy="auto",
+                signed_ingredient_policy="auto",
             )
             == b"s3-signed"
         )
@@ -578,6 +589,7 @@ class TestS3C2PASigning:
             trufo_api_url + TPS_C2PA_SIGN,
         ]
         assert mock_post.call_args_list[2].kwargs["json"]["signed_input_policy"] == "auto"
+        assert mock_post.call_args_list[2].kwargs["json"]["signed_ingredient_policy"] == "auto"
         mock_wait.assert_called_once_with("prod-key", "task-1", wait_seconds=600, trufo_api_url=trufo_api_url)
 
 
@@ -661,14 +673,30 @@ class TestRequestValidation:
         with pytest.raises(ValueError, match=f"Invalid {entry_type} entry"):
             validator(bad)
 
-    @pytest.mark.parametrize("signer", [sign_c2pa, sign_c2pa_distributed])
+    @pytest.mark.parametrize(
+        "signer",
+        [
+            sign_c2pa,
+            functools.partial(sign_c2pa, execution_mode=ExecutionMode.TASK, mime_type="image/jpeg"),
+            sign_c2pa_distributed,
+            sign_c2pa_distributed_test,
+        ],
+        ids=["request", "task", "distributed", "distributed_test"],
+    )
+    @pytest.mark.parametrize(
+        "argument, match",
+        [
+            ("signed_input_policy", "SignedInputPolicy"),
+            ("signed_ingredient_policy", "SignedIngredientPolicy"),
+        ],
+    )
     @patch("trufo.api.tps.sign_c2pa.require_provenance_module")
     @patch("trufo.api.tps.sign_c2pa.requests.post")
-    def test_invalid_signed_input_policy_rejected_before_request(
-        self, mock_post, mock_import, signer
+    def test_invalid_signed_policy_rejected_before_request(
+        self, mock_post, mock_import, signer, argument, match
     ):
-        with pytest.raises(ValueError, match="SignedInputPolicy"):
-            signer("api-key", b"input-media", signed_input_policy="maybe")
+        with pytest.raises(ValueError, match=match):
+            signer("api-key", b"input-media", **{argument: "maybe"})
         mock_post.assert_not_called()
         mock_import.assert_not_called()
 
