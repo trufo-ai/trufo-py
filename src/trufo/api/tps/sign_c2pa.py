@@ -42,7 +42,7 @@ from trufo.api.tps.tasks import (
 )
 from trufo.c2pa.actions import TrufoAction
 from trufo.c2pa.assertions import UserAssertion
-from trufo.c2pa.manifest import ManifestSettings, SignedInputPolicy
+from trufo.c2pa.manifest import ManifestSettings, SignedIngredientPolicy, SignedInputPolicy
 from trufo.c2pa.redactions import RedactableAssertion, RedactionReason
 from trufo.c2pa.watermark import WatermarkEffort, WatermarkIDAllocationMode, WatermarkMode
 from trufo.util.deprecation import deprecated_aliases
@@ -252,6 +252,7 @@ def _sign_c2pa_direct(
     manifest_settings: ManifestSettings | None = None,
     branded_gp_id: str | None = None,
     signed_input_policy: SignedInputPolicy | str | None = None,
+    signed_ingredient_policy: SignedIngredientPolicy | str | None = None,
     trufo_api_url: str = TRUFO_API_URL,
 ) -> bytes:
     """Sign media bytes through a C2PA signing endpoint."""
@@ -274,6 +275,10 @@ def _sign_c2pa_direct(
         body["branded_gp_id"] = branded_gp_id
     if signed_input_policy is not None:
         body["signed_input_policy"] = SignedInputPolicy.validate(signed_input_policy).value
+    if signed_ingredient_policy is not None:
+        body["signed_ingredient_policy"] = SignedIngredientPolicy.validate(
+            signed_ingredient_policy
+        ).value
 
     resp = requests.post(
         trufo_api_url + endpoint,
@@ -329,6 +334,7 @@ def submit_c2pa_sign(
     manifest_settings: ManifestSettings | None = None,
     branded_gp_id: str | None = None,
     signed_input_policy: SignedInputPolicy | str | None = None,
+    signed_ingredient_policy: SignedIngredientPolicy | str | None = None,
     trufo_api_url: str = TRUFO_API_URL,
 ) -> TaskReceipt:
     """Submit an existing Trufo upload reference for signing without waiting.
@@ -355,6 +361,10 @@ def submit_c2pa_sign(
         body["branded_gp_id"] = branded_gp_id
     if signed_input_policy is not None:
         body["signed_input_policy"] = SignedInputPolicy.validate(signed_input_policy).value
+    if signed_ingredient_policy is not None:
+        body["signed_ingredient_policy"] = SignedIngredientPolicy.validate(
+            signed_ingredient_policy
+        ).value
 
     return _submit_task(api_key, TPS_C2PA_SIGN, body, trufo_api_url=trufo_api_url)
 
@@ -369,6 +379,7 @@ def sign_c2pa_s3(
     *,
     manifest_settings: ManifestSettings | None = None,
     signed_input_policy: SignedInputPolicy | str | None = None,
+    signed_ingredient_policy: SignedIngredientPolicy | str | None = None,
     execution_mode: ExecutionMode = ExecutionMode.REQUEST,
     wait_seconds: float = 600,
     trufo_api_url: str = TRUFO_API_URL,
@@ -389,6 +400,8 @@ def sign_c2pa_s3(
             see the module docstring for when to set this explicitly.
         manifest_settings: Optional structured C2PA manifest settings.
         signed_input_policy: What to do when the input is already C2PA-signed; omit for ``auto``.
+        signed_ingredient_policy: What to do when an ingredient's media is already
+            C2PA-signed; omit for ``auto``.
         trufo_api_url: Freeform Trufo API base URL. Defaults to production.
 
     Returns:
@@ -418,6 +431,7 @@ def sign_c2pa_s3(
         ingredient_title=ingredient_title,
         manifest_settings=manifest_settings,
         signed_input_policy=signed_input_policy,
+        signed_ingredient_policy=signed_ingredient_policy,
         trufo_api_url=trufo_api_url,
     )
     task = wait_for_task(api_key, receipt.task_id, wait_seconds=wait_seconds, trufo_api_url=trufo_api_url)
@@ -452,6 +466,7 @@ def sign_c2pa_via_s3(
     *,
     manifest_settings: ManifestSettings | None = None,
     signed_input_policy: SignedInputPolicy | str | None = None,
+    signed_ingredient_policy: SignedIngredientPolicy | str | None = None,
     execution_mode: ExecutionMode = ExecutionMode.REQUEST,
     wait_seconds: float = 600,
     trufo_api_url: str = TRUFO_API_URL,
@@ -477,6 +492,8 @@ def sign_c2pa_via_s3(
             see the module docstring for when to set this explicitly.
         manifest_settings: Optional structured C2PA manifest settings.
         signed_input_policy: What to do when the input is already C2PA-signed; omit for ``auto``.
+        signed_ingredient_policy: What to do when an ingredient's media is already
+            C2PA-signed; omit for ``auto``.
         trufo_api_url: Freeform Trufo API base URL. Defaults to production.
 
     Returns:
@@ -502,6 +519,8 @@ def sign_c2pa_via_s3(
     _validate_manifest_setting_aliases(manifest_settings, manifest_title, ingredient_title)
     if signed_input_policy is not None:
         SignedInputPolicy.validate(signed_input_policy)
+    if signed_ingredient_policy is not None:
+        SignedIngredientPolicy.validate(signed_ingredient_policy)
     upload = get_c2pa_s3_upload_url(
         api_key,
         mime_type,
@@ -518,6 +537,7 @@ def sign_c2pa_via_s3(
         ingredient_title=ingredient_title,
         manifest_settings=manifest_settings,
         signed_input_policy=signed_input_policy,
+        signed_ingredient_policy=signed_ingredient_policy,
         execution_mode=execution_mode,
         wait_seconds=wait_seconds,
         trufo_api_url=trufo_api_url,
@@ -539,6 +559,7 @@ def sign_c2pa_via_s3_test(
     *,
     manifest_settings: ManifestSettings | None = None,
     signed_input_policy: SignedInputPolicy | str | None = None,
+    signed_ingredient_policy: SignedIngredientPolicy | str | None = None,
     trufo_api_url: str = TRUFO_API_URL_TEST,
 ) -> bytes:
     """Deprecated and unsupported: use sign_c2pa_test() with REQUEST bytes."""
@@ -574,6 +595,7 @@ def sign_c2pa(
     manifest_settings: ManifestSettings | None = None,
     branded_gp_id: str | None = None,
     signed_input_policy: SignedInputPolicy | str | None = None,
+    signed_ingredient_policy: SignedIngredientPolicy | str | None = None,
     execution_mode: ExecutionMode = ExecutionMode.REQUEST,
     mime_type: str | None = None,
     wait_seconds: float = 600,
@@ -598,6 +620,8 @@ def sign_c2pa(
             generator products; the content is signed as that product. Omit to
             sign with Trufo's own C2PA signer.
         signed_input_policy: What to do when the input is already C2PA-signed; omit for ``auto``.
+        signed_ingredient_policy: What to do when an ingredient's media is already
+            C2PA-signed; omit for ``auto``.
         trufo_api_url: Freeform Trufo API base URL. Defaults to production.
 
     Returns:
@@ -620,11 +644,14 @@ def sign_c2pa(
         _validate_manifest_setting_aliases(manifest_settings, manifest_title, ingredient_title)
         if signed_input_policy is not None:
             SignedInputPolicy.validate(signed_input_policy)
+        if signed_ingredient_policy is not None:
+            SignedIngredientPolicy.validate(signed_ingredient_policy)
         reference = _upload_task_input(api_key, media_bytes, mime_type, trufo_api_url=trufo_api_url)
         receipt = submit_c2pa_sign(
             api_key, reference, actions, assertions, manifest_title, ingredient_title,
             manifest_settings=manifest_settings, branded_gp_id=branded_gp_id,
             signed_input_policy=signed_input_policy,
+            signed_ingredient_policy=signed_ingredient_policy,
             trufo_api_url=trufo_api_url,
         )
         task = wait_for_task(api_key, receipt.task_id, wait_seconds=wait_seconds, trufo_api_url=trufo_api_url)
@@ -640,6 +667,7 @@ def sign_c2pa(
         manifest_settings=manifest_settings,
         branded_gp_id=branded_gp_id,
         signed_input_policy=signed_input_policy,
+        signed_ingredient_policy=signed_ingredient_policy,
         trufo_api_url=trufo_api_url,
     )
 
@@ -655,6 +683,7 @@ def sign_c2pa_test(
     manifest_settings: ManifestSettings | None = None,
     branded_gp_id: str | None = None,
     signed_input_policy: SignedInputPolicy | str | None = None,
+    signed_ingredient_policy: SignedIngredientPolicy | str | None = None,
     execution_mode: ExecutionMode = ExecutionMode.REQUEST,
     trufo_api_url: str = TRUFO_API_URL_TEST,
 ) -> bytes:
@@ -674,6 +703,8 @@ def sign_c2pa_test(
             generator products; the content is signed as that product. Omit to
             sign with Trufo's own C2PA signer.
         signed_input_policy: What to do when the input is already C2PA-signed; omit for ``auto``.
+        signed_ingredient_policy: What to do when an ingredient's media is already
+            C2PA-signed; omit for ``auto``.
         trufo_api_url: Trufo API base URL. Defaults to the Trufo test host (test.api.trufo.ai).
 
     Returns:
@@ -694,6 +725,7 @@ def sign_c2pa_test(
         manifest_settings=manifest_settings,
         branded_gp_id=branded_gp_id,
         signed_input_policy=signed_input_policy,
+        signed_ingredient_policy=signed_ingredient_policy,
         trufo_api_url=trufo_api_url,
     )
 
@@ -723,6 +755,7 @@ def sign_c2pa_distributed_test(
     manifest_settings: ManifestSettings | None = None,
     branded_gp_id: str | None = None,
     signed_input_policy: SignedInputPolicy | str | None = None,
+    signed_ingredient_policy: SignedIngredientPolicy | str | None = None,
 ) -> bytes:
     """Sign media locally using the Trufo test remote-signing endpoint.
 
@@ -749,6 +782,8 @@ def sign_c2pa_distributed_test(
             generator products; the content is signed as that product. Omit to
             sign with Trufo's own C2PA signer.
         signed_input_policy: What to do when the input is already C2PA-signed; omit for ``auto``.
+        signed_ingredient_policy: What to do when an ingredient's media is already
+            C2PA-signed; omit for ``auto``.
 
     Returns:
         Signed media bytes.
@@ -759,6 +794,8 @@ def sign_c2pa_distributed_test(
     _validate_manifest_setting_aliases(manifest_settings, manifest_title, ingredient_title)
     if signed_input_policy is not None:
         SignedInputPolicy.validate(signed_input_policy)
+    if signed_ingredient_policy is not None:
+        SignedIngredientPolicy.validate(signed_ingredient_policy)
 
     remote_orchestrator = require_provenance_module("tfprov.c2pa_generator.remote_orchestrator")
 
@@ -782,6 +819,15 @@ def sign_c2pa_distributed_test(
             if signed_input_policy is not None
             else {}
         ),
+        **(
+            {
+                "signed_ingredient_policy": SignedIngredientPolicy.validate(
+                    signed_ingredient_policy
+                ).value
+            }
+            if signed_ingredient_policy is not None
+            else {}
+        ),
     )
     return signed
 
@@ -800,6 +846,7 @@ def sign_c2pa_distributed(
     manifest_settings: ManifestSettings | None = None,
     branded_gp_id: str | None = None,
     signed_input_policy: SignedInputPolicy | str | None = None,
+    signed_ingredient_policy: SignedIngredientPolicy | str | None = None,
 ) -> bytes:
     """Sign media locally using the Trufo production remote-signing endpoint.
 
@@ -827,6 +874,8 @@ def sign_c2pa_distributed(
             generator products; the content is signed as that product. Omit to
             sign with Trufo's own C2PA signer.
         signed_input_policy: What to do when the input is already C2PA-signed; omit for ``auto``.
+        signed_ingredient_policy: What to do when an ingredient's media is already
+            C2PA-signed; omit for ``auto``.
 
     Returns:
         Signed media bytes.
@@ -837,6 +886,8 @@ def sign_c2pa_distributed(
     _validate_manifest_setting_aliases(manifest_settings, manifest_title, ingredient_title)
     if signed_input_policy is not None:
         SignedInputPolicy.validate(signed_input_policy)
+    if signed_ingredient_policy is not None:
+        SignedIngredientPolicy.validate(signed_ingredient_policy)
 
     remote_orchestrator = require_provenance_module("tfprov.c2pa_generator.remote_orchestrator")
 
@@ -858,6 +909,15 @@ def sign_c2pa_distributed(
         **(
             {"signed_input_policy": SignedInputPolicy.validate(signed_input_policy).value}
             if signed_input_policy is not None
+            else {}
+        ),
+        **(
+            {
+                "signed_ingredient_policy": SignedIngredientPolicy.validate(
+                    signed_ingredient_policy
+                ).value
+            }
+            if signed_ingredient_policy is not None
             else {}
         ),
     )

@@ -44,3 +44,16 @@ class SignedInputPolicy(str, Enum):
     @staticmethod
     def validate(policy: str) -> "SignedInputPolicy":
         return SignedInputPolicy(policy)
+
+
+class SignedIngredientPolicy(str, Enum):
+    """What Trufo does when an ingredient's media already carries a C2PA manifest."""
+
+    # the media's manifest is kept with the ingredient
+    KEEP = "keep"
+    # Trufo's best practice; the default when no policy is sent
+    AUTO = "auto"
+
+    @staticmethod
+    def validate(policy: str) -> "SignedIngredientPolicy":
+        return SignedIngredientPolicy(policy)
