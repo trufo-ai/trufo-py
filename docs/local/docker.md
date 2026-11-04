@@ -107,14 +107,12 @@ appears, and create them before the first start. Set `user:` to their owner. Kee
 
 **4. Start the service:**
 
-<!-- TODO(v22-release): the trufo-pawprint version in the full image's /health example -->
-
 ```bash
 docker compose up -d
 docker compose ps    # wait for "(healthy)"
 curl -s http://127.0.0.1:8080/health
 # {"status":"healthy","version":"2.2.0","engine_version":"2.2.0"}
-# full image: {"status":"healthy","version":"2.2.0-full","engine_version":"2.2.0","watermark_engine_version":"<version>"}
+# full image: {"status":"healthy","version":"2.2.0-full","engine_version":"2.2.0","watermark_engine_version":"0.5.4"}
 ```
 
 <!-- TODO(v22-release): re-measure the start times with the final pins -->
@@ -374,7 +372,7 @@ versions of its engines.
 
 | Image | Engine (trufo-provenance) | Watermark engine (trufo-pawprint) | Source image |
 | ----- | ------------------------- | --------------------------------- | ------------ |
-| `2.2.0-full` | 2.2.0 | `<version>` <!-- TODO(v22-release): the trufo-pawprint pin in requirements-full.txt --> | `2.2.0-full-source` |
+| `2.2.0-full` | 2.2.0 | 0.5.4 | `2.2.0-full-source` |
 | `2.2.0` | 2.2.0 | — | `2.2.0-source` |
 | `2.1.2` | 2.1.2 | — | `2.1.2-source` |
 | `2.1.1` | 2.1.1 | — | `2.1.1-source` |
