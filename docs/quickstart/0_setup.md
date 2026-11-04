@@ -29,7 +29,7 @@ Trufo serves three API hosts:
 
 - **`api.trufo.ai`** — production (global)
 - **`eu.api.trufo.ai`** — production (Europe)
-- **`test.api.trufo.ai`** — the test host: try out endpoints without Organization Validation. Outputs are signed with a test certificate (not accepted by conformant validators), signing and per-embed watermark records are ephemeral, and `-test` API key scopes apply. It serves C2PA signing (media in the request, or Local mode), watermark recovery and standalone binding. Registrations happen on the production hosts, with either key ([API Key Scopes](#api-key-scopes)); those hosts refuse test keys for Local mode and upload links ([Deprecations](../api/api_trufo.md#deprecations)).
+- **`test.api.trufo.ai`** — the test host: try out endpoints without Organization Validation. It serves C2PA signing (media in the request, or Local mode), watermark recovery and standalone binding; registrations happen on the production hosts, with either key ([API Key Scopes](#api-key-scopes)). Outputs are signed with a test certificate (not accepted by conformant validators), signing and per-embed watermark records are ephemeral, and `-test` API key scopes apply. The production hosts refuse test keys for Local mode and upload links ([Deprecations](../api/api_trufo.md#deprecations)).
 
 The test host is the natural place to develop an integration before pointing it at production.
 

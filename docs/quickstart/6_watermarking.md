@@ -16,7 +16,7 @@ There are two ways to get either watermark:
 - **As part of C2PA signing** — a `["watermark", {...}]` action in a `sign_c2pa*` call; Trufo embeds the mark and signs the manifest in one step. **Off by default** — the action requests it.
 - **Standalone binding** — `bind_watermark()` embeds the mark and *you* sign the media with your own certificate; see [Binding Without Trufo Signing](#binding-without-trufo-signing).
 
-Either way, for a per-embed mark the signed manifest declares the watermark per the C2PA specification: a `c2pa.watermarked.bound` action plus a `c2pa.soft-binding` assertion with algorithm `ai.trufo.pawprint.watermark`, Trufo's entry in the official C2PA soft-binding algorithm registry — Trufo writes these for you in the signing flow, while bind requires your manifest to carry them. A per-AI-system mark is not a soft binding; a Trufo-signed manifest records it with a `c2pa.watermarked.unbound` action instead.
+Either way, the signed manifest declares a per-embed mark per the C2PA specification: a `c2pa.watermarked.bound` action plus a `c2pa.soft-binding` assertion with algorithm `ai.trufo.pawprint.watermark`, Trufo's entry in the official C2PA soft-binding algorithm registry. Trufo writes these when it signs; a bind requires your manifest to carry them. A per-AI-system mark is not a soft binding.
 
 ## Supported Formats
 
@@ -31,8 +31,7 @@ pass `mime_type` to `sign_c2pa()` or `bind_watermark()`. The SDK uploads, submit
 polls, and downloads synchronously. `submit_bind_watermark()` accepts an existing
 Trufo upload reference and returns immediately with a task ID. A completed
 per-embed watermark task still requires signing and `bind_commit()`; it does not
-commit the content record itself. A per-AI-system one has nothing to commit.
-Test endpoints accept REQUEST only.
+commit the content record itself. Test endpoints accept REQUEST only.
 
 ## The `watermark` Action
 
@@ -51,7 +50,7 @@ For what watermarking bills, see [watermark billing](../api/api_c2pa.md#watermar
 
 <!-- TODO(sunset-2027-01-31): the deprecated mode paragraph goes; successor wid_allocation_mode -->
 
-The `mode` parameter (a `WatermarkMode` value) is deprecated: `"provenance"` still means `"per_embed"`, with a warning, until 2027-01-31T00:00:00+00:00, and is refused (400) from that instant; `"compliance"` raises `NotImplementedError`. Send `mode` or `wid_allocation_mode`, not both. trufo 2.1 and earlier send `mode` on every `/bind/watermark` call (`bind_watermark`, `submit_bind_watermark` and `bind_watermark_test`; not `bind_reserve`), so upgrade to trufo 2.2.0 before then. They do not show the warning on binds, since they drop the response's warnings, so check your installed version rather than wait for it. Over HTTP, drop `"mode": "provenance"` (`per_embed` is the default) or replace it with `"wid_allocation_mode": "per_embed"`. The notices and refusals are listed under [`watermark`](../api/api_c2pa.md#watermark).
+The `mode` parameter (`WatermarkMode`) is deprecated: until 2027-01-31T00:00:00+00:00, `"provenance"` means `"per_embed"`, with a warning, and from that instant `mode` is refused (400). trufo 2.1 and earlier send `mode` on every `/bind/watermark` call (`bind_watermark`, `submit_bind_watermark`, `bind_watermark_test`; not `bind_reserve`) and do not show the warning, so upgrade to trufo 2.2.0 before then. Over HTTP, drop `"mode": "provenance"` (`per_embed` is the default). The notices and refusals are listed under [`watermark`](../api/api_c2pa.md#watermark).
 
 ### Examples
 
@@ -124,9 +123,9 @@ Four routes produce a signed, watermarked asset. They differ in where the mark i
 | **Watermarking, Cloud** | `POST /bind/watermark`: Trufo embeds the mark, reserves the ID, opens the record, returns the marked media | you sign with your own certificate | | `POST /bind/commit`: Trufo checks the manifest declares the ID, stamps, stores or refers | `bind_watermark`, then `bind_commit` |
 | **Watermarking, Local** | `POST /bind/reserve`: Trufo reserves the ID and opens the record for a MIME type | you embed locally (Trufo engine) | you sign with your own certificate | `POST /bind/commit`, as above | `bind_reserve`, `watermark_media`, then `bind_commit` |
 
-Whoever embeds needs the engine: on C2PA Signing, Local, `trufo[local-full]` (see [Local mode with the Python SDK](../local/python.md)) or the [full Docker image](../local/docker.md#choose-an-image); on Watermarking, Local, `trufo[local-full]`, since neither Docker image has the `/bind` routes; the Cloud routes need nothing beyond the API. Whoever signs needs a certificate: the C2PA Signing routes use Trufo's; the Watermarking routes use yours, and for a per-embed mark the manifest you sign must declare it (a `c2pa.soft-binding` assertion with algorithm `ai.trufo.pawprint.watermark` and the watermark ID as its block value, paired with a `c2pa.watermarked.bound` action) — Trufo writes these for you on the C2PA Signing routes.
+Whoever embeds needs the engine: `trufo[local-full]` ([Local mode with the Python SDK](../local/python.md)) on either Local route, or the [full Docker image](../local/docker.md#choose-an-image) on C2PA Signing, Local (neither Docker image has the `/bind` routes); the Cloud routes need only the API. Whoever signs needs a certificate: Trufo's on the C2PA Signing routes, yours on the Watermarking routes, where your manifest must [declare a per-embed mark](../api/api_c2pa.md#post-bindcommit).
 
-For a per-embed mark, every route except C2PA Signing, Cloud ends in a commit, because the record cannot be completed until the manifest exists; the mark resolves publicly only once it is committed, so complete the flow before publishing a marked asset. A per-AI-system bind has nothing to commit: on Watermarking, Cloud you call `bind_watermark` and sign, and on Watermarking, Local you reserve, embed within the hour, and sign. A per-AI-system ID resolves from the AI system's registration, not from a commit.
+For a per-embed mark, every route except C2PA Signing, Cloud ends in a commit, since the record needs the manifest; the mark resolves publicly only once committed, so complete the flow before publishing a marked asset. A per-AI-system bind has nothing to commit: the AI system's ID resolves from its registration.
 
 **Without the watermark engine** (a `local-sign-only` or legacy `provenance` installation), C2PA Signing in Local mode works normally — but a watermark request **always fails immediately** with an install hint (`ImportError`: the trufo-pawprint dependency is required), regardless of `effort_policy`, before anything is sent to the server. The `effort_policy` levels govern what happens when the *installed* engine cannot watermark a particular input; requesting a watermark without the engine installed is refused outright.
 
@@ -172,7 +171,7 @@ bind_commit(api_key, reservation.cid, reservation.wid, manifest_bytes=store_byte
 
 If you have `trufo[local-sign-only]` or `trufo[local-full]` installed, you can also directly pass in the media file `signed_media_bytes=` instead of manifest `manifest_bytes=`.
 
-A per-AI-system bind embeds your AI system's watermark ID instead of a new one, and there is nothing to commit. The `ai_system_id` comes from registering the AI system with a `c2pa-sign-*` key, not a `watermark-*` key ([AI labeling, step 2](3_ai_labeling.md#step-2--register-an-ai-system)):
+A per-AI-system bind embeds your AI system's watermark ID instead of a new one, and there is nothing to commit. Register the AI system with a `c2pa-sign-*` key, not a `watermark-*` key ([AI labeling, step 2](3_ai_labeling.md#step-2--register-an-ai-system)):
 
 ```python
 result = bind_watermark(api_key, media_bytes, wid_allocation_mode="per_ai_system",
@@ -180,7 +179,7 @@ result = bind_watermark(api_key, media_bytes, wid_allocation_mode="per_ai_system
 # result.wid is the AI system's watermark ID; sign result.media with YOUR certificate
 ```
 
-In production, `result.cid` is the content record's ID, not something to pass to `bind_commit()`; on the test host it is null. On the **Watermarking, Local** route, pass the same three arguments to `bind_reserve()` and embed within the hour. Trufo-signed manifests record a per-AI-system mark with a `c2pa.watermarked.unbound` action and no soft binding. Since the mark is not a soft binding, nothing checks your manifest; declare it with a `c2pa.watermarked.unbound` action, as Trufo does, not a `c2pa.soft-binding` assertion.
+In production, `result.cid` is the ID of the embed's [content record](#managing-your-marks); on the test host it is null. On the **Watermarking, Local** route, pass the same three arguments to `bind_reserve()` and embed within the hour. Trufo-signed manifests record a per-AI-system mark with a `c2pa.watermarked.unbound` action and no soft binding. Trufo does not check your manifest; declare the mark the same way.
 
 ### Custom Manifest Storage
 
@@ -224,12 +223,11 @@ set_content_status(api_key, "active", cid=record.cid)    # restores it
 
 An inactive record no longer resolves for validators and leaves the daily
 active-ID count. A per-AI-system embed's record carries the AI system's
-watermark ID as `ai_system_wid` instead of `wid`, and cannot be switched off:
-the AI system's IDs resolve and count as active IDs from its registration, and
-an [inactive](../api/api_c2pa.md#post-ai-systemstatus) AI system's IDs keep
-resolving and keep counting as active IDs
-([watermark billing](../api/api_c2pa.md#watermark-billing)). See the
-[API reference](../api/api_c2pa.md#content-records).
+watermark ID as `ai_system_wid` instead of `wid`, and cannot be switched off.
+The AI system's IDs keep resolving even while the AI system is
+[inactive](../api/api_c2pa.md#post-ai-systemstatus);
+[watermark billing](../api/api_c2pa.md#watermark-billing) says when they count as
+active IDs. See the [API reference](../api/api_c2pa.md#content-records).
 
 ## Test vs Production
 
@@ -242,7 +240,7 @@ See [api_c2pa.md](../api/api_c2pa.md#signing-modes) for the full flow comparison
 `recover_content()` decodes a watermark from media — even after the C2PA manifest has been stripped — and returns the watermark ID, the detection confidence, its `wid_allocation_mode`, and what the mark resolves to:
 
 - A per-embed mark: the stored C2PA manifest store (`manifest_bytes`) when one has been captured.
-- A per-AI-system mark: `ai_involvement` and `ai_system`, the AI system's public information (name, version, model disclosure and, while its validation is active, your organization's validated legal name), which anyone with a recover key can see. Your own organization also sees its `ai_system_id` and `status`, and in production still has each embed's content record ([Managing Your Marks](#managing-your-marks)).
+- A per-AI-system mark: `ai_involvement` and `ai_system`, the AI system's public information (name, version, model disclosure and, while your Organization Validation is active, your organization's validated legal name), which anyone with a recover key can see; your own organization also sees its `ai_system_id` and `status`.
 
 `oid` is set when the mark belongs to your own organization. `recover_content()` requires an API key with the `content-recover-test` scope (test host) or `content-recover-prod` scope (production hosts); each key works only against its own host tier.
 
@@ -302,19 +300,15 @@ Use an active AI system, or reactivate this one with [`/ai-system/status`](../ap
 
 A per-AI-system bind has nothing to commit: once you have signed the marked media, you are done.
 
-<!-- TODO(sunset-2027-01-31): the deprecated-mode warning, UnsupportedParameter and not-both entries below go, and the 501 entry drops its compliance text; successor wid_allocation_mode -->
+<!-- TODO(sunset-2027-01-31): the deprecated-mode entry (warning and UnsupportedParameter) and the not-both entry below go, and the 501 entry drops its compliance text; successor wid_allocation_mode -->
 
 **`Per-asset watermark ID allocation is not supported.` or `Compliance watermarking is not supported.`**
 
 The SDK raises these as `NotImplementedError` before sending; over HTTP, the API returns them with a 501. Use `wid_allocation_mode` `"per_embed"` or `"per_ai_system"`.
 
-**A warning that the watermark `mode` parameter is deprecated**
+**A warning that the watermark `mode` parameter is deprecated, or `UnsupportedParameter: the watermark 'mode' parameter is no longer supported (expired 2027-01-31T00:00:00+00:00). Please use 'wid_allocation_mode'.`**
 
-Remove `mode` (`per_embed` is the default), or upgrade to trufo 2.2.0 and use `wid_allocation_mode`. trufo 2.1 and earlier send `mode` on every `/bind/watermark` call, and their `sign_c2pa` refuses `wid_allocation_mode` before sending. After 2027-01-31T00:00:00+00:00, `mode` is refused.
-
-**`UnsupportedParameter: the watermark 'mode' parameter is no longer supported (expired 2027-01-31T00:00:00+00:00). Please use 'wid_allocation_mode'.`**
-
-Remove `mode` (`per_embed` is the default), or upgrade to trufo 2.2.0 and use `wid_allocation_mode`. trufo 2.1 and earlier send `mode` on every `/bind/watermark` call, so binds from them need the upgrade.
+Remove `mode` (`per_embed` is the default), or upgrade to trufo 2.2.0 and use `wid_allocation_mode`. trufo 2.1 and earlier refuse `wid_allocation_mode` in `sign_c2pa` before sending, and send `mode` on every `/bind/watermark` call, so binds from them need the upgrade.
 
 **`Provide the watermark 'wid_allocation_mode' parameter or the deprecated 'mode', not both.`**
 

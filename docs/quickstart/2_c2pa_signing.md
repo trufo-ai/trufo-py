@@ -133,9 +133,9 @@ for the full settings.
 Trufo keeps a C2PA manifest the input already carries: the input becomes the parent
 ingredient of the new manifest, with the old manifest's validation results recorded.
 Under the default `signed_input_policy`, `auto`, C2PA data Trufo cannot read is
-removed and the file signed as if it carried none, with a notice. Without an
-[`ai_system`](3_ai_labeling.md) entry, `keep` changes only that: it refuses such
-data.
+removed, with a notice, and the file signed as if it carried none. `keep` refuses
+such data instead, and changes nothing else without an
+[`ai_system`](3_ai_labeling.md) entry. Both refuse a manifest only referenced by URL.
 
 ```python
 from trufo.c2pa import SignedInputPolicy
@@ -305,10 +305,8 @@ See [`POST /io/get-s3-upload-url`](../api/api_c2pa.md#post-ioget-s3-upload-url).
 [Troubleshooting](../local/python.md#troubleshooting) in Local mode with the Python SDK.
 
 **`The input carries C2PA data that Trufo cannot read, so Trufo cannot keep or validate it. Please send a copy with intact C2PA data, or contact support@trufo.ai.`**
-— no manifest could be read from the input's C2PA data. `keep` refuses such data,
-and both values refuse a manifest only referenced by URL; otherwise `auto` removes
-the data and signs. See
-[Signed inputs and ingredients](../api/api_c2pa.md#signed-inputs-and-ingredients).
+— no manifest could be read from the input's C2PA data; see [Signed Inputs](#signed-inputs)
+for when Trufo refuses it.
 
 **The sign succeeded with notices** (for example, a skipped watermark, or an input
 manifest that did not validate or is untrusted) — check the response `warnings`; the
