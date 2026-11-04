@@ -58,7 +58,7 @@ recommended `c2pa.ai-disclosure` assertion comes from the optional model disclos
 
 Registering an AI system
 [issues one new watermark ID per type of AI involvement](../api/api_c2pa.md#watermark-billing).
-A registration with a test key is not billed. Its name, version, model disclosure and your organization's validated legal name
+Its name, version, model disclosure and your organization's validated legal name
 can appear publicly in signed content and watermark lookups.
 
 ```python

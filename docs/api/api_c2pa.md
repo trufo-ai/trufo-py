@@ -822,7 +822,6 @@ year. A per-embed mark is a new ID plus one embed; a per-AI-system mark is one
 embed of the AI system's ID. Registering an AI system issues one new ID per type
 of AI involvement. An ID is active while it resolves: a per-embed ID from its
 committed record until you deactivate it, an AI system's IDs from registration.
-An AI system registered with a test key bills no new or active IDs.
 Watermarking, Cloud also bills the media and manifest bytes as data processing;
 Watermarking, Local bills the manifest bytes. Video watermarked on Trufo's servers
 also bills video compute at $0.30/GB, measured by input file size.
