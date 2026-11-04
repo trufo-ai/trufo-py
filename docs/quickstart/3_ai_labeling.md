@@ -1,7 +1,7 @@
 # Quickstart: AI Labeling
 
-Disclose that content was generated or assisted by AI, in a way validators and
-platforms recognize.
+When signing, you label content by naming the registered AI system that generates
+or modifies it.
 
 ## What This Does
 
@@ -13,216 +13,160 @@ questions:
 | `c2pa.ai-disclosure` assertion | *What model made this, and with how much human oversight?* | An assertion in your manifest |
 | `digitalSourceType` | *Is this asset itself AI-generated?* | A field on the creation action or ingredient |
 
-The AI disclosure describes the model and human oversight. The source type
-identifies AI generation; see the registration-dependent behavior below. For
-`c2pa.created` with `trainedAlgorithmicMedia`, follow
-[First-party model operation](#first-party-model-operation).
+If your organization operates a generative model, Trufo recommends declaring its
+output with a `c2pa.created` action carrying
+`digitalSourceType = trainedAlgorithmicMedia`, alongside the `c2pa.ai-disclosure`
+assertion. This is the signal that today's C2PA validators most reliably surface as
+AI-generated.
 
 ## Requirements
 
+- trufo 2.2.0 or later; trufo 2.1 refuses an `ai_system` entry before sending it.
+  Local mode also needs trufo-provenance 2.2.0 or later.
 - A `c2pa-sign-test` or `c2pa-sign-prod` API key. See [0_setup.md](0_setup.md).
   AI labeling adds no plan requirement.
-- Disclosures and software agents registered in the region you sign in:
-  `api.trufo.ai` and `test.api.trufo.ai` share registrations; `eu.api.trufo.ai` keeps
-  its own. See [Regions](../api/api_trufo.md#regions).
-- For [first-party model operation](#first-party-model-operation) only: the Created
-  Assertion Acknowledgement, accepted for your organization.
+- Registration on the production hosts, `api.trufo.ai` (`TRUFO_API_URL`) or
+  `eu.api.trufo.ai` (`TRUFO_API_URL_EUROPE`), with either key; an AI system works on
+  every regional endpoint. See [Regions](../api/api_trufo.md#regions).
+- For a [first-party](#step-1--confirm-you-are-the-first-party-operator) AI system:
+  the Created Assertion Acknowledgement ([step 2](#step-2--register-an-ai-system)).
 
 ---
 
-## Minimal Disclosure
+## Step 1 — Confirm You Are the First-Party Operator
 
-One entry adds an AI disclosure with the default model type, the body
-`{"modelType": "c2pa.types.model"}`:
+“First-party” means your organization operates the AI system and its model: on your
+own infrastructure, or on-device in your own client application whose output goes
+through your backend. Models hosted by a third party are not eligible. Otherwise,
+register the AI system without first-party: its content is then labeled as a
+declared AI ingredient ([step 3](#step-3--sign-with-the-ai-system)).
 
-```python
-from trufo import sign_c2pa
-from trufo.util.credentials import TrufoAPIKey, load_api_key
+## Step 2 — Register an AI System
 
-api_key = load_api_key(TrufoAPIKey.C2PA_SIGN_PROD)
+In the [Playground](https://app.trufo.ai/prov/apis/c2pa-signing?tab=playground),
+choose the AI profile and register it under Register Entities → AI System. In the
+API, use `POST /ai-system/add` below, with a test or production key. For a
+first-party AI system (`c2pa_first_party_attestable: true`), an organization owner
+or admin must first accept the Created Assertion Acknowledgement in
+[Organization Settings → Agreements](https://app.trufo.ai/settings/org#agreements);
+an automated agent may not accept it.
 
-signed_bytes = sign_c2pa(
-    api_key,
-    media_bytes,
-    assertions=[
-        ["ai_disclosure", {}],
-    ],
-)
-```
+Its details cannot be changed after registration: register each new version as a
+new AI system. Registrations are shared between test and production signing. The
+recommended `c2pa.ai-disclosure` assertion comes from the optional model disclosure
+(`c2pa_ai_disclosure`).
 
-Use this when you do not want to publish details about the model.
-
----
-
-## Detailed Disclosure
-
-To name the model, its framework, or the level of human oversight, register the
-disclosure once and reference it by id. Inline bodies are rejected at signing time —
-registering lets you reuse the same disclosure across the assets you sign.
-
-### Register it
+Registering an AI system
+[issues one new watermark ID per type of AI involvement](../api/api_c2pa.md#standalone-binding).
+Its name, version, model
+disclosure and your organization's validated legal name can appear publicly in
+signed content and watermark lookups.
 
 ```python
 import requests
 
-from trufo.api.endpoints import TPS_C2PA_AI_DISCLOSURE_ADD, TRUFO_API_URL
+from trufo.api.endpoints import TPS_AI_SYSTEM_ADD_PATH, TRUFO_API_URL
+from trufo.util.credentials import TrufoAPIKey, load_api_key
+
+api_key = load_api_key(TrufoAPIKey.C2PA_SIGN_PROD)  # or TrufoAPIKey.C2PA_SIGN_TEST
 
 resp = requests.post(
-    TRUFO_API_URL + TPS_C2PA_AI_DISCLOSURE_ADD,
+    TRUFO_API_URL + TPS_AI_SYSTEM_ADD_PATH,
     headers={"X-API-Key": api_key},
     json={
-        "nickname": "image model v3.2",
-        "assertion": {
-            "modelType": "c2pa.types.model.huggingface.transformers",
-            "modelName": "ImageGen Pro v3.2",
-            "modelIdentifier": "pkg:huggingface/acme/imagegen-pro@v3.2",
-            "contentProfile": {"humanOversightLevel": "prompt_guided"},
-        },
+        "name": "<AI_SYSTEM_NAME>",
+        "version": "<AI_SYSTEM_VERSION>",
+        "ai_involvement_modes": ["ai_generated"],
+        "c2pa_first_party_attestable": True,  # only if step 1 applies
+        "c2pa_ai_disclosure": {"modelType": "c2pa.types.model"},
     },
     timeout=60,
 )
 resp.raise_for_status()
-ai_disclosure_id = resp.json()["ai_disclosure_id"]
+ai_system_id = resp.json()["ai_system_id"]
 ```
 
-Registrations are per region: if you sign on `eu.api.trufo.ai`, use
-`TRUFO_API_URL_EUROPE` in place of `TRUFO_API_URL` here and in the software-agent
-registration below.
+The response is `{"ai_system_id": "aisys_…"}`.
+[`POST /ai-system/add`](../api/api_c2pa.md#post-ai-systemadd) has the fields, the
+[`c2pa_ai_disclosure`](../api/api_c2pa.md#c2pa_ai_disclosure) body and the errors;
+[`/ai-system/list`](../api/api_c2pa.md#post-ai-systemlist) lists your AI systems and
+[`/ai-system/status`](../api/api_c2pa.md#post-ai-systemstatus) switches one off and
+on.
 
-In the dashboard, register it on the C2PA Signing API page, **Playground** tab
-([app.trufo.ai/prov/apis/c2pa-signing?tab=playground](https://app.trufo.ai/prov/apis/c2pa-signing?tab=playground)):
-select **AI (Third-Party)** or **AI (First-Party)**, then **Register Entities** →
-**Register AI Disclosure**. The dashboard registers in your organization's default
-region.
+## Step 3 — Sign With the AI System
 
-`humanOversightLevel` is worth setting deliberately — it distinguishes fully
-automated generation from human-directed or human-reviewed work:
-
-| Value | Meaning |
-| ----- | ------- |
-| `fully_autonomous` | The model produced the asset without human direction |
-| `prompt_guided` | A human directed the model but did not review the output |
-| `human_validated` | A human reviewed and accepted the output |
-
-See [api_c2pa.md](../api/api_c2pa.md#post-c2paai-disclosureadd) for the complete
-schema. `POST /c2pa/ai-disclosure/list` returns each registration with its
-`assertion`, which signing embeds verbatim as the `c2pa.ai-disclosure` assertion.
-
-### Use it
+In the API, add one `ai_system` assertion to `assertions`:
 
 ```python
+from trufo import sign_c2pa
+
 signed_bytes = sign_c2pa(
     api_key,
     media_bytes,
     assertions=[
-        ["ai_disclosure", {"ai_disclosure_id": ai_disclosure_id}],
-    ],
-)
-```
-
----
-
-## Marking the Source Type
-
-`set_source_type=True` records `digitalSourceType = trainedAlgorithmicMedia`.
-For first-party model operation registered as described below, it accompanies
-`c2pa.created` and the linked software agent. Otherwise, it is recorded on the
-input ingredient.
-
-```python
-signed_bytes = sign_c2pa(
-    api_key,
-    media_bytes,
-    assertions=[
-        ["ai_disclosure", {"ai_disclosure_id": ai_disclosure_id, "set_source_type": True}],
+        ["ai_system", {"ai_system_id": ai_system_id, "ai_involvement": "ai_generated"}],
     ],
 )
 ```
 
 Over HTTP, including [Local mode with the Docker image](../local/docker.md#ai-labeling),
-the entry is JSON: `["ai_disclosure", {"ai_disclosure_id": "aidisc_...", "set_source_type": true}]`.
+the entry is JSON:
 
-`set_source_type` applies only to input with no C2PA manifest — content you are
-signing for the first time — and has no effect on any other input. Check the result
-at [verify.trufo.ai](https://verify.trufo.ai).
+```json
+["ai_system", {"ai_system_id": "aisys_…", "ai_involvement": "ai_generated"}]
+```
 
-The ingredient form uses a C2PA 2.4 field; older validators may reject it.
+An input without a C2PA manifest is labeled by the first of these that applies:
 
-If the input already carries a manifest, or you are declaring an AI-generated asset
-as an input to something else, express it as an ingredient instead — see
-[5_ingredients.md](5_ingredients.md).
+- Branded generator product (`branded_gp_id` set): signed as your branded generator
+  product.
+- Trufo AI Labeling Service (first-party AI system): signed with a `c2pa.created`
+  action (`digitalSourceType = trainedAlgorithmicMedia`) whose software agent is the
+  AI system.
+- Declared AI ingredient (not first-party): the input is recorded as an AI-generated
+  parent ingredient (`digitalSourceType = trainedAlgorithmicMedia`) and opened by
+  your organization (`c2pa.opened`). This is not generally sufficient for
+  interoperable AI disclosures.
 
-### First-party model operation
+Signing AI-modified content (`ai_modified`) requires a branded generator product.
 
-If you are operating the model (i.e. running in-house as opposed to calling an API,
-or otherwise conducting "AI Provider" operations per the EU AI Act definitions),
-then you may declare `c2pa.created` with `digitalSourceType=trainedAlgorithmicMedia`.
-This ensures that downstream validators (especially those that are not up to date)
-will reliably mark the content as AI-generated. Note that if C2PA security
-requirements increase in the future, this feature may be moved to the
-"branded-only" category that requires a bespoke Generator Product registration
-with the C2PA.
+If the input already carries a C2PA manifest, Trufo keeps it and declares no new
+source type. If that manifest says camera-captured or human-created, the input is
+rejected. This is the default
+[`signed_input_policy`](../api/api_c2pa.md#signed-inputs-and-ingredients), `auto`;
+with `keep`, that input is kept too, and no AI source type is declared for it.
 
-1. **Accept the Created Assertion Acknowledgement.** An organization owner or admin
-   accepts it on behalf of the organization at
-   [Organization Settings → Agreements](https://app.trufo.ai/settings/org#agreements),
-   as it is important that this feature is not used to write inaccurate information.
-2. **Register the software agent** that generates the media:
+Test signing (`sign_c2pa_test()` with a `c2pa-sign-test` key) gives the same labels,
+with the test certificate. Check the result at [verify.trufo.ai](https://verify.trufo.ai).
 
-   ```python
-   from trufo.api.endpoints import TPS_C2PA_SOFTWARE_AGENT_ADD
+## Step 4 — Optionally, Watermark per AI System
 
-   resp = requests.post(
-       TRUFO_API_URL + TPS_C2PA_SOFTWARE_AGENT_ADD,
-       headers={"X-API-Key": api_key},
-       json={"agent": {"name": "<generating application name>", "version": "<version>"}},
-       timeout=60,
-   )
-   resp.raise_for_status()
-   swagent_id = resp.json()["software_agent_id"]
-   ```
+For companies seeking minimal compliance with the EU AI Act Article 50(2),
+per-AI-system watermarking embeds a single watermark ID in all content a registered
+AI system generates. The AI system can be identified, but individual content
+provenance records (e.g. C2PA soft-binding) cannot.
 
-3. **Register the AI disclosure** as in [Register it](#register-it), with these
-   fields alongside `assertion`:
+In the API, add this to `actions`, in a request with the `ai_system` assertion:
 
-   ```python
-   "first_party_operated": True,
-   "software_agent_id": swagent_id,
-   ```
+```json
+["watermark", {"wid_allocation_mode": "per_ai_system"}]
+```
 
-4. **Sign with `set_source_type=True`**, as in [Marking the Source Type](#marking-the-source-type).
-
-In the dashboard, steps 2 and 3 are on the C2PA Signing API page, **Playground** tab:
-select **AI (First-Party)**, then under **Register Entities** use **Register Software
-Agent**, then **Register AI Disclosure** with **My organization operates this model**
-checked and the agent selected. The dashboard registers in your organization's
-default region.
-
-These registration fields are not embedded in the AI disclosure. The linked software
-agent's `agent` map (see `POST /c2pa/software-agent/list`) becomes the
-`softwareAgent` of `c2pa.created`: its name and optional version/OS identify the
-application that created the media. The AI disclosure remains a gathered assertion.
-
-This creation workflow is for AI-generated output. It does not represent the
-history of a photograph subsequently edited with generative AI. The source type
-is fixed to `trainedAlgorithmicMedia`.
-
-See the [registration reference](../api/api_c2pa.md#post-c2paai-disclosureadd)
-for field requirements and errors.
+See [6_watermarking.md](6_watermarking.md).
 
 ---
 
 ## Combining With Identity
 
-AI disclosure says what made the content; a CAWG identity assertion says who
-published it. They are complementary and commonly used together:
+The `ai_system` entry says what made the content; a CAWG identity assertion says
+who published it. They are complementary and commonly used together:
 
 ```python
 signed_bytes = sign_c2pa(
     api_key,
     media_bytes,
     assertions=[
-        ["ai_disclosure", {"ai_disclosure_id": ai_disclosure_id}],
+        ["ai_system", {"ai_system_id": ai_system_id, "ai_involvement": "ai_generated"}],
         ["cawg_identity", {"cawg_identity_id": "org_interim"}],
     ],
 )
@@ -233,7 +177,61 @@ with a `c2pa-sign-test` key and `cawg_identity_id="test"`.
 
 ---
 
+<!-- TODO(sunset-2026-12-31): the ai_disclosure migration section goes; successor none -->
+
+## Moving From `ai_disclosure`
+
+The `ai_disclosure` assertion is deprecated and will stop working after
+2026-12-31T00:00:00+00:00. Please use the `ai_system` assertion with an AI system
+registered at `/ai-system/add`.
+
+| Old (`ai_disclosure`) | New (`ai_system`) |
+| --------------------- | ----------------- |
+| `["ai_disclosure", {}]` | Register an AI system ([step 2](#step-2--register-an-ai-system)). Every label of an input without a C2PA manifest declares an AI source type; there is no disclosure-only label. |
+| `ai_disclosure_id` | An AI system with `c2pa_ai_disclosure` |
+| `first_party_operated` + `software_agent_id` | `c2pa_first_party_attestable`; the AI system's `name` and `version` are the software agent |
+| `set_source_type` | Automatic ([step 3](#step-3--sign-with-the-ai-system)) |
+| `aidisc_…` registrations | Not converted |
+
+---
+
+## Troubleshooting
+
+Every `ai_system` error, with when it occurs, is listed under
+[`ai_system`](../api/api_c2pa.md#ai_system). The common ones:
+
+**`404 AISystemNotFound`**
+
+The `ai_system_id` is unknown or belongs to another organization. List your
+organization's AI systems with [`/ai-system/list`](../api/api_c2pa.md#post-ai-systemlist).
+
+**`AISystemInactive: AI system '<ai_system_id>' is inactive. Use an active AI system (see /ai-system/list).`**
+
+Use an active AI system, or reactivate this one with
+[`/ai-system/status`](../api/api_c2pa.md#post-ai-systemstatus) (`"status": "active"`).
+
+**`ai_involvement 'ai_modified' requires a branded generator product (branded_gp_id).`**
+
+Pass `branded_gp_id`, one of your organization's branded generator products
+approved for `compositeWithTrainedAlgorithmicMedia`
+([`POST /c2pa/sign`](../api/api_c2pa.md#post-c2pasign)).
+
+**`The input carries a C2PA manifest whose source class is '<class>', which conflicts with ai_involvement '<ai_involvement>'.`**
+
+The input's manifest says camera-captured or human-created
+([step 3](#step-3--sign-with-the-ai-system)). Check that the input is the AI
+system's output.
+
+**`UnsupportedSDKVersion: the 'ai_system' assertion requires trufo-provenance 2.2.0 or later. Please upgrade.`**
+
+Local mode: upgrade trufo-provenance to 2.2.0 or later. The Docker image reports its
+`engine_version` at `/health`; see [Versions and Upgrades](../local/docker.md#versions-and-upgrades).
+
+---
+
 ## Reference
 
-- Assertion reference: [../api/api_c2pa.md](../api/api_c2pa.md#assertions)
+- `ai_system` assertion: [../api/api_c2pa.md#ai_system](../api/api_c2pa.md#ai_system)
+- AI system registration: [../api/api_c2pa.md#ai-systems](../api/api_c2pa.md#ai-systems)
+- Watermarking quickstart: [6_watermarking.md](6_watermarking.md)
 - Complete runnable example: [3_ai_labeling.py](3_ai_labeling.py)

@@ -41,7 +41,7 @@ Every integration starts in the dashboard at [app.trufo.ai](https://app.trufo.ai
 2. **Set up MFA** (passkey or TOTP) at [app.trufo.ai/settings/user](https://app.trufo.ai/settings/user). It is required to submit Organization Validation, accept agreements and create API keys.
 3. **Subscribe to a plan** for your product, for example the C2PA Signing API on its **Overview** tab at [app.trufo.ai/prov/apis/c2pa-signing](https://app.trufo.ai/prov/apis/c2pa-signing).
 4. **Submit Organization Validation (OV)** at [app.trufo.ai/settings/org/ov](https://app.trufo.ai/settings/org/ov). Trufo reviews it; production signing starts once it is approved.
-5. **Accept the agreements** your route needs at [app.trufo.ai/settings/org#agreements](https://app.trufo.ai/settings/org#agreements): the Trufo Library License for `sdk-download` keys, and the Created Assertion Acknowledgement for [first-party AI labeling](3_ai_labeling.md#first-party-model-operation).
+5. **Accept the agreements** your route needs at [app.trufo.ai/settings/org#agreements](https://app.trufo.ai/settings/org#agreements): the Trufo Library License for `sdk-download` keys, and the Created Assertion Acknowledgement for [first-party AI labeling](3_ai_labeling.md#step-1--confirm-you-are-the-first-party-operator).
 6. **Create API keys** at [app.trufo.ai/settings/org#api-access](https://app.trufo.ai/settings/org#api-access) under *API Access → API Keys*, picking the scopes that match your use case (see below).
 
 ## API Key Scopes
