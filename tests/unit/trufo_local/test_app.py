@@ -224,8 +224,13 @@ def test_engine_errors(sign, engine, side_effect, status, detail):
 
 
 def test_watermark_engine_installed(watermark_engine, client, sign, engine):
-    actions = [["watermark", {}]]
-    assert sign(actions=actions).status_code == 200
+    actions = [["watermark", {"effort": "require"}]]
+    response = sign(actions=actions)
+    assert response.status_code == 200
+    assert response.json()["warnings"] == [
+        "The watermark 'effort' parameter is deprecated; use 'effort_policy'.",
+        "A warning.",
+    ]
     assert engine.calls[0]["actions"] == actions
     assert client.get("/health").json()["watermark_engine_version"] == "0.5.2"
 

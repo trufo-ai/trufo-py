@@ -98,13 +98,14 @@ async def sign(body: C2PASignRequest, request: Request) -> dict | Response:
     if not api_key:
         raise HTTPException(status_code=401, detail="MissingAuthentication")
     state = request.app.state
+    validation_warnings = []
     if any(is_watermark_entry(entry) for entry in body.actions):
         if state.watermark_engine_version is None:
             raise HTTPException(status_code=400, detail="WatermarkNotAvailable")
         # only validate_and_strip_watermark's NotImplementedError is a 501; the engine
-        # validates again
+        # validates again but does not return these warnings
         try:
-            validate_and_strip_watermark(body.actions)
+            _, _, validation_warnings = validate_and_strip_watermark(body.actions)
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         except NotImplementedError as exc:
@@ -151,7 +152,7 @@ async def sign(body: C2PASignRequest, request: Request) -> dict | Response:
             if not await asyncio.to_thread(os.path.isfile, media_input_path):
                 raise HTTPException(status_code=404, detail="MediaInputPathNotFound") from exc
             raise
-    return {"media_output_path": written_path, "warnings": warnings}
+    return {"media_output_path": written_path, "warnings": validation_warnings + warnings}
 
 
 def _watermark_engine_version() -> str | None:
