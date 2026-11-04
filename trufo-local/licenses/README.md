@@ -30,7 +30,7 @@ The full image adds watermarking. It is built from [`Dockerfile.full`](https://g
 
 ## Trufo's Code
 
-Trufo's own code is not under the GPL or LGPL. Debian's FFmpeg and `heif-enc` with x265, which are GPL, run as separate programs. The LGPL libraries, including libsndfile with LAME and mpg123 built in, are separate, dynamically loaded libraries.
+Trufo's own code is not under the GPL or LGPL. Debian's FFmpeg and `heif-enc` with x265, which are GPL, run as separate programs. The LGPL libraries, including libsndfile with LAME and mpg123 built in, are separate, dynamically loaded libraries. GCC's libgomp and libgfortran, which are GPL, load into the same process as Trufo's code under the GCC Runtime Library Exception.
 
 ## What Trufo Provides
 
@@ -42,8 +42,8 @@ As distributor, Trufo provides:
 
 ## Running and Redistributing an Image
 
-You owe nothing under these third-party licenses to run an image. To redistribute one, pass on its notices and its source; copying its source image with it makes that easy.
+You owe nothing under these third-party licenses to run an image. To redistribute one, pass on its notices and its source; copying its source image with it makes that easy. Intel MKL's license also forbids reverse engineering or modifying MKL.
 
 ## Codec Patents
 
-The images contain H.264 and HEVC encoders, and the full image uses them when it watermarks video. Patent licensing for commercial codec use is separate from these copyright licenses, and is yours to assess.
+The images contain H.264, HEVC and AAC encoders. When the full image watermarks a file, it re-encodes H.264 and HEVC video with x264 and x265, HEVC-coded HEIC and HEIF images with x265 through `heif-enc`, and AAC-LC audio with FFmpeg. Patent licensing for commercial codec use is separate from these copyright licenses, and is yours to assess.
