@@ -82,8 +82,8 @@ Every response carries an `X-Request-ID` header — include it when contacting s
 
 <!-- TODO(sunset-2027-01-31): this paragraph and the next table go; successor none -->
 
-The four deprecations below keep working until 2027-01-31T23:59:00+00:00 (the
-start of 31 January 2027, UTC) and fail from that instant. Sign and bind
+The four deprecations below keep working until 2027-01-31T23:59:00+00:00 and
+fail from that instant. Sign and bind
 requests get a notice in `warnings`; the `/c2pa/ai-disclosure/*` endpoints
 signal through headers only.
 
