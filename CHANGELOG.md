@@ -7,6 +7,92 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.0] — 2026-11-03
+<!-- TODO(v22-release): the publish date (2.1.0 took its publish day) -->
+
+### Added
+
+- [AI systems](docs/api/api_c2pa.md#ai-systems): register one at
+  `/ai-system/add` and name it in an
+  [`ai_system`](docs/api/api_c2pa.md#ai_system) entry to label the content it
+  generates or modifies (`UserAssertion.AI_SYSTEM`, `AIInvolvement`).
+  `TPS_AI_SYSTEM_ADD_PATH`, `TPS_AI_SYSTEM_LIST_PATH` and
+  `TPS_AI_SYSTEM_STATUS_PATH` name the endpoints.
+- `signed_input_policy` and `signed_ingredient_policy` (`SignedInputPolicy`,
+  `SignedIngredientPolicy`) on the C2PA signing functions: `auto` (the default)
+  or `keep`; see
+  [Signed inputs and ingredients](docs/api/api_c2pa.md#signed-inputs-and-ingredients).
+- `wid_allocation_mode` (`WatermarkIDAllocationMode`) on the
+  [`watermark`](docs/api/api_c2pa.md#watermark) action, `bind_watermark`,
+  `submit_bind_watermark` and `bind_reserve`: `per_embed` (the default) or
+  `per_ai_system`, the AI system's watermark ID, which is not a C2PA soft
+  binding. Binds take `ai_system_id` and `ai_involvement` with `per_ai_system`.
+- `RecoverContentResult.wid_allocation_mode`, `.ai_involvement` and `.ai_system`
+  (the AI system's public information), and `ContentRecord.ai_system_wid`.
+- `bind_watermark` and `wait_for_task` (watermark tasks) re-emit the server's
+  `warnings` as `TrufoServerWarning`; `BindWatermarkTaskResult` has `warnings`.
+- `action_history` entries accept a `description`, the C2PA actions
+  `c2pa.enhanced`, `c2pa.mastered`, `c2pa.mixed` and `c2pa.remixed`, and custom
+  actions in a domain your organization has validated.
+- A `componentOf` or `inputTo` ingredient can be declared by its `format`, such
+  as `video/mp4`, instead of its `media`.
+- A full [`trufo-local`](docs/local/docker.md#choose-an-image) Docker image,
+  `ghcr.io/trufo-ai/trufo-local:2.2-full`: the signing-only image (`2.2`) plus
+  watermark embedding, on CPU only; neither serves the `/bind` routes. It
+  returns a watermark action's notices, such as the one for the deprecated
+  `effort` alias, in `warnings`. Both 2.2 images take `signed_input_policy`,
+  `signed_ingredient_policy` and the `ai_system` entry.
+
+### Changed
+
+- Local-engine extras require trufo-provenance 2.2, which uses pillow-heif
+  1.8.1+trufo.1, Trufo's build on packages.trufo.ai, instead of pi-heif. It
+  bundles libheif 1.23.6, which fixes CVE-2026-84383, and has no x265 encoder.
+  After upgrading, `pip uninstall pi-heif` removes the unused package.
+- Under the default `auto` policies, C2PA data Trufo cannot read, such as a
+  malformed manifest store, is removed with a notice instead of refused (`keep`
+  still refuses it). Under either policy, a kept manifest that did not validate
+  or is untrusted gets a notice.
+- A declared ingredient (one without `media`) is always gathered: `placement:
+  "created"` on it returns 400, with or without `branded_gp_id`.
+- A `componentOf` ingredient's `media` may be in any format with **Yes** under
+  C2PA validate in [Media format support](docs/api/media_format_support.md), not
+  only an image.
+- At submission, a TASK sign runs the checks a REQUEST runs before processing
+  the media: `submit_c2pa_sign` and TASK `sign_c2pa` raise `requests.HTTPError`
+  for a refused request instead of `TaskFailedError`, and no task is created.
+- The production hosts refuse test keys in Local mode and on the upload link
+  (410); use the `_test` helpers, which call the test host.
+- Local mode keeps an ingredient's `media` on your machine, sending only its
+  SHA-256 and byte length.
+- Local mode passes on the engine's own notices, such as a best-effort
+  watermark failure: as a `UserWarning` in Python, and in `warnings` from the
+  Docker image.
+
+### Deprecated
+
+- The `ai_disclosure` entry (`UserAssertion.AI_DISCLOSURE`) and
+  `/c2pa/ai-disclosure/add` and `/list` (`TPS_C2PA_AI_DISCLOSURE_ADD`,
+  `TPS_C2PA_AI_DISCLOSURE_LIST`) are refused by the Trufo API from 2026-12-31;
+  use the `ai_system` entry with an AI system registered at `/ai-system/add`.
+  Unlike the old entry, under the default `auto` policy and without a `redact`
+  or `transcode` action, the new one refuses (400) a signed input whose source
+  class is `camera_captured` or `human_created`. AI disclosure registrations are
+  not converted; see
+  [Moving From `ai_disclosure`](docs/quickstart/3_ai_labeling.md#moving-from-ai_disclosure).
+- The watermark `mode` (the bind functions' `mode=`, the `watermark` action's
+  `mode`, and `WatermarkMode`) is refused by the Trufo API from 2026-12-31; use
+  `wid_allocation_mode` (`per_embed` replaces `provenance`).
+- `bind_watermark`, `submit_bind_watermark` and `bind_watermark_test` from
+  trufo-py 2.1 or earlier are refused by the Trufo API from 2026-12-31; upgrade
+  to 2.2.0 before then.
+- Local mode with trufo-provenance 2.1 or earlier (trufo-py 2.1 or earlier with
+  a local engine extra, and the Docker image's 2.1 tags) is refused by the Trufo
+  API from 2026-12-31; upgrade trufo-py to 2.2.0 with its local engine extra, or
+  use a [2.2 image](docs/local/docker.md#versions-and-upgrades), before then.
+- The old endpoint path constant names, such as `TPS_C2PA_SIGN`: use the names
+  with a `_PATH` suffix, such as `TPS_C2PA_SIGN_PATH`.
+
 ## [2.1.0] — 2026-10-25
 
 ### Added
@@ -523,7 +609,8 @@ Minor-version bump marks the general availability of the production C2PA signing
 - `trufo.intf`: credential storage and loading (env vars + file), CLI entry point.
 - PyPI trusted publishing via GitHub Actions (OIDC, no API tokens required).
 
-[Unreleased]: https://github.com/trufo-ai/trufo-py/compare/v2.1.0...HEAD
+[Unreleased]: https://github.com/trufo-ai/trufo-py/compare/v2.2.0...HEAD
+[2.2.0]: https://github.com/trufo-ai/trufo-py/compare/v2.1.0...v2.2.0
 [2.1.0]: https://github.com/trufo-ai/trufo-py/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/trufo-ai/trufo-py/compare/v1.5.4...v2.0.0
 [1.5.4]: https://github.com/trufo-ai/trufo-py/compare/v1.5.3...v1.5.4
