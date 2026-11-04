@@ -2,7 +2,7 @@
 
 This reference defines media eligibility for C2PA generation and validation, and
 Trufo watermark embedding and recovery. It covers Cloud mode and Local mode as of
-Trufo SDK 2.2.0 with Provenance 2.2.0 and Pawprint 0.5.3.
+Trufo SDK 2.2.0 with Provenance 2.2.0 and Pawprint 0.5.4.
 
 A file is supported when its MIME type is eligible for the operation and the file
 passes that operation's checks; a supported container does not make every file in
