@@ -1,7 +1,7 @@
 # Copyright 2025-2026 Trufo, Inc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-"""Deprecated class names resolve to their renamed classes with a warning."""
+"""Deprecated names resolve to their renamed objects with a warning."""
 
 import importlib
 
@@ -18,6 +18,7 @@ import pytest
         ("trufo.api.tps.bind", "BindWatermark", "BindWatermarkResult"),
         ("trufo.api.tps.bind", "BindReservation", "BindReserveResult"),
         ("trufo.api.tps.sign_c2pa", "C2PAS3SignedOutput", "SignC2PAS3Result"),
+        ("trufo.api.endpoints", "TPS_C2PA_SIGN", "TPS_C2PA_SIGN_PATH"),
     ],
 )
 def test_old_name_warns_and_resolves_to_new(module_path, old, new):

@@ -8,9 +8,9 @@ from dataclasses import dataclass
 import requests
 
 from trufo.api.endpoints import (
-    TPS_CONTENT_GET,
-    TPS_CONTENT_LIST,
-    TPS_CONTENT_STATUS,
+    TPS_CONTENT_GET_PATH,
+    TPS_CONTENT_LIST_PATH,
+    TPS_CONTENT_STATUS_PATH,
     TRUFO_API_URL,
 )
 from trufo.api.headers import sdk_headers
@@ -101,7 +101,7 @@ def get_content(
         requests.HTTPError: If the API returns a non-2xx response (404 when no
             record of yours matches).
     """
-    return _record(_post(api_key, trufo_api_url + TPS_CONTENT_GET, _key(cid, wid, mid)))
+    return _record(_post(api_key, trufo_api_url + TPS_CONTENT_GET_PATH, _key(cid, wid, mid)))
 
 
 def list_content(
@@ -141,7 +141,7 @@ def list_content(
     ):
         if value is not None:
             body[name] = value
-    payload = _post(api_key, trufo_api_url + TPS_CONTENT_LIST, body)
+    payload = _post(api_key, trufo_api_url + TPS_CONTENT_LIST_PATH, body)
     return ContentPage(
         items=[_record(item) for item in payload["items"]],
         next_cursor=payload.get("next_cursor"),
@@ -182,4 +182,4 @@ def set_content_status(
             record of yours matches).
     """
     body = {**_key(cid, wid, mid), "status": status}
-    return _record(_post(api_key, trufo_api_url + TPS_CONTENT_STATUS, body))
+    return _record(_post(api_key, trufo_api_url + TPS_CONTENT_STATUS_PATH, body))

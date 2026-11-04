@@ -41,9 +41,9 @@ from pathlib import Path
 import requests
 
 from trufo.api.endpoints import (
-    TPS_BIND_COMMIT,
-    TPS_BIND_RESERVE,
-    TPS_BIND_WATERMARK,
+    TPS_BIND_COMMIT_PATH,
+    TPS_BIND_RESERVE_PATH,
+    TPS_BIND_WATERMARK_PATH,
     TRUFO_API_URL,
     TRUFO_API_URL_TEST,
 )
@@ -198,7 +198,7 @@ def bind_watermark(
         "media_input": base64.b64encode(media_bytes).decode(),
         **allocation,
     }
-    payload = _post(api_key, trufo_api_url + TPS_BIND_WATERMARK, body)
+    payload = _post(api_key, trufo_api_url + TPS_BIND_WATERMARK_PATH, body)
     emit_server_warnings(payload)
     return BindWatermarkResult(
         media=base64.b64decode(payload["media_output"]),
@@ -231,7 +231,7 @@ def submit_bind_watermark(
             mode=mode,
         ),
     }
-    return _submit_task(api_key, TPS_BIND_WATERMARK, body, trufo_api_url=trufo_api_url)
+    return _submit_task(api_key, TPS_BIND_WATERMARK_PATH, body, trufo_api_url=trufo_api_url)
 
 
 def bind_reserve(
@@ -271,7 +271,7 @@ def bind_reserve(
             ai_involvement=ai_involvement,
         ),
     }
-    payload = _post(api_key, trufo_api_url + TPS_BIND_RESERVE, body)
+    payload = _post(api_key, trufo_api_url + TPS_BIND_RESERVE_PATH, body)
     package = payload["wid_package"]
     return BindReserveResult(
         cid=payload["cid"], wid=package["wid"], expires_at=package["expires_at"], wid_package=dict(package)
@@ -375,7 +375,7 @@ def bind_commit(
         body["manifest_id"] = manifest_id
     if manifest_endpoint is not None:
         body["manifest_endpoint"] = manifest_endpoint
-    _post(api_key, trufo_api_url + TPS_BIND_COMMIT, body)
+    _post(api_key, trufo_api_url + TPS_BIND_COMMIT_PATH, body)
 
 
 def bind_watermark_test(

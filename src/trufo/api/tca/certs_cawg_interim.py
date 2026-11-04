@@ -15,7 +15,7 @@ from pathlib import Path
 
 from cryptography.hazmat.primitives.asymmetric import ec
 
-from trufo.api.endpoints import RA_CAWG_INTERIM_CSR_JWT
+from trufo.api.endpoints import RA_CAWG_INTERIM_CSR_JWT_PATH
 from trufo.api.session import TrufoSession
 from trufo.crypt.tca_certs import LeafType, build_csr, est_enroll, extract_cert_chain
 
@@ -42,7 +42,7 @@ def _request_cawg_interim_csr_jwt(client: TrufoSession, validity_days: int | Non
     body: dict = {}
     if validity_days is not None:
         body["validity_days"] = validity_days
-    data = client.make_request(RA_CAWG_INTERIM_CSR_JWT, body)
+    data = client.make_request(RA_CAWG_INTERIM_CSR_JWT_PATH, body)
     return data["csr_jwt"]
 
 

@@ -11,8 +11,8 @@ from unittest.mock import MagicMock, patch
 import pytest
 from trufo import GetS3UploadURLResult, SignC2PAS3Result
 from trufo.api.endpoints import (
-    TPS_GET_S3_UPLOAD_URL,
-    TPS_C2PA_SIGN,
+    TPS_C2PA_SIGN_PATH,
+    TPS_GET_S3_UPLOAD_URL_PATH,
     TRUFO_API_URL,
     TRUFO_API_URL_TEST,
 )
@@ -171,7 +171,7 @@ class TestDirectC2PASigning:
 
         assert result == signed
         mock_post.assert_called_once_with(
-            TRUFO_API_URL + TPS_C2PA_SIGN,
+            TRUFO_API_URL + TPS_C2PA_SIGN_PATH,
             json={
                 "media_input": base64.b64encode(b"input-media").decode(),
                 "actions": [
@@ -218,7 +218,7 @@ class TestDirectC2PASigning:
 
         assert result == signed
         mock_post.assert_called_once_with(
-            TRUFO_API_URL_TEST + TPS_C2PA_SIGN,
+            TRUFO_API_URL_TEST + TPS_C2PA_SIGN_PATH,
             json={
                 "media_input": base64.b64encode(b"input-media").decode(),
                 "actions": [],
@@ -407,7 +407,7 @@ class TestS3C2PASigning:
             duration="5m",
         )
         mock_post.assert_called_once_with(
-            TRUFO_API_URL + TPS_GET_S3_UPLOAD_URL,
+            TRUFO_API_URL + TPS_GET_S3_UPLOAD_URL_PATH,
             json={"mime_type": "image/jpeg", "duration": "5m"},
             headers=_expected_headers("api-key"),
             timeout=60,
@@ -427,7 +427,7 @@ class TestS3C2PASigning:
 
         assert result.task_id == "task-1"
         mock_post.assert_called_once_with(
-            TRUFO_API_URL + TPS_C2PA_SIGN,
+            TRUFO_API_URL + TPS_C2PA_SIGN_PATH,
             json={
                 "media_input_s3": "signed-input-reference",
                 "execution_mode": "task",
@@ -584,9 +584,9 @@ class TestS3C2PASigning:
         )
 
         assert [call.args[0] for call in mock_post.call_args_list] == [
-            trufo_api_url + TPS_C2PA_SIGN,
-            trufo_api_url + TPS_GET_S3_UPLOAD_URL,
-            trufo_api_url + TPS_C2PA_SIGN,
+            trufo_api_url + TPS_C2PA_SIGN_PATH,
+            trufo_api_url + TPS_GET_S3_UPLOAD_URL_PATH,
+            trufo_api_url + TPS_C2PA_SIGN_PATH,
         ]
         assert mock_post.call_args_list[2].kwargs["json"]["signed_input_policy"] == "auto"
         assert mock_post.call_args_list[2].kwargs["json"]["signed_ingredient_policy"] == "auto"

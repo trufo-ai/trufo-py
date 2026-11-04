@@ -7,6 +7,8 @@ Trufo API endpoint definitions.
 
 import os
 
+from trufo.util.deprecation import deprecated_aliases
+
 TRUFO_API_URL = "https://api.trufo.ai"
 TRUFO_API_URL_EUROPE = "https://eu.api.trufo.ai"
 # test signing runs on its own host; unlike the main API there is no dedicated
@@ -23,37 +25,66 @@ TRUFO_OCSP_URL = "https://ocsp.trufo.ai"
 TRUFO_APP_URL = os.environ.get("TRUFO_APP_URL", "https://app.trufo.ai")
 
 # account / device auth (RFC 8628 — browser on a DIFFERENT machine)
-DEVICE_AUTHORIZE = "/account/device/authorize"
-DEVICE_TOKEN = "/account/device/token"
+DEVICE_AUTHORIZE_PATH = "/account/device/authorize"
+DEVICE_TOKEN_PATH = "/account/device/token"
 # account / loopback auth (RFC 8252 + PKCE — browser on the SAME machine)
-LOOPBACK_TOKEN = "/account/loopback/token"
+LOOPBACK_TOKEN_PATH = "/account/loopback/token"
 LOOPBACK_AUTH_PATH = "/loopback"  # path on TRUFO_APP_URL, not on the API
-ACCOUNT_REFRESH = "/account/refresh"
+ACCOUNT_REFRESH_PATH = "/account/refresh"
 
 # registration authority
-RA_CSR_JWT = "/ra/c2pa/csr-jwt"
-RA_CAWG_INTERIM_CSR_JWT = "/ra/cawg-interim/csr-jwt"
+RA_CSR_JWT_PATH = "/ra/c2pa/csr-jwt"
+RA_CAWG_INTERIM_CSR_JWT_PATH = "/ra/cawg-interim/csr-jwt"
 
 # generator product
-GP_INSTANCE_CREATE = "/gproduct/instance/create"
-GP_CREDENTIAL_REGISTER = "/gproduct/instance/credential/register"
+GP_INSTANCE_CREATE_PATH = "/gproduct/instance/create"
+GP_CREDENTIAL_REGISTER_PATH = "/gproduct/instance/credential/register"
 
 # TPS content endpoints
-TPS_C2PA_SIGN = "/c2pa/sign"
+TPS_C2PA_SIGN_PATH = "/c2pa/sign"
 # legacy hosted test path on the main host; superseded by TRUFO_API_URL_TEST +
-# TPS_C2PA_SIGN, kept live during deprecation
+# TPS_C2PA_SIGN_PATH, kept live during deprecation
 TPS_C2PA_SIGN_TEST = "/test/c2pa/sign"
-TPS_C2PA_GET_S3_URL = "/c2pa/io/get-s3-url"  # deprecated: use TPS_GET_S3_UPLOAD_URL
-TPS_GET_S3_UPLOAD_URL = "/io/get-s3-upload-url"
-TPS_CONTENT_RECOVER = "/content/recover"
-TPS_CONTENT_GET = "/content/get"
-TPS_CONTENT_LIST = "/content/list"
-TPS_CONTENT_STATUS = "/content/status"
-TPS_BIND_WATERMARK = "/bind/watermark"
-TPS_BIND_RESERVE = "/bind/reserve"
-TPS_BIND_COMMIT = "/bind/commit"
+TPS_C2PA_GET_S3_URL = "/c2pa/io/get-s3-url"  # deprecated: use TPS_GET_S3_UPLOAD_URL_PATH
+TPS_GET_S3_UPLOAD_URL_PATH = "/io/get-s3-upload-url"
+TPS_CONTENT_RECOVER_PATH = "/content/recover"
+TPS_CONTENT_GET_PATH = "/content/get"
+TPS_CONTENT_LIST_PATH = "/content/list"
+TPS_CONTENT_STATUS_PATH = "/content/status"
+TPS_BIND_WATERMARK_PATH = "/bind/watermark"
+TPS_BIND_RESERVE_PATH = "/bind/reserve"
+TPS_BIND_COMMIT_PATH = "/bind/commit"
 # TODO(sunset-2026-12-31): the ai-disclosure endpoints go; successor /ai-system/add and /list
 TPS_C2PA_AI_DISCLOSURE_ADD = "/c2pa/ai-disclosure/add"
 TPS_C2PA_AI_DISCLOSURE_LIST = "/c2pa/ai-disclosure/list"
-TPS_C2PA_SOFTWARE_AGENT_ADD = "/c2pa/software-agent/add"
-TPS_C2PA_SOFTWARE_AGENT_LIST = "/c2pa/software-agent/list"
+TPS_AI_SYSTEM_ADD_PATH = "/ai-system/add"
+TPS_AI_SYSTEM_LIST_PATH = "/ai-system/list"
+TPS_AI_SYSTEM_STATUS_PATH = "/ai-system/status"
+TPS_C2PA_SOFTWARE_AGENT_ADD_PATH = "/c2pa/software-agent/add"
+TPS_C2PA_SOFTWARE_AGENT_LIST_PATH = "/c2pa/software-agent/list"
+
+
+__getattr__ = deprecated_aliases(
+    globals(),
+    {
+        "DEVICE_AUTHORIZE": "DEVICE_AUTHORIZE_PATH",
+        "DEVICE_TOKEN": "DEVICE_TOKEN_PATH",
+        "LOOPBACK_TOKEN": "LOOPBACK_TOKEN_PATH",
+        "ACCOUNT_REFRESH": "ACCOUNT_REFRESH_PATH",
+        "RA_CSR_JWT": "RA_CSR_JWT_PATH",
+        "RA_CAWG_INTERIM_CSR_JWT": "RA_CAWG_INTERIM_CSR_JWT_PATH",
+        "GP_INSTANCE_CREATE": "GP_INSTANCE_CREATE_PATH",
+        "GP_CREDENTIAL_REGISTER": "GP_CREDENTIAL_REGISTER_PATH",
+        "TPS_C2PA_SIGN": "TPS_C2PA_SIGN_PATH",
+        "TPS_GET_S3_UPLOAD_URL": "TPS_GET_S3_UPLOAD_URL_PATH",
+        "TPS_CONTENT_RECOVER": "TPS_CONTENT_RECOVER_PATH",
+        "TPS_CONTENT_GET": "TPS_CONTENT_GET_PATH",
+        "TPS_CONTENT_LIST": "TPS_CONTENT_LIST_PATH",
+        "TPS_CONTENT_STATUS": "TPS_CONTENT_STATUS_PATH",
+        "TPS_BIND_WATERMARK": "TPS_BIND_WATERMARK_PATH",
+        "TPS_BIND_RESERVE": "TPS_BIND_RESERVE_PATH",
+        "TPS_BIND_COMMIT": "TPS_BIND_COMMIT_PATH",
+        "TPS_C2PA_SOFTWARE_AGENT_ADD": "TPS_C2PA_SOFTWARE_AGENT_ADD_PATH",
+        "TPS_C2PA_SOFTWARE_AGENT_LIST": "TPS_C2PA_SOFTWARE_AGENT_LIST_PATH",
+    },
+)

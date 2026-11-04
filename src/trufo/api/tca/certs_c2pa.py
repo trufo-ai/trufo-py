@@ -14,9 +14,9 @@ from cryptography.hazmat.primitives.asymmetric import ec
 
 from trufo.api.auth import extract_detail
 from trufo.api.endpoints import (
-    GP_CREDENTIAL_REGISTER,
-    GP_INSTANCE_CREATE,
-    RA_CSR_JWT,
+    GP_CREDENTIAL_REGISTER_PATH,
+    GP_INSTANCE_CREATE_PATH,
+    RA_CSR_JWT_PATH,
     TRUFO_API_URL,
 )
 from trufo.api.session import TrufoSession
@@ -45,7 +45,7 @@ def create_instance(client: TrufoSession, gp_id: str, name: str) -> str:
         The new gpi_id.
     """
     data = client.make_request(
-        GP_INSTANCE_CREATE,
+        GP_INSTANCE_CREATE_PATH,
         {
             "gp_id": gp_id,
             "name": name,
@@ -78,7 +78,7 @@ def register_credential(
         The new gpic_id.
     """
     data = client.make_request(
-        GP_CREDENTIAL_REGISTER,
+        GP_CREDENTIAL_REGISTER_PATH,
         {
             "gpi_id": gpi_id,
             "public_key_pem": public_key_pem,
@@ -154,7 +154,7 @@ def _request_c2pa_csr_jwt(
 
     # RA authenticates via client_assertion in the body, not Bearer JWT
     resp = requests.post(
-        f"{TRUFO_API_URL}{RA_CSR_JWT}",
+        f"{TRUFO_API_URL}{RA_CSR_JWT_PATH}",
         headers=sdk_headers(**{"Content-Type": "application/json"}),
         json=body,
         timeout=30,

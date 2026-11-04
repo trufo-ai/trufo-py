@@ -34,7 +34,7 @@ import requests
 from trufo.api.auth import TokenPair, extract_detail
 from trufo.api.endpoints import (
     LOOPBACK_AUTH_PATH,
-    LOOPBACK_TOKEN,
+    LOOPBACK_TOKEN_PATH,
     TRUFO_API_URL,
     TRUFO_APP_URL,
 )
@@ -243,7 +243,7 @@ def exchange_loopback_code(
         RuntimeError: If the exchange is rejected.
     """
     resp = requests.post(
-        f"{base_url}{LOOPBACK_TOKEN}",
+        f"{base_url}{LOOPBACK_TOKEN_PATH}",
         headers=sdk_headers(api_key, **{"Content-Type": "application/json"}),
         json={
             "code": code,

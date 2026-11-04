@@ -8,7 +8,7 @@ from dataclasses import dataclass
 
 import requests
 
-from trufo.api.endpoints import TPS_CONTENT_RECOVER, TRUFO_API_URL
+from trufo.api.endpoints import TPS_CONTENT_RECOVER_PATH, TRUFO_API_URL
 from trufo.api.headers import sdk_headers
 from trufo.util.deprecation import deprecated_aliases
 
@@ -71,7 +71,7 @@ def recover_content(
         requests.HTTPError: If the API returns a non-2xx response.
     """
     resp = requests.post(
-        trufo_api_url + TPS_CONTENT_RECOVER,
+        trufo_api_url + TPS_CONTENT_RECOVER_PATH,
         json={
             "media_input": base64.b64encode(media_bytes).decode(),
             "parse_manifest_json": parse_manifest_json,
