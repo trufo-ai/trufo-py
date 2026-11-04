@@ -11,9 +11,8 @@ from trufo.util.deprecation import deprecated_aliases
 
 TRUFO_API_URL = "https://api.trufo.ai"
 TRUFO_API_URL_EUROPE = "https://eu.api.trufo.ai"
-# test signing runs on its own host; unlike the main API there is no dedicated
-# per-user test endpoint yet (dedicated test sandboxes may come later, which
-# would require a package update to configure)
+# test signing runs on its own host, which serves the content routes (signing,
+# recovery, binding) for test keys
 TRUFO_API_URL_TEST = "https://test.api.trufo.ai"
 TRUFO_CA_URL = "https://ca.trufo.ai"
 TRUFO_TSA_URL = "https://tsa.trufo.ai"
@@ -42,8 +41,8 @@ GP_CREDENTIAL_REGISTER_PATH = "/gproduct/instance/credential/register"
 
 # TPS content endpoints
 TPS_C2PA_SIGN_PATH = "/c2pa/sign"
-# legacy hosted test path on the main host; superseded by TRUFO_API_URL_TEST +
-# TPS_C2PA_SIGN_PATH, kept live during deprecation
+# legacy hosted test path on the production hosts, which answer it with 410;
+# TRUFO_API_URL_TEST + TPS_C2PA_SIGN_PATH replaces it
 TPS_C2PA_SIGN_TEST = "/test/c2pa/sign"
 TPS_C2PA_GET_S3_URL = "/c2pa/io/get-s3-url"  # deprecated: use TPS_GET_S3_UPLOAD_URL_PATH
 TPS_GET_S3_UPLOAD_URL_PATH = "/io/get-s3-upload-url"
