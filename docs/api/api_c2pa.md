@@ -104,8 +104,8 @@ Beyond the platform-wide codes in [api_trufo.md](api_trufo.md):
 | ------ | -------- | ------- |
 | 400 | *(message)* | Request validation — malformed `actions`/`assertions`, watermark contract violations, an unsatisfiable redaction, a refused [`ingredient`](#ingredient) or [signed input](#signed-inputs-and-ingredients) |
 | 400 | `AISystemInactive: …` | An inactive AI system (see [`ai_system`](#ai_system)) |
-| 400 | `UnsupportedAssertion: …` | The deprecated `ai_disclosure` entry from 2027-01-31T00:00:00+00:00 (see [`ai_disclosure`](#ai_disclosure)) <!-- TODO(sunset-2027-01-31): this row goes; successor none --> |
-| 400 | `UnsupportedParameter: …` | The deprecated watermark `mode` from 2027-01-31T00:00:00+00:00 (see [`watermark`](#watermark)) <!-- TODO(sunset-2027-01-31): this row goes; successor none --> |
+| 400 | `UnsupportedAssertion: …` | The deprecated `ai_disclosure` entry from 2027-01-31T23:59:00+00:00 (see [`ai_disclosure`](#ai_disclosure)) <!-- TODO(sunset-2027-01-31): this row goes; successor none --> |
+| 400 | `UnsupportedParameter: …` | The deprecated watermark `mode` from 2027-01-31T23:59:00+00:00 (see [`watermark`](#watermark)) <!-- TODO(sunset-2027-01-31): this row goes; successor none --> |
 | 400 | `InvalidCawgIdentityId` | Unknown `cawg_identity_id` |
 | 400 | `MissingC2PACustomDomain` | A `custom` assertion without a label |
 | 400 | `UnsupportedSDKVersion: …` | Local mode: the `trufo-py` or `trufo-provenance` version is below the minimum or past its support, or the engine is too old for a feature the request uses; the detail names the package and the reason (see [Local mode](#local-mode)) |
@@ -356,8 +356,8 @@ is the installed version.
 
 | trufo-provenance | Notice, until the date | 400, from the date |
 | ---------------- | ---------------------- | ------------------ |
-| 2.1.x | `trufo-provenance <version> is deprecated and will stop working after 2027-01-31T00:00:00+00:00. Please upgrade.` | `UnsupportedSDKVersion: trufo-provenance <version> is no longer supported (expired 2027-01-31T00:00:00+00:00). Please upgrade.` |
-| 2.0.x or earlier (from 0.3.0, the supported minimum) | `trufo-provenance <version> is deprecated and will stop working after 2026-12-31T00:00:00+00:00. Please upgrade.` | `UnsupportedSDKVersion: trufo-provenance <version> is no longer supported (expired 2026-12-31T00:00:00+00:00). Please upgrade.` <!-- TODO(sunset-2026-12-31): this row goes; successor none --> |
+| 2.1.x | `trufo-provenance <version> is deprecated and will stop working after 2027-01-31T23:59:00+00:00. Please upgrade.` | `UnsupportedSDKVersion: trufo-provenance <version> is no longer supported (expired 2027-01-31T23:59:00+00:00). Please upgrade.` |
+| 2.0.x or earlier (from 0.3.0, the supported minimum) | `trufo-provenance <version> is deprecated and will stop working after 2026-12-31T23:59:00+00:00. Please upgrade.` | `UnsupportedSDKVersion: trufo-provenance <version> is no longer supported (expired 2026-12-31T23:59:00+00:00). Please upgrade.` <!-- TODO(sunset-2026-12-31): this row goes; successor none --> |
 
 ---
 
@@ -445,7 +445,7 @@ Format eligibility and restrictions are listed in
 
 <!-- TODO(sunset-2027-01-31): the deprecated mode paragraph and its two tables go; successor wid_allocation_mode -->
 
-**Deprecated `mode`.** Until 2027-01-31T00:00:00+00:00, `mode` `"provenance"`
+**Deprecated `mode`.** Until 2027-01-31T23:59:00+00:00, `mode` `"provenance"`
 means `"per_embed"`, and the response's `warnings` (a task's result included)
 carry one of these notices; from that instant, `mode` is refused. In Local mode,
 the notices and the refusal apply only with trufo-provenance 2.2.0 or later.
@@ -454,14 +454,14 @@ the notices and the refusal apply only with trufo-provenance 2.2.0 or later.
 
 | When | Text |
 | ---- | ---- |
-| `mode` in a request from trufo-py older than 2.2 | `trufo-py <version> sends the deprecated watermark 'mode' parameter, which will stop working after 2027-01-31T00:00:00+00:00. Please upgrade trufo-py.` |
-| `mode` sent by any other caller | `The watermark 'mode' parameter is deprecated and will stop working after 2027-01-31T00:00:00+00:00. Please use 'wid_allocation_mode' ('per_embed' replaces 'provenance').` |
+| `mode` in a request from trufo-py older than 2.2 | `trufo-py <version> sends the deprecated watermark 'mode' parameter, which will stop working after 2027-01-31T23:59:00+00:00. Please upgrade trufo-py.` |
+| `mode` sent by any other caller | `The watermark 'mode' parameter is deprecated and will stop working after 2027-01-31T23:59:00+00:00. Please use 'wid_allocation_mode' ('per_embed' replaces 'provenance').` |
 
 **Errors:**
 
 | When | Status | `detail` |
 | ---- | ------ | -------- |
-| `mode`, from 2027-01-31T00:00:00+00:00 | 400 | `UnsupportedParameter: the watermark 'mode' parameter is no longer supported (expired 2027-01-31T00:00:00+00:00). Please use 'wid_allocation_mode'.` |
+| `mode`, from 2027-01-31T23:59:00+00:00 | 400 | `UnsupportedParameter: the watermark 'mode' parameter is no longer supported (expired 2027-01-31T23:59:00+00:00). Please use 'wid_allocation_mode'.` |
 | Both `mode` and `wid_allocation_mode` | 400 | `Provide the watermark 'wid_allocation_mode' parameter or the deprecated 'mode', not both.` |
 | `mode` `"compliance"` | 501 | `Compliance watermarking is not supported.` |
 
@@ -592,7 +592,7 @@ In Local mode with the Python SDK, the last two are raised by the call.
 
 Deprecated: use [`ai_system`](#ai_system); see
 [Moving From `ai_disclosure`](../quickstart/3_ai_labeling.md#moving-from-ai_disclosure).
-Until 2027-01-31T00:00:00+00:00, the entry adds a `c2pa.ai-disclosure` assertion:
+Until 2027-01-31T23:59:00+00:00, the entry adds a `c2pa.ai-disclosure` assertion:
 the [registered](#post-c2paai-disclosureadd) body whose `ai_disclosure_id` you
 pass, or `{"modelType": "c2pa.types.model"}` when you pass none. With
 `set_source_type: true`, an input without a C2PA manifest is also declared
@@ -601,20 +601,20 @@ registration, otherwise on the input ingredient.
 
 Sign responses that use the entry carry the `Deprecation` and `Sunset` headers
 ([Deprecations](api_trufo.md#deprecations)) and the notice below in `warnings`
-(for a TASK, in the task result's `warnings`); from 2027-01-31T00:00:00+00:00,
+(for a TASK, in the task result's `warnings`); from 2027-01-31T23:59:00+00:00,
 the entry is refused.
 
 **Notices:**
 
 | When | Text |
 | ---- | ---- |
-| A sign request uses the entry | `The 'ai_disclosure' assertion is deprecated and will stop working after 2027-01-31T00:00:00+00:00. Please use the 'ai_system' assertion with an AI system registered at /ai-system/add.` |
+| A sign request uses the entry | `The 'ai_disclosure' assertion is deprecated and will stop working after 2027-01-31T23:59:00+00:00. Please use the 'ai_system' assertion with an AI system registered at /ai-system/add.` |
 
 **Errors:**
 
 | When | Status | `detail` |
 | ---- | ------ | -------- |
-| The entry, from 2027-01-31T00:00:00+00:00 | 400 | `UnsupportedAssertion: the 'ai_disclosure' assertion is no longer supported (expired 2027-01-31T00:00:00+00:00). Please use the 'ai_system' assertion.` |
+| The entry, from 2027-01-31T23:59:00+00:00 | 400 | `UnsupportedAssertion: the 'ai_disclosure' assertion is no longer supported (expired 2027-01-31T23:59:00+00:00). Please use the 'ai_system' assertion.` |
 
 #### `cawg_metadata`
 
@@ -1149,7 +1149,7 @@ from the credential.
 Deprecated: use [`POST /ai-system/add`](#post-ai-systemadd). Every 201 carries the
 `Deprecation`, `Sunset` and
 `Link: <https://api.trufo.ai/ai-system/add>; rel="successor-version"` headers
-([Deprecations](api_trufo.md#deprecations)). From 2027-01-31T00:00:00+00:00, the
+([Deprecations](api_trufo.md#deprecations)). From 2027-01-31T23:59:00+00:00, the
 endpoint answers 410 with the same headers.
 
 | Field | Type | Required | Description |
@@ -1172,7 +1172,7 @@ test and production. Acceptance is checked at registration, not again at signing
 | ---- | ------- |
 | 403 | First-party operation requested before the organization accepted the Created Assertion Acknowledgement. |
 | 404 | The linked software agent does not exist, was deleted, or belongs to another organization. |
-| 410 | From 2027-01-31T00:00:00+00:00: `POST /c2pa/ai-disclosure/add is no longer supported (expired 2027-01-31T00:00:00+00:00). Please use POST /ai-system/add.` |
+| 410 | From 2027-01-31T23:59:00+00:00: `POST /c2pa/ai-disclosure/add is no longer supported (expired 2027-01-31T23:59:00+00:00). Please use POST /ai-system/add.` |
 | 422 | First-party operation was declared without a nonempty `software_agent_id`. |
 
 `assertion` takes the same fields as [`c2pa_ai_disclosure`](#c2pa_ai_disclosure).
@@ -1182,7 +1182,7 @@ test and production. Acceptance is checked at registration, not again at signing
 Deprecated: use [`POST /ai-system/list`](#post-ai-systemlist). Every 200 carries
 the `Deprecation`, `Sunset` and
 `Link: <https://api.trufo.ai/ai-system/list>; rel="successor-version"` headers.
-From 2027-01-31T00:00:00+00:00, the endpoint answers 410 with the same headers.
+From 2027-01-31T23:59:00+00:00, the endpoint answers 410 with the same headers.
 List your registered bodies before then to reuse one as an AI system's
 [`c2pa_ai_disclosure`](#c2pa_ai_disclosure).
 
@@ -1194,7 +1194,7 @@ Older registrations return `first_party_operated: false` and `software_agent_id:
 
 | Code | Meaning |
 | ---- | ------- |
-| 410 | From 2027-01-31T00:00:00+00:00: `POST /c2pa/ai-disclosure/list is no longer supported (expired 2027-01-31T00:00:00+00:00). Please use POST /ai-system/list.` |
+| 410 | From 2027-01-31T23:59:00+00:00: `POST /c2pa/ai-disclosure/list is no longer supported (expired 2027-01-31T23:59:00+00:00). Please use POST /ai-system/list.` |
 
 ### `POST /c2pa/software-agent/add`
 
