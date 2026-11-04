@@ -21,14 +21,14 @@ AI-generated.
 
 ## Requirements
 
-- trufo 2.2.0 or later; trufo 2.1 refuses an `ai_system` entry before sending it.
-  Local mode also needs trufo-provenance 2.2.0 or later.
-- A `c2pa-sign-test` or `c2pa-sign-prod` API key. See [0_setup.md](0_setup.md).
-  AI labeling adds no plan requirement.
-- Registration on the production hosts, `api.trufo.ai` (`TRUFO_API_URL`) or
-  `eu.api.trufo.ai` (`TRUFO_API_URL_EUROPE`), with either key; an AI system works on
-  every regional endpoint. See [Regions](../api/api_trufo.md#regions).
-- For a [first-party](#step-1--confirm-you-are-the-first-party-operator) AI system:
+- trufo 2.2.0 or later (trufo 2.1 refuses an `ai_system` entry before sending it);
+  in Local mode, also trufo-provenance 2.2.0 or later.
+- A `c2pa-sign-test` or `c2pa-sign-prod` API key ([0_setup.md](0_setup.md)); AI
+  labeling adds no plan requirement.
+- Registration on a production host, `api.trufo.ai` (`TRUFO_API_URL`) or
+  `eu.api.trufo.ai` (`TRUFO_API_URL_EUROPE`), with either key; the AI system works
+  on every [regional endpoint](../api/api_trufo.md#regions).
+- For a [first-party](#step-1--confirm-you-are-the-first-party-operator) AI system,
   the Created Assertion Acknowledgement ([step 2](#step-2--register-an-ai-system)).
 
 ---
@@ -58,9 +58,8 @@ recommended `c2pa.ai-disclosure` assertion comes from the optional model disclos
 
 Registering an AI system
 [issues one new watermark ID per type of AI involvement](../api/api_c2pa.md#watermark-billing).
-Its name, version, model
-disclosure and your organization's validated legal name can appear publicly in
-signed content and watermark lookups.
+A registration with a test key is not billed. Its name, version, model disclosure and your organization's validated legal name
+can appear publicly in signed content and watermark lookups.
 
 ```python
 import requests
@@ -86,12 +85,10 @@ resp.raise_for_status()
 ai_system_id = resp.json()["ai_system_id"]
 ```
 
-The response is `{"ai_system_id": "aisys_…"}`.
-[`POST /ai-system/add`](../api/api_c2pa.md#post-ai-systemadd) has the fields, the
-[`c2pa_ai_disclosure`](../api/api_c2pa.md#c2pa_ai_disclosure) body and the errors;
-[`/ai-system/list`](../api/api_c2pa.md#post-ai-systemlist) lists your AI systems and
-[`/ai-system/status`](../api/api_c2pa.md#post-ai-systemstatus) switches one off and
-on.
+The response is `{"ai_system_id": "aisys_…"}`. See
+[`POST /ai-system/add`](../api/api_c2pa.md#post-ai-systemadd) for the fields, the
+`c2pa_ai_disclosure` body and the errors, and [AI Systems](../api/api_c2pa.md#ai-systems)
+to list your AI systems or switch one off.
 
 ## Step 3 — Sign With the AI System
 
@@ -136,11 +133,7 @@ rejected. This is the default
 [`signed_input_policy`](../api/api_c2pa.md#signed-inputs-and-ingredients), `auto`;
 with `keep`, that input is kept too, and no AI source type is declared for it.
 
-Under `auto`, a request with a `redact` or `transcode` action keeps the input's
-manifest even when it says camera-captured or human-created. C2PA data Trufo
-cannot read is removed and the input labeled as one without a manifest, though a
-`redact` or `transcode` action is then refused; under `keep` such an input is
-refused, and a manifest only referenced by URL is refused under both.
+Under `auto`, a `redact` or `transcode` action also keeps such an input;
 [Signed inputs and ingredients](../api/api_c2pa.md#signed-inputs-and-ingredients)
 lists every case.
 
@@ -160,10 +153,9 @@ In the API, add this to `actions`, in a request with the `ai_system` assertion:
 ["watermark", {"wid_allocation_mode": "per_ai_system"}]
 ```
 
-See the watermarking quickstart for [the `watermark` action](6_watermarking.md#the-watermark-action),
-[binding without Trufo signing](6_watermarking.md#binding-without-trufo-signing) and
-[reading watermarks](6_watermarking.md#reading-watermarks), and the API reference for
-[watermark billing](../api/api_c2pa.md#watermark-billing).
+See [the `watermark` action](6_watermarking.md#the-watermark-action) for its options,
+and [Binding Without Trufo Signing](6_watermarking.md#binding-without-trufo-signing)
+to watermark media you sign yourself.
 
 ---
 
@@ -208,13 +200,13 @@ registered at `/ai-system/add`.
 
 ## Troubleshooting
 
-Every `ai_system` error, with when it occurs, is listed under
-[`ai_system`](../api/api_c2pa.md#ai_system). The common ones:
+All `ai_system` errors are listed under [`ai_system`](../api/api_c2pa.md#ai_system);
+the common ones:
 
 **`404 AISystemNotFound`**
 
-The `ai_system_id` is unknown or belongs to another organization. List your
-organization's AI systems with [`/ai-system/list`](../api/api_c2pa.md#post-ai-systemlist).
+The `ai_system_id` is unknown or belongs to another organization;
+[`/ai-system/list`](../api/api_c2pa.md#post-ai-systemlist) lists yours.
 
 **`AISystemInactive: AI system '<ai_system_id>' is inactive. Use an active AI system (see /ai-system/list).`**
 
@@ -231,10 +223,8 @@ approved for `compositeWithTrainedAlgorithmicMedia`
 
 The input's manifest says camera-captured or human-created
 ([step 3](#step-3--sign-with-the-ai-system)). Check that the input is the AI
-system's output. With
-[`signed_input_policy`](../api/api_c2pa.md#signed-inputs-and-ingredients) `keep`,
-Trufo signs such an input, keeping its manifest; no AI source type is declared, so
-the content's origin stays as that manifest records it.
+system's output. To sign it anyway, set `signed_input_policy` to `keep`; no AI
+source type is declared.
 
 **`UnsupportedSDKVersion: the 'ai_system' assertion requires trufo-provenance 2.2.0 or later. Please upgrade.`**
 

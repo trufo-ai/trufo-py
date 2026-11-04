@@ -21,7 +21,7 @@ from trufo.util.credentials import TrufoAPIKey, load_api_key
 
 # the ai_system_id from POST /ai-system/add ("aisys_…"); register once, not on
 # each run: registrations cannot be deleted, and each issues one new watermark ID
-# per type of AI involvement
+# per type of AI involvement (not billed with a test key)
 AI_SYSTEM_ID = ""
 assert AI_SYSTEM_ID, "Set AI_SYSTEM_ID to the ai_system_id returned by POST /ai-system/add"
 

@@ -9,12 +9,11 @@ Describe prior or contributing assets in the manifest. Each
 
 An entry either sends the file as base64 `media`, in a format with **Yes** under
 C2PA validate in [Media format support](../api/media_format_support.md), or
-declares it without `media`, as a `componentOf` or `inputTo`. A sent file's
-readable C2PA history is always kept with the ingredient;
+declares it without `media`, as a `componentOf` or `inputTo`. A sent file always
+keeps its readable C2PA history and is thumbnailed when supported;
 [`signed_ingredient_policy`](../api/api_c2pa.md#signed-inputs-and-ingredients) sets
-what happens to C2PA data Trufo cannot read. The file is thumbnailed when
-supported. A declared file gives its media type in `format` (optional for an
-`inputTo`); no history is looked for, and validators report its provenance as
+what happens to C2PA data Trufo cannot read. A declared file gives its media type
+in `format` (optional for an `inputTo`), and validators report its provenance as
 unknown.
 
 Three relationships are available:
@@ -91,11 +90,9 @@ assertions = [[
 
 Creation and `parentOf` are always placed in the created claim set. Eligible AI,
 custom, component, and input assertions opt in with an inline
-`"placement": "created"`; a component or input needs its file sent as `media` for
-that. A declared ingredient is always gathered; created placement for it is refused
-for now and may be supported later. CAWG assertions do not support created
-placement, and the `ai_system` entry takes no `placement` (it accepts only
-`ai_system_id` and `ai_involvement`).
+`"placement": "created"`. A declared ingredient is always gathered; created placement
+for it is refused for now and may be supported later. CAWG assertions do not support
+created placement, and the `ai_system` entry takes no `placement`.
 
 Normal signing defaults `allActionsIncluded` to true. Elevated requests
 (creation, `parentOf`, action history, or a created placement) default it to
