@@ -5,8 +5,7 @@ HTTP service on your own machine. Your applications name an input file and an ou
 file by path, and the service signs one into the other:
 
 - the media stays on your machine;
-- Trufo's engine builds the manifest locally, inside the container, including any
-  watermark, in the full image;
+- Trufo's engine builds the manifest locally, inside the container;
 - Trufo receives the signing instructions, signs the claim with Trufo's certificate,
   and (unless opt-out), stores the finished manifest for soft-binding recovery and
   general audit records.
@@ -19,23 +18,22 @@ embeds Trufo watermarks; see [Choose an Image](#choose-an-image).
 
 Choose the image when the media must stay on your machines and your callers use
 another language or platform, or when you already run your services as containers.
-Cloud mode is simpler when uploading the media is fine. To embed a watermark while
-signing, use the full image, Cloud mode or `trufo[local-full]`
-([Local mode with the Python SDK](python.md)). Compare the modes in
+Cloud mode is simpler when uploading the media is fine. Compare the modes in
 [Signing Modes](../api/api_c2pa.md#signing-modes).
 
 ## Choose an Image
 
-Both images run the same service from the same `compose.yaml`:
+Both images run the same service from the same `compose.yaml`, and serve only
+`/health` and `/c2pa/sign`, not the
+[Watermarking routes](../quickstart/6_watermarking.md#routes) (`/bind/*`).
 
 <!-- TODO(v22-release): confirm HEIC, HEIF and AVIF watermark signs end to end in the full image, from W1/W2 -->
 
 - **The signing-only image (`2.2`)**, the shipped default, signs without
   watermarking.
-- **The full image (`2.2-full`)** also embeds Trufo watermarks while signing, in
-  every format that [Media format support](../api/media_format_support.md) lists for
-  watermark embedding (HEIC, HEIF and AVIF included). It runs on CPU only, is larger
-  and needs more memory; each new container also downloads the watermark engine.
+- **The full image (`2.2-full`)** also embeds Trufo watermarks while signing, on CPU
+  only, in every format that [Media format support](../api/media_format_support.md)
+  lists for watermark embedding (HEIC, HEIF and AVIF included).
 
 <!-- TODO(v22-release): re-measure the sizes and idle memory with the final pins -->
 <!-- TODO(v22-release): the linux/arm64 sizes, from the release run's size report -->
@@ -46,9 +44,7 @@ Both images run the same service from the same `compose.yaml`:
 | Unpacked | about 0.9 GB | about 1.9 GB |
 | Idle memory | about 100 MiB | about 300 MiB |
 
-Both images serve only `/health` and `/c2pa/sign`, not the
-[Watermarking routes](../quickstart/6_watermarking.md#routes) (`/bind/*`). To switch
-images, change the tag in `image:` and run `docker compose up -d`.
+To switch images, change the tag in `image:` and run `docker compose up -d`.
 
 <!-- TODO(sunset-2027-01-31): the next line goes; successor none -->
 
@@ -70,8 +66,7 @@ If you run a 2.1 image, see [Versions and Upgrades](#versions-and-upgrades).
   [Prerequisites](../quickstart/0_setup.md#prerequisites)).
 - **Outbound HTTPS** to `packages.trufo.ai` when a new container starts, and to the
   host in `TRUFO_API_URL` for each signing request. Apart from pulling the image, these
-  are the only hosts the service connects to. Its packages come from
-  `packages.trufo.ai`, checked against fixed hashes.
+  are the only hosts the service connects to.
 
 ## Quick Start
 
@@ -147,18 +142,16 @@ curl -s http://127.0.0.1:8080/c2pa/sign \
 | `media_input_path` | Yes | Absolute path of the input file, inside an input folder |
 | `media_output_path` | Yes | Absolute path for the signed file, inside an output folder |
 | `actions` | Yes | As in [`POST /c2pa/sign`](../api/api_c2pa.md#post-c2pasign) |
-| `assertions`, `manifest_title`, `ingredient_title`, `manifest_settings`, `branded_gp_id`, `signed_input_policy`, `signed_ingredient_policy` | No | As in [`POST /c2pa/sign`](../api/api_c2pa.md#post-c2pasign); the two policies are in [Signed inputs and ingredients](../api/api_c2pa.md#signed-inputs-and-ingredients) |
+| `assertions`, `manifest_title`, `ingredient_title`, `manifest_settings`, `branded_gp_id`, `signed_input_policy`, `signed_ingredient_policy` | No | As in [`POST /c2pa/sign`](../api/api_c2pa.md#post-c2pasign) |
 
 `actions` and `assertions` take the same entries as in Cloud mode, `transcode` included
-(see [`actions`](../api/api_c2pa.md#actions)). The two policy fields and the
-`ai_system` entry need a 2.2 image.
-
-In the full image, a [`watermark`](../api/api_c2pa.md#watermark) action embeds the
-mark locally, with the same options as in Cloud mode: any `effort_policy`, and
-`wid_allocation_mode` `per_embed` or `per_ai_system`; see
-[watermark billing](../api/api_c2pa.md#watermark-billing). The signing-only image
-refuses any `watermark` action, whatever its `effort_policy`, with 400
-`WatermarkNotAvailable` before anything reaches Trufo.
+(see [`actions`](../api/api_c2pa.md#actions)). `signed_input_policy`,
+`signed_ingredient_policy` and the `ai_system` entry need a 2.2 image. In the full
+image, a [`watermark`](../api/api_c2pa.md#watermark) action embeds the mark locally,
+with the same options as in Cloud mode (see
+[watermark billing](../api/api_c2pa.md#watermark-billing)); the signing-only image
+refuses one, whatever its
+`effort_policy`, with 400 `WatermarkNotAvailable`, before anything reaches Trufo.
 
 The response gives the path written and any [`warnings`](../api/api_c2pa.md#response-warnings).
 
@@ -184,9 +177,10 @@ untrusted.
 
 ## AI Labeling
 
-Register an AI system once, on `api.trufo.ai` or `eu.api.trufo.ai`, with your
-`c2pa-sign-prod` or `c2pa-sign-test` key; it then works with every `TRUFO_API_URL`
-in [Settings](#settings), the test host included. The service only signs.
+The service only signs, so register an AI system once with Trufo's API, on
+`api.trufo.ai` or `eu.api.trufo.ai`, with your `c2pa-sign-prod` or `c2pa-sign-test`
+key. It then works
+with every `TRUFO_API_URL` in [Settings](#settings), the test host included.
 
 ```bash
 curl -X POST https://api.trufo.ai/ai-system/add \
@@ -217,13 +211,10 @@ in `assertions`:
 }
 ```
 
-The labels this gives, including `c2pa.created` with `trainedAlgorithmicMedia` for a
-[first-party](../quickstart/3_ai_labeling.md#step-1--confirm-you-are-the-first-party-operator)
-AI system, are in [step 3](../quickstart/3_ai_labeling.md#step-3--sign-with-the-ai-system).
-In the full image only, adding `["watermark", {"wid_allocation_mode": "per_ai_system"}]`
-to `actions` embeds the AI system's watermark ID; see
-[the `watermark` action](../quickstart/6_watermarking.md#the-watermark-action) and
-[watermark billing](../api/api_c2pa.md#watermark-billing).
+[Step 3](../quickstart/3_ai_labeling.md#step-3--sign-with-the-ai-system) of the
+quickstart gives the labels this produces. The per-AI-system watermark of
+[step 4](../quickstart/3_ai_labeling.md#step-4--optionally-watermark-per-ai-system)
+needs the full image.
 
 <!-- TODO(sunset-2027-01-31): the next line goes; successor none -->
 
@@ -336,10 +327,10 @@ started finishes and is billed, even if its client disconnects; see
 
 Each image's idle memory is in [Choose an Image](#choose-an-image). In the
 signing-only image, allow about 256 MiB for typical still images, and about 1.25 GiB
-for two concurrent signing requests of multi-gigabyte video. This page gives no
-memory figure for the full image while signing or watermarking; set its limit from a
-trial with your largest files. Under a container memory limit, the page cache from
-reading and writing large files also counts until the kernel reclaims it.
+for two concurrent signing requests of multi-gigabyte video; for the full image, set
+the limit from a trial with your largest files. Under a container memory limit, the
+page cache from reading and writing large files also counts until the kernel
+reclaims it.
 
 Both images' health checks call `/health`, with a 60-second start period. `docker stop`
 lets signing requests in progress finish within Docker's stop timeout.
@@ -360,10 +351,9 @@ execution by default; add `exec`. In `compose.yaml`, under the service:
 <!-- TODO(v22-release): re-measure the full image's /tmp peak during install with the final pins -->
 <!-- TODO(v22-release): the full image's /tmp peak during a watermarking sign, per media type, from W7 -->
 
-A tmpfs `/tmp` starts empty, so each start of the container downloads the packages.
-In the full image, they take up to about 170 MiB of it while they install; this
-covers the install only, so leave room for signing. A tmpfs `/tmp` counts toward the
-container's memory.
+A tmpfs `/tmp` starts empty, so each start of the container downloads the packages;
+it also counts toward the container's memory. In the full image, the packages take up
+to about 170 MiB of it while they install; leave room for signing too.
 
 To also drop every capability and set `no-new-privileges`, add under the service:
 
@@ -379,9 +369,8 @@ To also drop every capability and set `no-new-privileges`, add under the service
 The shipped `compose.yaml` uses `2.2`, which moves to each 2.2.x release; an exact
 version such as `2.2.0` never changes. Fixes, including security fixes, ship in the
 newest minor version. The full image's `2.2-full` and `2.2.0-full` behave the same
-way; there is no `latest` tag. `/health` reports the image's `version`, its
-`engine_version` and, in the full image, its `watermark_engine_version`; the full
-image's `version` ends in `-full`.
+way; there is no `latest` tag. `/health` reports the image's `version` and the
+versions of its engines.
 
 | Image | Engine (trufo-provenance) | Watermark engine (trufo-pawprint) | Source image |
 | ----- | ------------------------- | --------------------------------- | ------------ |
@@ -390,25 +379,28 @@ image's `version` ends in `-full`.
 | `2.1.2` | 2.1.2 | — | `2.1.2-source` |
 | `2.1.1` | 2.1.1 | — | `2.1.1-source` |
 
-<!-- TODO(sunset-2027-01-31): the 2.1 sentence in the next paragraph goes; successor none -->
-
-To upgrade, run `docker compose pull && docker compose up -d`; a `2.1` tag never
-moves to 2.2. To upgrade from 2.1, set `image:` to
-`ghcr.io/trufo-ai/trufo-local:2.2` (or `2.2-full`) and run `docker compose up -d`.
-The 2.1 images stop signing from 2027-01-31T00:00:00+00:00 (the start of 31 January
-2027, UTC); see [Local mode](../api/api_c2pa.md#local-mode). The full image needs
-more [memory](#choose-an-image) and [`/tmp` space](#read-only-root-filesystem). To
+To move to the newest 2.2.x, run `docker compose pull && docker compose up -d`. To
 stay on one version, set `image: ghcr.io/trufo-ai/trufo-local:2.2.0` (or
-`2.2.0-full`). When a signing response's `warnings` says a version is deprecated,
-move to a newer image before the date it gives; after that date, signing returns 400
+`2.2.0-full`).
+
+<!-- TODO(sunset-2027-01-31): the next paragraph goes; successor none -->
+
+A `2.1` tag never moves to 2.2, and the 2.1 images stop signing from
+2027-01-31T00:00:00+00:00 (see [Local mode](../api/api_c2pa.md#local-mode)). To
+upgrade from 2.1, set `image:` to `ghcr.io/trufo-ai/trufo-local:2.2` (or `2.2-full`)
+and run `docker compose up -d`.
+
+When a signing response's `warnings` says a version is deprecated, move to a newer
+image before the date it gives; from that date, signing returns 400
 `UnsupportedSDKVersion: …`.
 
 ## Security
 
 - **Keys.** Neither image contains a key, the engine or the watermark engine. The
   service keeps the `sdk-download` key in its environment and never writes it to
-  disk; `docker inspect` shows it to anyone who can run Docker commands on the host. The API key sent with
-  each signing request serves that request only and is never stored.
+  disk; `docker inspect` shows it to anyone who can run Docker commands on the host.
+  The API key sent with each signing request serves that request only and is never
+  stored.
 - **Port.** The service speaks plain HTTP. Keep port 8080 on `127.0.0.1`, as the
   shipped `compose.yaml` does, or on a private network that only your callers can
   reach.
@@ -453,11 +445,11 @@ Errors return `{"detail": …}`.
 | 400 | `InvalidMediaOutputPath` | The output path is not absolute, is outside every output folder, or names an existing directory, or its folder is missing or not writable |
 | 400 | `The output path is an existing directory.` | After the extension changes, the new name (for example `photo.jpg`) is an existing directory |
 | 400 | `The output path is the input file.` | The output, with the signed format's extension, would replace the input |
-| 400 | `WatermarkNotAvailable` | A `watermark` action sent to the signing-only image, which signs without watermarking; use the full image (`2.2-full`) |
-| 400 | `Watermarking failed: …` | Full image: the mark could not be embedded, under `effort_policy` `require` or `require_if_supported`. Under `best_effort`, the file is signed without the mark and this text is in `warnings` |
+| 400 | `WatermarkNotAvailable` | A `watermark` action sent to the signing-only image; use the full image (`2.2-full`) |
+| 400 | `Watermarking failed: …` | Full image: the mark could not be embedded, under `effort_policy` `require` or `require_if_supported`; under `best_effort`, the file is signed without it and this text is in `warnings` |
 | 400 | *(message)* | The engine rejected the request, for example a malformed action |
-| 400 | `UnsupportedSDKVersion: …` | The SDK or engine version in the image is below the supported minimum or its support has ended; the detail names the package (`trufo-py` or `trufo-provenance`). See [Local mode](../api/api_c2pa.md#local-mode) and [Versions and Upgrades](#versions-and-upgrades) |
-| 4xx | *(Trufo's code or message)* | Trufo's API refused the signing request, for example `InvalidAPIKey`, `APIKeyScopeNotAllowed`, `MissingOrganizationValidation`, `NoEligiblePlan`, or `Test keys are not accepted on this host. …` for a `c2pa-sign-test` key with a production `TRUFO_API_URL`; see [api_trufo.md](../api/api_trufo.md#error-envelope) and [api_c2pa.md](../api/api_c2pa.md#errors) |
+| 400 | `UnsupportedSDKVersion: …` | The image's SDK or engine version is not supported, or the engine is too old for a feature the request uses; the detail names the package and the reason. See [Versions and Upgrades](#versions-and-upgrades) |
+| 4xx | *(Trufo's code or message)* | Trufo's API refused the request, for example `InvalidAPIKey`, `APIKeyScopeNotAllowed`, `MissingOrganizationValidation`, `NoEligiblePlan`, or `Test keys are not accepted on this host. …` (a `c2pa-sign-test` key with a production `TRUFO_API_URL`); see [api_trufo.md](../api/api_trufo.md#error-envelope) and [api_c2pa.md](../api/api_c2pa.md#errors) |
 | 422 | *(field list)* | The body failed schema validation |
 | 501 | `Per-asset watermark ID allocation is not supported.` | Full image: `wid_allocation_mode` `per_asset` |
 | 501 | `Compliance watermarking is not supported.` | Full image: the deprecated `mode` `compliance` <!-- TODO(sunset-2027-01-31): this row goes; successor none --> |

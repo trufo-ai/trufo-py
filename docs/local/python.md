@@ -13,12 +13,11 @@
 
 Choose the Python SDK when the media must stay on your machine or is large, your
 callers are in Python on Linux, or you embed watermarks locally. For other languages
-or platforms, see [Local mode with the Docker image](docker.md). Its
-[full image](docker.md#choose-an-image) is the HTTP counterpart of `trufo[local-full]`
-for C2PA Signing in Local mode, without the
-[Watermarking routes](../quickstart/6_watermarking.md#routes) and on CPU only
-(`local-full` uses an NVIDIA GPU when present). Cloud mode is simpler when uploading
-the media is fine.
+or platforms, see [Local mode with the Docker image](docker.md); its
+[full image](docker.md#choose-an-image) signs and watermarks like `trufo[local-full]`,
+but on CPU only and without the
+[Watermarking routes](../quickstart/6_watermarking.md#routes). Cloud mode is simpler
+when uploading the media is fine.
 
 ## Requirements
 
@@ -155,15 +154,14 @@ Library License (see [Private Package Index](#private-package-index)).
 FFmpeg so that `ffprobe` is on the PATH (Debian and Ubuntu: `ffmpeg`).
 
 **`Test keys are not accepted on this host. Please use test.api.trufo.ai.`** — a
-`c2pa-sign-test` key sent to a production host, by `sign_c2pa_distributed()`
-(which defaults to one) or by a `trufo_api_url` pointing at one. Use
-`sign_c2pa_distributed_test()`, or a `c2pa-sign-prod` key. See
+`c2pa-sign-test` key sent to a production host, which `sign_c2pa_distributed()` calls
+by default. Use `sign_c2pa_distributed_test()`, or a `c2pa-sign-prod` key; see
 [Signing Modes](../api/api_c2pa.md#signing-modes).
 
-**`UnsupportedSDKVersion: …`** — a version below the supported minimum or whose
-support has ended, or an engine too old for a feature the request uses; the
-message names the package and the reason. Upgrade `trufo` with its local engine
-extra, which installs `trufo-provenance`. See
+**`UnsupportedSDKVersion: …`** — the SDK or engine version is not supported, or the
+engine is too old for a feature the request uses; the message names the package and
+the reason.
+Upgrade `trufo` with its local engine extra, which installs `trufo-provenance`; see
 [Local mode](../api/api_c2pa.md#local-mode).
 
 For other platforms, use [Local mode with the Docker image](docker.md), or contact
