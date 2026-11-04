@@ -11,7 +11,7 @@ name: build-images
 # one of them, on either architecture, pushes nothing.
 #
 # Trigger: push a tag  trufo-local-X.Y.Z
-#   e.g.  git tag trufo-local-2.1.0   &&  git push origin trufo-local-2.1.0
+#   e.g.  git tag trufo-local-2.2.0   &&  git push origin trufo-local-2.2.0
 # On GHCR, X.Y.Z-source and X.Y.Z-full-source are pushed first, then X.Y.Z-full, then
 # X.Y.Z. X.Y.Z and X.Y.Z-full never move: the run fails if GHCR already has either.
 # X.Y and X.Y-full move only when this is the highest trufo-local-X.Y.Z tag.
