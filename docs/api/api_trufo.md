@@ -87,8 +87,8 @@ start of 31 January 2027, UTC) and fail from that instant. Sign and bind
 requests get a notice in `warnings`; the `/c2pa/ai-disclosure/*` endpoints
 signal through headers only.
 
-| Deprecated | Replacement | After 2027-01-31T00:00:00+00:00 | Who must act |
-| ---------- | ----------- | ------------------------------- | ------------ |
+| Deprecated | Replacement | From 2027-01-31T00:00:00+00:00 | Who must act |
+| ---------- | ----------- | ------------------------------ | ------------ |
 | The [`ai_disclosure`](api_c2pa.md#ai_disclosure) entry | The [`ai_system`](api_c2pa.md#ai_system) entry | 400 `UnsupportedAssertion: …` | Sign requests that send it |
 | [`POST /c2pa/ai-disclosure/add`, `/list`](api_c2pa.md#post-c2paai-disclosureadd) | [`POST /ai-system/add`, `/list`](api_c2pa.md#ai-systems) | 410 | Their callers |
 | The watermark [`mode`](api_c2pa.md#watermark) | `wid_allocation_mode` (`per_embed` replaces `provenance`) | 400 `UnsupportedParameter: …` | Requests that send it, including every `/bind/watermark` call from trufo 2.1 or earlier, which always sends `mode` and does not show the notice |
@@ -106,7 +106,7 @@ Deprecated responses can carry these headers:
 | Header | Value |
 | ------ | ----- |
 | `Deprecation` | `@<Unix time>` (RFC 9745): when the deprecation took effect |
-| `Sunset` | An HTTP-date (RFC 8594): the date after which the request fails |
+| `Sunset` | An HTTP-date (RFC 8594): the date from which the request fails |
 | `Link` | `<URL>; rel="successor-version"`: what replaces it |
 
 <!-- TODO(sunset-2027-01-31): the two ai_disclosure rows go; successor none -->
@@ -119,11 +119,10 @@ Deprecated responses can carry these headers:
 | A test key's 410 on a production host's [upload link](api_c2pa.md#post-ioget-s3-upload-url) | `Deprecation` |
 | The 410 of the legacy `POST /test/c2pa/sign` on a production host | `Deprecation`, and `Link` to `/c2pa/sign` on the test host |
 
-The watermark `mode` and SDK-version notices carry no headers.
-
-The test-key 410s apply without a notice period and to every SDK version, since
-the server refuses them: the production hosts refuse test keys in Local mode and
-on the upload link, and accept them on their registration endpoints.
+The watermark `mode` and SDK-version notices carry no headers. The test-key 410s
+have no notice period and apply to every SDK version. The production hosts accept
+test keys on their registration endpoints, such as
+[AI systems](api_c2pa.md#ai-systems).
 
 ### Organization scoping
 

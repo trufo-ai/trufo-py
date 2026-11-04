@@ -86,15 +86,15 @@ routes them to the `py.warnings` logger.
 
 <!-- TODO(sunset-2027-01-31): the deprecated mode and ai_disclosure clauses go; successor none -->
 
-Messages you may see: a declined watermark
-(`Watermarking is not supported for '<mime>' media…`), a best-effort watermark
-failure (`Watermarking failed: …`), notices about the C2PA data of the input or
-an ingredient (listed under
-[Signed inputs and ingredients](#signed-inputs-and-ingredients)), the deprecated
-watermark `mode` notices (listed under [`watermark`](#watermark)), the deprecated
-`ai_disclosure` notice (listed under [`ai_disclosure`](#ai_disclosure)), and, in
-Local mode, SDK-version deprecation notices (listed under
-[Local mode](#local-mode)).
+Messages you may see:
+
+- A declined watermark (`Watermarking is not supported for '<mime>' media…`) or a
+  best-effort watermark failure (`Watermarking failed: …`).
+- What Trufo found in the C2PA data of the input or an ingredient: see
+  [Signed inputs and ingredients](#signed-inputs-and-ingredients).
+- Deprecations: the watermark [`mode`](#watermark), the
+  [`ai_disclosure`](#ai_disclosure) entry and, in Local mode, the
+  [engine version](#local-mode).
 
 ### Errors
 
@@ -104,11 +104,11 @@ Beyond the platform-wide codes in [api_trufo.md](api_trufo.md):
 | ------ | -------- | ------- |
 | 400 | *(message)* | Request validation — malformed `actions`/`assertions`, watermark contract violations, an unsatisfiable redaction, a refused [`ingredient`](#ingredient) or [signed input](#signed-inputs-and-ingredients) |
 | 400 | `AISystemInactive: …` | An inactive AI system (see [`ai_system`](#ai_system)) |
-| 400 | `UnsupportedAssertion: …` | The deprecated `ai_disclosure` entry after 2027-01-31T00:00:00+00:00 (see [`ai_disclosure`](#ai_disclosure)) <!-- TODO(sunset-2027-01-31): this row goes; successor none --> |
-| 400 | `UnsupportedParameter: …` | The deprecated watermark `mode` after 2027-01-31T00:00:00+00:00 (see [`watermark`](#watermark)) <!-- TODO(sunset-2027-01-31): this row goes; successor none --> |
+| 400 | `UnsupportedAssertion: …` | The deprecated `ai_disclosure` entry from 2027-01-31T00:00:00+00:00 (see [`ai_disclosure`](#ai_disclosure)) <!-- TODO(sunset-2027-01-31): this row goes; successor none --> |
+| 400 | `UnsupportedParameter: …` | The deprecated watermark `mode` from 2027-01-31T00:00:00+00:00 (see [`watermark`](#watermark)) <!-- TODO(sunset-2027-01-31): this row goes; successor none --> |
 | 400 | `InvalidCawgIdentityId` | Unknown `cawg_identity_id` |
 | 400 | `MissingC2PACustomDomain` | A `custom` assertion without a label |
-| 400 | `UnsupportedSDKVersion: …` | Local mode: the SDK or engine version is below the supported minimum or its support has ended, or the engine is too old for a feature the request uses; the detail names the package (`trufo-py` or `trufo-provenance`) and explains why (see [Local mode](#local-mode)) |
+| 400 | `UnsupportedSDKVersion: …` | Local mode: the `trufo-py` or `trufo-provenance` version is below the minimum or past its support, or the engine is too old for a feature the request uses; the detail names the package and the reason (see [Local mode](#local-mode)) |
 | 403 | `MissingOrganizationValidation` | Production signing before OV completes |
 | 403 | `InvalidC2PACustomDomain` | The label's domain is not domain-validated for your organization |
 | 403 | `NoEligiblePlan` | The organization lacks the required plan |
@@ -149,10 +149,6 @@ a `c2pa-sign-test` key against `test.api.trufo.ai`, which the Python SDK's `_tes
 helpers call by default. Test signing skips OV, produces manifests signed by the
 test certificate (not accepted by conformant validators), and creates no
 permanent signing record.
-
-The production hosts refuse a `c2pa-sign-test` key in Local mode with a 410 that
-carries the `Deprecation` header and a `Link` to the same path on the test host
-(`rel="successor-version"`).
 
 **Errors:**
 
@@ -220,10 +216,8 @@ Shared by signing and watermarking. `/c2pa/io/get-s3-url` is a deprecated alias
 with the same request and response; use `/io/get-s3-upload-url` instead.
 
 Uploads serve [TASK](#tasks) execution, which only the production hosts run, so
-they take a `c2pa-sign-prod` or `watermark-prod` key. On the production hosts, a
-test key gets a 410 with only the `Deprecation` header; use `sign_c2pa_test()` or
-`bind_watermark_test()` instead. Media over 10 MB, and audio or video
-watermarking, need TASK: use a production key.
+they take a `c2pa-sign-prod` or `watermark-prod` key; a test key gets the 410
+below. With a test key, use `sign_c2pa_test()` or `bind_watermark_test()`.
 
 | Field | Type | Required | Description |
 | ----- | ---- | -------- | ----------- |
@@ -280,7 +274,7 @@ not replace the subsequent `/bind/commit` step. With a per-AI-system watermark,
 | Checked | Which checks | A refusal |
 | --- | --- | --- |
 | At submission | Those a REQUEST runs before processing the media: a sign's watermark action, `branded_gp_id` and `assertions`; a bind's `mode` and watermark ID allocation | The HTTP status and `detail` a REQUEST would get; no task is created |
-| While processing | The others, among them the [signed-input](#signed-inputs-and-ingredients) refusals and every [`ingredient`](#ingredient) error except the created-placement refusal | `status: "failed"` and an `error` with `code` and `http_status`, plus `message` only when the media's format cannot be watermarked |
+| While processing | The others, among them the [signed-input](#signed-inputs-and-ingredients) refusals and every [`ingredient`](#ingredient) error except the created-placement and unbranded `parentOf` refusals | `status: "failed"` and an `error` with `code` and `http_status`, plus `message` only when the media's format cannot be watermarked |
 
 Error `code`s, with their `http_status`: `invalid_input` (400),
 `permission_denied` (403), `input_not_found` (404), `capacity_exceeded` (429),
@@ -352,29 +346,18 @@ the host's operating system and kernel release as `operating_system`, for exampl
 `sign_c2pa()` does. Setting either policy, like sending an
 [`ai_system`](#ai_system) entry, needs trufo-provenance 2.2.0 or later.
 
-<!-- TODO(sunset-2027-01-31): the versions paragraph and its two tables go; successor none -->
-<!-- TODO(sunset-2026-12-31): the 2.0.x-or-earlier clause in the versions paragraph goes; successor none -->
+<!-- TODO(sunset-2027-01-31): the versions paragraph and its table go; successor none -->
 
-**Versions.** Local mode with trufo-provenance 2.1.x signs with a notice until
-2027-01-31T00:00:00+00:00, and with 2.0.x or earlier (from 0.3.0, the supported
-minimum) until 2026-12-31T00:00:00+00:00; each is refused from that instant.
-Upgrade `trufo` to 2.2.0 or later with its local engine extra, or move the
-[Docker image](../local/docker.md#versions-and-upgrades) to a 2.2 tag.
-`<version>` is the installed version.
+**Versions.** Local mode with a trufo-provenance version in the table below signs
+with its notice in `warnings` until the notice's date, and is refused (400) from
+that date. Upgrade `trufo` to 2.2.0 or later with its local engine extra, or move the
+[Docker image](../local/docker.md#versions-and-upgrades) to a 2.2 tag. `<version>`
+is the installed version.
 
-**Notices:**
-
-| When | Text |
-| ---- | ---- |
-| trufo-provenance 2.1.x | `trufo-provenance <version> is deprecated and will stop working after 2027-01-31T00:00:00+00:00. Please upgrade.` |
-| trufo-provenance 2.0.x or earlier (from 0.3.0) | `trufo-provenance <version> is deprecated and will stop working after 2026-12-31T00:00:00+00:00. Please upgrade.` <!-- TODO(sunset-2026-12-31): this row goes; successor none --> |
-
-**Errors:**
-
-| When | Status | `detail` |
-| ---- | ------ | -------- |
-| trufo-provenance 2.1.x, after 2027-01-31T00:00:00+00:00 | 400 | `UnsupportedSDKVersion: trufo-provenance <version> is no longer supported (expired 2027-01-31T00:00:00+00:00). Please upgrade.` |
-| trufo-provenance 2.0.x or earlier (from 0.3.0), after 2026-12-31T00:00:00+00:00 | 400 | `UnsupportedSDKVersion: trufo-provenance <version> is no longer supported (expired 2026-12-31T00:00:00+00:00). Please upgrade.` <!-- TODO(sunset-2026-12-31): this row goes; successor none --> |
+| trufo-provenance | Notice, until the date | 400, from the date |
+| ---------------- | ---------------------- | ------------------ |
+| 2.1.x | `trufo-provenance <version> is deprecated and will stop working after 2027-01-31T00:00:00+00:00. Please upgrade.` | `UnsupportedSDKVersion: trufo-provenance <version> is no longer supported (expired 2027-01-31T00:00:00+00:00). Please upgrade.` |
+| 2.0.x or earlier (from 0.3.0, the supported minimum) | `trufo-provenance <version> is deprecated and will stop working after 2026-12-31T00:00:00+00:00. Please upgrade.` | `UnsupportedSDKVersion: trufo-provenance <version> is no longer supported (expired 2026-12-31T00:00:00+00:00). Please upgrade.` <!-- TODO(sunset-2026-12-31): this row goes; successor none --> |
 
 ---
 
@@ -478,7 +461,7 @@ the notices and the refusal apply only with trufo-provenance 2.2.0 or later.
 
 | When | Status | `detail` |
 | ---- | ------ | -------- |
-| `mode`, after 2027-01-31T00:00:00+00:00 | 400 | `UnsupportedParameter: the watermark 'mode' parameter is no longer supported (expired 2027-01-31T00:00:00+00:00). Please use 'wid_allocation_mode'.` |
+| `mode`, from 2027-01-31T00:00:00+00:00 | 400 | `UnsupportedParameter: the watermark 'mode' parameter is no longer supported (expired 2027-01-31T00:00:00+00:00). Please use 'wid_allocation_mode'.` |
 | Both `mode` and `wid_allocation_mode` | 400 | `Provide the watermark 'wid_allocation_mode' parameter or the deprecated 'mode', not both.` |
 | `mode` `"compliance"` | 501 | `Compliance watermarking is not supported.` |
 
@@ -577,11 +560,7 @@ rejected. This is the default
 [`signed_input_policy`](#signed-inputs-and-ingredients), `auto`; with `keep`,
 that input is kept too, and no AI source type is declared for it.
 
-Under `auto`, a request with a `redact` or `transcode` action keeps the input's
-manifest even when it says camera-captured or human-created. C2PA data Trufo
-cannot read is removed and the input labeled as one without a manifest, though a
-`redact` or `transcode` action is then refused; under `keep` such an input is
-refused, and a manifest only referenced by URL is refused under both.
+Under `auto`, a `redact` or `transcode` action also keeps such an input;
 [Signed inputs and ingredients](#signed-inputs-and-ingredients) lists every case.
 
 The test host writes the same labels, with the test certificate.
@@ -597,7 +576,6 @@ The test host writes the same labels, with the test certificate.
 | `ai_system_id` or `ai_involvement` missing | 400 | `The 'ai_system' assertion requires 'ai_system_id' and 'ai_involvement'.` |
 | Extra keys in the entry | 400 | `The 'ai_system' assertion accepts only 'ai_system_id' and 'ai_involvement'; the software agent and source type come from the AI system's registration.` |
 | `ai_involvement` unknown | 400 | `ai_involvement must be 'ai_generated' or 'ai_modified'.` |
-| A `parentOf` ingredient, without `branded_gp_id` | 403 | `C2PACreatedUserAssertionsNotAuthorized: created user assertions are not authorized.` |
 | An unknown or another organization's `ai_system_id` | 404 | `AISystemNotFound` |
 | The AI system is inactive | 400 | `AISystemInactive: AI system '<ai_system_id>' is inactive. Use an active AI system (see /ai-system/list).` |
 | `ai_involvement` not in the system's modes | 400 | `ai_involvement '<value>' is not in the AI system's ai_involvement_modes.` |
@@ -636,7 +614,7 @@ the entry is refused.
 
 | When | Status | `detail` |
 | ---- | ------ | -------- |
-| The entry, after 2027-01-31T00:00:00+00:00 | 400 | `UnsupportedAssertion: the 'ai_disclosure' assertion is no longer supported (expired 2027-01-31T00:00:00+00:00). Please use the 'ai_system' assertion.` |
+| The entry, from 2027-01-31T00:00:00+00:00 | 400 | `UnsupportedAssertion: the 'ai_disclosure' assertion is no longer supported (expired 2027-01-31T00:00:00+00:00). Please use the 'ai_system' assertion.` |
 
 #### `cawg_metadata`
 
@@ -686,10 +664,10 @@ of the asset, not a Trufo attestation.
 | Param | Type | Required | Description |
 | ----- | ---- | -------- | ----------- |
 | `relationship` | string | Yes | `inputTo`, `componentOf`, or `parentOf` (the asset before the supplied input's edits) |
-| `title` | string | No | The ingredient title (`dc:title`). When unset: the media's manifest title, if it exists; otherwise, `ingredient_{n}.{ext}` (media-less entries: `ingredient_{n}`). Messages name the ingredient by its `title`, else `ingredient_{n}`; `n` counts the request's `ingredient` entries from 0. |
+| `title` | string | No | The ingredient title (`dc:title`). When unset: the media's manifest title, if it exists; otherwise, `ingredient_{n}.{ext}` (media-less entries: `ingredient_{n}`), where `n` counts the request's `ingredient` entries from 0. Messages use `title`, else `ingredient_{n}`. |
 | `data_types` | list | No | `[{"type": "c2pa.types.<kind>", "version": "…"}]` |
 | `digital_source_type` | string | No | The IPTC `trainedAlgorithmicMedia` or `compositeWithTrainedAlgorithmicMedia` URI; not with `media` that carries a C2PA manifest |
-| `media` | string | For `parentOf` | base64 bytes, in a format with **Yes** under C2PA validate in [Media format support](media_format_support.md); declare other formats with `format` (`componentOf` or `inputTo`). A `componentOf` entry needs `media` or `format`; an `inputTo` entry needs neither |
+| `media` | string | For `parentOf` | base64 bytes, in a format with **Yes** under C2PA validate in [Media format support](media_format_support.md); declare other formats with `format` (`componentOf` or `inputTo`). A `componentOf` entry needs `media` or `format`; an `inputTo` entry, neither |
 | `format` | string | No | The media type of a declared ingredient (one without `media`), such as `video/mp4`; not with `media` |
 | `placement` | string | No | `gathered` (default) or `created`, on a request authorized for created assertions; `parentOf` is always created. A declared ingredient is always gathered; created placement for it is refused for now and may be supported later. |
 | `action_history` | list | No | Actions between a `parentOf` source and the supplied input; entries may independently set `placement`, `digitalSourceType` and `description`. An entry's action is a C2PA action or a custom one in a domain your organization has validated (for example `com.example.upscaled`) |
@@ -703,8 +681,8 @@ of the asset, not a Trufo attestation.
   provenance as unknown.
 
 At most one `parentOf` ingredient is allowed, it requires media, and it cannot be
-combined with `creation`. A signed supplied input cannot be relabeled as newly
-created or attached to a different parent.
+combined with `creation`. A kept [signed input](#signed-inputs-and-ingredients) is
+already the parent, so it cannot take a `creation` entry or a `parentOf` you send.
 
 **Errors:**
 
@@ -715,12 +693,12 @@ created or attached to a different parent.
 | An ingredient's `format` is not a media type | 400 | `The ingredient 'format' must be a media type such as 'video/mp4'.` |
 | A `componentOf` ingredient has neither `media` nor `format` | 400 | `The componentOf relationship requires ingredient 'media' or 'format'.` |
 | An ingredient has both `media` and `format` | 400 | `Provide the ingredient 'media' or 'format', not both.` |
-| A `parentOf` ingredient has no `media` | 400 | `The parentOf relationship requires ingredient 'media'.` |
+| A `parentOf` ingredient without `branded_gp_id` | 403 | `C2PACreatedUserAssertionsNotAuthorized: created user assertions are not authorized.` |
+| A `parentOf` ingredient with `branded_gp_id` but no `media` | 400 | `The parentOf relationship requires ingredient 'media'.` |
 | `digital_source_type` with `media` that carries a C2PA manifest | 400 | `The ingredient 'digital_source_type' cannot be combined with media that carries a C2PA manifest (mutually exclusive per the spec).` |
 
 In the format refusal, `<mime>` reads `Unknown format` when the media type cannot
-be detected. The created-placement refusal is a 400 on every request, branded or
-not.
+be detected.
 
 #### `creation`
 
@@ -742,62 +720,43 @@ separately authorized completeness claim.
 
 ### Signed inputs and ingredients
 
-Two fields set what Trufo does with a file that already carries C2PA data:
-
-- `signed_input_policy` covers the input file only, not a `parentOf` you send.
-- `signed_ingredient_policy` covers every [`ingredient`](#ingredient) sent with
-  `media`, a `parentOf` included. A declared ingredient (no `media`) has no
-  history to read.
-
-Each is `auto` (the default when omitted) or `keep`. For the input, `keep` skips
-the source-class check and refuses C2PA data Trufo cannot read instead of
-removing it; for an ingredient, it changes only the latter. The Python SDK sends a
-value only when you set one, as `SignedInputPolicy` or `SignedIngredientPolicy`
-from `trufo.c2pa`, or as a string. Cloud and Local mode apply them alike; in Local
-mode, the engine on your machine applies them (trufo-provenance 2.2.0 or later).
-
-When Trufo signs, it keeps every readable manifest, with its validation results
-recorded, failures included. A kept input becomes the `parentOf` ingredient,
-opened with `c2pa.opened`, and gets no new `digitalSourceType`.
-[`redact`](#redact) removes the four assertion labels it supports from a kept
-history, and the new manifest records each redaction.
+Two fields, each `auto` (the default) or `keep`, set what Trufo does with a file
+that already carries C2PA data: `signed_input_policy` for the input file, and
+`signed_ingredient_policy` for every [`ingredient`](#ingredient) sent with `media`,
+a `parentOf` included. Cloud and Local mode apply them alike. The Python SDK sends a
+value only when you set one, as `SignedInputPolicy` or `SignedIngredientPolicy` from
+`trufo.c2pa`, or as a string.
 
 - **Valid**: the manifest is well-formed, and its signature, hashes and time stamp
   validate.
 - **Trusted**: valid, and its signer is on the trust lists Trufo checks.
-- **Cannot read**: no manifest can be read from the C2PA data, as with a malformed
-  manifest store or a manifest only referenced by URL.
+- **Cannot read**: no manifest can be read from the C2PA data.
 
-| Input | `auto` (default) | `keep` |
-| ----- | ---------------- | ------ |
-| No C2PA data | Signed as usual | Signed as usual |
-| A readable manifest, no [`ai_system`](#ai_system) entry | Kept | Kept |
-| A readable manifest, an `ai_system` entry and a `redact` or `transcode` action | Kept | Kept |
-| A readable manifest, an `ai_system` entry, neither action, source class (below) `camera_captured` or `human_created` | Refused (400) | Kept |
-| The same, any other source class | Kept | Kept |
-| A manifest only referenced by URL | Refused (400): removing the C2PA data leaves the reference | Refused (400) |
-| Any other C2PA data Trufo cannot read, such as a malformed manifest store | Removed: the input is signed as if it carried none; an `ai_system` entry then labels it, and a `redact` or `transcode` action is refused | Refused (400) |
+| C2PA data in the file | `auto` (default) | `keep` |
+| --------------------- | ---------------- | ------ |
+| A readable manifest, valid or not | Kept, with its validation results recorded, unless the source-class check below refuses an input | Kept, with its validation results recorded |
+| A manifest only referenced by URL | Refused (400): removing the data leaves the reference | Refused (400) |
+| Other data Trufo cannot read, such as a malformed manifest store | Removed: an input is signed as if it carried none, and an ingredient is added without its history. A `redact` or `transcode` action on that input is then refused | Refused (400) |
 
-A kept input also cannot take a `creation` entry or a `parentOf`
-[ingredient](#ingredient) you send.
-
-| Sent ingredient | `auto` (default) | `keep` |
-| --------------- | ---------------- | ------ |
-| No C2PA data | Added | Added |
-| A readable manifest | Kept with the ingredient | Kept with the ingredient |
-| A manifest only referenced by URL | Refused (400) | Refused (400) |
-| Any other C2PA data Trufo cannot read, such as a malformed manifest store | Removed: the ingredient is added without its history | Refused (400) |
+A kept input becomes the `parentOf` ingredient, opened with `c2pa.opened`, and gets
+no new `digitalSourceType`; [`redact`](#redact) removes assertions from its history.
 
 **Source class.** Under `auto`, with an `ai_system` entry and no `redact` or
-`transcode` action, Trufo checks the input's source class, which the notice or
-the refusal names. To find it, Trufo walks back from the active manifest
-through `parentOf` ingredients only. A manifest whose first action is
-`c2pa.created` gives the origin, that action's `digitalSourceType`; one whose
-first action is `c2pa.opened` leads to its parent's manifest or, for a parent
-without one, to that ingredient's own `digitalSourceType`. Anything else leaves
-the origin unknown. An action other than `c2pa.created` that carries
-`trainedAlgorithmicMedia` or `compositeWithTrainedAlgorithmicMedia`, in any
-manifest on the walk, is an AI edit.
+`transcode` action, Trufo refuses an input whose source class is `camera_captured`
+or `human_created` (the 400 is listed under [`ai_system`](#ai_system)), and keeps
+any other with a notice naming its class. `keep` skips this check. To find the
+class, Trufo walks back from the active manifest through `parentOf` ingredients, by
+each manifest's first action:
+
+- `c2pa.created`: its `digitalSourceType` is the origin.
+- `c2pa.opened`: go on to the parent's manifest or, for a parent without one, take
+  that ingredient's `digitalSourceType`.
+- Anything else: the origin is unknown.
+
+Any action on the walk other than `c2pa.created` that carries
+`trainedAlgorithmicMedia` or `compositeWithTrainedAlgorithmicMedia` is an AI edit.
+Validation results and gathered assertions, such as `c2pa.ai-disclosure`, do not
+affect the class.
 
 | Origin | AI edit on the walk | Source class |
 | ------ | ------------------- | ------------ |
@@ -809,15 +768,8 @@ manifest on the walk, is an AI edit.
 | Any other source type | No | `other` |
 | Unknown | No | `none` |
 
-The class does not depend on whether earlier manifests validate;
-`c2pa.ai-disclosure` and other gathered assertions do not set it.
-
-**Notices.** Without an `ai_system` entry, a kept input gets a notice only when its
-manifest did not validate or is untrusted. With one, a kept input always gets a
-notice saying why it was kept: under `auto` without a `redact` or `transcode`
-action, a single notice that names the source class; otherwise the
-`redact`/`transcode` or `keep` notice, plus the not-validated or untrusted notice
-when one applies.
+**Notices.** Every notice whose When applies is sent, but a source-class notice
+replaces the not-validated or untrusted one.
 
 | When | Text |
 | ---- | ---- |
@@ -840,8 +792,6 @@ when one applies.
 | The same, for an ingredient sent as `media` | 400 | `Ingredient '<title>' carries C2PA data that Trufo cannot read, so Trufo cannot validate it. Please send a copy with intact C2PA data, or contact support@trufo.ai.` |
 | Local mode: the request sets `signed_input_policy` and the engine is older than trufo-provenance 2.2.0 | 400 | `UnsupportedSDKVersion: signed_input_policy requires trufo-provenance 2.2.0 or later. Please upgrade.` |
 | Local mode: the request sets `signed_ingredient_policy` and the engine is older than trufo-provenance 2.2.0 | 400 | `UnsupportedSDKVersion: signed_ingredient_policy requires trufo-provenance 2.2.0 or later. Please upgrade.` |
-
-The source-class refusal is listed under [`ai_system`](#ai_system).
 
 ---
 
@@ -872,6 +822,7 @@ year. A per-embed mark is a new ID plus one embed; a per-AI-system mark is one
 embed of the AI system's ID. Registering an AI system issues one new ID per type
 of AI involvement. An ID is active while it resolves: a per-embed ID from its
 committed record until you deactivate it, an AI system's IDs from registration.
+An AI system registered with a test key bills no new or active IDs.
 Watermarking, Cloud also bills the media and manifest bytes as data processing;
 Watermarking, Local bills the manifest bytes. Video watermarked on Trufo's servers
 also bills video compute at $0.30/GB, measured by input file size.
@@ -929,9 +880,7 @@ The `per_asset` and deprecated `mode` refusals are listed under
 | Field | Type | Required | Description |
 | ----- | ---- | -------- | ----------- |
 | `mime_type` | string | Yes | MIME type of the media you will watermark locally (an encode-supported format) |
-| `wid_allocation_mode` | string | No | How the watermark ID is allocated: `per_embed` (a new ID for this embed) or `per_ai_system` (the registered AI system's ID for `ai_involvement`); `per_asset` is reserved and unsupported. When omitted, `per_embed` applies. |
-| `ai_system_id` | string | With `per_ai_system` | The registered AI system whose watermark ID is used. Required with `wid_allocation_mode` `per_ai_system`, and accepted only with it. |
-| `ai_involvement` | string | With `per_ai_system` | `ai_generated` or `ai_modified`, one of the AI system's `ai_involvement_modes`. Required with `wid_allocation_mode` `per_ai_system`, and accepted only with it. |
+| `wid_allocation_mode`, `ai_system_id`, `ai_involvement` | string | As in `/bind/watermark` | As in [`/bind/watermark`](#post-bindwatermark), with the same errors |
 
 **Response (200):**
 
@@ -942,8 +891,7 @@ The `per_asset` and deprecated `mode` refusals are listed under
 
 A per-AI-system bind returns the AI system's watermark ID in the same
 `wid_package`; on the test host, its `cid` is not a record. A per-AI-system
-reservation bills its embed when issued and is valid for 1 hour. The errors for
-these fields are those of [`/bind/watermark`](#post-bindwatermark).
+reservation bills its embed when issued and is valid for 1 hour.
 
 ### `POST /bind/commit`
 
@@ -1032,17 +980,15 @@ only when the mark belongs to the caller's org.
 
 What a watermark ID resolves to:
 
-- A per-embed ID: its content record's stored manifest, to any recover-key holder
-  while the record is active ([`/content/status`](#post-contentstatus)), and to
-  your own organization always.
-- A per-AI-system ID: the AI system's public information, to any recover-key
-  holder, inactive AI systems included. It is not a C2PA soft binding, so the
-  C2PA soft-binding resolution API does not serve it.
+- A per-embed ID: its record's stored manifest, to any recover-key holder while the
+  record is [active](#post-contentstatus), and always to your own organization.
+- A per-AI-system ID: the AI system's public information, to any recover-key holder,
+  even while the AI system is inactive. It is not a C2PA soft binding, so the C2PA
+  soft-binding resolution API does not serve it.
 - Any other ID: detection only.
 
-Each host resolves only its own IDs: on the test host, per-embed test IDs resolve
-to their test records and per-AI-system test IDs to the AI system. Recovery has
-its own format eligibility and restrictions; see
+Each host resolves only its own IDs: the test host resolves test IDs of both kinds.
+Recovery has its own format eligibility and restrictions; see
 [Media format support](media_format_support.md).
 
 **Errors:**
@@ -1066,9 +1012,8 @@ Production hosts only. SDK: `get_content()`, `list_content()`,
 A per-AI-system embed's record carries the AI system's watermark ID as
 `ai_system_wid` instead of `wid`. `/content/list` lists these records, except
 under a `status` filter; `/content/get` does not find them by the AI system's
-watermark ID, and they cannot be switched off. The AI system's IDs count as
-active IDs from its registration; an inactive AI system's IDs keep resolving and
-keep counting as active IDs ([watermark billing](#watermark-billing)).
+watermark ID, and they cannot be switched off. The AI system's IDs keep resolving,
+even while the AI system is [inactive](#post-ai-systemstatus).
 
 Unlike `/content/recover`, which decodes media and is metered, these take an
 identifier or filters, touch only your own records, and are not metered.
@@ -1119,16 +1064,15 @@ per-AI-system one.
 
 ## AI Systems
 
-An AI system is registered once and referenced by `ai_system_id` when signing (an
-[`ai_system`](#ai_system) entry in `assertions`) and watermarking. Its details
-cannot be changed after registration: register each new version as a new AI
-system. Registrations are shared between test and production signing. An AI
-system works on every regional endpoint ([Regions](api_trufo.md#regions)).
-Production hosts only.
+Register an AI system once, then pass its `ai_system_id` when signing (an
+[`ai_system`](#ai_system) entry) and watermarking. Its details cannot be changed after
+registration: register each new version as a new AI system. Registrations are shared
+between test and production signing. An AI system works on every regional endpoint
+([Regions](api_trufo.md#regions)). Production hosts only.
 
-**Auth (all three):** API key with the `c2pa-sign-prod` or `c2pa-sign-test`
-scope, or an MFA-verified access token with the `c2pa_sign` permission. No plan
-is required.
+**Auth (all three):** API key with the `c2pa-sign-prod` or `c2pa-sign-test` scope,
+or an MFA-verified access token with the `c2pa_sign` permission. No plan is
+required.
 
 ### `POST /ai-system/add`
 
@@ -1148,8 +1092,8 @@ an automated agent may not accept it.
 
 Registration assigns the AI system one production and one test watermark ID for
 each value in `ai_involvement_modes`; see [watermark billing](#watermark-billing).
-Its name, version, model disclosure and your organization's
-validated legal name can appear publicly in signed content and watermark lookups.
+Its name, version, model disclosure and your organization's validated legal name
+can appear publicly in signed content and watermark lookups.
 
 **Response (201):** `{"ai_system_id": "aisys_…"}`.
 
@@ -1159,7 +1103,7 @@ validated legal name can appear publicly in signed content and watermark lookups
 | ------ | -------- | ------- |
 | 400 | *(message)* | An invalid `c2pa_ai_disclosure` body; the detail explains why |
 | 403 | `The Created Assertion Acknowledgement has not been accepted. It is a legal agreement that must be accepted in the dashboard by an owner or admin authorized to accept it for your organization, at https://app.trufo.ai/settings/org#agreements; an automated agent may not accept it on your organization's behalf. Once it is accepted, register the AI system again.` | `c2pa_first_party_attestable` before the Created Assertion Acknowledgement is accepted |
-| 422 | *(field list)*, with the message `Value error, ai_involvement_modes must be one or both of 'ai_generated' and 'ai_modified'.` | `ai_involvement_modes` empty, repeated or unknown |
+| 422 | *(field list)* with `Value error, ai_involvement_modes must be one or both of 'ai_generated' and 'ai_modified'.` | `ai_involvement_modes` empty, repeated or unknown |
 
 #### `c2pa_ai_disclosure`
 
@@ -1168,17 +1112,9 @@ validated legal name can appear publicly in signed content and watermark lookups
 | `modelType` | string | Yes | One of the permitted C2PA model-type values, e.g. `c2pa.types.model`, `c2pa.types.model.pytorch`, `c2pa.types.model.huggingface.transformers` |
 | `modelName` | string | No | Human-readable model name |
 | `modelIdentifier` | string | No | Machine-readable identifier (e.g. a PURL) |
-| `contentProfile` | object | No | Only `humanOversightLevel`: `fully_autonomous`, `prompt_guided`, or `human_validated` |
+| `contentProfile` | object | No | Only `humanOversightLevel`: `fully_autonomous` (the model produced the asset without human direction), `prompt_guided` (a human directed the model but did not review the output), or `human_validated` (a human reviewed and accepted the output) |
 | `scientificDomain` | string or list | No | Dotted domain codes, e.g. `cs.AI` |
 | `metadata` | object | No | Free-form |
-
-`humanOversightLevel` values:
-
-| Value | Meaning |
-| ----- | ------- |
-| `fully_autonomous` | The model produced the asset without human direction |
-| `prompt_guided` | A human directed the model but did not review the output |
-| `human_validated` | A human reviewed and accepted the output |
 
 ### `POST /ai-system/list`
 
@@ -1193,11 +1129,11 @@ Newest first.
 | `ai_system_id` | string | Yes | Registration identifier. |
 | `status` | string | Yes | `inactive` rejects new signs and embeds that use the AI system; `active` restores it. |
 
-Idempotent, and nothing is deleted. Content already marked with an inactive AI
-system keeps resolving, and the AI system's watermark IDs keep counting as active
-IDs ([watermark billing](#watermark-billing)). **Response (200):** the AI
-system's list entry after the write. **Errors:** 404 `AISystemNotFound` for an
-unknown or another organization's `ai_system_id`.
+Idempotent; nothing is deleted. Content already marked with an inactive AI system
+keeps resolving, and the AI system's watermark IDs keep counting as active IDs
+([watermark billing](#watermark-billing)). **Response (200):** the AI system's list
+entry after the write. **Errors:** 404 `AISystemNotFound` for an unknown or another
+organization's `ai_system_id`.
 
 ---
 
@@ -1214,7 +1150,7 @@ from the credential.
 Deprecated: use [`POST /ai-system/add`](#post-ai-systemadd). Every 201 carries the
 `Deprecation`, `Sunset` and
 `Link: <https://api.trufo.ai/ai-system/add>; rel="successor-version"` headers
-([Deprecations](api_trufo.md#deprecations)). After 2027-01-31T00:00:00+00:00, the
+([Deprecations](api_trufo.md#deprecations)). From 2027-01-31T00:00:00+00:00, the
 endpoint answers 410 with the same headers.
 
 | Field | Type | Required | Description |
@@ -1237,7 +1173,7 @@ test and production. Acceptance is checked at registration, not again at signing
 | ---- | ------- |
 | 403 | First-party operation requested before the organization accepted the Created Assertion Acknowledgement. |
 | 404 | The linked software agent does not exist, was deleted, or belongs to another organization. |
-| 410 | After 2027-01-31T00:00:00+00:00: `POST /c2pa/ai-disclosure/add is no longer supported (expired 2027-01-31T00:00:00+00:00). Please use POST /ai-system/add.` |
+| 410 | From 2027-01-31T00:00:00+00:00: `POST /c2pa/ai-disclosure/add is no longer supported (expired 2027-01-31T00:00:00+00:00). Please use POST /ai-system/add.` |
 | 422 | First-party operation was declared without a nonempty `software_agent_id`. |
 
 `assertion` takes the same fields as [`c2pa_ai_disclosure`](#c2pa_ai_disclosure).
@@ -1247,7 +1183,7 @@ test and production. Acceptance is checked at registration, not again at signing
 Deprecated: use [`POST /ai-system/list`](#post-ai-systemlist). Every 200 carries
 the `Deprecation`, `Sunset` and
 `Link: <https://api.trufo.ai/ai-system/list>; rel="successor-version"` headers.
-After 2027-01-31T00:00:00+00:00, the endpoint answers 410 with the same headers.
+From 2027-01-31T00:00:00+00:00, the endpoint answers 410 with the same headers.
 List your registered bodies before then to reuse one as an AI system's
 [`c2pa_ai_disclosure`](#c2pa_ai_disclosure).
 
@@ -1259,7 +1195,7 @@ Older registrations return `first_party_operated: false` and `software_agent_id:
 
 | Code | Meaning |
 | ---- | ------- |
-| 410 | After 2027-01-31T00:00:00+00:00: `POST /c2pa/ai-disclosure/list is no longer supported (expired 2027-01-31T00:00:00+00:00). Please use POST /ai-system/list.` |
+| 410 | From 2027-01-31T00:00:00+00:00: `POST /c2pa/ai-disclosure/list is no longer supported (expired 2027-01-31T00:00:00+00:00). Please use POST /ai-system/list.` |
 
 ### `POST /c2pa/software-agent/add`
 
