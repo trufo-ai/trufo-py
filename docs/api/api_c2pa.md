@@ -96,15 +96,17 @@ Beyond the platform-wide codes in [api_trufo.md](api_trufo.md):
 | Status | `detail` | Meaning |
 | ------ | -------- | ------- |
 | 400 | *(message)* | Request validation — malformed `actions`/`assertions`, watermark contract violations, an unsatisfiable redaction |
+| 400 | `AISystemInactive: …` | An inactive AI system (see [`ai_system`](#ai_system)) |
 | 400 | `InvalidCawgIdentityId` | Unknown `cawg_identity_id` |
 | 400 | `MissingC2PACustomDomain` | A `custom` assertion without a label |
-| 400 | `UnsupportedSDKVersion: …` | Local mode: the SDK or engine version is below the supported minimum; the detail names the package (`trufo-py` or `trufo-provenance`) and asks you to upgrade |
+| 400 | `UnsupportedSDKVersion: …` | Local mode: the SDK or engine version is below the supported minimum, or the engine is too old for a feature the request uses; the detail names the package (`trufo-py` or `trufo-provenance`) and explains why |
 | 403 | `MissingOrganizationValidation` | Production signing before OV completes |
 | 403 | `InvalidC2PACustomDomain` | The label's domain is not domain-validated for your organization |
 | 403 | `NoEligiblePlan` | The organization lacks the required plan |
 | 403 | `BPVNotActive: <reason>` | Branded Product Validation (BPV) for the generator product is not active; the detail explains why |
 | 403 | `C2PACreatedUserAssertionsNotAuthorized: <reason>` | A created declaration this request is not authorized to make (see [`assertions`](#assertions)); the detail explains why |
 | 404 | *(message)* | Unknown `ai_disclosure_id` or `software_agent_id` |
+| 404 | `AISystemNotFound` | Unknown or another organization's `ai_system_id` (see [`ai_system`](#ai_system)) |
 | 404 | `GProductNotFound` | No such generator product in your organization |
 
 **Retries and billing.** A sign is metered when it completes, so a failed request
@@ -402,7 +404,8 @@ existing history, never the output of a transform in the same call.
 Ordered `[name, params]` pairs. Assertions are gathered unless their documented
 schema fixes or permits created placement. Created declarations require an
 authorized branded generator product (`branded_gp_id`), limited to the source
-types the product is approved for. A created C2PA action requires
+types the product is approved for; without one, the only created declarations
+are an [`ai_system`](#ai_system) entry's source-type labels. A created C2PA action requires
 a `digitalSourceType`, except `c2pa.converted`, `c2pa.edited.metadata`,
 `c2pa.enhanced`, `c2pa.opened`, `c2pa.placed`, `c2pa.published`,
 `c2pa.redacted`, `c2pa.repackaged`, `c2pa.resized.proportional`,
@@ -411,6 +414,7 @@ a `digitalSourceType`, except `c2pa.converted`, `c2pa.edited.metadata`,
 
 | Assertion | Params | C2PA label |
 | --------- | ------ | ---------- |
+| `"ai_system"` | `{"ai_system_id": "<id>", "ai_involvement": "ai_generated"}` | `c2pa.actions` (`c2pa.created`, or `c2pa.opened` with a `c2pa.ingredient.v3` parent); `c2pa.ai-disclosure` when the AI system has one |
 | `"ai_disclosure"` | `{"ai_disclosure_id": "<id>", "set_source_type": false}` | `c2pa.ai-disclosure` |
 | `"cawg_metadata"` | `{"assertion": {…}}` | `cawg.metadata` |
 | `"cawg_training"` | `{"assertion": {…}}` | `cawg.training-mining` |
@@ -418,6 +422,68 @@ a `digitalSourceType`, except `c2pa.converted`, `c2pa.edited.metadata`,
 | `"custom"` | `{"label": "<reverse-dns>", "assertion": {…}}` | Your label |
 | `"ingredient"` | `{"relationship": "<rel>", …}` | `c2pa.ingredient.v3` |
 | `"creation"` | `{"digitalSourceType": "<IPTC URI>", "softwareAgent": {…}}` | `c2pa.actions` (`c2pa.created`) |
+
+#### `ai_system`
+
+Names the [registered AI system](#post-ai-systemadd) that generates or modifies
+the content:
+
+```python
+["ai_system", {"ai_system_id": "aisys_…", "ai_involvement": "ai_generated"}]
+```
+
+`ai_involvement` is one of the AI system's `ai_involvement_modes`. A request
+carries at most one `ai_system` entry, and no `ai_disclosure` or `creation` entry
+with it.
+
+An input without a C2PA manifest is labeled by the first of these that applies:
+
+- Branded generator product (`branded_gp_id` set): signed as your branded
+  generator product.
+- Trufo AI Labeling Service (first-party AI system): signed with a `c2pa.created`
+  action (`digitalSourceType = trainedAlgorithmicMedia`) whose software agent is
+  the AI system.
+- Declared AI ingredient (not first-party): the input is recorded as an
+  AI-generated parent ingredient (`digitalSourceType = trainedAlgorithmicMedia`)
+  and opened by your organization (`c2pa.opened`). This is not generally
+  sufficient for interoperable AI disclosures.
+
+Signing AI-modified content (`ai_modified`) requires a branded generator product.
+A branded request writes the same `c2pa.created` action, with
+`compositeWithTrainedAlgorithmicMedia` for `ai_modified`.
+
+The recommended `c2pa.ai-disclosure` assertion comes from the optional model
+disclosure (`c2pa_ai_disclosure`). It is gathered, never created.
+
+If the input already carries a C2PA manifest, Trufo keeps it and declares no new
+source type. If that manifest says camera-captured or human-created, the input is
+rejected. This is the default
+[`signed_input_policy`](#signed-inputs-and-ingredients), `auto`; with `keep`,
+that input is kept too, and no AI source type is declared for it.
+
+The test host writes the same labels, with the test certificate.
+
+**Errors:**
+
+| When | Status | `detail` |
+| ---- | ------ | -------- |
+| Local mode, an engine too old for the entry | 400 | `UnsupportedSDKVersion: the 'ai_system' assertion requires trufo-provenance 2.2.0 or later. Please upgrade.` |
+| Two `ai_system` entries | 400 | `At most one 'ai_system' assertion is allowed per request.` |
+| With the deprecated `ai_disclosure` entry | 400 | `The 'ai_system' assertion cannot be combined with the deprecated 'ai_disclosure' assertion; remove 'ai_disclosure'.` |
+| With a `creation` entry | 400 | `The 'ai_system' assertion cannot be combined with a 'creation' assertion; remove 'creation'.` |
+| `ai_system_id` or `ai_involvement` missing | 400 | `The 'ai_system' assertion requires 'ai_system_id' and 'ai_involvement'.` |
+| Extra keys in the entry | 400 | `The 'ai_system' assertion accepts only 'ai_system_id' and 'ai_involvement'; the software agent and source type come from the AI system's registration.` |
+| `ai_involvement` unknown | 400 | `ai_involvement must be 'ai_generated' or 'ai_modified'.` |
+| A `parentOf` ingredient, without `branded_gp_id` | 403 | `C2PACreatedUserAssertionsNotAuthorized: created user assertions are not authorized.` |
+| An unknown or another organization's `ai_system_id` | 404 | `AISystemNotFound` |
+| The AI system is inactive | 400 | `AISystemInactive: AI system '<ai_system_id>' is inactive. Use an active AI system (see /ai-system/list).` |
+| `ai_involvement` not in the system's modes | 400 | `ai_involvement '<value>' is not in the AI system's ai_involvement_modes.` |
+| `ai_modified` without `branded_gp_id` | 400 | `ai_involvement 'ai_modified' requires a branded generator product (branded_gp_id).` |
+| With `branded_gp_id`, the product is not approved for the entry's source type | 403 | `C2PACreatedUserAssertionsNotAuthorized: the digitalSourceType <uri> is not approved for this branded generator product.` |
+| A signed input whose source class is `camera_captured` or `human_created`, under the default `signed_input_policy` (`auto`) | 400 | `The input carries a C2PA manifest whose source class is '<class>', which conflicts with ai_involvement '<ai_involvement>'.` |
+| A `parentOf` ingredient, with `branded_gp_id`, on an input without a C2PA manifest (the entry's `c2pa.created` takes no parent) | 400 | `The creation assertion cannot be combined with a parentOf ingredient.` |
+
+In Local mode with the Python SDK, the last two are raised by the call.
 
 #### `ai_disclosure`
 
