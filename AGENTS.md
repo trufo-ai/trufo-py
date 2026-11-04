@@ -28,8 +28,8 @@ systems, and certificate enrollment.
   and `wid_allocation_mode` = `per_embed` (default) / `per_ai_system` (needs an
   `ai_system` entry) selecting the watermark ID (`WatermarkIDAllocationMode`;
   `per_asset` raises `NotImplementedError`). `mode` / `WatermarkMode` is a deprecated
-  alias until 2026-12-31T00:00:00+00:00.
-  <!-- TODO(sunset-2026-12-31): the mode sentence goes; successor wid_allocation_mode -->
+  alias until 2027-01-31T00:00:00+00:00.
+  <!-- TODO(sunset-2027-01-31): the mode sentence goes; successor wid_allocation_mode -->
   Format policy: see `docs/api/media_format_support.md`; do not duplicate its tables.
 - Routes: **C2PA Signing, Cloud / Local** (Trufo signs; `sign_c2pa`,
   `sign_c2pa_distributed`) and **Watermarking, Cloud / Local** (the caller signs with

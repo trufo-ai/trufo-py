@@ -73,7 +73,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The `ai_disclosure` entry (`UserAssertion.AI_DISCLOSURE`) and
   `/c2pa/ai-disclosure/add` and `/list` (`TPS_C2PA_AI_DISCLOSURE_ADD`,
-  `TPS_C2PA_AI_DISCLOSURE_LIST`) are refused by the Trufo API from 2026-12-31;
+  `TPS_C2PA_AI_DISCLOSURE_LIST`) are refused by the Trufo API from 2027-01-31;
   use the `ai_system` entry with an AI system registered at `/ai-system/add`.
   Unlike the old entry, under the default `auto` policy and without a `redact`
   or `transcode` action, the new one refuses (400) a signed input whose source
@@ -81,14 +81,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   not converted; see
   [Moving From `ai_disclosure`](docs/quickstart/3_ai_labeling.md#moving-from-ai_disclosure).
 - The watermark `mode` (the bind functions' `mode=`, the `watermark` action's
-  `mode`, and `WatermarkMode`) is refused by the Trufo API from 2026-12-31; use
+  `mode`, and `WatermarkMode`) is refused by the Trufo API from 2027-01-31; use
   `wid_allocation_mode` (`per_embed` replaces `provenance`).
 - `bind_watermark`, `submit_bind_watermark` and `bind_watermark_test` from
-  trufo-py 2.1 or earlier are refused by the Trufo API from 2026-12-31; upgrade
+  trufo-py 2.1 or earlier are refused by the Trufo API from 2027-01-31; upgrade
   to 2.2.0 before then.
 - Local mode with trufo-provenance 2.1 or earlier (trufo-py 2.1 or earlier with
   a local engine extra, and the Docker image's 2.1 tags) is refused by the Trufo
-  API from 2026-12-31; upgrade trufo-py to 2.2.0 with its local engine extra, or
+  API from 2027-01-31; upgrade trufo-py to 2.2.0 with its local engine extra, or
   use a [2.2 image](docs/local/docker.md#versions-and-upgrades), before then.
 - The old endpoint path constant names, such as `TPS_C2PA_SIGN`: use the names
   with a `_PATH` suffix, such as `TPS_C2PA_SIGN_PATH`.

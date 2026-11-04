@@ -53,7 +53,7 @@ TPS_CONTENT_STATUS_PATH = "/content/status"
 TPS_BIND_WATERMARK_PATH = "/bind/watermark"
 TPS_BIND_RESERVE_PATH = "/bind/reserve"
 TPS_BIND_COMMIT_PATH = "/bind/commit"
-# TODO(sunset-2026-12-31): the ai-disclosure endpoints go; successor /ai-system/add and /list
+# TODO(sunset-2027-01-31): the ai-disclosure endpoints go; successor /ai-system/add and /list
 TPS_C2PA_AI_DISCLOSURE_ADD = "/c2pa/ai-disclosure/add"
 TPS_C2PA_AI_DISCLOSURE_LIST = "/c2pa/ai-disclosure/list"
 TPS_AI_SYSTEM_ADD_PATH = "/ai-system/add"

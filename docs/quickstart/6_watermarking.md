@@ -49,9 +49,9 @@ A `["watermark", {...}]` entry in `actions` requests watermarking; at most one i
 
 For what watermarking bills, see [watermark billing](../api/api_c2pa.md#watermark-billing).
 
-<!-- TODO(sunset-2026-12-31): the deprecated mode paragraph goes; successor wid_allocation_mode -->
+<!-- TODO(sunset-2027-01-31): the deprecated mode paragraph goes; successor wid_allocation_mode -->
 
-The `mode` parameter (a `WatermarkMode` value) is deprecated: `"provenance"` still means `"per_embed"`, with a warning, until 2026-12-31T00:00:00+00:00, and is refused (400) from that instant; `"compliance"` raises `NotImplementedError`. Send `mode` or `wid_allocation_mode`, not both. trufo 2.1 and earlier send `mode` on every `/bind/watermark` call (`bind_watermark`, `submit_bind_watermark` and `bind_watermark_test`; not `bind_reserve`), so upgrade to trufo 2.2.0 before then. They do not show the warning on binds, since they drop the response's warnings, so check your installed version rather than wait for it. Over HTTP, drop `"mode": "provenance"` (`per_embed` is the default) or replace it with `"wid_allocation_mode": "per_embed"`. The notices and refusals are listed under [`watermark`](../api/api_c2pa.md#watermark).
+The `mode` parameter (a `WatermarkMode` value) is deprecated: `"provenance"` still means `"per_embed"`, with a warning, until 2027-01-31T00:00:00+00:00, and is refused (400) from that instant; `"compliance"` raises `NotImplementedError`. Send `mode` or `wid_allocation_mode`, not both. trufo 2.1 and earlier send `mode` on every `/bind/watermark` call (`bind_watermark`, `submit_bind_watermark` and `bind_watermark_test`; not `bind_reserve`), so upgrade to trufo 2.2.0 before then. They do not show the warning on binds, since they drop the response's warnings, so check your installed version rather than wait for it. Over HTTP, drop `"mode": "provenance"` (`per_embed` is the default) or replace it with `"wid_allocation_mode": "per_embed"`. The notices and refusals are listed under [`watermark`](../api/api_c2pa.md#watermark).
 
 ### Examples
 
@@ -302,7 +302,7 @@ Use an active AI system, or reactivate this one with [`/ai-system/status`](../ap
 
 A per-AI-system bind has nothing to commit: once you have signed the marked media, you are done.
 
-<!-- TODO(sunset-2026-12-31): the deprecated-mode warning, UnsupportedParameter and not-both entries below go, and the 501 entry drops its compliance text; successor wid_allocation_mode -->
+<!-- TODO(sunset-2027-01-31): the deprecated-mode warning, UnsupportedParameter and not-both entries below go, and the 501 entry drops its compliance text; successor wid_allocation_mode -->
 
 **`Per-asset watermark ID allocation is not supported.` or `Compliance watermarking is not supported.`**
 
@@ -310,9 +310,9 @@ The SDK raises these as `NotImplementedError` before sending; over HTTP, the API
 
 **A warning that the watermark `mode` parameter is deprecated**
 
-Remove `mode` (`per_embed` is the default), or upgrade to trufo 2.2.0 and use `wid_allocation_mode`. trufo 2.1 and earlier send `mode` on every `/bind/watermark` call, and their `sign_c2pa` refuses `wid_allocation_mode` before sending. After 2026-12-31T00:00:00+00:00, `mode` is refused.
+Remove `mode` (`per_embed` is the default), or upgrade to trufo 2.2.0 and use `wid_allocation_mode`. trufo 2.1 and earlier send `mode` on every `/bind/watermark` call, and their `sign_c2pa` refuses `wid_allocation_mode` before sending. After 2027-01-31T00:00:00+00:00, `mode` is refused.
 
-**`UnsupportedParameter: the watermark 'mode' parameter is no longer supported (expired 2026-12-31T00:00:00+00:00). Please use 'wid_allocation_mode'.`**
+**`UnsupportedParameter: the watermark 'mode' parameter is no longer supported (expired 2027-01-31T00:00:00+00:00). Please use 'wid_allocation_mode'.`**
 
 Remove `mode` (`per_embed` is the default), or upgrade to trufo 2.2.0 and use `wid_allocation_mode`. trufo 2.1 and earlier send `mode` on every `/bind/watermark` call, so binds from them need the upgrade.
 

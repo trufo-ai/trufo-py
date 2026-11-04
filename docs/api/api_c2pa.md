@@ -22,7 +22,7 @@ See [api_trufo.md](api_trufo.md) for authentication, error conventions, and regi
 | `POST /io/get-s3-upload-url` | `c2pa-sign-prod` or `watermark-prod` (production hosts) | Corresponding signing or watermark access |
 | `POST /c2pa/io/get-s3-url` **(deprecated alias)** | Same as `/io/get-s3-upload-url` | Same as `/io/get-s3-upload-url` |
 | `POST /ai-system/add`, `/list`, `/status` | `c2pa-sign-prod` or `c2pa-sign-test` (production hosts only) | — |
-| `POST /c2pa/ai-disclosure/add`, `/list` **(deprecated)** | `c2pa-sign-prod` or `c2pa-sign-test` (production hosts only) | — <!-- TODO(sunset-2026-12-31): this row goes; successor the /ai-system row --> |
+| `POST /c2pa/ai-disclosure/add`, `/list` **(deprecated)** | `c2pa-sign-prod` or `c2pa-sign-test` (production hosts only) | — <!-- TODO(sunset-2027-01-31): this row goes; successor the /ai-system row --> |
 | `POST /c2pa/software-agent/add`, `/list` | `c2pa-sign-prod` or `c2pa-sign-test` (production hosts only) | — |
 | `POST /content/recover` | `content-recover-prod` (test host: `content-recover-test`) | C2PA Signing or Watermark API |
 | `POST /bind/watermark`, `/bind/reserve`, `/bind/commit` | `watermark-prod` (test host: `watermark-test`) | C2PA Signing or Watermark API |
@@ -84,7 +84,7 @@ if caught:  # signed, with notices — e.g. no watermark embedded, or an untrust
 notices, `"error"` turns them into exceptions, and `logging.captureWarnings(True)`
 routes them to the `py.warnings` logger.
 
-<!-- TODO(sunset-2026-12-31): the deprecated mode and ai_disclosure clauses go; successor none -->
+<!-- TODO(sunset-2027-01-31): the deprecated mode and ai_disclosure clauses go; successor none -->
 
 Messages you may see: a declined watermark
 (`Watermarking is not supported for '<mime>' media…`), a best-effort watermark
@@ -104,8 +104,8 @@ Beyond the platform-wide codes in [api_trufo.md](api_trufo.md):
 | ------ | -------- | ------- |
 | 400 | *(message)* | Request validation — malformed `actions`/`assertions`, watermark contract violations, an unsatisfiable redaction, a refused [`ingredient`](#ingredient) or [signed input](#signed-inputs-and-ingredients) |
 | 400 | `AISystemInactive: …` | An inactive AI system (see [`ai_system`](#ai_system)) |
-| 400 | `UnsupportedAssertion: …` | The deprecated `ai_disclosure` entry after 2026-12-31T00:00:00+00:00 (see [`ai_disclosure`](#ai_disclosure)) <!-- TODO(sunset-2026-12-31): this row goes; successor none --> |
-| 400 | `UnsupportedParameter: …` | The deprecated watermark `mode` after 2026-12-31T00:00:00+00:00 (see [`watermark`](#watermark)) <!-- TODO(sunset-2026-12-31): this row goes; successor none --> |
+| 400 | `UnsupportedAssertion: …` | The deprecated `ai_disclosure` entry after 2027-01-31T00:00:00+00:00 (see [`ai_disclosure`](#ai_disclosure)) <!-- TODO(sunset-2027-01-31): this row goes; successor none --> |
+| 400 | `UnsupportedParameter: …` | The deprecated watermark `mode` after 2027-01-31T00:00:00+00:00 (see [`watermark`](#watermark)) <!-- TODO(sunset-2027-01-31): this row goes; successor none --> |
 | 400 | `InvalidCawgIdentityId` | Unknown `cawg_identity_id` |
 | 400 | `MissingC2PACustomDomain` | A `custom` assertion without a label |
 | 400 | `UnsupportedSDKVersion: …` | Local mode: the SDK or engine version is below the supported minimum or its support has ended, or the engine is too old for a feature the request uses; the detail names the package (`trufo-py` or `trufo-provenance`) and explains why (see [Local mode](#local-mode)) |
@@ -114,12 +114,12 @@ Beyond the platform-wide codes in [api_trufo.md](api_trufo.md):
 | 403 | `NoEligiblePlan` | The organization lacks the required plan |
 | 403 | `BPVNotActive: <reason>` | Branded Product Validation (BPV) for the generator product is not active; the detail explains why |
 | 403 | `C2PACreatedUserAssertionsNotAuthorized: <reason>` | A created declaration this request is not authorized to make (see [`assertions`](#assertions)); the detail explains why |
-| 404 | *(message)* | Unknown `ai_disclosure_id` or `software_agent_id` <!-- TODO(sunset-2026-12-31): the ai_disclosure_id half goes; successor none --> |
+| 404 | *(message)* | Unknown `ai_disclosure_id` or `software_agent_id` <!-- TODO(sunset-2027-01-31): the ai_disclosure_id half goes; successor none --> |
 | 404 | `AISystemNotFound` | Unknown or another organization's `ai_system_id` (see [`ai_system`](#ai_system)) |
 | 404 | `GProductNotFound` | No such generator product in your organization |
 | 410 | `Test keys are not accepted on this host. …` | Local mode with a `c2pa-sign-test` key on a production host (see [Signing Modes](#signing-modes)) |
 | 410 | `Test keys can't use upload links. …` | A test key on a production host's upload link (see [`POST /io/get-s3-upload-url`](#post-ioget-s3-upload-url)) |
-| 501 | *(message)* | An unsupported watermark option: `"per_asset"` allocation, or the deprecated `mode` `"compliance"` (see [`watermark`](#watermark)) <!-- TODO(sunset-2026-12-31): the row's deprecated mode "compliance" clause goes; successor none --> |
+| 501 | *(message)* | An unsupported watermark option: `"per_asset"` allocation, or the deprecated `mode` `"compliance"` (see [`watermark`](#watermark)) <!-- TODO(sunset-2027-01-31): the row's deprecated mode "compliance" clause goes; successor none --> |
 
 **Retries and billing.** A sign is metered when it completes, so a failed request
 never bills. Retries are not deduplicated: if a request completed but its response
@@ -352,10 +352,10 @@ the host's operating system and kernel release as `operating_system`, for exampl
 `sign_c2pa()` does. Setting either policy, like sending an
 [`ai_system`](#ai_system) entry, needs trufo-provenance 2.2.0 or later.
 
-<!-- TODO(sunset-2026-12-31): the versions paragraph and its two tables go; successor none -->
+<!-- TODO(sunset-2027-01-31): the versions paragraph and its two tables go; successor none -->
 
 **Versions.** Local mode with trufo-provenance 2.1 or earlier (from 0.3.0, the
-supported minimum) signs with a notice until 2026-12-31T00:00:00+00:00 and is
+supported minimum) signs with a notice until 2027-01-31T00:00:00+00:00 and is
 refused from that instant. Upgrade `trufo` to 2.2.0 or later with its local engine
 extra, or move the [Docker image](../local/docker.md#versions-and-upgrades) to a
 2.2 tag. `<version>` is the installed version.
@@ -364,13 +364,13 @@ extra, or move the [Docker image](../local/docker.md#versions-and-upgrades) to a
 
 | When | Text |
 | ---- | ---- |
-| trufo-provenance 2.1 or earlier (from 0.3.0) | `trufo-provenance <version> is deprecated and will stop working after 2026-12-31T00:00:00+00:00. Please upgrade.` |
+| trufo-provenance 2.1 or earlier (from 0.3.0) | `trufo-provenance <version> is deprecated and will stop working after 2027-01-31T00:00:00+00:00. Please upgrade.` |
 
 **Errors:**
 
 | When | Status | `detail` |
 | ---- | ------ | -------- |
-| trufo-provenance 2.1 or earlier (from 0.3.0), after 2026-12-31T00:00:00+00:00 | 400 | `UnsupportedSDKVersion: trufo-provenance <version> is no longer supported (expired 2026-12-31T00:00:00+00:00). Please upgrade.` |
+| trufo-provenance 2.1 or earlier (from 0.3.0), after 2027-01-31T00:00:00+00:00 | 400 | `UnsupportedSDKVersion: trufo-provenance <version> is no longer supported (expired 2027-01-31T00:00:00+00:00). Please upgrade.` |
 
 ---
 
@@ -425,7 +425,7 @@ Embeds an imperceptible Trufo Pawprint watermark that carries a watermark ID.
 | ----- | ---- | ----------- |
 | `wid_allocation_mode` | string | `"per_embed"` (default) or `"per_ai_system"`, below; `"per_asset"` is unsupported (HTTP 501) |
 | `effort_policy` | string | Failure tolerance, below; `"require"` for a bare action. `effort` is a deprecated alias (a warning is returned; providing both is an error) |
-| `mode` | string | Deprecated, below <!-- TODO(sunset-2026-12-31): this row goes; successor wid_allocation_mode --> |
+| `mode` | string | Deprecated, below <!-- TODO(sunset-2027-01-31): this row goes; successor wid_allocation_mode --> |
 
 - `"per_embed"`: a new watermark ID for this embed, which identifies one content
   record. The manifest declares it by a `c2pa.watermarked.bound` action and a
@@ -456,9 +456,9 @@ Format eligibility and restrictions are listed in
 | `"per_ai_system"` without an `ai_system` entry | 400 | `The watermark's wid_allocation_mode 'per_ai_system' requires an 'ai_system' assertion.` |
 | `"per_asset"` | 501 | `Per-asset watermark ID allocation is not supported.` |
 
-<!-- TODO(sunset-2026-12-31): the deprecated mode paragraph and its two tables go; successor wid_allocation_mode -->
+<!-- TODO(sunset-2027-01-31): the deprecated mode paragraph and its two tables go; successor wid_allocation_mode -->
 
-**Deprecated `mode`.** Until 2026-12-31T00:00:00+00:00, `mode` `"provenance"`
+**Deprecated `mode`.** Until 2027-01-31T00:00:00+00:00, `mode` `"provenance"`
 means `"per_embed"`, and the response's `warnings` (a task's result included)
 carry one of these notices; from that instant, `mode` is refused. In Local mode,
 the notices and the refusal apply only with trufo-provenance 2.2.0 or later.
@@ -467,14 +467,14 @@ the notices and the refusal apply only with trufo-provenance 2.2.0 or later.
 
 | When | Text |
 | ---- | ---- |
-| `mode` in a request from trufo-py older than 2.2 | `trufo-py <version> sends the deprecated watermark 'mode' parameter, which will stop working after 2026-12-31T00:00:00+00:00. Please upgrade trufo-py.` |
-| `mode` sent by any other caller | `The watermark 'mode' parameter is deprecated and will stop working after 2026-12-31T00:00:00+00:00. Please use 'wid_allocation_mode' ('per_embed' replaces 'provenance').` |
+| `mode` in a request from trufo-py older than 2.2 | `trufo-py <version> sends the deprecated watermark 'mode' parameter, which will stop working after 2027-01-31T00:00:00+00:00. Please upgrade trufo-py.` |
+| `mode` sent by any other caller | `The watermark 'mode' parameter is deprecated and will stop working after 2027-01-31T00:00:00+00:00. Please use 'wid_allocation_mode' ('per_embed' replaces 'provenance').` |
 
 **Errors:**
 
 | When | Status | `detail` |
 | ---- | ------ | -------- |
-| `mode`, after 2026-12-31T00:00:00+00:00 | 400 | `UnsupportedParameter: the watermark 'mode' parameter is no longer supported (expired 2026-12-31T00:00:00+00:00). Please use 'wid_allocation_mode'.` |
+| `mode`, after 2027-01-31T00:00:00+00:00 | 400 | `UnsupportedParameter: the watermark 'mode' parameter is no longer supported (expired 2027-01-31T00:00:00+00:00). Please use 'wid_allocation_mode'.` |
 | Both `mode` and `wid_allocation_mode` | 400 | `Provide the watermark 'wid_allocation_mode' parameter or the deprecated 'mode', not both.` |
 | `mode` `"compliance"` | 501 | `Compliance watermarking is not supported.` |
 
@@ -525,7 +525,7 @@ a `digitalSourceType`, except `c2pa.converted`, `c2pa.edited.metadata`,
 | Assertion | Params | C2PA label |
 | --------- | ------ | ---------- |
 | `"ai_system"` | `{"ai_system_id": "<id>", "ai_involvement": "ai_generated"}` | `c2pa.actions` (`c2pa.created`, or `c2pa.opened` with a `c2pa.ingredient.v3` parent); `c2pa.ai-disclosure` when the AI system has one |
-| `"ai_disclosure"` **(deprecated)** | `{"ai_disclosure_id": "<id>", "set_source_type": false}` | `c2pa.ai-disclosure` <!-- TODO(sunset-2026-12-31): this row goes; successor the ai_system row --> |
+| `"ai_disclosure"` **(deprecated)** | `{"ai_disclosure_id": "<id>", "set_source_type": false}` | `c2pa.ai-disclosure` <!-- TODO(sunset-2027-01-31): this row goes; successor the ai_system row --> |
 | `"cawg_metadata"` | `{"assertion": {…}}` | `cawg.metadata` |
 | `"cawg_training"` | `{"assertion": {…}}` | `cawg.training-mining` |
 | `"cawg_identity"` | `{"cawg_identity_id": "<id>"}` | `cawg.identity` |
@@ -542,7 +542,7 @@ the content:
 ["ai_system", {"ai_system_id": "aisys_…", "ai_involvement": "ai_generated"}]
 ```
 
-<!-- TODO(sunset-2026-12-31): "ai_disclosure or" goes from the next paragraph; successor none -->
+<!-- TODO(sunset-2027-01-31): "ai_disclosure or" goes from the next paragraph; successor none -->
 
 `ai_involvement` is one of the AI system's `ai_involvement_modes`. A request
 carries at most one `ai_system` entry, and no `ai_disclosure` or `creation` entry
@@ -588,7 +588,7 @@ The test host writes the same labels, with the test certificate.
 | ---- | ------ | -------- |
 | Local mode, an engine too old for the entry | 400 | `UnsupportedSDKVersion: the 'ai_system' assertion requires trufo-provenance 2.2.0 or later. Please upgrade.` |
 | Two `ai_system` entries | 400 | `At most one 'ai_system' assertion is allowed per request.` |
-| With the deprecated `ai_disclosure` entry | 400 | `The 'ai_system' assertion cannot be combined with the deprecated 'ai_disclosure' assertion; remove 'ai_disclosure'.` <!-- TODO(sunset-2026-12-31): this row goes; successor none --> |
+| With the deprecated `ai_disclosure` entry | 400 | `The 'ai_system' assertion cannot be combined with the deprecated 'ai_disclosure' assertion; remove 'ai_disclosure'.` <!-- TODO(sunset-2027-01-31): this row goes; successor none --> |
 | With a `creation` entry | 400 | `The 'ai_system' assertion cannot be combined with a 'creation' assertion; remove 'creation'.` |
 | `ai_system_id` or `ai_involvement` missing | 400 | `The 'ai_system' assertion requires 'ai_system_id' and 'ai_involvement'.` |
 | Extra keys in the entry | 400 | `The 'ai_system' assertion accepts only 'ai_system_id' and 'ai_involvement'; the software agent and source type come from the AI system's registration.` |
@@ -604,13 +604,13 @@ The test host writes the same labels, with the test certificate.
 
 In Local mode with the Python SDK, the last two are raised by the call.
 
-<!-- TODO(sunset-2026-12-31): this entry goes; successor ai_system -->
+<!-- TODO(sunset-2027-01-31): this entry goes; successor ai_system -->
 
 #### `ai_disclosure`
 
 Deprecated: use [`ai_system`](#ai_system); see
 [Moving From `ai_disclosure`](../quickstart/3_ai_labeling.md#moving-from-ai_disclosure).
-Until 2026-12-31T00:00:00+00:00, the entry adds a `c2pa.ai-disclosure` assertion:
+Until 2027-01-31T00:00:00+00:00, the entry adds a `c2pa.ai-disclosure` assertion:
 the [registered](#post-c2paai-disclosureadd) body whose `ai_disclosure_id` you
 pass, or `{"modelType": "c2pa.types.model"}` when you pass none. With
 `set_source_type: true`, an input without a C2PA manifest is also declared
@@ -619,20 +619,20 @@ registration, otherwise on the input ingredient.
 
 Sign responses that use the entry carry the `Deprecation` and `Sunset` headers
 ([Deprecations](api_trufo.md#deprecations)) and the notice below in `warnings`
-(for a TASK, in the task result's `warnings`); from 2026-12-31T00:00:00+00:00,
+(for a TASK, in the task result's `warnings`); from 2027-01-31T00:00:00+00:00,
 the entry is refused.
 
 **Notices:**
 
 | When | Text |
 | ---- | ---- |
-| A sign request uses the entry | `The 'ai_disclosure' assertion is deprecated and will stop working after 2026-12-31T00:00:00+00:00. Please use the 'ai_system' assertion with an AI system registered at /ai-system/add.` |
+| A sign request uses the entry | `The 'ai_disclosure' assertion is deprecated and will stop working after 2027-01-31T00:00:00+00:00. Please use the 'ai_system' assertion with an AI system registered at /ai-system/add.` |
 
 **Errors:**
 
 | When | Status | `detail` |
 | ---- | ------ | -------- |
-| The entry, after 2026-12-31T00:00:00+00:00 | 400 | `UnsupportedAssertion: the 'ai_disclosure' assertion is no longer supported (expired 2026-12-31T00:00:00+00:00). Please use the 'ai_system' assertion.` |
+| The entry, after 2027-01-31T00:00:00+00:00 | 400 | `UnsupportedAssertion: the 'ai_disclosure' assertion is no longer supported (expired 2027-01-31T00:00:00+00:00). Please use the 'ai_system' assertion.` |
 
 #### `cawg_metadata`
 
@@ -884,7 +884,7 @@ also bills video compute at $0.30/GB, measured by input file size.
 | `wid_allocation_mode` | string | No | How the watermark ID is allocated: `per_embed` (a new ID for this embed) or `per_ai_system` (the registered AI system's ID for `ai_involvement`); `per_asset` is reserved and unsupported. When omitted, `per_embed` applies. |
 | `ai_system_id` | string | With `per_ai_system` | The registered AI system whose watermark ID is used. Required with `wid_allocation_mode` `per_ai_system`, and accepted only with it. |
 | `ai_involvement` | string | With `per_ai_system` | `ai_generated` or `ai_modified`, one of the AI system's `ai_involvement_modes`. Required with `wid_allocation_mode` `per_ai_system`, and accepted only with it. |
-| `mode` | string | No | Deprecated: use `wid_allocation_mode` (`per_embed` replaces `provenance`). `compliance` is reserved and unsupported. <!-- TODO(sunset-2026-12-31): this row goes; successor wid_allocation_mode --> |
+| `mode` | string | No | Deprecated: use `wid_allocation_mode` (`per_embed` replaces `provenance`). `compliance` is reserved and unsupported. <!-- TODO(sunset-2027-01-31): this row goes; successor wid_allocation_mode --> |
 
 \* Provide exactly one: bytes for REQUEST, an upload reference for TASK. TASK runs
 on the production hosts only and returns 202; see [Tasks](#tasks).
@@ -1203,14 +1203,14 @@ Reusable bodies registered once and referenced by id when signing. Both groups
 accept a `c2pa-sign-prod` or `c2pa-sign-test` key and infer the owning organization
 from the credential.
 
-<!-- TODO(sunset-2026-12-31): the two ai-disclosure sections go, and the intro then names the software-agent endpoints only; successor AI Systems -->
+<!-- TODO(sunset-2027-01-31): the two ai-disclosure sections go, and the intro then names the software-agent endpoints only; successor AI Systems -->
 
 ### `POST /c2pa/ai-disclosure/add`
 
 Deprecated: use [`POST /ai-system/add`](#post-ai-systemadd). Every 201 carries the
 `Deprecation`, `Sunset` and
 `Link: <https://api.trufo.ai/ai-system/add>; rel="successor-version"` headers
-([Deprecations](api_trufo.md#deprecations)). After 2026-12-31T00:00:00+00:00, the
+([Deprecations](api_trufo.md#deprecations)). After 2027-01-31T00:00:00+00:00, the
 endpoint answers 410 with the same headers.
 
 | Field | Type | Required | Description |
@@ -1233,7 +1233,7 @@ test and production. Acceptance is checked at registration, not again at signing
 | ---- | ------- |
 | 403 | First-party operation requested before the organization accepted the Created Assertion Acknowledgement. |
 | 404 | The linked software agent does not exist, was deleted, or belongs to another organization. |
-| 410 | After 2026-12-31T00:00:00+00:00: `POST /c2pa/ai-disclosure/add is no longer supported (expired 2026-12-31T00:00:00+00:00). Please use POST /ai-system/add.` |
+| 410 | After 2027-01-31T00:00:00+00:00: `POST /c2pa/ai-disclosure/add is no longer supported (expired 2027-01-31T00:00:00+00:00). Please use POST /ai-system/add.` |
 | 422 | First-party operation was declared without a nonempty `software_agent_id`. |
 
 `assertion` takes the same fields as [`c2pa_ai_disclosure`](#c2pa_ai_disclosure).
@@ -1243,7 +1243,7 @@ test and production. Acceptance is checked at registration, not again at signing
 Deprecated: use [`POST /ai-system/list`](#post-ai-systemlist). Every 200 carries
 the `Deprecation`, `Sunset` and
 `Link: <https://api.trufo.ai/ai-system/list>; rel="successor-version"` headers.
-After 2026-12-31T00:00:00+00:00, the endpoint answers 410 with the same headers.
+After 2027-01-31T00:00:00+00:00, the endpoint answers 410 with the same headers.
 List your registered bodies before then to reuse one as an AI system's
 [`c2pa_ai_disclosure`](#c2pa_ai_disclosure).
 
@@ -1255,7 +1255,7 @@ Older registrations return `first_party_operated: false` and `software_agent_id:
 
 | Code | Meaning |
 | ---- | ------- |
-| 410 | After 2026-12-31T00:00:00+00:00: `POST /c2pa/ai-disclosure/list is no longer supported (expired 2026-12-31T00:00:00+00:00). Please use POST /ai-system/list.` |
+| 410 | After 2027-01-31T00:00:00+00:00: `POST /c2pa/ai-disclosure/list is no longer supported (expired 2027-01-31T00:00:00+00:00). Please use POST /ai-system/list.` |
 
 ### `POST /c2pa/software-agent/add`
 

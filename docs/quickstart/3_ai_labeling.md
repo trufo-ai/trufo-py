@@ -188,12 +188,12 @@ with a `c2pa-sign-test` key and `cawg_identity_id="test"`.
 
 ---
 
-<!-- TODO(sunset-2026-12-31): the ai_disclosure migration section goes; successor none -->
+<!-- TODO(sunset-2027-01-31): the ai_disclosure migration section goes; successor none -->
 
 ## Moving From `ai_disclosure`
 
 The `ai_disclosure` assertion is deprecated and will stop working after
-2026-12-31T00:00:00+00:00. Please use the `ai_system` assertion with an AI system
+2027-01-31T00:00:00+00:00. Please use the `ai_system` assertion with an AI system
 registered at `/ai-system/add`.
 
 | Old (`ai_disclosure`) | New (`ai_system`) |

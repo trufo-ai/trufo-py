@@ -50,7 +50,7 @@ Both images serve only `/health` and `/c2pa/sign`, not the
 [Watermarking routes](../quickstart/6_watermarking.md#routes) (`/bind/*`). To switch
 images, change the tag in `image:` and run `docker compose up -d`.
 
-<!-- TODO(sunset-2026-12-31): the next line goes; successor none -->
+<!-- TODO(sunset-2027-01-31): the next line goes; successor none -->
 
 If you run a 2.1 image, see [Versions and Upgrades](#versions-and-upgrades).
 
@@ -225,11 +225,11 @@ to `actions` embeds the AI system's watermark ID; see
 [the `watermark` action](../quickstart/6_watermarking.md#the-watermark-action) and
 [watermark billing](../api/api_c2pa.md#watermark-billing).
 
-<!-- TODO(sunset-2026-12-31): the next line goes; successor none -->
+<!-- TODO(sunset-2027-01-31): the next line goes; successor none -->
 
 If you send the deprecated `ai_disclosure` entry, see
 [Moving From `ai_disclosure`](../quickstart/3_ai_labeling.md#moving-from-ai_disclosure);
-it stops working from 2026-12-31T00:00:00+00:00.
+it stops working from 2027-01-31T00:00:00+00:00.
 
 ## Folders
 
@@ -390,13 +390,13 @@ image's `version` ends in `-full`.
 | `2.1.2` | 2.1.2 | — | `2.1.2-source` |
 | `2.1.1` | 2.1.1 | — | `2.1.1-source` |
 
-<!-- TODO(sunset-2026-12-31): the 2.1 sentence in the next paragraph goes; successor none -->
+<!-- TODO(sunset-2027-01-31): the 2.1 sentence in the next paragraph goes; successor none -->
 
 To upgrade, run `docker compose pull && docker compose up -d`; a `2.1` tag never
 moves to 2.2. To upgrade from 2.1, set `image:` to
 `ghcr.io/trufo-ai/trufo-local:2.2` (or `2.2-full`) and run `docker compose up -d`.
-The 2.1 images stop signing from 2026-12-31T00:00:00+00:00 (the start of 31 December
-2026, UTC); see [Local mode](../api/api_c2pa.md#local-mode). The full image needs
+The 2.1 images stop signing from 2027-01-31T00:00:00+00:00 (the start of 31 January
+2027, UTC); see [Local mode](../api/api_c2pa.md#local-mode). The full image needs
 more [memory](#choose-an-image) and [`/tmp` space](#read-only-root-filesystem). To
 stay on one version, set `image: ghcr.io/trufo-ai/trufo-local:2.2.0` (or
 `2.2.0-full`). When a signing response's `warnings` says a version is deprecated,
@@ -460,7 +460,7 @@ Errors return `{"detail": …}`.
 | 4xx | *(Trufo's code or message)* | Trufo's API refused the signing request, for example `InvalidAPIKey`, `APIKeyScopeNotAllowed`, `MissingOrganizationValidation`, `NoEligiblePlan`, or `Test keys are not accepted on this host. …` for a `c2pa-sign-test` key with a production `TRUFO_API_URL`; see [api_trufo.md](../api/api_trufo.md#error-envelope) and [api_c2pa.md](../api/api_c2pa.md#errors) |
 | 422 | *(field list)* | The body failed schema validation |
 | 501 | `Per-asset watermark ID allocation is not supported.` | Full image: `wid_allocation_mode` `per_asset` |
-| 501 | `Compliance watermarking is not supported.` | Full image: the deprecated `mode` `compliance` <!-- TODO(sunset-2026-12-31): this row goes; successor none --> |
+| 501 | `Compliance watermarking is not supported.` | Full image: the deprecated `mode` `compliance` <!-- TODO(sunset-2027-01-31): this row goes; successor none --> |
 | 502 | `TrufoAPIError` | Trufo's API returned a server error or an unreadable error, or could not be reached |
 | 500 | `Internal server error.` | Anything unexpected |
 

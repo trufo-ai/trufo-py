@@ -111,7 +111,7 @@ def _allocation_fields(
     """Validate the watermark ID allocation arguments and return the set ones as request keys."""
     fields: dict = {}
     if mode is not None:
-        # TODO(sunset-2026-12-31): WatermarkMode and the watermark 'mode' parameter go;
+        # TODO(sunset-2027-01-31): WatermarkMode and the watermark 'mode' parameter go;
         # successor WatermarkIDAllocationMode
         if wid_allocation_mode is not None:
             raise ValueError(

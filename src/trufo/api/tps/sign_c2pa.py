@@ -155,7 +155,7 @@ def _validate_watermark_action(entry: Any) -> None:
     if "apply" in params:
         raise ValueError("The watermark 'apply' parameter has been replaced by 'effort_policy'.")
     if "mode" in params:
-        # TODO(sunset-2026-12-31): WatermarkMode and the watermark 'mode' parameter go;
+        # TODO(sunset-2027-01-31): WatermarkMode and the watermark 'mode' parameter go;
         # successor WatermarkIDAllocationMode
         if "wid_allocation_mode" in params:
             raise ValueError(
