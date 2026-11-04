@@ -27,22 +27,19 @@ Both images run the same service from the same `compose.yaml`, and serve only
 `/health` and `/c2pa/sign`, not the
 [Watermarking routes](../quickstart/6_watermarking.md#routes) (`/bind/*`).
 
-<!-- TODO(v22-release): confirm HEIC, HEIF and AVIF watermark signs end to end in the full image, from W1/W2 -->
-
 - **The signing-only image (`2.2`)**, the shipped default, signs without
   watermarking.
 - **The full image (`2.2-full`)** also embeds Trufo watermarks while signing, on CPU
   only, in every format that [Media format support](../api/media_format_support.md)
   lists for watermark embedding (HEIC, HEIF and AVIF included).
 
-<!-- TODO(v22-release): re-measure the sizes and idle memory with the final pins -->
-<!-- TODO(v22-release): the linux/arm64 sizes, from the release run's size report -->
-
-| linux/amd64 | Signing-only | Full |
-| ----------- | ------------ | ---- |
-| Pulled (compressed) | about 340 MB | about 620 MB |
-| Unpacked | about 0.9 GB | about 1.9 GB |
-| Idle memory | about 100 MiB | about 300 MiB |
+| | Signing-only | Full |
+| --- | ------------ | ---- |
+| Pulled (compressed), linux/amd64 | about 340 MB | about 620 MB |
+| Pulled (compressed), linux/arm64 | about 320 MB | about 550 MB |
+| Unpacked, linux/amd64 | about 0.9 GB | about 1.9 GB |
+| Unpacked, linux/arm64 | about 0.8 GB | about 1.7 GB |
+| Idle memory, linux/amd64 | about 100 MiB | about 300 MiB |
 
 To switch images, change the tag in `image:` and run `docker compose up -d`.
 
@@ -51,8 +48,6 @@ To switch images, change the tag in `image:` and run `docker compose up -d`.
 If you run a 2.1 image, see [Versions and Upgrades](#versions-and-upgrades).
 
 ## Before You Start
-
-<!-- TODO(v22-release): confirm the per-sign hosts in the Outbound HTTPS bullet, from the staging checks -->
 
 - **Docker** with Compose. Every image tag (not the `-source` tags) serves
   linux/amd64 and linux/arm64.
@@ -65,8 +60,7 @@ If you run a 2.1 image, see [Versions and Upgrades](#versions-and-upgrades).
   `TRUFO_API_URL` to the test host and send a `c2pa-sign-test` key (see
   [Prerequisites](../quickstart/0_setup.md#prerequisites)).
 - **Outbound HTTPS** to `packages.trufo.ai` when a new container starts, and to the
-  host in `TRUFO_API_URL` for each signing request. Apart from pulling the image, these
-  are the only hosts the service connects to.
+  host in `TRUFO_API_URL` for each signing request.
 
 ## Quick Start
 
@@ -114,8 +108,6 @@ curl -s http://127.0.0.1:8080/health
 # {"status":"healthy","version":"2.2.0","engine_version":"2.2.0"}
 # full image: {"status":"healthy","version":"2.2.0-full","engine_version":"2.2.0","watermark_engine_version":"0.5.4"}
 ```
-
-<!-- TODO(v22-release): re-measure the start times with the final pins -->
 
 A new container first downloads and installs its packages, and is healthy after
 about 5 to 20 seconds; the full image after about 10 seconds or more. If it keeps
@@ -297,14 +289,12 @@ Fix it in this order:
 
 ### Engine Download
 
-<!-- TODO(v22-release): re-measure the full image's installed size with the final pins -->
-<!-- TODO(v22-release): the download size per new full container, from a fresh start with the final pins -->
-
 Each new container downloads its packages from `packages.trufo.ai` with the
 `sdk-download` key: the engine and, in the full image, the watermark engine
 (`trufo-pawprint`) with its model weights. It checks them against fixed hashes and
-installs them in `/tmp`; the full image's packages take about 100 MB there. A
-restart or a reboot reuses them; anything that creates a new container, such as
+installs them in `/tmp`; the full image's packages are about 70 MB to download and
+take about 100 MB there.
+A restart or a reboot reuses them; anything that creates a new container, such as
 `docker compose up -d` after a change or a pull, downloads them again. Within the hour
 after you revoke the `sdk-download` key, new containers can no longer start; running
 containers keep working, and so do restarted ones that still have the packages in
@@ -319,9 +309,6 @@ The service signs two files at a time; further requests wait their turn. A reque
 whose client disconnects while waiting is not signed. A signing request that has
 started finishes and is billed, even if its client disconnects; see
 [Retries and billing](../api/api_c2pa.md#errors).
-
-<!-- TODO(v22-release): re-measure the signing-only memory figures with the final pins -->
-<!-- TODO(v22-release): the full image's memory and CPU time for signing and watermarking, per media type, from W7 -->
 
 Each image's idle memory is in [Choose an Image](#choose-an-image). In the
 signing-only image, allow about 256 MiB for typical still images, and about 1.25 GiB
@@ -345,9 +332,6 @@ execution by default; add `exec`. In `compose.yaml`, under the service:
     tmpfs:
       - /tmp:exec
 ```
-
-<!-- TODO(v22-release): re-measure the full image's /tmp peak during install with the final pins -->
-<!-- TODO(v22-release): the full image's /tmp peak during a watermarking sign, per media type, from W7 -->
 
 A tmpfs `/tmp` starts empty, so each start of the container downloads the packages;
 it also counts toward the container's memory. In the full image, the packages take up
@@ -468,14 +452,11 @@ and points to each Debian package's license in `/usr/share/doc/`. In
 `/usr/share/doc/trufo-local/licenses/`, the full image adds the license texts its
 Python packages omit for the libraries they bundle.
 
-<!-- TODO(v22-release): re-measure the signing-only source image's size with the final pins -->
-<!-- TODO(v22-release): the full source image's size, from check 12 -->
-
 Each image version has a source image in the same repository, tagged with its
 version plus `-source` (`2.2.0-source`, `2.2.0-full-source`), holding the complete
 corresponding source code of its GPL-, LGPL- and MPL-licensed software. The full
 image's source image also holds the signing-only image's sources. The signing-only
-source image is about 1.2 GB. To extract one:
+source image is about 1.3 GB, and the full one about 1.4 GB. To extract one:
 
 ```bash
 docker create --platform linux/amd64 --name trufo-local-source ghcr.io/trufo-ai/trufo-local:2.2.0-source none
