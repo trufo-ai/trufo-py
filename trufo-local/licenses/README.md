@@ -46,4 +46,4 @@ You owe nothing under these third-party licenses to run an image. To redistribut
 
 ## Codec Patents
 
-The images contain H.264, HEVC and AAC encoders. When the full image watermarks a file, it re-encodes H.264 and HEVC video with x264 and x265, HEVC-coded HEIC and HEIF images with x265 through `heif-enc`, and AAC-LC audio with FFmpeg. Patent licensing for commercial codec use is separate from these copyright licenses, and is yours to assess.
+The images contain H.264, HEVC, ProRes and AAC encoders. When the full image watermarks a file, it re-encodes H.264 and HEVC video with x264 and x265, ProRes video with FFmpeg's `prores_ks` encoder, HEVC-coded HEIC and HEIF images with x265 through `heif-enc`, and AAC-LC audio with FFmpeg. Patent licensing for commercial codec use is separate from these copyright licenses, and is yours to assess.
