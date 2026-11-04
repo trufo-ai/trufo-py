@@ -45,7 +45,7 @@ class WatermarkIDAllocationMode(str, Enum):
         return selected
 
 
-# TODO(sunset-2026-12-31): WatermarkMode and the watermark 'mode' parameter go;
+# TODO(sunset-2027-01-31): WatermarkMode and the watermark 'mode' parameter go;
 # successor WatermarkIDAllocationMode
 class WatermarkMode(str, Enum):
     """Deprecated: use WatermarkIDAllocationMode.

@@ -6,15 +6,18 @@
 - Trufo's engine, `trufo-provenance`, builds the manifest locally, including any
   watermark;
 - Trufo receives the signing instructions, signs the claim with Trufo's certificate,
-  and (if elected) stores the finished manifest for soft-binding recovery and general
-  audit records.
+  and (unless opt-out), stores the finished manifest for soft-binding recovery and
+  general audit records.
 
 ## When to Use It
 
 Choose the Python SDK when the media must stay on your machine or is large, your
 callers are in Python on Linux, or you embed watermarks locally. For other languages
-or platforms, see [Local mode with the Docker image](docker.md). Cloud mode is
-simpler when uploading the media is fine.
+or platforms, see [Local mode with the Docker image](docker.md); its
+[full image](docker.md#choose-an-image) signs and watermarks like `trufo[local-full]`,
+but on CPU only and without the
+[Watermarking routes](../quickstart/6_watermarking.md#routes). Cloud mode is simpler
+when uploading the media is fine.
 
 ## Requirements
 
@@ -35,9 +38,11 @@ simpler when uploading the media is fine.
 
 The engine packages, `trufo-provenance` and `trufo-pawprint`, come from Trufo's private
 package index at `packages.trufo.ai`; the `trufo` package itself comes from public
-PyPI. Set up the index before installing an extra. It needs an `sdk-download` API
-key, created at [app.trufo.ai/settings/org](https://app.trufo.ai/settings/org#api-access)
-under *API Access → API Keys*. Creating one requires an active C2PA Signing or
+PyPI. The index also serves Trufo's build of `pillow-heif` (1.8.1+trufo.1), which
+the engine requires in both extras; a package mirror or allowlist needs it too. Set
+up the index before installing an extra. It needs an `sdk-download` API key, created
+at [app.trufo.ai/settings/org](https://app.trufo.ai/settings/org#api-access) under
+*API Access → API Keys*. Creating one requires an active C2PA Signing or
 Watermark API plan and the Trufo Library License, accepted at
 [Organization Settings → Agreements](https://app.trufo.ai/settings/org#agreements).
 
@@ -116,7 +121,8 @@ signed_bytes = sign_c2pa_distributed(api_key, media_bytes)
 ```
 
 Both helpers take the same `actions`, `assertions`, `manifest_settings`,
-`branded_gp_id` and `trufo_api_url` as `sign_c2pa()`, `transcode` included; see the
+`branded_gp_id`, `signed_input_policy`, `signed_ingredient_policy` and
+`trufo_api_url` as `sign_c2pa()`, `transcode` included; see the
 [C2PA Signing Quickstart](../quickstart/2_c2pa_signing.md) and
 [`actions`](../api/api_c2pa.md#actions). With `trufo[local-full]`, a `watermark`
 action embeds the mark locally; see the
@@ -124,13 +130,15 @@ action embeds the mark locally; see the
 by default: [Local mode](../api/api_c2pa.md#local-mode).
 
 Trufo's [notices](../api/api_c2pa.md#response-warnings) arrive as Python
-`UserWarning`s. When the SDK or engine version is deprecated, a notice gives the date
+`UserWarning`s. Refusals carry the same texts as in Cloud mode and are raised by the
+SDK call. When the SDK or engine version is deprecated, a notice gives the date
 after which signing with it returns `400 UnsupportedSDKVersion`; upgrade before then.
 
 ## Troubleshooting
 
-**`No matching distribution found for trufo-provenance…`** — pip cannot see the
-private index: set it up as in [Private Package Index](#private-package-index). On a
+**`No matching distribution found for trufo-provenance…` or `…for pillow-heif…`** —
+pip cannot see the private index: set it up as in
+[Private Package Index](#private-package-index). On a
 host other than Linux with CPython 3.12, use
 [Local mode with the Docker image](docker.md).
 
@@ -144,6 +152,17 @@ Library License (see [Private Package Index](#private-package-index)).
 
 **`RuntimeError: ffprobe is required for audio/video media probing.`** — install
 FFmpeg so that `ffprobe` is on the PATH (Debian and Ubuntu: `ffmpeg`).
+
+**`Test keys are not accepted on this host. Please use test.api.trufo.ai.`** — a
+`c2pa-sign-test` key sent to a production host, which `sign_c2pa_distributed()` calls
+by default. Use `sign_c2pa_distributed_test()`, or a `c2pa-sign-prod` key; see
+[Signing Modes](../api/api_c2pa.md#signing-modes).
+
+**`UnsupportedSDKVersion: …`** — the SDK or engine version is not supported, or the
+engine is too old for a feature the request uses; the message names the package and
+the reason.
+Upgrade `trufo` with its local engine extra, which installs `trufo-provenance`; see
+[Local mode](../api/api_c2pa.md#local-mode).
 
 For other platforms, use [Local mode with the Docker image](docker.md), or contact
 [support@trufo.ai](mailto:support@trufo.ai).

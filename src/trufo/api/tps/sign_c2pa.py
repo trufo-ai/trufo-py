@@ -31,7 +31,7 @@ from typing import Any
 import requests
 
 from trufo.api.endpoints import (
-    TPS_C2PA_SIGN,
+    TPS_C2PA_SIGN_PATH,
     TRUFO_API_URL,
     TRUFO_API_URL_TEST,
 )
@@ -155,7 +155,7 @@ def _validate_watermark_action(entry: Any) -> None:
     if "apply" in params:
         raise ValueError("The watermark 'apply' parameter has been replaced by 'effort_policy'.")
     if "mode" in params:
-        # TODO(sunset-2026-12-31): WatermarkMode and the watermark 'mode' parameter go;
+        # TODO(sunset-2027-01-31): WatermarkMode and the watermark 'mode' parameter go;
         # successor WatermarkIDAllocationMode
         if "wid_allocation_mode" in params:
             raise ValueError(
@@ -366,7 +366,7 @@ def submit_c2pa_sign(
             signed_ingredient_policy
         ).value
 
-    return _submit_task(api_key, TPS_C2PA_SIGN, body, trufo_api_url=trufo_api_url)
+    return _submit_task(api_key, TPS_C2PA_SIGN_PATH, body, trufo_api_url=trufo_api_url)
 
 
 def sign_c2pa_s3(
@@ -657,7 +657,7 @@ def sign_c2pa(
         task = wait_for_task(api_key, receipt.task_id, wait_seconds=wait_seconds, trufo_api_url=trufo_api_url)
         return _download_task_output(task)
     return _sign_c2pa_direct(
-        TPS_C2PA_SIGN,
+        TPS_C2PA_SIGN_PATH,
         api_key,
         media_bytes,
         actions=actions,
@@ -715,7 +715,7 @@ def sign_c2pa_test(
     """
     ExecutionMode.validate(execution_mode, test=True)
     return _sign_c2pa_direct(
-        TPS_C2PA_SIGN,
+        TPS_C2PA_SIGN_PATH,
         api_key,
         media_bytes,
         actions=actions,

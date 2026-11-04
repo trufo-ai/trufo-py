@@ -8,9 +8,9 @@ from dataclasses import dataclass
 import requests
 
 from trufo.api.endpoints import (
-    TPS_CONTENT_GET,
-    TPS_CONTENT_LIST,
-    TPS_CONTENT_STATUS,
+    TPS_CONTENT_GET_PATH,
+    TPS_CONTENT_LIST_PATH,
+    TPS_CONTENT_STATUS_PATH,
     TRUFO_API_URL,
 )
 from trufo.api.headers import sdk_headers
@@ -22,14 +22,15 @@ class ContentRecord:
 
     ``wid`` is the watermark ID once a mark is embedded (and, on the bind
     routes, committed) and ``mid`` the manifest ID once a manifest is captured;
-    a record with both is what public soft-binding resolution serves and what
-    soft-binding resolution maintenance charges for. A per-AI-system embed sets
+    a record with both is what public soft-binding resolution serves, and it
+    counts as one active ID until you deactivate it. A per-AI-system embed sets
     ``ai_system_wid``, your AI system's watermark ID, instead of ``wid``.
-    ``status`` is ``"active"`` or ``"inactive"``. Unknown future fields are ignored.
+    ``status`` is ``"active"`` or ``"inactive"``, or None without a ``wid``.
+    Unknown future fields are ignored.
     """
 
     cid: str
-    status: str
+    status: str | None
     origin: str
     mime_type: str
     create_ts: str
@@ -101,7 +102,7 @@ def get_content(
         requests.HTTPError: If the API returns a non-2xx response (404 when no
             record of yours matches).
     """
-    return _record(_post(api_key, trufo_api_url + TPS_CONTENT_GET, _key(cid, wid, mid)))
+    return _record(_post(api_key, trufo_api_url + TPS_CONTENT_GET_PATH, _key(cid, wid, mid)))
 
 
 def list_content(
@@ -141,7 +142,7 @@ def list_content(
     ):
         if value is not None:
             body[name] = value
-    payload = _post(api_key, trufo_api_url + TPS_CONTENT_LIST, body)
+    payload = _post(api_key, trufo_api_url + TPS_CONTENT_LIST_PATH, body)
     return ContentPage(
         items=[_record(item) for item in payload["items"]],
         next_cursor=payload.get("next_cursor"),
@@ -159,9 +160,9 @@ def set_content_status(
 ) -> ContentRecord:
     """Set one content record's lifecycle status.
 
-    ``"inactive"`` withdraws the record from public soft-binding resolution and
-    stops its soft-binding resolution maintenance from the next UTC day;
-    ``"active"`` restores it. Idempotent.
+    ``"inactive"`` withdraws the record from public soft-binding resolution
+    immediately and from active-ID counting at the next daily count;
+    ``"active"`` reverses both on the same timing. Idempotent.
 
     Args:
         api_key: API key with scope ``c2pa-sign-prod`` or ``watermark-prod``.
@@ -179,7 +180,8 @@ def set_content_status(
     Raises:
         ValueError: If not exactly one key is given.
         requests.HTTPError: If the API returns a non-2xx response (404 when no
-            record of yours matches).
+            record of yours matches, or for a record without a ``wid``, such as
+            a per-AI-system one).
     """
     body = {**_key(cid, wid, mid), "status": status}
-    return _record(_post(api_key, trufo_api_url + TPS_CONTENT_STATUS, body))
+    return _record(_post(api_key, trufo_api_url + TPS_CONTENT_STATUS_PATH, body))

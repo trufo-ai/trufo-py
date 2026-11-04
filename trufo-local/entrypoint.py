@@ -77,9 +77,9 @@ def is_trufo_api_url(url: str) -> bool:
     return parts.scheme == "https" and (hostname == "trufo.ai" or hostname.endswith(".trufo.ai"))
 
 
-def read_pinned_version() -> str:
-    """Return the engine version that requirements.txt pins."""
-    return re.match(r"trufo-provenance\[c2pa\]==(\S+) ", _REQUIREMENTS_FILE.read_text())[1]
+def read_pinned_versions() -> dict[str, str]:
+    """Return the versions that requirements.txt pins, by package name, in file order."""
+    return dict(re.findall(r"^([\w.-]+)(?:\[.*?\])?==(\S+)", _REQUIREMENTS_FILE.read_text(), re.M))
 
 
 def _check_index_access(api_key: str) -> None:
@@ -106,20 +106,26 @@ def _check_index_access(api_key: str) -> None:
         sys.exit(f"Could not reach packages.trufo.ai: {getattr(exc, 'reason', exc)}.")
 
 
-def _install_engine(api_key: str) -> None:
-    """Install the pinned engine from Trufo's package index, unless this container has it."""
-    version = read_pinned_version()
+def _install_pinned_packages(api_key: str) -> None:
+    """Install the pinned packages from Trufo's package index, unless this container has them."""
+    versions = read_pinned_versions()
+    pins = " and ".join(f"{name} {version}" for name, version in versions.items())
     try:
-        installed_version = importlib.metadata.version("trufo-provenance")
+        all_installed = all(
+            importlib.metadata.version(name) == version for name, version in versions.items()
+        )
     except importlib.metadata.PackageNotFoundError:
-        installed_version = None
-    if installed_version == version:
-        print(f"trufo-provenance {version} is already installed.", file=sys.stderr)
+        all_installed = False
+    if all_installed:
+        print(f"{pins} {'is' if len(versions) == 1 else 'are'} already installed.", file=sys.stderr)
         return
     # the engine's native bridge library cannot load from a noexec mount; tfprov loads without it
     if os.statvfs("/tmp").f_flag & os.ST_NOEXEC:
-        sys.exit(f"trufo-provenance {version} cannot run from /tmp. Mount /tmp without noexec.")
-    print(f"Installing trufo-provenance {version} from packages.trufo.ai.", file=sys.stderr)
+        sys.exit(
+            f"trufo-provenance {versions['trufo-provenance']} cannot run from /tmp. "
+            "Mount /tmp without noexec."
+        )
+    print(f"Installing {pins} from packages.trufo.ai.", file=sys.stderr)
     _check_index_access(api_key)
     # the key reaches pip through its environment only, never its arguments; --quiet keeps
     # pip's index line, which names the index URL, out of the log
@@ -182,7 +188,7 @@ def main() -> None:
     api_key = os.environ.get("TRUFO_SDK_DOWNLOAD_API_KEY", "")
     if not api_key:
         sys.exit("TRUFO_SDK_DOWNLOAD_API_KEY is not set. Set it to your sdk-download key.")
-    _install_engine(api_key)
+    _install_pinned_packages(api_key)
     uvicorn = [sys.executable, "-m", "uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8080"]
     os.execv(sys.executable, uvicorn)
 

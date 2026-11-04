@@ -8,7 +8,7 @@ from dataclasses import dataclass
 
 import requests
 
-from trufo.api.endpoints import TPS_CONTENT_RECOVER, TRUFO_API_URL
+from trufo.api.endpoints import TPS_CONTENT_RECOVER_PATH, TRUFO_API_URL
 from trufo.api.headers import sdk_headers
 from trufo.util.deprecation import deprecated_aliases
 
@@ -17,7 +17,7 @@ from trufo.util.deprecation import deprecated_aliases
 class RecoverContentResult:
     """Result of a watermark recovery call.
 
-    A provenance mark carries the stored C2PA manifest store as ``manifest_bytes``
+    A per-embed mark carries the stored C2PA manifest store as ``manifest_bytes``
     when one has been captured (validate it against your own copy of the
     media; ``manifest_json`` is its parse, present only when requested).
     A per-AI-system mark (``wid_allocation_mode="per_ai_system"``) carries the
@@ -65,13 +65,14 @@ def recover_content(
     Returns:
         Detection flag with, when detected, the watermark ID, a detection
         confidence in (0, 1], and the stored C2PA manifest store bytes when
-        available.
+        available; for a per-AI-system mark, ``ai_involvement`` and
+        ``ai_system`` instead of manifest bytes.
 
     Raises:
         requests.HTTPError: If the API returns a non-2xx response.
     """
     resp = requests.post(
-        trufo_api_url + TPS_CONTENT_RECOVER,
+        trufo_api_url + TPS_CONTENT_RECOVER_PATH,
         json={
             "media_input": base64.b64encode(media_bytes).decode(),
             "parse_manifest_json": parse_manifest_json,

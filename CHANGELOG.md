@@ -7,6 +7,77 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.0] — 2026-11-03
+<!-- TODO(v22-release): the publish date (2.1.0 took its publish day) -->
+
+### Added
+
+- [AI systems](docs/api/api_c2pa.md#ai-systems) (`TPS_AI_SYSTEM_ADD_PATH`,
+  `TPS_AI_SYSTEM_LIST_PATH`, `TPS_AI_SYSTEM_STATUS_PATH`) and the `ai_system`
+  entry that labels their output (`UserAssertion.AI_SYSTEM`, `AIInvolvement`).
+- [`signed_input_policy`](docs/api/api_c2pa.md#signed-inputs-and-ingredients)
+  and `signed_ingredient_policy` on the C2PA signing functions: `auto` (the
+  default) or `keep` (`SignedInputPolicy`, `SignedIngredientPolicy`).
+- `wid_allocation_mode` (`WatermarkIDAllocationMode`) on the
+  [`watermark`](docs/api/api_c2pa.md#watermark) action, `bind_watermark`,
+  `submit_bind_watermark` and `bind_reserve`: `per_embed` (the default) or
+  `per_ai_system`, the AI system's watermark ID (binds also take `ai_system_id`
+  and `ai_involvement`). `RecoverContentResult` adds `wid_allocation_mode`,
+  `ai_involvement` and `ai_system`; `ContentRecord` adds `ai_system_wid`.
+- `bind_watermark` and `wait_for_task` (watermark tasks) re-emit the server's
+  `warnings` as `TrufoServerWarning`; `BindWatermarkTaskResult` has `warnings`.
+- A `componentOf` or `inputTo` ingredient can be declared by its `format`, such
+  as `video/mp4`, instead of its `media`.
+- `action_history` entries accept a `description`, `c2pa.enhanced`,
+  `c2pa.mastered`, `c2pa.mixed`, `c2pa.remixed` and custom actions in your
+  organization's validated domains.
+- The full [`trufo-local`](docs/local/docker.md#choose-an-image) image
+  (`2.2-full`), which also embeds watermarks while signing.
+
+### Changed
+
+- Local-engine extras require trufo-provenance 2.2, which uses pillow-heif
+  1.8.1+trufo.1, Trufo's build on packages.trufo.ai, instead of pi-heif. It
+  bundles libheif 1.23.6, which fixes CVE-2026-84383, and has no x265 encoder.
+  After upgrading, `pip uninstall pi-heif` removes the unused package.
+- Under the default `auto` policies, C2PA data Trufo cannot read, such as a
+  malformed manifest store, is removed with a notice instead of refused (`keep`
+  still refuses it). A kept manifest that did not validate or is untrusted gets
+  a notice.
+- A declared ingredient (one without `media`) is always gathered: `placement:
+  "created"` on it returns 400. A `componentOf` ingredient's `media` may be in
+  any format with **Yes** under C2PA validate in
+  [Media format support](docs/api/media_format_support.md), not only an image.
+- At submission, a TASK sign runs the checks a REQUEST runs before processing
+  the media: `submit_c2pa_sign` and TASK `sign_c2pa` raise `requests.HTTPError`
+  for a refused request instead of `TaskFailedError`, and no task is created.
+- Production hosts refuse test keys in Local mode and on the upload link (410);
+  use the `_test` helpers, which call the test host.
+- Local mode keeps an ingredient's `media` on your machine (sending its SHA-256
+  and byte length) and passes on the engine's own notices as a `UserWarning`.
+
+### Deprecated
+
+- The `ai_disclosure` entry (`UserAssertion.AI_DISCLOSURE`) and its endpoints
+  (`TPS_C2PA_AI_DISCLOSURE_ADD`, `TPS_C2PA_AI_DISCLOSURE_LIST`) are refused by
+  the Trufo API from 2027-01-31; use the `ai_system` entry, which, under the
+  default `auto` policy, can refuse a signed camera-captured or human-created
+  input. AI disclosure registrations are not converted
+  ([migration](docs/quickstart/3_ai_labeling.md#moving-from-ai_disclosure)).
+- The watermark `mode` (the action's and the bind functions' `mode=`) and
+  `WatermarkMode` are refused by the Trufo API from 2027-01-31; use
+  `wid_allocation_mode` (`per_embed` replaces `provenance`).
+- `bind_watermark`, `submit_bind_watermark` and `bind_watermark_test` from
+  trufo-py 2.1 or earlier are refused by the Trufo API from 2027-01-31; upgrade
+  to 2.2.0 before then.
+- Local mode with trufo-provenance 2.0.x or earlier (trufo-py 2.0 or earlier) is
+  refused by the Trufo API from 2026-12-31, and with 2.1.x (trufo-py 2.1 and
+  the trufo-local 2.1 images) from 2027-01-31; upgrade to trufo-py 2.2.0 with
+  its local engine extra, or to a
+  [2.2 image](docs/local/docker.md#versions-and-upgrades).
+- Old endpoint constant names such as `TPS_C2PA_SIGN`: use the `_PATH` names,
+  such as `TPS_C2PA_SIGN_PATH`.
+
 ## [2.1.0] — 2026-10-25
 
 ### Added
@@ -523,7 +594,8 @@ Minor-version bump marks the general availability of the production C2PA signing
 - `trufo.intf`: credential storage and loading (env vars + file), CLI entry point.
 - PyPI trusted publishing via GitHub Actions (OIDC, no API tokens required).
 
-[Unreleased]: https://github.com/trufo-ai/trufo-py/compare/v2.1.0...HEAD
+[Unreleased]: https://github.com/trufo-ai/trufo-py/compare/v2.2.0...HEAD
+[2.2.0]: https://github.com/trufo-ai/trufo-py/compare/v2.1.0...v2.2.0
 [2.1.0]: https://github.com/trufo-ai/trufo-py/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/trufo-ai/trufo-py/compare/v1.5.4...v2.0.0
 [1.5.4]: https://github.com/trufo-ai/trufo-py/compare/v1.5.3...v1.5.4

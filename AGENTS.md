@@ -1,8 +1,8 @@
 # trufo-py
 
 Python SDK for the Trufo Provenance Service (TPS). Provides helpers for C2PA
-signing, CAWG identity and metadata assertions, AI-disclosure labeling, and
-certificate enrollment.
+signing, CAWG identity and metadata assertions, AI labeling with registered AI
+systems, and certificate enrollment.
 
 ## Key facts for AI assistants
 
@@ -16,14 +16,20 @@ certificate enrollment.
   `sdk-download` key; signing needs `libmagic`, and `ffprobe` for audio or video. See
   `docs/local/python.md`.
 - The Docker image `ghcr.io/trufo-ai/trufo-local` runs C2PA Signing in Local mode as
-  an HTTP service: `POST /c2pa/sign` names input and output files by path. The
-  `sdk-download` key goes in its `.env`; the `c2pa-sign-*` key is sent with each
-  request and never stored. Source in `trufo-local/`; guide `docs/local/docker.md`.
+  an HTTP service: `POST /c2pa/sign` names input and output files by path. Two
+  images: the signing-only image (`2.2`, the shipped default) and the full image
+  (`2.2-full`), which adds watermark embedding, on CPU only; neither has the `/bind`
+  routes. The `sdk-download` key goes in its `.env`; the `c2pa-sign-*` key is sent
+  with each request and never stored. Source in `trufo-local/`; guide
+  `docs/local/docker.md`.
 - Watermarking is **off by default**; a `["watermark", {...}]` action requests it, with
   `effort_policy` = `require` (bare default) / `require_if_supported` / `best_effort`
   setting failure tolerance (`WatermarkEffort` enum; `effort` is a deprecated alias)
-  and `mode` = `provenance` (default) / `compliance` selecting the mark kind
-  (`WatermarkMode`; compliance is a placeholder that raises `NotImplementedError`).
+  and `wid_allocation_mode` = `per_embed` (default) / `per_ai_system` (needs an
+  `ai_system` entry) selecting the watermark ID (`WatermarkIDAllocationMode`;
+  `per_asset` raises `NotImplementedError`). `mode` / `WatermarkMode` is a deprecated
+  alias until 2027-01-31T00:00:00+00:00.
+  <!-- TODO(sunset-2027-01-31): the mode sentence goes; successor wid_allocation_mode -->
   Format policy: see `docs/api/media_format_support.md`; do not duplicate its tables.
 - Routes: **C2PA Signing, Cloud / Local** (Trufo signs; `sign_c2pa`,
   `sign_c2pa_distributed`) and **Watermarking, Cloud / Local** (the caller signs with
@@ -31,24 +37,26 @@ certificate enrollment.
   `watermark_media` → `bind_commit`); prose says "Cloud mode" / "Local mode".
   Production bind needs a `watermark-prod` key, a C2PA Signing or
   Watermark API plan, and completed Organization Validation; `_test` variants use the
-  test host with `watermark-test`. Commit
+  test host with `watermark-test`. Commit (per-embed only)
   verifies the manifest declares the mark (soft-binding assertion +
-  `c2pa.watermarked.bound`). Compliance mode is unsupported.
+  `c2pa.watermarked.bound`).
 - In code: the `_distributed` functions; `origin` values `c2pa_hosted`,
   `c2pa_distributed`, `bind_hosted`, `bind_distributed`; tpts/lpts/tpls/lpls in
   docstrings.
 - Every production sign or bind creates a content record. `get_content` looks one up by
   `cid`, `wid`, or `mid`; `list_content` pages them oldest first (status / origin / creation
   window filters, ≤100 per page); `set_content_status(api_key, "inactive", wid=...)`
-  withdraws a mark from public soft-binding resolution and stops its soft-binding
-  resolution maintenance charge from the next UTC day. Production hosts only; no plan
+  withdraws a mark from public soft-binding resolution and from the daily count of
+  active IDs (billed per active ID per year). Production hosts only; no plan
   required.
 - `sign_c2pa_distributed()` uses the production remote signing endpoint and requires
   completed Organization Validation plus a `c2pa-sign-prod` API key.
 - `sign_c2pa_distributed_test()` uses the test remote signing endpoint and requires
   a `c2pa-sign-test` API key.
-- Test signing runs on its own host (`test.api.trufo.ai`, `TRUFO_API_URL_TEST`) with the
-  same routes as production; the legacy `/test/c2pa/sign` path remains during deprecation.
+- Test signing runs on its own host (`test.api.trufo.ai`, `TRUFO_API_URL_TEST`), which
+  serves the content routes (signing, recovery, binding), not the registries. The
+  production hosts refuse test keys for Local mode and upload links (410); the legacy
+  `/test/c2pa/sign` path answers 410.
 
 ## Documentation map
 
@@ -80,4 +88,4 @@ Two modes exist; see `docs/api/api_c2pa.md` for the full comparison.
 |---|---|---|---|
 | Cloud | `sign_c2pa`, `sign_c2pa_test` | No | Yes |
 | Local, Python SDK | `sign_c2pa_distributed`, `sign_c2pa_distributed_test` | Yes (`trufo[local-sign-only]`; `trufo[local-full]` for watermarking) | No |
-| Local, Docker image | `POST /c2pa/sign` on `trufo-local` | No (the container downloads the engine) | No |
+| Local, Docker image | `POST /c2pa/sign` on `trufo-local` | No (the container downloads the engine; `2.2-full` for watermarking) | No |

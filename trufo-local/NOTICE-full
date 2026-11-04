@@ -1,0 +1,46 @@
+trufo-local
+Copyright 2025-2026 Trufo Inc. All rights reserved.
+
+trufo-local and the trufo package are distributed under the Apache License 2.0.
+
+The Trufo provenance engine (trufo-provenance) is not part of this image. The
+container downloads it at start with your sdk-download key. It is distributed
+under the Trufo Library License v1.0.0
+(https://trufo.ai/legal/trufo_library_license/v_1_0_0.html).
+
+The Trufo watermark engine (trufo-pawprint), including its model weights, is
+not part of this image. The container downloads it at start with your
+sdk-download key. It is distributed under the Trufo Library License v1.0.0
+(https://trufo.ai/legal/trufo_library_license/v_1_0_0.html).
+
+This image contains third-party software under its own licenses, including
+software under the GNU GPL and LGPL: a GPL build of FFmpeg from Debian,
+including x264 and x265, which runs as a separate program; Debian's heif-enc,
+with its x265 and libaom encoders, which also runs as a separate program; the
+FFmpeg, libgfortran and libquadmath libraries bundled with
+opencv-python-headless and numpy (libquadmath on amd64 only); the libheif and
+libde265 libraries bundled with pillow-heif; the libgomp library bundled with
+torch and imagecodecs; on arm64, the libgfortran library bundled with torch;
+the libsndfile, LAME and mpg123 libraries bundled with soundfile; and
+autocommand, vendored in setuptools. The copyright and license of each Debian
+package are in /usr/share/doc/. The license texts that the bundled libraries'
+Python packages leave out are in /usr/share/doc/trufo-local/licenses/.
+
+The complete corresponding source code of the GPL-, LGPL- and MPL-licensed
+software in this image is published in the same repository as this image (for
+example, ghcr.io/trufo-ai/trufo-local), under this image's version tag plus
+"-source" (for example, 2.2.0-full-source). The image's
+ai.trufo.trufo-local.source label names it.
+
+Trufo also offers this source code on request. For at least three years after
+Trufo last distributes an image version, Trufo Inc. will give any third party a
+complete machine-readable copy of the corresponding source code of the GPL-,
+LGPL- and MPL-licensed software in that version, on a medium customarily used
+for software interchange, for no more than Trufo's cost of physically
+performing the distribution. Send requests to legal@trufo.ai and name the image
+version (for example, 2.2.0-full).
+
+Trufo grants no license under any third-party patent that may cover the audio
+and video formats this software handles, such as H.264, HEVC and AAC. You are
+responsible for determining and obtaining any patent licenses your use
+requires.

@@ -128,6 +128,31 @@ for the full settings.
 
 ---
 
+## Signed Inputs
+
+Trufo keeps a C2PA manifest the input already carries: the input becomes the parent
+ingredient of the new manifest, with the old manifest's validation results recorded.
+Under the default `signed_input_policy`, `auto`, C2PA data Trufo cannot read is
+removed, with a notice, and the file signed as if it carried none. `keep` refuses
+such data instead, and changes nothing else without an
+[`ai_system`](3_ai_labeling.md) entry. Both refuse a manifest only referenced by URL.
+
+```python
+from trufo.c2pa import SignedInputPolicy
+
+signed_bytes = sign_c2pa_test(
+    api_key,
+    media_bytes,
+    signed_input_policy=SignedInputPolicy.KEEP,
+)
+```
+
+Ingredients that carry their own manifests are covered in
+[5_ingredients.md](5_ingredients.md); every case is listed under
+[Signed inputs and ingredients](../api/api_c2pa.md#signed-inputs-and-ingredients).
+
+---
+
 ## S3 Signing
 
 For large media, upload to an ephemeral Trufo-signed S3 location instead of
@@ -147,7 +172,7 @@ Use TASK for files above 10 MB (10,000,000 bytes), and for audio, video, or othe
 non-image processing (e.g. watermarking or transcoding). Signing-only calls for
 supported formats under the size cap can use REQUEST. The SDK defaults to REQUEST
 and never switches modes automatically; requests requiring TASK are rejected.
-TASK is not supported on the test host.
+TASK is not supported on the test host, and uploads need a production key.
 
 The legacy S3 helpers are deprecated:
 
@@ -208,9 +233,12 @@ with requests.get(completed.result.download_url, stream=True, timeout=120) as re
 `submit_c2pa_sign()` always submits a TASK, so it takes no `execution_mode`
 argument. Reuse an existing Trufo upload reference to skip the upload step;
 arbitrary S3 URLs are not accepted. Download from `download_url`, not the opaque
-`media_output_s3` reference. `wait_for_task()` raises `TaskFailedError` for a failed or
-expired task; its `.task` contains the status and error code. Increasing
-`wait_seconds` does not increase the server's execution timeout.
+`media_output_s3` reference. `submit_c2pa_sign()` raises `requests.HTTPError` for a
+request Trufo refuses; read the reason from `err.response.json()["detail"]`. No task
+is created. `wait_for_task()` raises `TaskFailedError` for a failed or expired task;
+its `.task.error_code` and `.task.error_http_status` say why
+([Tasks](../api/api_c2pa.md#tasks)). Increasing `wait_seconds` does not increase the
+server's execution timeout.
 
 ---
 
@@ -268,12 +296,21 @@ Use the test helpers until OV is complete.
 **`403 APIKeyScopeNotAllowed`** — the key's scope doesn't match: `c2pa-sign-prod`
 for production, `c2pa-sign-test` for test.
 
+**`410 Test keys can't use upload links. On test.api.trufo.ai, send the media in the request.`**
+— a test key asked a production host for an upload link. Upload with a
+`c2pa-sign-prod` key, or use `sign_c2pa_test()`.
+See [`POST /io/get-s3-upload-url`](../api/api_c2pa.md#post-ioget-s3-upload-url).
+
 **Local mode errors** (`ImportError`, `ffprobe`, package index) — see
 [Troubleshooting](../local/python.md#troubleshooting) in Local mode with the Python SDK.
 
-**The sign succeeded but something was skipped** — check the response `warnings`;
-the SDK re-emits them as `TrufoServerWarning`. See
-[`warnings`](../api/api_c2pa.md#response-warnings).
+**`The input carries C2PA data that Trufo cannot read, so Trufo cannot keep or validate it. Please send a copy with intact C2PA data, or contact support@trufo.ai.`**
+— no manifest could be read from the input's C2PA data; see [Signed Inputs](#signed-inputs)
+for when Trufo refuses it.
+
+**The sign succeeded with notices** (for example, a skipped watermark, or an input
+manifest that did not validate or is untrusted) — check the response `warnings`; the
+SDK re-emits them as `TrufoServerWarning`. See [`warnings`](../api/api_c2pa.md#response-warnings).
 
 ---
 

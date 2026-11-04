@@ -3,6 +3,7 @@
 
 """Tests for the trufo-local service: path checks, error mapping and sign slots."""
 
+import importlib.metadata
 import json
 import os
 import threading
@@ -17,6 +18,7 @@ pytest.importorskip("tfprov", minversion="2.1.1")
 import app as service  # noqa: E402
 import tfprov  # noqa: E402
 from fastapi.testclient import TestClient  # noqa: E402
+from tfprov.c2pa_generator.trufo_actions import WatermarkApplyError  # noqa: E402
 from tfprov.c2pa_py.errors import RedactionError, RemoteSignError  # noqa: E402
 
 API_KEY = "c2pa-sign-test:key"
@@ -62,7 +64,32 @@ def engine(monkeypatch):
 
 
 @pytest.fixture
-def client(folders, engine):
+def no_watermark_engine(monkeypatch):
+    """Report the watermark engine as not installed, whatever this environment has."""
+    version = importlib.metadata.version
+
+    def fake_version(name):
+        if name == "trufo-pawprint":
+            raise importlib.metadata.PackageNotFoundError(name)
+        return version(name)
+
+    monkeypatch.setattr(importlib.metadata, "version", fake_version)
+
+
+@pytest.fixture
+def watermark_engine(no_watermark_engine, monkeypatch):
+    """Report the watermark engine as installed; list it before client, which reads it at start."""
+    version = importlib.metadata.version
+    monkeypatch.setattr(
+        importlib.metadata,
+        "version",
+        lambda name: "0.5.2" if name == "trufo-pawprint" else version(name),
+    )
+    monkeypatch.setattr(service, "require_watermark_engine", lambda: None)
+
+
+@pytest.fixture
+def client(folders, engine, no_watermark_engine):
     with TestClient(service.app, raise_server_exceptions=False) as client:
         yield client
 
@@ -129,6 +156,8 @@ def test_accepted(sign, folders, engine):
         "ingredient_title": "photo.jpg",
         "manifest_settings": {"all_actions_included": True},
         "branded_gp_id": "gp_1",
+        "signed_input_policy": "keep",
+        "signed_ingredient_policy": "auto",
     }
     response = sign(
         **{IN: f"{folders}/in/link.jpg", OUT: f"{folders}/both/signed.jpg"},
@@ -148,6 +177,12 @@ def test_accepted(sign, folders, engine):
             **fields,
         }
     ]
+
+
+@pytest.mark.parametrize("field", ["signed_input_policy", "signed_ingredient_policy"])
+def test_bad_policy(sign, engine, field):
+    assert sign(**{field: "bogus"}).status_code == 422
+    assert engine.calls == []
 
 
 @pytest.mark.parametrize(
@@ -175,15 +210,56 @@ def test_accepted(sign, folders, engine):
         pytest.param(RemoteSignError("Not JSON.", status_code=400), 502, "TrufoAPIError", id="400"),
         pytest.param(ValueError("Refused."), 400, "Refused.", id="engine refusal"),
         pytest.param(RedactionError("Refused."), 400, "Refused.", id="redaction"),
+        pytest.param(WatermarkApplyError("Not marked."), 400, "Not marked.", id="watermark failed"),
         pytest.param(_remove_input, 404, "MediaInputPathNotFound", id="input removed"),
         pytest.param(FileNotFoundError(), 500, "Internal server error.", id="other file"),
         pytest.param(RuntimeError(), 500, "Internal server error.", id="unexpected"),
+        pytest.param(NotImplementedError(), 500, "Internal server error.", id="not implemented"),
     ],
 )
 def test_engine_errors(sign, engine, side_effect, status, detail):
     engine.side_effect = side_effect
     response = sign()
     assert (response.status_code, response.json()) == (status, {"detail": detail})
+
+
+def test_watermark_engine_installed(watermark_engine, client, sign, engine):
+    actions = [["watermark", {"effort": "require"}]]
+    response = sign(actions=actions)
+    assert response.status_code == 200
+    assert response.json()["warnings"] == [
+        "The watermark 'effort' parameter is deprecated; use 'effort_policy'.",
+        "A warning.",
+    ]
+    assert engine.calls[0]["actions"] == actions
+    assert client.get("/health").json()["watermark_engine_version"] == "0.5.2"
+
+
+@pytest.mark.parametrize(
+    "params, status, detail",
+    [
+        pytest.param(
+            {"wid_allocation_mode": "per_asset"},
+            501,
+            "Per-asset watermark ID allocation is not supported.",
+            id="per asset",
+        ),
+        pytest.param({"mode": "bogus"}, 400, "Invalid watermark mode.", id="bad mode"),
+    ],
+)
+def test_watermark_refused(watermark_engine, sign, engine, params, status, detail):
+    response = sign(actions=[["watermark", params]])
+    assert (response.status_code, response.json()) == (status, {"detail": detail})
+    assert engine.calls == []
+
+
+def test_unimportable_watermark_engine_fails_the_start(watermark_engine, folders, monkeypatch):
+    def require_watermark_engine():
+        raise ImportError
+
+    monkeypatch.setattr(service, "require_watermark_engine", require_watermark_engine)
+    with pytest.raises(ImportError), TestClient(service.app):
+        pass
 
 
 def test_two_signs_at_a_time_while_health_answers(client, sign, folders, engine):

@@ -17,9 +17,9 @@ from dataclasses import dataclass
 import requests
 
 from trufo.api.endpoints import (
-    ACCOUNT_REFRESH,
-    DEVICE_AUTHORIZE,
-    DEVICE_TOKEN,
+    ACCOUNT_REFRESH_PATH,
+    DEVICE_AUTHORIZE_PATH,
+    DEVICE_TOKEN_PATH,
     TRUFO_API_URL,
 )
 from trufo.api.headers import sdk_headers
@@ -64,7 +64,7 @@ def initiate_device_auth(
         RuntimeError: If the request fails.
     """
     resp = requests.post(
-        f"{base_url}{DEVICE_AUTHORIZE}",
+        f"{base_url}{DEVICE_AUTHORIZE_PATH}",
         headers=sdk_headers(api_key),
         timeout=30,
     )
@@ -110,7 +110,7 @@ def poll_for_tokens(
 
     while time.monotonic() < deadline:
         resp = requests.post(
-            f"{base_url}{DEVICE_TOKEN}",
+            f"{base_url}{DEVICE_TOKEN_PATH}",
             headers=sdk_headers(api_key, **{"Content-Type": "application/json"}),
             json={"device_code": device_code},
             timeout=30,
@@ -160,7 +160,7 @@ def refresh_tokens(
         RuntimeError: If the refresh fails (token expired, revoked, etc.).
     """
     resp = requests.post(
-        f"{base_url}{ACCOUNT_REFRESH}",
+        f"{base_url}{ACCOUNT_REFRESH_PATH}",
         json={"refresh_token": refresh_token},
         timeout=30,
     )

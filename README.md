@@ -35,7 +35,7 @@ That is a complete C2PA signature — Trufo assembles and signs the manifest, so
 ## What You Can Do
 
 - **Sign C2PA manifests** — in [Cloud mode](docs/quickstart/2_c2pa_signing.md), or in [Local mode](#c2pa-signing-local) so media never leaves your machine
-- **Label AI-generated content** with [C2PA AI disclosures](docs/quickstart/3_ai_labeling.md)
+- **Label AI-generated content** by naming the [registered AI system](docs/quickstart/3_ai_labeling.md) that generates or modifies it
 - **Stamp organization identity and metadata** via [CAWG](docs/quickstart/4_cawg_publish.md)
 - **Embed and recover watermarks** that [survive manifest stripping](docs/quickstart/6_watermarking.md), with Trufo signing or your own
 - **Manage your content records** — look up, list, and switch off the marks you keep resolvable ([content records](docs/api/api_c2pa.md#content-records))
@@ -47,7 +47,7 @@ That is a complete C2PA signature — Trufo assembles and signs the manifest, so
 In Local mode, your media stays on your machine: Trufo's engine builds the manifest locally, and Trufo receives the signing instructions and signs the claim. Two ways to run it:
 
 - **Python SDK:** `sign_c2pa_distributed()` with the `trufo[local-sign-only]` or `trufo[local-full]` extra; `local-full` adds local watermark embedding. See [Local mode with the Python SDK](docs/local/python.md).
-- **Docker image:** `ghcr.io/trufo-ai/trufo-local`, an HTTP service on your machine that signs files by path, for callers in any language. See [Local mode with the Docker image](docs/local/docker.md).
+- **Docker image:** `ghcr.io/trufo-ai/trufo-local`, an HTTP service on your machine that signs files by path, for callers in any language; the full image (`2.2-full`) adds watermark embedding. See [Local mode with the Docker image](docs/local/docker.md).
 
 ## Workflow Examples (Quickstart)
 

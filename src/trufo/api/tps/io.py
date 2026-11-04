@@ -7,7 +7,7 @@ from dataclasses import dataclass
 
 import requests
 
-from trufo.api.endpoints import TPS_GET_S3_UPLOAD_URL, TRUFO_API_URL
+from trufo.api.endpoints import TPS_GET_S3_UPLOAD_URL_PATH, TRUFO_API_URL
 from trufo.api.headers import sdk_headers
 from trufo.util.deprecation import deprecated_aliases
 
@@ -39,7 +39,7 @@ def get_s3_upload_url(
     if duration is not None:
         body["duration"] = duration
     response = requests.post(
-        trufo_api_url + TPS_GET_S3_UPLOAD_URL,
+        trufo_api_url + TPS_GET_S3_UPLOAD_URL_PATH,
         json=body,
         headers=sdk_headers(api_key),
         timeout=60,

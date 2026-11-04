@@ -2,7 +2,7 @@
 
 This reference defines media eligibility for C2PA generation and validation, and
 Trufo watermark embedding and recovery. It covers Cloud mode and Local mode as of
-Trufo SDK 2.1.0 with Provenance 2.1.2 and Pawprint 0.5.1.
+Trufo SDK 2.2.0 with Provenance 2.2.0 and Pawprint 0.5.3.
 
 A file is supported when its MIME type is eligible for the operation and the file
 passes that operation's checks; a supported container does not make every file in
@@ -35,6 +35,10 @@ does not guarantee that an ID is detected or recovered.
 Types not listed as eligible are unsupported. C2PA signing accepts images of at
 most 400 million pixels. The restrictions sections below apply to watermark
 operations only; they do not define C2PA codec or pixel-depth limits.
+
+An ingredient sent as `media` must be in a format with **Yes** under C2PA
+validate; other formats can be declared with `format` instead (see
+[`ingredient`](api_c2pa.md#ingredient)).
 
 Media type is detected from the content. Common aliases are normalized:
 `audio/x-wav` and `audio/vnd.wave` to `audio/wav`, `audio/x-flac` to

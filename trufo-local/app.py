@@ -5,11 +5,13 @@
 
 ``POST /c2pa/sign`` takes the Trufo API's sign request fields, with an input and an output
 path in place of the media, and signs through Trufo's distributed flow: the files stay in
-their folders, and only the claim goes to Trufo. ``GET /health`` reports the image's version
-and the engine's.
+their folders, and only the claim goes to Trufo. When the watermark engine is installed, the
+service also watermarks. ``GET /health`` reports the image's version and the engine's, and
+the watermark engine's when it is installed.
 """
 
 import asyncio
+import importlib.metadata
 import logging
 import os
 from contextlib import asynccontextmanager
@@ -22,10 +24,16 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel
 from tfprov.c2pa_generator.remote_orchestrator import generate_claim_remote
-from tfprov.c2pa_generator.sb_watermark import is_watermark_entry
+from tfprov.c2pa_generator.sb_watermark import (
+    is_watermark_entry,
+    require_watermark_engine,
+    validate_and_strip_watermark,
+)
+from tfprov.c2pa_generator.trufo_actions import WatermarkApplyError
 from tfprov.c2pa_py.errors import RedactionError, RemoteSignError
 
 from trufo.api.endpoints import TRUFO_API_URL
+from trufo.c2pa.manifest import SignedIngredientPolicy, SignedInputPolicy
 
 logger = logging.getLogger(__name__)
 
@@ -44,15 +52,18 @@ class C2PASignRequest(BaseModel):
     ingredient_title: str | None = None
     manifest_settings: dict[str, Any] | None = None
     branded_gp_id: str | None = None
+    signed_input_policy: SignedInputPolicy | None = None
+    signed_ingredient_policy: SignedIngredientPolicy | None = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Read the settings once, at start."""
+    """Read the settings and check the watermark engine once, at start."""
     app.state.input_dirs = parse_folder_list("TRUFO_LOCAL_INPUT_DIRS", "read")
     app.state.output_dirs = parse_folder_list("TRUFO_LOCAL_OUTPUT_DIRS", "write to")
     app.state.trufo_api_url = os.environ.get("TRUFO_API_URL", TRUFO_API_URL)
     app.state.version = os.environ["TRUFO_LOCAL_VERSION"]
+    app.state.watermark_engine_version = _watermark_engine_version()
     app.state.sign_slots = asyncio.BoundedSemaphore(_SIGN_SLOTS)
     yield
 
@@ -68,12 +79,16 @@ async def internal_error_handler(request: Request, exc: Exception) -> JSONRespon
 
 @app.get("/health")
 async def health(request: Request) -> dict:
-    """Report the image's version and the installed engine's."""
-    return {
+    """Report the versions of the image, its engine and, if installed, its watermark engine."""
+    state = request.app.state
+    report = {
         "status": "healthy",
-        "version": request.app.state.version,
+        "version": state.version,
         "engine_version": tfprov.__version__,
     }
+    if state.watermark_engine_version is not None:
+        report["watermark_engine_version"] = state.watermark_engine_version
+    return report
 
 
 @app.post("/c2pa/sign", response_model=None)
@@ -82,9 +97,19 @@ async def sign(body: C2PASignRequest, request: Request) -> dict | Response:
     api_key = request.headers.get("X-API-Key", "")
     if not api_key:
         raise HTTPException(status_code=401, detail="MissingAuthentication")
-    if any(is_watermark_entry(entry) for entry in body.actions):
-        raise HTTPException(status_code=400, detail="WatermarkNotAvailable")
     state = request.app.state
+    validation_warnings = []
+    if any(is_watermark_entry(entry) for entry in body.actions):
+        if state.watermark_engine_version is None:
+            raise HTTPException(status_code=400, detail="WatermarkNotAvailable")
+        # only validate_and_strip_watermark's NotImplementedError is a 501; the engine
+        # validates again but does not return these warnings
+        try:
+            _, _, validation_warnings = validate_and_strip_watermark(body.actions)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        except NotImplementedError as exc:
+            raise HTTPException(status_code=501, detail=str(exc)) from exc
     # in a thread, so a stalled folder mount cannot stall the server
     media_input_path, media_output_path = await asyncio.to_thread(
         _check_paths, body, state.input_dirs, state.output_dirs
@@ -107,6 +132,8 @@ async def sign(body: C2PASignRequest, request: Request) -> dict | Response:
                 ingredient_title=body.ingredient_title,
                 manifest_settings=body.manifest_settings,
                 branded_gp_id=body.branded_gp_id,
+                signed_input_policy=body.signed_input_policy,
+                signed_ingredient_policy=body.signed_ingredient_policy,
             )
         except RemoteSignError as exc:
             # trufo's own 4xx errors pass through; any other trufo failure is upstream's
@@ -118,14 +145,29 @@ async def sign(body: C2PASignRequest, request: Request) -> dict | Response:
                 raise HTTPException(status_code=exc.status_code, detail=exc.detail) from exc
             logger.warning("%s", exc)
             raise HTTPException(status_code=502, detail="TrufoAPIError") from exc
-        except (RedactionError, ValueError) as exc:
+        except (RedactionError, ValueError, WatermarkApplyError) as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         except FileNotFoundError as exc:
             # the engine raises it for other missing files too, such as ffprobe
             if not await asyncio.to_thread(os.path.isfile, media_input_path):
                 raise HTTPException(status_code=404, detail="MediaInputPathNotFound") from exc
             raise
-    return {"media_output_path": written_path, "warnings": warnings}
+    return {"media_output_path": written_path, "warnings": validation_warnings + warnings}
+
+
+def _watermark_engine_version() -> str | None:
+    """Return the watermark engine's version, or None if it is not installed.
+
+    Raises:
+        ImportError: If it is installed but cannot be imported.
+    """
+    try:
+        version = importlib.metadata.version("trufo-pawprint")
+    except importlib.metadata.PackageNotFoundError:
+        return None
+    # a broken install fails the start, not the first watermark request
+    require_watermark_engine()
+    return version
 
 
 def _check_paths(
