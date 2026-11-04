@@ -128,6 +128,31 @@ for the full settings.
 
 ---
 
+## Signed Inputs
+
+Trufo keeps a C2PA manifest the input already carries: the input becomes the parent
+ingredient of the new manifest, with the old manifest's validation results recorded.
+Under the default `signed_input_policy`, `auto`, C2PA data Trufo cannot read is
+removed and the file signed as if it carried none, with a notice. Without an
+[`ai_system`](3_ai_labeling.md) entry, `keep` changes only that: it refuses such
+data.
+
+```python
+from trufo.c2pa import SignedInputPolicy
+
+signed_bytes = sign_c2pa_test(
+    api_key,
+    media_bytes,
+    signed_input_policy=SignedInputPolicy.KEEP,
+)
+```
+
+Ingredients that carry their own manifests are covered in
+[5_ingredients.md](5_ingredients.md); every case is listed under
+[Signed inputs and ingredients](../api/api_c2pa.md#signed-inputs-and-ingredients).
+
+---
+
 ## S3 Signing
 
 For large media, upload to an ephemeral Trufo-signed S3 location instead of
@@ -271,9 +296,15 @@ for production, `c2pa-sign-test` for test.
 **Local mode errors** (`ImportError`, `ffprobe`, package index) — see
 [Troubleshooting](../local/python.md#troubleshooting) in Local mode with the Python SDK.
 
-**The sign succeeded but something was skipped** — check the response `warnings`;
-the SDK re-emits them as `TrufoServerWarning`. See
-[`warnings`](../api/api_c2pa.md#response-warnings).
+**`The input carries C2PA data that Trufo cannot read, so Trufo cannot keep or validate it. Please send a copy with intact C2PA data, or contact support@trufo.ai.`**
+— no manifest could be read from the input's C2PA data. `keep` refuses such data,
+and both values refuse a manifest only referenced by URL; otherwise `auto` removes
+the data and signs. See
+[Signed inputs and ingredients](../api/api_c2pa.md#signed-inputs-and-ingredients).
+
+**The sign succeeded with notices** (for example, a skipped watermark, or an input
+manifest that did not validate or is untrusted) — check the response `warnings`; the
+SDK re-emits them as `TrufoServerWarning`. See [`warnings`](../api/api_c2pa.md#response-warnings).
 
 ---
 

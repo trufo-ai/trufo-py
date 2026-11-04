@@ -7,11 +7,20 @@ Manage the ingredients of a signed asset — the prior assets carried into its m
 Describe prior or contributing assets in the manifest. Each
 `["ingredient", {...}]` entry belongs in `assertions`; it is gathered by default.
 
-Three relationships are available. Entries may carry base64 `media`, which is
-validated when it has provenance and thumbnailed when supported:
+An entry either sends the file as base64 `media`, in a format with **Yes** under
+C2PA validate in [Media format support](../api/media_format_support.md), or
+declares it without `media`, as a `componentOf` or `inputTo`. A sent file's
+readable C2PA history is always kept with the ingredient;
+[`signed_ingredient_policy`](../api/api_c2pa.md#signed-inputs-and-ingredients) sets
+what happens to C2PA data Trufo cannot read. The file is thumbnailed when
+supported. A declared file gives its media type in `format` (optional for an
+`inputTo`); no history is looked for, and validators report its provenance as
+unknown.
+
+Three relationships are available:
 
 - **`inputTo`** — an input to a computational process: a prompt, model, or dataset. Use `data_types` to say which (`c2pa.types.prompt`, `c2pa.types.model`, `c2pa.types.dataset`, ...).
-- **`componentOf`** — a placed component of a composition; requires `media` in a thumbnail-capable image format.
+- **`componentOf`** — a placed component of a composition; send it as `media`, or declare it with `format`.
 - **`parentOf`** — the source asset before the edits represented by the active
   input. It requires `media`, is always a created declaration, and there may be
   at most one.
@@ -23,9 +32,13 @@ signed_bytes = sign_c2pa(
     assertions=[
         ["ingredient", {"relationship": "inputTo", "title": "prompt.txt",
                         "data_types": [{"type": "c2pa.types.prompt"}]}],
+        ["ingredient", {"relationship": "componentOf", "format": "video/webm",
+                        "title": "intro.webm"}],
     ],
 )
 ```
+
+WebM has no C2PA support, so `intro.webm` can only be declared.
 
 ## Branded provenance declarations
 
@@ -78,7 +91,11 @@ assertions = [[
 
 Creation and `parentOf` are always placed in the created claim set. Eligible AI,
 custom, component, and input assertions opt in with an inline
-`"placement": "created"`; CAWG assertions do not support created placement.
+`"placement": "created"`; a component or input needs its file sent as `media` for
+that. A declared ingredient is always gathered; created placement for it is refused
+for now and may be supported later. CAWG assertions do not support created
+placement, and the `ai_system` entry takes no `placement` (it accepts only
+`ai_system_id` and `ai_involvement`).
 
 Normal signing defaults `allActionsIncluded` to true. Elevated requests
 (creation, `parentOf`, action history, or a created placement) default it to

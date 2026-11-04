@@ -61,7 +61,8 @@ injected server-side and not suppressible by the caller:
 ### Response warnings
 
 Sign responses include a `warnings` list of non-fatal notices — work the server
-completed differently than requested. In Cloud mode, the Python SDK re-emits each as
+completed differently than requested, and what Trufo found in the C2PA data of the
+input or an ingredient. In Cloud mode, the Python SDK re-emits each as
 a `TrufoServerWarning`; in Local mode, the engine emits each as a plain `UserWarning`,
 the base class of `TrufoServerWarning`, so filter on `UserWarning` to catch both:
 
@@ -74,7 +75,7 @@ with warnings.catch_warnings(record=True) as caught:
     warnings.simplefilter("always", TrufoServerWarning)
     signed = sign_c2pa(api_key, media_bytes, actions=actions)
 
-if caught:  # signed, but something was skipped — e.g. no watermark embedded
+if caught:  # signed, with notices — e.g. no watermark embedded, or an untrusted input manifest
     for w in caught:
         log.warning("Trufo notice: %s", w.message)
 ```
@@ -85,9 +86,11 @@ routes them to the `py.warnings` logger.
 
 Messages you may see: a declined watermark
 (`Watermarking is not supported for '<mime>' media…`), a best-effort watermark
-failure (`Watermarking failed: …`), and, in Local mode, SDK-version deprecation
-notices, which give the date after which signing with that version returns
-`400 UnsupportedSDKVersion`.
+failure (`Watermarking failed: …`), notices about the C2PA data of the input or
+an ingredient (listed under
+[Signed inputs and ingredients](#signed-inputs-and-ingredients)), and, in Local
+mode, SDK-version deprecation notices, which give the date after which signing
+with that version returns `400 UnsupportedSDKVersion`.
 
 ### Errors
 
@@ -95,7 +98,7 @@ Beyond the platform-wide codes in [api_trufo.md](api_trufo.md):
 
 | Status | `detail` | Meaning |
 | ------ | -------- | ------- |
-| 400 | *(message)* | Request validation — malformed `actions`/`assertions`, watermark contract violations, an unsatisfiable redaction |
+| 400 | *(message)* | Request validation — malformed `actions`/`assertions`, watermark contract violations, an unsatisfiable redaction, a refused [`ingredient`](#ingredient) or [signed input](#signed-inputs-and-ingredients) |
 | 400 | `AISystemInactive: …` | An inactive AI system (see [`ai_system`](#ai_system)) |
 | 400 | `InvalidCawgIdentityId` | Unknown `cawg_identity_id` |
 | 400 | `MissingC2PACustomDomain` | A `custom` assertion without a label |
@@ -148,6 +151,8 @@ permanent signing record.
 | `ingredient_title` | string | No | The ingredient title assigned to the input asset (parent, via a `c2pa.opened` action). When unset: the input's manifest title, if it exists; otherwise, `input.{ext}`. |
 | `manifest_settings` | object | No | Structured titles, thumbnail settings, and `all_actions_included`. |
 | `branded_gp_id` | string | No | One of your organization's branded generator products (`gp_...`, listed on the dashboard's C2PA Signing API page, **Manage** tab); the content is signed as that product. Omit to sign with Trufo's own C2PA signer. |
+| `signed_input_policy` | string | No | What happens when the input file already carries a C2PA manifest: `keep` or `auto`. When omitted, `auto` applies. See [Signed inputs and ingredients](#signed-inputs-and-ingredients). |
+| `signed_ingredient_policy` | string | No | What happens when an ingredient's media already carries a C2PA manifest: `keep` or `auto`. When omitted, `auto` applies. See [Signed inputs and ingredients](#signed-inputs-and-ingredients). |
 
 \* Provide exactly one: bytes for REQUEST, an S3 reference for TASK. There is no
 automatic fallback. REQUEST has a 10 MB (10,000,000-byte) input cap; audio/video
@@ -296,7 +301,9 @@ the host's operating system and kernel release as `operating_system`, for exampl
 `Linux 6.8.0-45-generic`.
 
 `sign_c2pa_distributed()` and `sign_c2pa_distributed_test()` accept
-`branded_gp_id`, as `sign_c2pa()` does.
+`branded_gp_id`, `signed_input_policy` and `signed_ingredient_policy`, as
+`sign_c2pa()` does. Setting either policy, like sending an
+[`ai_system`](#ai_system) entry, needs trufo-provenance 2.2.0 or later.
 
 ---
 
@@ -461,6 +468,13 @@ rejected. This is the default
 [`signed_input_policy`](#signed-inputs-and-ingredients), `auto`; with `keep`,
 that input is kept too, and no AI source type is declared for it.
 
+Under `auto`, a request with a `redact` or `transcode` action keeps the input's
+manifest even when it says camera-captured or human-created. C2PA data Trufo
+cannot read is removed and the input labeled as one without a manifest, though a
+`redact` or `transcode` action is then refused; under `keep` such an input is
+refused, and a manifest only referenced by URL is refused under both.
+[Signed inputs and ingredients](#signed-inputs-and-ingredients) lists every case.
+
 The test host writes the same labels, with the test certificate.
 
 **Errors:**
@@ -480,7 +494,7 @@ The test host writes the same labels, with the test certificate.
 | `ai_involvement` not in the system's modes | 400 | `ai_involvement '<value>' is not in the AI system's ai_involvement_modes.` |
 | `ai_modified` without `branded_gp_id` | 400 | `ai_involvement 'ai_modified' requires a branded generator product (branded_gp_id).` |
 | With `branded_gp_id`, the product is not approved for the entry's source type | 403 | `C2PACreatedUserAssertionsNotAuthorized: the digitalSourceType <uri> is not approved for this branded generator product.` |
-| A signed input whose source class is `camera_captured` or `human_created`, under the default `signed_input_policy` (`auto`) | 400 | `The input carries a C2PA manifest whose source class is '<class>', which conflicts with ai_involvement '<ai_involvement>'.` |
+| A signed input whose source class is `camera_captured` or `human_created`, under the default [`signed_input_policy`](#signed-inputs-and-ingredients) (`auto`), without a `redact` or `transcode` action | 400 | `The input carries a C2PA manifest whose source class is '<class>', which conflicts with ai_involvement '<ai_involvement>'.` |
 | A `parentOf` ingredient, with `branded_gp_id`, on an input without a C2PA manifest (the entry's `c2pa.created` takes no parent) | 400 | `The creation assertion cannot be combined with a parentOf ingredient.` |
 
 In Local mode with the Python SDK, the last two are raised by the call.
@@ -553,20 +567,41 @@ of the asset, not a Trufo attestation.
 | Param | Type | Required | Description |
 | ----- | ---- | -------- | ----------- |
 | `relationship` | string | Yes | `inputTo`, `componentOf`, or `parentOf` (the asset before the supplied input's edits) |
-| `title` | string | No | The ingredient title (`dc:title`). When unset: the media's manifest title, if it exists; otherwise, `ingredient_{n}.{ext}` (media-less entries: `ingredient_{n}`). |
+| `title` | string | No | The ingredient title (`dc:title`). When unset: the media's manifest title, if it exists; otherwise, `ingredient_{n}.{ext}` (media-less entries: `ingredient_{n}`). Messages name the ingredient by its `title`, else `ingredient_{n}`; `n` counts the request's `ingredient` entries from 0. |
 | `data_types` | list | No | `[{"type": "c2pa.types.<kind>", "version": "…"}]` |
-| `digital_source_type` | string | No | The IPTC `trainedAlgorithmicMedia` or `compositeWithTrainedAlgorithmicMedia` URI |
-| `media` | string | For `componentOf` | base64 bytes; must be a thumbnail-capable image (JPEG, PNG, WebP, GIF, TIFF, HEIC/HEIF) |
-| `placement` | string | No | `gathered` (default) or, when eligible and authorized, `created`; `parentOf` is always created |
+| `digital_source_type` | string | No | The IPTC `trainedAlgorithmicMedia` or `compositeWithTrainedAlgorithmicMedia` URI; not with `media` that carries a C2PA manifest |
+| `media` | string | For `parentOf` | base64 bytes, in a format with **Yes** under C2PA validate in [Media format support](media_format_support.md); declare other formats with `format` (`componentOf` or `inputTo`). A `componentOf` entry needs `media` or `format`; an `inputTo` entry needs neither |
+| `format` | string | No | The media type of a declared ingredient (one without `media`), such as `video/mp4`; not with `media` |
+| `placement` | string | No | `gathered` (default) or `created`, on a request authorized for created assertions; `parentOf` is always created. A declared ingredient is always gathered; created placement for it is refused for now and may be supported later. |
 | `action_history` | list | No | Actions between a `parentOf` source and the supplied input; entries may independently set `placement`, `digitalSourceType` and `description`. An entry's action is a C2PA action or a custom one in a domain your organization has validated (for example `com.example.upscaled`) |
 
-Media carrying its own C2PA manifest is validated and referenced, and cannot also
-declare `digital_source_type`; manifest-free media is recorded as a described
-record, not a cryptographic binding, with a thumbnail when it is an image.
+- Sent (`media`): a readable C2PA history is always kept with the ingredient,
+  validation failures included;
+  [`signed_ingredient_policy`](#signed-inputs-and-ingredients) sets what happens to
+  C2PA data Trufo cannot read. Media without a C2PA manifest gets a thumbnail when
+  it is an image.
+- Declared (no `media`): no history is looked for; validators report its
+  provenance as unknown.
 
 At most one `parentOf` ingredient is allowed, it requires media, and it cannot be
 combined with `creation`. A signed supplied input cannot be relabeled as newly
 created or attached to a different parent.
+
+**Errors:**
+
+| When | Status | `detail` |
+| ---- | ------ | -------- |
+| An ingredient sent as `media` in a format without **Yes** under C2PA validate | 400 | `Ingredient '<title>': Unsupported Format Error: <mime> is not supported in the C2PA validation setting. A componentOf or inputTo ingredient in this format can be declared with its 'format' and no 'media'. If you would like to request support, contact support@trufo.ai; feel free to provide a sample file and the use case context.` |
+| A declared ingredient sets `placement` to `created` | 400 | `A declared ingredient (one without 'media') is always gathered; omit 'placement'. Setting 'placement' to 'created' requires sending the file as 'media', in a format Trufo can read, on a request authorized for created assertions. If you would like to request created placement for a format Trufo cannot read, contact support@trufo.ai; feel free to provide a sample file and the use case context.` |
+| An ingredient's `format` is not a media type | 400 | `The ingredient 'format' must be a media type such as 'video/mp4'.` |
+| A `componentOf` ingredient has neither `media` nor `format` | 400 | `The componentOf relationship requires ingredient 'media' or 'format'.` |
+| An ingredient has both `media` and `format` | 400 | `Provide the ingredient 'media' or 'format', not both.` |
+| A `parentOf` ingredient has no `media` | 400 | `The parentOf relationship requires ingredient 'media'.` |
+| `digital_source_type` with `media` that carries a C2PA manifest | 400 | `The ingredient 'digital_source_type' cannot be combined with media that carries a C2PA manifest (mutually exclusive per the spec).` |
+
+In the format refusal, `<mime>` reads `Unknown format` when the media type cannot
+be detected. The created-placement refusal is a 400 on every request, branded or
+not.
 
 #### `creation`
 
@@ -585,6 +620,109 @@ agent. It emits exactly one leading `c2pa.created` action and is always created:
 agent record. Creation, external parents, action histories, and any created
 placement default `allActionsIncluded` to false; explicitly asserting true is a
 separately authorized completeness claim.
+
+### Signed inputs and ingredients
+
+Two fields set what Trufo does with a file that already carries C2PA data:
+
+- `signed_input_policy` covers the input file only, not a `parentOf` you send.
+- `signed_ingredient_policy` covers every [`ingredient`](#ingredient) sent with
+  `media`, a `parentOf` included. A declared ingredient (no `media`) has no
+  history to read.
+
+Each is `auto` (the default when omitted) or `keep`. For the input, `keep` skips
+the source-class check and refuses C2PA data Trufo cannot read instead of
+removing it; for an ingredient, it changes only the latter. The Python SDK sends a
+value only when you set one, as `SignedInputPolicy` or `SignedIngredientPolicy`
+from `trufo.c2pa`, or as a string. Cloud and Local mode apply them alike; in Local
+mode, the engine on your machine applies them (trufo-provenance 2.2.0 or later).
+
+When Trufo signs, it keeps every readable manifest, with its validation results
+recorded, failures included. A kept input becomes the `parentOf` ingredient,
+opened with `c2pa.opened`, and gets no new `digitalSourceType`.
+[`redact`](#redact) removes the four assertion labels it supports from a kept
+history, and the new manifest records each redaction.
+
+- **Valid**: the manifest is well-formed, and its signature, hashes and time stamp
+  validate.
+- **Trusted**: valid, and its signer is on the trust lists Trufo checks.
+- **Cannot read**: no manifest can be read from the C2PA data, as with a malformed
+  manifest store or a manifest only referenced by URL.
+
+| Input | `auto` (default) | `keep` |
+| ----- | ---------------- | ------ |
+| No C2PA data | Signed as usual | Signed as usual |
+| A readable manifest, no [`ai_system`](#ai_system) entry | Kept | Kept |
+| A readable manifest, an `ai_system` entry and a `redact` or `transcode` action | Kept | Kept |
+| A readable manifest, an `ai_system` entry, neither action, source class (below) `camera_captured` or `human_created` | Refused (400) | Kept |
+| The same, any other source class | Kept | Kept |
+| A manifest only referenced by URL | Refused (400): removing the C2PA data leaves the reference | Refused (400) |
+| Any other C2PA data Trufo cannot read, such as a malformed manifest store | Removed: the input is signed as if it carried none; an `ai_system` entry then labels it, and a `redact` or `transcode` action is refused | Refused (400) |
+
+A kept input also cannot take a `creation` entry or a `parentOf`
+[ingredient](#ingredient) you send.
+
+| Sent ingredient | `auto` (default) | `keep` |
+| --------------- | ---------------- | ------ |
+| No C2PA data | Added | Added |
+| A readable manifest | Kept with the ingredient | Kept with the ingredient |
+| A manifest only referenced by URL | Refused (400) | Refused (400) |
+| Any other C2PA data Trufo cannot read, such as a malformed manifest store | Removed: the ingredient is added without its history | Refused (400) |
+
+**Source class.** Under `auto`, with an `ai_system` entry and no `redact` or
+`transcode` action, Trufo checks the input's source class, which the notice or
+the refusal names. To find it, Trufo walks back from the active manifest
+through `parentOf` ingredients only. A manifest whose first action is
+`c2pa.created` gives the origin, that action's `digitalSourceType`; one whose
+first action is `c2pa.opened` leads to its parent's manifest or, for a parent
+without one, to that ingredient's own `digitalSourceType`. Anything else leaves
+the origin unknown. An action other than `c2pa.created` that carries
+`trainedAlgorithmicMedia` or `compositeWithTrainedAlgorithmicMedia`, in any
+manifest on the walk, is an AI edit.
+
+| Origin | AI edit on the walk | Source class |
+| ------ | ------------------- | ------------ |
+| `trainedAlgorithmicMedia` | Any | `ai_generated` |
+| `compositeWithTrainedAlgorithmicMedia` | Any | `ai_modified` |
+| Any other (camera and human included), or unknown | Yes | `ai_modified` |
+| `digitalCapture`, `computationalCapture`, `compositeCapture`, `negativeFilm`, `positiveFilm`, `print` | No | `camera_captured` |
+| `digitalCreation`, `humanEdits` | No | `human_created` |
+| Any other source type | No | `other` |
+| Unknown | No | `none` |
+
+The class does not depend on whether earlier manifests validate;
+`c2pa.ai-disclosure` and other gathered assertions do not set it.
+
+**Notices.** Without an `ai_system` entry, a kept input gets a notice only when its
+manifest did not validate or is untrusted. With one, a kept input always gets a
+notice saying why it was kept: under `auto` without a `redact` or `transcode`
+action, a single notice that names the source class; otherwise the
+`redact`/`transcode` or `keep` notice, plus the not-validated or untrusted notice
+when one applies.
+
+| When | Text |
+| ---- | ---- |
+| A kept input's manifest did not validate | `The input's C2PA manifest did not validate; Trufo kept it, and its validation failures are recorded in the new manifest.` |
+| A kept input's manifest is valid but untrusted | `The input's C2PA manifest is valid but untrusted: its signer is not on the trust lists Trufo checks. Trufo kept it.` |
+| `auto`, an `ai_system` entry and no `redact` or `transcode` action: the input's manifest did not validate | `The input already contains a C2PA manifest that did not validate, so (per auto mode) it is kept and a c2pa.opened action was added in lieu of a new c2pa.created with digitalSourceType set to trainedAlgorithmicMedia (or equivalent). Its validation failures are recorded in the new manifest. Please note that the existing C2PA manifest will resolve to a source classification of '<class>'.` |
+| `auto`, an `ai_system` entry and no `redact` or `transcode` action: the input's manifest is valid | `The input already contains a valid <and trusted / but untrusted> C2PA manifest, so (per auto mode) it is kept and a c2pa.opened action was added in lieu of a new c2pa.created with digitalSourceType set to trainedAlgorithmicMedia (or equivalent). Please note that the existing C2PA manifest will resolve to a source classification of '<class>'.` |
+| `auto`, an `ai_system` entry and a `redact` or `transcode` action | `The input already carries a C2PA manifest, so Trufo kept it for the requested <action> action; no new source type was declared.` |
+| `keep` and an `ai_system` entry | `signed_input_policy is 'keep', so Trufo kept the input's C2PA manifest; no new source type was declared.` |
+| `auto`: the input's C2PA data cannot be read and is removed | `The input carries C2PA data that Trufo cannot read, so (per auto mode) Trufo removed that data and signed the input as if it carried no C2PA data.` |
+| An ingredient's manifest did not validate | `The C2PA manifest of ingredient '<title>' did not validate; Trufo kept it with the ingredient, and its validation failures are recorded in the new manifest.` |
+| An ingredient's manifest is valid but untrusted | `The C2PA manifest of ingredient '<title>' is valid but untrusted: its signer is not on the trust lists Trufo checks. Trufo kept it with the ingredient.` |
+| `auto`: an ingredient's C2PA data cannot be read and is removed | `Ingredient '<title>' carries C2PA data that Trufo cannot read, so (per auto mode) Trufo added the ingredient without its C2PA history; validators will report its provenance as unknown.` |
+
+**Errors:**
+
+| When | Status | `detail` |
+| ---- | ------ | -------- |
+| The input's C2PA data cannot be read: under `keep`, or under either value for a manifest only referenced by URL | 400 | `The input carries C2PA data that Trufo cannot read, so Trufo cannot keep or validate it. Please send a copy with intact C2PA data, or contact support@trufo.ai.` |
+| The same, for an ingredient sent as `media` | 400 | `Ingredient '<title>' carries C2PA data that Trufo cannot read, so Trufo cannot validate it. Please send a copy with intact C2PA data, or contact support@trufo.ai.` |
+| Local mode: the request sets `signed_input_policy` and the engine is older than trufo-provenance 2.2.0 | 400 | `UnsupportedSDKVersion: signed_input_policy requires trufo-provenance 2.2.0 or later. Please upgrade.` |
+| Local mode: the request sets `signed_ingredient_policy` and the engine is older than trufo-provenance 2.2.0 | 400 | `UnsupportedSDKVersion: signed_ingredient_policy requires trufo-provenance 2.2.0 or later. Please upgrade.` |
+
+The source-class refusal is listed under [`ai_system`](#ai_system).
 
 ---
 

@@ -36,6 +36,10 @@ Types not listed as eligible are unsupported. C2PA signing accepts images of at
 most 400 million pixels. The restrictions sections below apply to watermark
 operations only; they do not define C2PA codec or pixel-depth limits.
 
+An ingredient sent as `media` must be in a format with **Yes** under C2PA
+validate; other formats can be declared with `format` instead (see
+[`ingredient`](api_c2pa.md#ingredient)).
+
 Media type is detected from the content. Common aliases are normalized:
 `audio/x-wav` and `audio/vnd.wave` to `audio/wav`, `audio/x-flac` to
 `audio/flac`, `audio/x-mpeg` to `audio/mpeg`, `audio/x-m4a` to `audio/mp4`,

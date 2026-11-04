@@ -116,7 +116,8 @@ signed_bytes = sign_c2pa_distributed(api_key, media_bytes)
 ```
 
 Both helpers take the same `actions`, `assertions`, `manifest_settings`,
-`branded_gp_id` and `trufo_api_url` as `sign_c2pa()`, `transcode` included; see the
+`branded_gp_id`, `signed_input_policy`, `signed_ingredient_policy` and
+`trufo_api_url` as `sign_c2pa()`, `transcode` included; see the
 [C2PA Signing Quickstart](../quickstart/2_c2pa_signing.md) and
 [`actions`](../api/api_c2pa.md#actions). With `trufo[local-full]`, a `watermark`
 action embeds the mark locally; see the
@@ -124,7 +125,8 @@ action embeds the mark locally; see the
 by default: [Local mode](../api/api_c2pa.md#local-mode).
 
 Trufo's [notices](../api/api_c2pa.md#response-warnings) arrive as Python
-`UserWarning`s. When the SDK or engine version is deprecated, a notice gives the date
+`UserWarning`s. Refusals carry the same texts as in Cloud mode and are raised by the
+SDK call. When the SDK or engine version is deprecated, a notice gives the date
 after which signing with it returns `400 UnsupportedSDKVersion`; upgrade before then.
 
 ## Troubleshooting

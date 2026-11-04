@@ -136,6 +136,14 @@ rejected. This is the default
 [`signed_input_policy`](../api/api_c2pa.md#signed-inputs-and-ingredients), `auto`;
 with `keep`, that input is kept too, and no AI source type is declared for it.
 
+Under `auto`, a request with a `redact` or `transcode` action keeps the input's
+manifest even when it says camera-captured or human-created. C2PA data Trufo
+cannot read is removed and the input labeled as one without a manifest, though a
+`redact` or `transcode` action is then refused; under `keep` such an input is
+refused, and a manifest only referenced by URL is refused under both.
+[Signed inputs and ingredients](../api/api_c2pa.md#signed-inputs-and-ingredients)
+lists every case.
+
 Test signing (`sign_c2pa_test()` with a `c2pa-sign-test` key) gives the same labels,
 with the test certificate. Check the result at [verify.trufo.ai](https://verify.trufo.ai).
 
@@ -220,7 +228,10 @@ approved for `compositeWithTrainedAlgorithmicMedia`
 
 The input's manifest says camera-captured or human-created
 ([step 3](#step-3--sign-with-the-ai-system)). Check that the input is the AI
-system's output.
+system's output. With
+[`signed_input_policy`](../api/api_c2pa.md#signed-inputs-and-ingredients) `keep`,
+Trufo signs such an input, keeping its manifest; no AI source type is declared, so
+the content's origin stays as that manifest records it.
 
 **`UnsupportedSDKVersion: the 'ai_system' assertion requires trufo-provenance 2.2.0 or later. Please upgrade.`**
 
