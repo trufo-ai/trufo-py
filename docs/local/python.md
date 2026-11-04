@@ -6,15 +6,19 @@
 - Trufo's engine, `trufo-provenance`, builds the manifest locally, including any
   watermark;
 - Trufo receives the signing instructions, signs the claim with Trufo's certificate,
-  and (if elected) stores the finished manifest for soft-binding recovery and general
-  audit records.
+  and (unless opt-out), stores the finished manifest for soft-binding recovery and
+  general audit records.
 
 ## When to Use It
 
 Choose the Python SDK when the media must stay on your machine or is large, your
 callers are in Python on Linux, or you embed watermarks locally. For other languages
-or platforms, see [Local mode with the Docker image](docker.md). Cloud mode is
-simpler when uploading the media is fine.
+or platforms, see [Local mode with the Docker image](docker.md). Its
+[full image](docker.md#choose-an-image) is the HTTP counterpart of `trufo[local-full]`
+for C2PA Signing in Local mode, without the
+[Watermarking routes](../quickstart/6_watermarking.md#routes) and on CPU only
+(`local-full` uses an NVIDIA GPU when present). Cloud mode is simpler when uploading
+the media is fine.
 
 ## Requirements
 
@@ -35,9 +39,11 @@ simpler when uploading the media is fine.
 
 The engine packages, `trufo-provenance` and `trufo-pawprint`, come from Trufo's private
 package index at `packages.trufo.ai`; the `trufo` package itself comes from public
-PyPI. Set up the index before installing an extra. It needs an `sdk-download` API
-key, created at [app.trufo.ai/settings/org](https://app.trufo.ai/settings/org#api-access)
-under *API Access → API Keys*. Creating one requires an active C2PA Signing or
+PyPI. The index also serves Trufo's build of `pillow-heif` (1.8.1+trufo.1), which
+the engine requires in both extras; a package mirror or allowlist needs it too. Set
+up the index before installing an extra. It needs an `sdk-download` API key, created
+at [app.trufo.ai/settings/org](https://app.trufo.ai/settings/org#api-access) under
+*API Access → API Keys*. Creating one requires an active C2PA Signing or
 Watermark API plan and the Trufo Library License, accepted at
 [Organization Settings → Agreements](https://app.trufo.ai/settings/org#agreements).
 
@@ -131,8 +137,9 @@ after which signing with it returns `400 UnsupportedSDKVersion`; upgrade before 
 
 ## Troubleshooting
 
-**`No matching distribution found for trufo-provenance…`** — pip cannot see the
-private index: set it up as in [Private Package Index](#private-package-index). On a
+**`No matching distribution found for trufo-provenance…` or `…for pillow-heif…`** —
+pip cannot see the private index: set it up as in
+[Private Package Index](#private-package-index). On a
 host other than Linux with CPython 3.12, use
 [Local mode with the Docker image](docker.md).
 
@@ -153,8 +160,8 @@ FFmpeg so that `ffprobe` is on the PATH (Debian and Ubuntu: `ffmpeg`).
 `sign_c2pa_distributed_test()`, or a `c2pa-sign-prod` key. See
 [Signing Modes](../api/api_c2pa.md#signing-modes).
 
-**`UnsupportedSDKVersion: …`** — a version below the supported minimum or after
-its deprecation date, or an engine too old for a feature the request uses; the
+**`UnsupportedSDKVersion: …`** — a version below the supported minimum or whose
+support has ended, or an engine too old for a feature the request uses; the
 message names the package and the reason. Upgrade `trufo` with its local engine
 extra, which installs `trufo-provenance`. See
 [Local mode](../api/api_c2pa.md#local-mode).

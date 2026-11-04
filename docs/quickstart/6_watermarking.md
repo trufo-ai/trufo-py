@@ -51,7 +51,7 @@ For what watermarking bills, see [watermark billing](../api/api_c2pa.md#watermar
 
 <!-- TODO(sunset-2026-12-31): the deprecated mode paragraph goes; successor wid_allocation_mode -->
 
-The `mode` parameter (a `WatermarkMode` value) is deprecated: `"provenance"` still means `"per_embed"`, with a warning, until 2026-12-31T00:00:00+00:00, and is refused (400) after that; `"compliance"` raises `NotImplementedError`. Send `mode` or `wid_allocation_mode`, not both. trufo 2.1 and earlier send `mode` on every `/bind/watermark` call (`bind_watermark`, `submit_bind_watermark` and `bind_watermark_test`; not `bind_reserve`), so upgrade to trufo 2.2.0 before then. They do not show the warning on binds, since they drop the response's warnings, so check your installed version rather than wait for it. Over HTTP, drop `"mode": "provenance"` (`per_embed` is the default) or replace it with `"wid_allocation_mode": "per_embed"`. The notices and refusals are listed under [`watermark`](../api/api_c2pa.md#watermark).
+The `mode` parameter (a `WatermarkMode` value) is deprecated: `"provenance"` still means `"per_embed"`, with a warning, until 2026-12-31T00:00:00+00:00, and is refused (400) from that instant; `"compliance"` raises `NotImplementedError`. Send `mode` or `wid_allocation_mode`, not both. trufo 2.1 and earlier send `mode` on every `/bind/watermark` call (`bind_watermark`, `submit_bind_watermark` and `bind_watermark_test`; not `bind_reserve`), so upgrade to trufo 2.2.0 before then. They do not show the warning on binds, since they drop the response's warnings, so check your installed version rather than wait for it. Over HTTP, drop `"mode": "provenance"` (`per_embed` is the default) or replace it with `"wid_allocation_mode": "per_embed"`. The notices and refusals are listed under [`watermark`](../api/api_c2pa.md#watermark).
 
 ### Examples
 
@@ -124,7 +124,7 @@ Four routes produce a signed, watermarked asset. They differ in where the mark i
 | **Watermarking, Cloud** | `POST /bind/watermark`: Trufo embeds the mark, reserves the ID, opens the record, returns the marked media | you sign with your own certificate | | `POST /bind/commit`: Trufo checks the manifest declares the ID, stamps, stores or refers | `bind_watermark`, then `bind_commit` |
 | **Watermarking, Local** | `POST /bind/reserve`: Trufo reserves the ID and opens the record for a MIME type | you embed locally (Trufo engine) | you sign with your own certificate | `POST /bind/commit`, as above | `bind_reserve`, `watermark_media`, then `bind_commit` |
 
-Whoever embeds needs the engine: the Local routes require the `trufo[local-full]` installation (see [Local mode with the Python SDK](../local/python.md)); the Cloud routes need nothing beyond the API. Whoever signs needs a certificate: the C2PA Signing routes use Trufo's; the Watermarking routes use yours, and for a per-embed mark the manifest you sign must declare it (a `c2pa.soft-binding` assertion with algorithm `ai.trufo.pawprint.watermark` and the watermark ID as its block value, paired with a `c2pa.watermarked.bound` action) — Trufo writes these for you on the C2PA Signing routes.
+Whoever embeds needs the engine: on C2PA Signing, Local, `trufo[local-full]` (see [Local mode with the Python SDK](../local/python.md)) or the [full Docker image](../local/docker.md#choose-an-image); on Watermarking, Local, `trufo[local-full]`, since neither Docker image has the `/bind` routes; the Cloud routes need nothing beyond the API. Whoever signs needs a certificate: the C2PA Signing routes use Trufo's; the Watermarking routes use yours, and for a per-embed mark the manifest you sign must declare it (a `c2pa.soft-binding` assertion with algorithm `ai.trufo.pawprint.watermark` and the watermark ID as its block value, paired with a `c2pa.watermarked.bound` action) — Trufo writes these for you on the C2PA Signing routes.
 
 For a per-embed mark, every route except C2PA Signing, Cloud ends in a commit, because the record cannot be completed until the manifest exists; the mark resolves publicly only once it is committed, so complete the flow before publishing a marked asset. A per-AI-system bind has nothing to commit: on Watermarking, Cloud you call `bind_watermark` and sign, and on Watermarking, Local you reserve, embed within the hour, and sign. A per-AI-system ID resolves from the AI system's registration, not from a commit.
 
@@ -132,8 +132,8 @@ For a per-embed mark, every route except C2PA Signing, Cloud ends in a commit, b
 
 Additional notes for local embedding:
 
-- The engine runs on CPU by default; an NVIDIA GPU (CUDA) is used automatically when available.
-- Watermarking M4A, raw AAC (ADTS), MP4 or MOV needs FFmpeg, and HEIC/HEIF or AVIF needs libheif's `heif-enc`. On Debian or Ubuntu: `apt install ffmpeg libheif-examples libheif-plugin-x265 libheif-plugin-aomenc`.
+- The engine runs on CPU by default; an NVIDIA GPU (CUDA) is used automatically when available. The full Docker image runs on CPU only.
+- Watermarking M4A, raw AAC (ADTS), MP4 or MOV needs FFmpeg, and HEIC/HEIF or AVIF needs libheif's `heif-enc`. On Debian or Ubuntu: `apt install ffmpeg libheif-examples libheif-plugin-x265 libheif-plugin-aomenc`. The full Docker image includes both.
 
 ## Binding Without Trufo Signing
 
@@ -322,11 +322,11 @@ Remove `mode`.
 
 **`ImportError` mentioning trufo-pawprint or the local engine**
 
-Embedding a watermark locally, in C2PA Signing, Local or Watermarking, Local, requires `trufo[local-full]`; see [Local mode with the Python SDK](../local/python.md).
+Embedding a watermark locally needs `trufo[local-full]` (C2PA Signing, Local or Watermarking, Local) or the full Docker image (C2PA Signing, Local only); see [Local mode with the Python SDK](../local/python.md).
 
 **`400 WatermarkNotAvailable` from the Docker image**
 
-The Docker image signs without watermarking; see [Local mode with the Docker image](../local/docker.md). To embed a watermark while signing, use Cloud mode or `trufo[local-full]`.
+The signing-only image signs without watermarking; see [Choose an Image](../local/docker.md#choose-an-image). To embed a watermark while signing, use the full image (`2.2-full`), Cloud mode or `trufo[local-full]`.
 
 ---
 

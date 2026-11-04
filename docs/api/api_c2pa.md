@@ -108,7 +108,7 @@ Beyond the platform-wide codes in [api_trufo.md](api_trufo.md):
 | 400 | `UnsupportedParameter: …` | The deprecated watermark `mode` after 2026-12-31T00:00:00+00:00 (see [`watermark`](#watermark)) <!-- TODO(sunset-2026-12-31): this row goes; successor none --> |
 | 400 | `InvalidCawgIdentityId` | Unknown `cawg_identity_id` |
 | 400 | `MissingC2PACustomDomain` | A `custom` assertion without a label |
-| 400 | `UnsupportedSDKVersion: …` | Local mode: the SDK or engine version is below the supported minimum or after its deprecation date, or the engine is too old for a feature the request uses; the detail names the package (`trufo-py` or `trufo-provenance`) and explains why (see [Local mode](#local-mode)) |
+| 400 | `UnsupportedSDKVersion: …` | Local mode: the SDK or engine version is below the supported minimum or its support has ended, or the engine is too old for a feature the request uses; the detail names the package (`trufo-py` or `trufo-provenance`) and explains why (see [Local mode](#local-mode)) |
 | 403 | `MissingOrganizationValidation` | Production signing before OV completes |
 | 403 | `InvalidC2PACustomDomain` | The label's domain is not domain-validated for your organization |
 | 403 | `NoEligiblePlan` | The organization lacks the required plan |
@@ -356,7 +356,7 @@ the host's operating system and kernel release as `operating_system`, for exampl
 
 **Versions.** Local mode with trufo-provenance 2.1 or earlier (from 0.3.0, the
 supported minimum) signs with a notice until 2026-12-31T00:00:00+00:00 and is
-refused after that date. Upgrade `trufo` to 2.2.0 or later with its local engine
+refused from that instant. Upgrade `trufo` to 2.2.0 or later with its local engine
 extra, or move the [Docker image](../local/docker.md#versions-and-upgrades) to a
 2.2 tag. `<version>` is the installed version.
 
@@ -460,7 +460,7 @@ Format eligibility and restrictions are listed in
 
 **Deprecated `mode`.** Until 2026-12-31T00:00:00+00:00, `mode` `"provenance"`
 means `"per_embed"`, and the response's `warnings` (a task's result included)
-carry one of these notices; after that date, `mode` is refused. In Local mode,
+carry one of these notices; from that instant, `mode` is refused. In Local mode,
 the notices and the refusal apply only with trufo-provenance 2.2.0 or later.
 
 **Notices:**
@@ -619,8 +619,8 @@ registration, otherwise on the input ingredient.
 
 Sign responses that use the entry carry the `Deprecation` and `Sunset` headers
 ([Deprecations](api_trufo.md#deprecations)) and the notice below in `warnings`
-(for a TASK, in the task result's `warnings`); after that date, the entry is
-refused.
+(for a TASK, in the task result's `warnings`); from 2026-12-31T00:00:00+00:00,
+the entry is refused.
 
 **Notices:**
 

@@ -106,7 +106,7 @@ Deprecated responses can carry these headers:
 
 | Response | Headers |
 | -------- | ------- |
-| [`/c2pa/ai-disclosure/add`, `/list`](api_c2pa.md#post-c2paai-disclosureadd): every 201 or 200, and their 410 after the date | `Deprecation`, `Sunset`, `Link` |
+| [`/c2pa/ai-disclosure/add`, `/list`](api_c2pa.md#post-c2paai-disclosureadd): every 201 or 200, and their 410 from 2026-12-31T00:00:00+00:00 | `Deprecation`, `Sunset`, `Link` |
 | A sign that uses the [`ai_disclosure`](api_c2pa.md#ai_disclosure) entry: REQUEST (200), TASK (202) and Local mode | `Deprecation`, `Sunset` |
 | A test key's 410 in [Local mode](api_c2pa.md#signing-modes) on a production host | `Deprecation`, and `Link` to the same path on the test host |
 | A test key's 410 on a production host's [upload link](api_c2pa.md#post-ioget-s3-upload-url) | `Deprecation` |
