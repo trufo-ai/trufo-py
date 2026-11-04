@@ -315,7 +315,7 @@ jobs:
               name = re.sub(r"[-_.]+", "-", dist.name).lower()
               if name.startswith("nvidia-") or name == "torchcodec":
                   problems.append(f"installed: {dist.name}")
-          with tempfile.TemporaryDirectory() as folder:
+          with tempfile.TemporaryDirectory() as folder, tempfile.TemporaryDirectory() as link_folder:
               # heif-enc and its x265 and aom encoders, which re-encode watermarked HEIC, HEIF and
               # AVIF, each write a tiny image
               tiny_path = Path(folder, "tiny.png")
@@ -340,11 +340,14 @@ jobs:
               unmarked_path = Path(folder, "unmarked.png")
               marked_path = Path(folder, "marked.png")
               Image.fromarray(np.clip(gradient + noise, 0, 255).astype(np.uint8)).save(unmarked_path)
+              # embed through a symlink named input.png in its own folder, as trufo-local's path mode does
+              input_link = Path(link_folder, "input.png")
+              input_link.symlink_to(unmarked_path.resolve())
               wid = "v1.0123456789a"
               expires_at = datetime.now(timezone.utc) + timedelta(hours=1)
               package = WatermarkIdPackage(wid=wid, expires_at=expires_at)
               start = time.monotonic()
-              embed(unmarked_path, package, out_file=marked_path)
+              embed(input_link, package, out_file=marked_path)
               embedded = time.monotonic()
               marked = extract(marked_path)
               extracted = time.monotonic()
