@@ -50,7 +50,7 @@ For what watermarking bills, see [watermark billing](../api/api_c2pa.md#watermar
 
 <!-- TODO(sunset-2027-01-31): the deprecated mode paragraph goes; successor wid_allocation_mode -->
 
-The `mode` parameter (`WatermarkMode`) is deprecated: until 2027-01-31T00:00:00+00:00, `"provenance"` means `"per_embed"`, with a warning, and from that instant `mode` is refused (400). trufo 2.1 and earlier send `mode` on every `/bind/watermark` call (`bind_watermark`, `submit_bind_watermark`, `bind_watermark_test`; not `bind_reserve`) and do not show the warning, so upgrade to trufo 2.2.0 before then. Over HTTP, drop `"mode": "provenance"` (`per_embed` is the default). The notices and refusals are listed under [`watermark`](../api/api_c2pa.md#watermark).
+The `mode` parameter (`WatermarkMode`) is deprecated: until 2027-01-31T23:59:00+00:00, `"provenance"` means `"per_embed"`, with a warning, and from that instant `mode` is refused (400). trufo 2.1 and earlier send `mode` on every `/bind/watermark` call (`bind_watermark`, `submit_bind_watermark`, `bind_watermark_test`; not `bind_reserve`) and do not show the warning, so upgrade to trufo 2.2.0 before then. Over HTTP, drop `"mode": "provenance"` (`per_embed` is the default). The notices and refusals are listed under [`watermark`](../api/api_c2pa.md#watermark).
 
 ### Examples
 
@@ -306,7 +306,7 @@ A per-AI-system bind has nothing to commit: once you have signed the marked medi
 
 The SDK raises these as `NotImplementedError` before sending; over HTTP, the API returns them with a 501. Use `wid_allocation_mode` `"per_embed"` or `"per_ai_system"`.
 
-**A warning that the watermark `mode` parameter is deprecated, or `UnsupportedParameter: the watermark 'mode' parameter is no longer supported (expired 2027-01-31T00:00:00+00:00). Please use 'wid_allocation_mode'.`**
+**A warning that the watermark `mode` parameter is deprecated, or `UnsupportedParameter: the watermark 'mode' parameter is no longer supported (expired 2027-01-31T23:59:00+00:00). Please use 'wid_allocation_mode'.`**
 
 Remove `mode` (`per_embed` is the default), or upgrade to trufo 2.2.0 and use `wid_allocation_mode`. trufo 2.1 and earlier refuse `wid_allocation_mode` in `sign_c2pa` before sending, and send `mode` on every `/bind/watermark` call, so binds from them need the upgrade.
 

@@ -210,7 +210,7 @@ needs the full image.
 
 If you send the deprecated `ai_disclosure` entry, see
 [Moving From `ai_disclosure`](../quickstart/3_ai_labeling.md#moving-from-ai_disclosure);
-it stops working from 2027-01-31T00:00:00+00:00.
+it stops working from 2027-01-31T23:59:00+00:00.
 
 ## Folders
 
@@ -368,7 +368,7 @@ stay on one version, set `image: ghcr.io/trufo-ai/trufo-local:2.2.0` (or
 <!-- TODO(sunset-2027-01-31): the next paragraph goes; successor none -->
 
 A `2.1` tag never moves to 2.2, and the 2.1 images stop signing from
-2027-01-31T00:00:00+00:00 (see [Local mode](../api/api_c2pa.md#local-mode)). To
+2027-01-31T23:59:00+00:00 (see [Local mode](../api/api_c2pa.md#local-mode)). To
 upgrade from 2.1, set `image:` to `ghcr.io/trufo-ai/trufo-local:2.2` (or `2.2-full`)
 and run `docker compose up -d`.
 

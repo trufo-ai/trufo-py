@@ -185,7 +185,7 @@ with a `c2pa-sign-test` key and `cawg_identity_id="test"`.
 ## Moving From `ai_disclosure`
 
 The `ai_disclosure` assertion is deprecated and will stop working after
-2027-01-31T00:00:00+00:00. Please use the `ai_system` assertion with an AI system
+2027-01-31T23:59:00+00:00. Please use the `ai_system` assertion with an AI system
 registered at `/ai-system/add`.
 
 | Old (`ai_disclosure`) | New (`ai_system`) |

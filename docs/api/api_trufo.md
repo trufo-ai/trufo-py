@@ -82,12 +82,12 @@ Every response carries an `X-Request-ID` header — include it when contacting s
 
 <!-- TODO(sunset-2027-01-31): this paragraph and the next table go; successor none -->
 
-The four deprecations below keep working until 2027-01-31T00:00:00+00:00 (the
+The four deprecations below keep working until 2027-01-31T23:59:00+00:00 (the
 start of 31 January 2027, UTC) and fail from that instant. Sign and bind
 requests get a notice in `warnings`; the `/c2pa/ai-disclosure/*` endpoints
 signal through headers only.
 
-| Deprecated | Replacement | From 2027-01-31T00:00:00+00:00 | Who must act |
+| Deprecated | Replacement | From 2027-01-31T23:59:00+00:00 | Who must act |
 | ---------- | ----------- | ------------------------------ | ------------ |
 | The [`ai_disclosure`](api_c2pa.md#ai_disclosure) entry | The [`ai_system`](api_c2pa.md#ai_system) entry | 400 `UnsupportedAssertion: …` | Sign requests that send it |
 | [`POST /c2pa/ai-disclosure/add`, `/list`](api_c2pa.md#post-c2paai-disclosureadd) | [`POST /ai-system/add`, `/list`](api_c2pa.md#ai-systems) | 410 | Their callers |
@@ -98,7 +98,7 @@ signal through headers only.
 
 Local mode with trufo-provenance 2.0.x or earlier (from 0.3.0, the supported
 minimum) gets the same notice and error, but fails from
-2026-12-31T00:00:00+00:00; users of trufo 2.0 or earlier with a local engine
+2026-12-31T23:59:00+00:00; users of trufo 2.0 or earlier with a local engine
 extra must act.
 
 Deprecated responses can carry these headers:
@@ -113,7 +113,7 @@ Deprecated responses can carry these headers:
 
 | Response | Headers |
 | -------- | ------- |
-| [`/c2pa/ai-disclosure/add`, `/list`](api_c2pa.md#post-c2paai-disclosureadd): every 201 or 200, and their 410 from 2027-01-31T00:00:00+00:00 | `Deprecation`, `Sunset`, `Link` |
+| [`/c2pa/ai-disclosure/add`, `/list`](api_c2pa.md#post-c2paai-disclosureadd): every 201 or 200, and their 410 from 2027-01-31T23:59:00+00:00 | `Deprecation`, `Sunset`, `Link` |
 | A sign that uses the [`ai_disclosure`](api_c2pa.md#ai_disclosure) entry: REQUEST (200), TASK (202) and Local mode | `Deprecation`, `Sunset` |
 | A test key's 410 in [Local mode](api_c2pa.md#signing-modes) on a production host | `Deprecation`, and `Link` to the same path on the test host |
 | A test key's 410 on a production host's [upload link](api_c2pa.md#post-ioget-s3-upload-url) | `Deprecation` |
