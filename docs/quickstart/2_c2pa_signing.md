@@ -172,7 +172,7 @@ Use TASK for files above 10 MB (10,000,000 bytes), and for audio, video, or othe
 non-image processing (e.g. watermarking or transcoding). Signing-only calls for
 supported formats under the size cap can use REQUEST. The SDK defaults to REQUEST
 and never switches modes automatically; requests requiring TASK are rejected.
-TASK is not supported on the test host.
+TASK is not supported on the test host, and uploads need a production key.
 
 The legacy S3 helpers are deprecated:
 
@@ -233,9 +233,12 @@ with requests.get(completed.result.download_url, stream=True, timeout=120) as re
 `submit_c2pa_sign()` always submits a TASK, so it takes no `execution_mode`
 argument. Reuse an existing Trufo upload reference to skip the upload step;
 arbitrary S3 URLs are not accepted. Download from `download_url`, not the opaque
-`media_output_s3` reference. `wait_for_task()` raises `TaskFailedError` for a failed or
-expired task; its `.task` contains the status and error code. Increasing
-`wait_seconds` does not increase the server's execution timeout.
+`media_output_s3` reference. `submit_c2pa_sign()` raises `requests.HTTPError` for a
+request Trufo refuses; read the reason from `err.response.json()["detail"]`. No task
+is created. `wait_for_task()` raises `TaskFailedError` for a failed or expired task;
+its `.task.error_code` and `.task.error_http_status` say why
+([Tasks](../api/api_c2pa.md#tasks)). Increasing `wait_seconds` does not increase the
+server's execution timeout.
 
 ---
 
@@ -292,6 +295,11 @@ Use the test helpers until OV is complete.
 
 **`403 APIKeyScopeNotAllowed`** — the key's scope doesn't match: `c2pa-sign-prod`
 for production, `c2pa-sign-test` for test.
+
+**`410 Test keys can't use upload links. On test.api.trufo.ai, send the media in the request.`**
+— a test key asked a production host for an upload link. Upload with a
+`c2pa-sign-prod` key, or use `sign_c2pa_test()`.
+See [`POST /io/get-s3-upload-url`](../api/api_c2pa.md#post-ioget-s3-upload-url).
 
 **Local mode errors** (`ImportError`, `ffprobe`, package index) — see
 [Troubleshooting](../local/python.md#troubleshooting) in Local mode with the Python SDK.

@@ -147,6 +147,18 @@ Library License (see [Private Package Index](#private-package-index)).
 **`RuntimeError: ffprobe is required for audio/video media probing.`** — install
 FFmpeg so that `ffprobe` is on the PATH (Debian and Ubuntu: `ffmpeg`).
 
+**`Test keys are not accepted on this host. Please use test.api.trufo.ai.`** — a
+`c2pa-sign-test` key sent to a production host, by `sign_c2pa_distributed()`
+(which defaults to one) or by a `trufo_api_url` pointing at one. Use
+`sign_c2pa_distributed_test()`, or a `c2pa-sign-prod` key. See
+[Signing Modes](../api/api_c2pa.md#signing-modes).
+
+**`UnsupportedSDKVersion: …`** — a version below the supported minimum or after
+its deprecation date, or an engine too old for a feature the request uses; the
+message names the package and the reason. Upgrade `trufo` with its local engine
+extra, which installs `trufo-provenance`. See
+[Local mode](../api/api_c2pa.md#local-mode).
+
 For other platforms, use [Local mode with the Docker image](docker.md), or contact
 [support@trufo.ai](mailto:support@trufo.ai).
 

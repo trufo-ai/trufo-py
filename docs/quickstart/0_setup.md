@@ -29,9 +29,9 @@ Trufo serves three API hosts:
 
 - **`api.trufo.ai`** — production (global)
 - **`eu.api.trufo.ai`** — production (Europe)
-- **`test.api.trufo.ai`** — the test host: try out endpoints without Organization Validation or billing. Outputs are signed with a test certificate (not accepted by conformant validators), records are ephemeral, and `-test` API key scopes apply. It serves C2PA signing, watermark recovery and standalone binding.
+- **`test.api.trufo.ai`** — the test host: try out endpoints without Organization Validation. Outputs are signed with a test certificate (not accepted by conformant validators), signing and per-embed watermark records are ephemeral, and `-test` API key scopes apply. It serves C2PA signing (media in the request, or Local mode), watermark recovery and standalone binding. Registrations happen on the production hosts, with either key ([API Key Scopes](#api-key-scopes)); those hosts refuse test keys for Local mode and upload links ([Deprecations](../api/api_trufo.md#deprecations)).
 
-The test host is the natural place to develop an integration before pointing it at production. Some newer features are available on the test host only — marked (🟠 **test only**) throughout these docs.
+The test host is the natural place to develop an integration before pointing it at production.
 
 ## Prerequisites
 
@@ -50,7 +50,7 @@ Depending on what you need, set up the corresponding API key:
 
 - **Development / interactive access** — create a `trufo-api` key, then run `trufo login` to exchange it for an access token via a browser sign-in.
 - **Calling `/c2pa/sign` in deployment** — create a `c2pa-sign-prod` key (for the production hosts) or a `c2pa-sign-test` key (for the test host `test.api.trufo.ai`).
-- **Calling `sign_c2pa_distributed_test()` or `sign_c2pa_distributed()`** — create a `c2pa-sign-test` or `c2pa-sign-prod` key (same as above).
+- **Calling `sign_c2pa_distributed_test()` or `sign_c2pa_distributed()`** — create a `c2pa-sign-test` key for `sign_c2pa_distributed_test()`, or a `c2pa-sign-prod` key for `sign_c2pa_distributed()`.
 - **Registering AI systems (`/ai-system/*`)** — create a `c2pa-sign-test` or `c2pa-sign-prod` key; either works on the production hosts, and registrations are shared between test and production signing.
 - **Installing the engine for Local mode** (the Python SDK extras or the Docker image) — create an `sdk-download` key; it needs a C2PA Signing or Watermark API plan (step 3) and the Trufo Library License (step 5).
 - **Calling `tsa.trufo.ai`** — create a `tsa` key.

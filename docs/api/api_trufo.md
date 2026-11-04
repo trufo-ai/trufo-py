@@ -33,7 +33,8 @@ Sending both is rejected with `400 MixedCredentials`. Sending neither is
 
 Some responses carry a `warnings` list alongside a successful result — work Trufo
 completed differently than requested, such as a watermark that could not be
-embedded under a lenient effort. They are informational, never fatal.
+embedded under a lenient effort, or a [deprecation](#deprecations) notice. They
+are informational, never fatal.
 
 The Python SDK re-emits each as a `TrufoServerWarning` (a `UserWarning` subclass
 exported as `trufo.TrufoServerWarning`), and in Local mode the engine emits each as a
@@ -77,6 +78,46 @@ Errors common to most endpoints:
 
 Every response carries an `X-Request-ID` header — include it when contacting support.
 
+### Deprecations
+
+<!-- TODO(sunset-2026-12-31): this paragraph and the next table go; successor none -->
+
+The four deprecations below keep working until 2026-12-31T00:00:00+00:00 (the
+start of 31 December 2026, UTC) and fail from that instant. Sign and bind
+requests get a notice in `warnings`; the `/c2pa/ai-disclosure/*` endpoints
+signal through headers only.
+
+| Deprecated | Replacement | After 2026-12-31T00:00:00+00:00 | Who must act |
+| ---------- | ----------- | ------------------------------- | ------------ |
+| The [`ai_disclosure`](api_c2pa.md#ai_disclosure) entry | The [`ai_system`](api_c2pa.md#ai_system) entry | 400 `UnsupportedAssertion: …` | Sign requests that send it |
+| [`POST /c2pa/ai-disclosure/add`, `/list`](api_c2pa.md#post-c2paai-disclosureadd) | [`POST /ai-system/add`, `/list`](api_c2pa.md#ai-systems) | 410 | Their callers |
+| The watermark [`mode`](api_c2pa.md#watermark) | `wid_allocation_mode` (`per_embed` replaces `provenance`) | 400 `UnsupportedParameter: …` | Requests that send it, including every `/bind/watermark` call from trufo 2.1 or earlier, which always sends `mode` and does not show the notice |
+| [Local mode](api_c2pa.md#local-mode) with trufo-provenance 2.1 or earlier (from 0.3.0, the supported minimum) | trufo-provenance 2.2.0 or later | 400 `UnsupportedSDKVersion: …` | trufo 2.1 or earlier with a local engine extra, and the [Docker image](../local/docker.md#versions-and-upgrades)'s 2.1 tags |
+
+Deprecated responses can carry these headers:
+
+| Header | Value |
+| ------ | ----- |
+| `Deprecation` | `@<Unix time>` (RFC 9745): when the deprecation took effect |
+| `Sunset` | An HTTP-date (RFC 8594): the date after which the request fails |
+| `Link` | `<URL>; rel="successor-version"`: what replaces it |
+
+<!-- TODO(sunset-2026-12-31): the two ai_disclosure rows go; successor none -->
+
+| Response | Headers |
+| -------- | ------- |
+| [`/c2pa/ai-disclosure/add`, `/list`](api_c2pa.md#post-c2paai-disclosureadd): every 201 or 200, and their 410 after the date | `Deprecation`, `Sunset`, `Link` |
+| A sign that uses the [`ai_disclosure`](api_c2pa.md#ai_disclosure) entry: REQUEST (200), TASK (202) and Local mode | `Deprecation`, `Sunset` |
+| A test key's 410 in [Local mode](api_c2pa.md#signing-modes) on a production host | `Deprecation`, and `Link` to the same path on the test host |
+| A test key's 410 on a production host's [upload link](api_c2pa.md#post-ioget-s3-upload-url) | `Deprecation` |
+| The 410 of the legacy `POST /test/c2pa/sign` on a production host | `Deprecation`, and `Link` to `/c2pa/sign` on the test host |
+
+The watermark `mode` and SDK-version notices carry no headers.
+
+The test-key 410s apply without a notice period and to every SDK version, since
+the server refuses them: the production hosts refuse test keys in Local mode and
+on the upload link, and accept them on their registration endpoints.
+
 ### Organization scoping
 
 Credentials are bound to one organization: an API key belongs to the org it was
@@ -90,6 +131,8 @@ therefore never act cross-org.
 | `oid` | `org_…` — organization, recorded in every signed manifest |
 | `api_key` | `{scope}:{key}` |
 | `ai_system_id` | `aisys_…` — AI system, from [`POST /ai-system/add`](api_c2pa.md#post-ai-systemadd) |
+
+<!-- TODO(sunset-2026-12-31): "disclosure records" goes from the next paragraph; successor none -->
 
 Other identifiers Trufo returns (disclosure records, software agents, generator
 products, instances, credentials) are opaque prefixed strings — pass them back
@@ -109,7 +152,7 @@ no automatic routing between them.
 | Media submitted in Cloud mode | Processed by the endpoint you call; EU calls stay in EU infrastructure |
 | Signing records and watermark IDs | Shared — content signed via either endpoint is recoverable from either |
 | AI systems | Shared — an AI system registered via either endpoint works on either |
-| Stored assertion records (AI disclosures, software agents) | Regional — a record registered via one endpoint is not visible from the other |
+| Stored assertion records (deprecated AI disclosures, software agents) | Regional — a record registered via one endpoint is not visible from the other <!-- TODO(sunset-2026-12-31): "deprecated AI disclosures" goes; successor AI systems --> |
 | Request logs | Regional |
 
 Register stored assertion records on the same endpoint you sign with. An organization's
@@ -238,11 +281,11 @@ organization owner or admin with MFA creates and revokes keys at
 | Scope | Grants | Requires |
 | ----- | ------ | -------- |
 | `trufo-api` | Device authorization flow | — |
-| `c2pa-sign-test` | C2PA signing on the test host, and the [AI system endpoints](api_c2pa.md#ai-systems) on the production hosts | — |
+| `c2pa-sign-test` | C2PA signing on the test host, and the [AI system endpoints](api_c2pa.md#ai-systems) on the production hosts, which refuse it for Local mode and the upload link (410, [Deprecations](#deprecations)) | — |
 | `c2pa-sign-prod` | C2PA signing and the [AI system endpoints](api_c2pa.md#ai-systems) on the production hosts | C2PA Signing plan |
 | `content-recover-test` | Watermark recovery (`/content/recover`, test host) | — |
 | `content-recover-prod` | Watermark recovery (`/content/recover`, production hosts) | C2PA Signing or Watermark API plan |
-| `watermark-test` | Standalone binding (`/bind/*`, test host) | — |
+| `watermark-test` | Standalone binding (`/bind/*`, test host); the production hosts' upload link refuses it (410, [Deprecations](#deprecations)) | — |
 | `watermark-prod` | Standalone binding (`/bind/*`, production hosts) | C2PA Signing or Watermark API plan |
 | `tsa` | RFC 3161 timestamping (`tsa.trufo.ai`) | C2PA TSA plan |
 | `sdk-download` | Downloading the local engine packages from Trufo's private package index, for the [Python SDK](../local/python.md) or the [Docker image](../local/docker.md) | C2PA Signing or Watermark API plan, and the Trufo Library License accepted ([Agreements](#agreements)) |

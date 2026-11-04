@@ -1,8 +1,8 @@
 # trufo-py
 
 Python SDK for the Trufo Provenance Service (TPS). Provides helpers for C2PA
-signing, CAWG identity and metadata assertions, AI-disclosure labeling, and
-certificate enrollment.
+signing, CAWG identity and metadata assertions, AI labeling with registered AI
+systems, and certificate enrollment.
 
 ## Key facts for AI assistants
 
@@ -50,8 +50,10 @@ certificate enrollment.
   completed Organization Validation plus a `c2pa-sign-prod` API key.
 - `sign_c2pa_distributed_test()` uses the test remote signing endpoint and requires
   a `c2pa-sign-test` API key.
-- Test signing runs on its own host (`test.api.trufo.ai`, `TRUFO_API_URL_TEST`) with the
-  same routes as production; the legacy `/test/c2pa/sign` path remains during deprecation.
+- Test signing runs on its own host (`test.api.trufo.ai`, `TRUFO_API_URL_TEST`), which
+  serves the content routes (signing, recovery, binding), not the registries. The
+  production hosts refuse test keys for Local mode and upload links (410); the legacy
+  `/test/c2pa/sign` path answers 410.
 
 ## Documentation map
 
