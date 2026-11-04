@@ -818,7 +818,7 @@ validated legal name can appear publicly in signed content and watermark lookups
 | ------ | -------- | ------- |
 | 400 | *(message)* | An invalid `c2pa_ai_disclosure` body; the detail explains why |
 | 403 | `The Created Assertion Acknowledgement has not been accepted. It is a legal agreement that must be accepted in the dashboard by an owner or admin authorized to accept it for your organization, at https://app.trufo.ai/settings/org#agreements; an automated agent may not accept it on your organization's behalf. Once it is accepted, register the AI system again.` | `c2pa_first_party_attestable` before the Created Assertion Acknowledgement is accepted |
-| 422 | *(field list)*, with the message `Value error, ai_involvement_modes must be one or both of 'ai_generated' and 'ai_modified'.` | `ai_involvement_modes` empty or unknown |
+| 422 | *(field list)*, with the message `Value error, ai_involvement_modes must be one or both of 'ai_generated' and 'ai_modified'.` | `ai_involvement_modes` empty, repeated or unknown |
 
 #### `c2pa_ai_disclosure`
 
