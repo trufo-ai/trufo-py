@@ -1,12 +1,12 @@
 # Trufo C2PA Signing API
 
 C2PA manifest generation in Cloud mode (direct or via S3) and in Local mode, which
-keeps media on your machine; watermark recovery; and the assertion records reused
-across signing requests.
+keeps media on your machine; watermark recovery; AI system registration; and the
+assertion records reused across signing requests.
 
 - **Global API:** `https://api.trufo.ai`
 - **Europe API:** `https://eu.api.trufo.ai`
-- **Test API:** `https://test.api.trufo.ai` — same routes, signed with a test certificate
+- **Test API:** `https://test.api.trufo.ai` — C2PA signing with a test certificate, in Cloud mode (direct) and Local mode; watermark recovery and standalone binding
 
 See [api_trufo.md](api_trufo.md) for authentication, error conventions, and regions.
 
@@ -21,13 +21,14 @@ See [api_trufo.md](api_trufo.md) for authentication, error conventions, and regi
 | `POST /c2pa/sign` | `c2pa-sign-prod` (test host: `c2pa-sign-test`) | C2PA Signing |
 | `POST /io/get-s3-upload-url` | Signing or watermark API key (test host: test keys only) | Corresponding signing or watermark access for production keys |
 | `POST /c2pa/io/get-s3-url` **(deprecated alias)** | Same as `/io/get-s3-upload-url` | Same as `/io/get-s3-upload-url` |
-| `POST /c2pa/ai-disclosure/add`, `/list` | `c2pa-sign-prod` or `c2pa-sign-test` | — |
-| `POST /c2pa/software-agent/add`, `/list` | `c2pa-sign-prod` or `c2pa-sign-test` | — |
+| `POST /ai-system/add`, `/list`, `/status` | `c2pa-sign-prod` or `c2pa-sign-test` (production hosts only) | — |
+| `POST /c2pa/ai-disclosure/add`, `/list` | `c2pa-sign-prod` or `c2pa-sign-test` (production hosts only) | — |
+| `POST /c2pa/software-agent/add`, `/list` | `c2pa-sign-prod` or `c2pa-sign-test` (production hosts only) | — |
 | `POST /content/recover` | `content-recover-prod` (test host: `content-recover-test`) | C2PA Signing or Watermark API |
 | `POST /bind/watermark`, `/bind/reserve`, `/bind/commit` | `watermark-prod` (test host: `watermark-test`) | C2PA Signing or Watermark API |
 
 An account access token with the `c2pa_sign` permission may be used instead of an
-API key on the signing, assertion-record, and content-record endpoints;
+API key on the signing, AI system, assertion-record, and content-record endpoints;
 `/content/recover` and the `/bind/*` endpoints require an API key.
 
 Local mode: see [Signing Modes](#signing-modes).
@@ -709,6 +710,90 @@ write. **Errors:** as `get`.
 
 ---
 
+## AI Systems
+
+An AI system is registered once and referenced by `ai_system_id` when signing (an
+[`ai_system`](#ai_system) entry in `assertions`) and watermarking. Its details
+cannot be changed after registration: register each new version as a new AI
+system. Registrations are shared between test and production signing. An AI
+system works on every regional endpoint ([Regions](api_trufo.md#regions)).
+Production hosts only.
+
+**Auth (all three):** API key with the `c2pa-sign-prod` or `c2pa-sign-test`
+scope, or an MFA-verified access token with the `c2pa_sign` permission. No plan
+is required.
+
+### `POST /ai-system/add`
+
+| Field | Type | Required | Description |
+| ----- | ---- | -------- | ----------- |
+| `name` | string | Yes | The AI system's name; with `version`, its C2PA `softwareAgent`. |
+| `version` | string | Yes | The AI system's version; a new version is a new registration. |
+| `ai_involvement_modes` | list of strings | Yes | Which of `ai_generated` and `ai_modified` the AI system supports (one or both). |
+| `c2pa_first_party_attestable` | boolean | No | Default `false`. The organization operates the AI system and is accountable for its AI labels; requires the Created Assertion Acknowledgement. |
+| `c2pa_ai_disclosure` | object | No | A `c2pa.ai-disclosure` body (C2PA 2.4 § 18.28) describing the underlying model. Without it, signs that use the AI system carry no `c2pa.ai-disclosure` assertion. |
+| `nickname` | string | No | Display label only. |
+
+For a first-party AI system (`c2pa_first_party_attestable: true`), an organization
+owner or admin must first accept the Created Assertion Acknowledgement in
+[Organization Settings → Agreements](https://app.trufo.ai/settings/org#agreements);
+an automated agent may not accept it.
+
+Registration assigns the AI system one production and one test watermark ID for
+each value in `ai_involvement_modes`; see [Standalone Binding](#standalone-binding)
+for billing. Its name, version, model disclosure and your organization's
+validated legal name can appear publicly in signed content and watermark lookups.
+
+**Response (201):** `{"ai_system_id": "aisys_…"}`.
+
+**Errors:**
+
+| Status | `detail` | Meaning |
+| ------ | -------- | ------- |
+| 400 | *(message)* | An invalid `c2pa_ai_disclosure` body; the detail explains why |
+| 403 | `The Created Assertion Acknowledgement has not been accepted. It is a legal agreement that must be accepted in the dashboard by an owner or admin authorized to accept it for your organization, at https://app.trufo.ai/settings/org#agreements; an automated agent may not accept it on your organization's behalf. Once it is accepted, register the AI system again.` | `c2pa_first_party_attestable` before the Created Assertion Acknowledgement is accepted |
+| 422 | *(field list)*, with the message `Value error, ai_involvement_modes must be one or both of 'ai_generated' and 'ai_modified'.` | `ai_involvement_modes` empty or unknown |
+
+#### `c2pa_ai_disclosure`
+
+| Field | Type | Required | Notes |
+| ----- | ---- | -------- | ----- |
+| `modelType` | string | Yes | One of the permitted C2PA model-type values, e.g. `c2pa.types.model`, `c2pa.types.model.pytorch`, `c2pa.types.model.huggingface.transformers` |
+| `modelName` | string | No | Human-readable model name |
+| `modelIdentifier` | string | No | Machine-readable identifier (e.g. a PURL) |
+| `contentProfile` | object | No | Only `humanOversightLevel`: `fully_autonomous`, `prompt_guided`, or `human_validated` |
+| `scientificDomain` | string or list | No | Dotted domain codes, e.g. `cs.AI` |
+| `metadata` | object | No | Free-form |
+
+`humanOversightLevel` values:
+
+| Value | Meaning |
+| ----- | ------- |
+| `fully_autonomous` | The model produced the asset without human direction |
+| `prompt_guided` | A human directed the model but did not review the output |
+| `human_validated` | A human reviewed and accepted the output |
+
+### `POST /ai-system/list`
+
+**Request:** `{}`. **Response (200):** up to 1,000 `items[]` of
+`{ai_system_id, name, version, ai_involvement_modes, c2pa_first_party_attestable, c2pa_ai_disclosure, nickname, status}`.
+Newest first.
+
+### `POST /ai-system/status`
+
+| Field | Type | Required | Description |
+| ----- | ---- | -------- | ----------- |
+| `ai_system_id` | string | Yes | Registration identifier. |
+| `status` | string | Yes | `inactive` rejects new signs and embeds that use the AI system; `active` restores it. |
+
+Idempotent, and nothing is deleted. Content already marked with an inactive AI
+system keeps resolving, and the AI system's watermark IDs stay active; see
+[Standalone Binding](#standalone-binding) for billing. **Response (200):** the AI
+system's list entry after the write. **Errors:** 404 `AISystemNotFound` for an
+unknown or another organization's `ai_system_id`.
+
+---
+
 ## Assertion Records
 
 Reusable bodies registered once and referenced by id when signing. Both groups
@@ -739,16 +824,7 @@ test and production. Acceptance is checked at registration, not again at signing
 | 404 | The linked software agent does not exist, was deleted, or belongs to another organization. |
 | 422 | First-party operation was declared without a nonempty `software_agent_id`. |
 
-`assertion` fields:
-
-| Field | Type | Required | Notes |
-| ----- | ---- | -------- | ----- |
-| `modelType` | string | Yes | One of the permitted C2PA model-type values, e.g. `c2pa.types.model`, `c2pa.types.model.pytorch`, `c2pa.types.model.huggingface.transformers` |
-| `modelName` | string | No | Human-readable model name |
-| `modelIdentifier` | string | No | Machine-readable identifier (e.g. a PURL) |
-| `contentProfile` | object | No | Only `humanOversightLevel`: `fully_autonomous`, `prompt_guided`, or `human_validated` |
-| `scientificDomain` | string or list | No | Dotted domain codes, e.g. `cs.AI` |
-| `metadata` | object | No | Free-form |
+`assertion` takes the same fields as [`c2pa_ai_disclosure`](#c2pa_ai_disclosure).
 
 ### `POST /c2pa/ai-disclosure/list`
 

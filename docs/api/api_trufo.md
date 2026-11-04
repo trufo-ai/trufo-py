@@ -5,7 +5,7 @@ endpoint: request format, errors, warnings, and regions.
 
 - **Global API:** `https://api.trufo.ai`
 - **Europe API:** `https://eu.api.trufo.ai`
-- **Test API:** `https://test.api.trufo.ai` (C2PA signing only; see [api_c2pa.md](api_c2pa.md))
+- **Test API:** `https://test.api.trufo.ai` (C2PA signing, watermark recovery and standalone binding; see [api_c2pa.md](api_c2pa.md))
 
 ---
 
@@ -89,6 +89,7 @@ therefore never act cross-org.
 | ----- | ----- |
 | `oid` | `org_…` — organization, recorded in every signed manifest |
 | `api_key` | `{scope}:{key}` |
+| `ai_system_id` | `aisys_…` — AI system, from [`POST /ai-system/add`](api_c2pa.md#post-ai-systemadd) |
 
 Other identifiers Trufo returns (disclosure records, software agents, generator
 products, instances, credentials) are opaque prefixed strings — pass them back
@@ -107,10 +108,11 @@ no automatic routing between them.
 | Accounts, organizations, API keys | Shared — the same credentials work on either endpoint |
 | Media submitted in Cloud mode | Processed by the endpoint you call; EU calls stay in EU infrastructure |
 | Signing records and watermark IDs | Shared — content signed via either endpoint is recoverable from either |
+| AI systems | Shared — an AI system registered via either endpoint works on either |
 | Stored assertion records (AI disclosures, software agents) | Regional — a record registered via one endpoint is not visible from the other |
 | Request logs | Regional |
 
-Register assertion records on the same endpoint you sign with. An organization's
+Register stored assertion records on the same endpoint you sign with. An organization's
 `default_content_region` setting is a dashboard preference for new work; it does
 not restrict which endpoints accept your credentials.
 
@@ -223,7 +225,7 @@ These features each need one:
 | Agreement | Required for |
 | --------- | ------------ |
 | Trufo Library License | Creating `sdk-download` keys |
-| Created Assertion Acknowledgement | Registering [first-party AI disclosures](api_c2pa.md#post-c2paai-disclosureadd) |
+| Created Assertion Acknowledgement | Registering [first-party AI systems](api_c2pa.md#post-ai-systemadd) |
 
 ---
 
@@ -236,8 +238,8 @@ organization owner or admin with MFA creates and revokes keys at
 | Scope | Grants | Requires |
 | ----- | ------ | -------- |
 | `trufo-api` | Device authorization flow | — |
-| `c2pa-sign-test` | C2PA signing on the test host | — |
-| `c2pa-sign-prod` | C2PA signing on the production hosts | C2PA Signing plan |
+| `c2pa-sign-test` | C2PA signing on the test host, and the [AI system endpoints](api_c2pa.md#ai-systems) on the production hosts | — |
+| `c2pa-sign-prod` | C2PA signing and the [AI system endpoints](api_c2pa.md#ai-systems) on the production hosts | C2PA Signing plan |
 | `content-recover-test` | Watermark recovery (`/content/recover`, test host) | — |
 | `content-recover-prod` | Watermark recovery (`/content/recover`, production hosts) | C2PA Signing or Watermark API plan |
 | `watermark-test` | Standalone binding (`/bind/*`, test host) | — |
