@@ -92,7 +92,14 @@ signal through headers only.
 | The [`ai_disclosure`](api_c2pa.md#ai_disclosure) entry | The [`ai_system`](api_c2pa.md#ai_system) entry | 400 `UnsupportedAssertion: …` | Sign requests that send it |
 | [`POST /c2pa/ai-disclosure/add`, `/list`](api_c2pa.md#post-c2paai-disclosureadd) | [`POST /ai-system/add`, `/list`](api_c2pa.md#ai-systems) | 410 | Their callers |
 | The watermark [`mode`](api_c2pa.md#watermark) | `wid_allocation_mode` (`per_embed` replaces `provenance`) | 400 `UnsupportedParameter: …` | Requests that send it, including every `/bind/watermark` call from trufo 2.1 or earlier, which always sends `mode` and does not show the notice |
-| [Local mode](api_c2pa.md#local-mode) with trufo-provenance 2.1 or earlier (from 0.3.0, the supported minimum) | trufo-provenance 2.2.0 or later | 400 `UnsupportedSDKVersion: …` | trufo 2.1 or earlier with a local engine extra, and the [Docker image](../local/docker.md#versions-and-upgrades)'s 2.1 tags |
+| [Local mode](api_c2pa.md#local-mode) with trufo-provenance 2.1.x | trufo-provenance 2.2.0 or later | 400 `UnsupportedSDKVersion: …` | trufo 2.1 with a local engine extra, and the [Docker image](../local/docker.md#versions-and-upgrades)'s 2.1 tags |
+
+<!-- TODO(sunset-2026-12-31): the next paragraph goes; successor none -->
+
+Local mode with trufo-provenance 2.0.x or earlier (from 0.3.0, the supported
+minimum) gets the same notice and error, but fails from
+2026-12-31T00:00:00+00:00; users of trufo 2.0 or earlier with a local engine
+extra must act.
 
 Deprecated responses can carry these headers:
 

@@ -86,10 +86,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `bind_watermark`, `submit_bind_watermark` and `bind_watermark_test` from
   trufo-py 2.1 or earlier are refused by the Trufo API from 2027-01-31; upgrade
   to 2.2.0 before then.
-- Local mode with trufo-provenance 2.1 or earlier (trufo-py 2.1 or earlier with
-  a local engine extra, and the Docker image's 2.1 tags) is refused by the Trufo
-  API from 2027-01-31; upgrade trufo-py to 2.2.0 with its local engine extra, or
-  use a [2.2 image](docs/local/docker.md#versions-and-upgrades), before then.
+- Local mode is refused by the Trufo API from 2026-12-31 with trufo-provenance
+  2.0.x or earlier (trufo-py 2.0 or earlier), and from 2027-01-31 with 2.1.x
+  (trufo-py 2.1, and the Docker image's 2.1 tags); upgrade trufo-py to 2.2.0
+  with its local engine extra, or use a
+  [2.2 image](docs/local/docker.md#versions-and-upgrades), before the date that
+  applies.
 - The old endpoint path constant names, such as `TPS_C2PA_SIGN`: use the names
   with a `_PATH` suffix, such as `TPS_C2PA_SIGN_PATH`.
 

@@ -353,24 +353,28 @@ the host's operating system and kernel release as `operating_system`, for exampl
 [`ai_system`](#ai_system) entry, needs trufo-provenance 2.2.0 or later.
 
 <!-- TODO(sunset-2027-01-31): the versions paragraph and its two tables go; successor none -->
+<!-- TODO(sunset-2026-12-31): the 2.0.x-or-earlier clause in the versions paragraph goes; successor none -->
 
-**Versions.** Local mode with trufo-provenance 2.1 or earlier (from 0.3.0, the
-supported minimum) signs with a notice until 2027-01-31T00:00:00+00:00 and is
-refused from that instant. Upgrade `trufo` to 2.2.0 or later with its local engine
-extra, or move the [Docker image](../local/docker.md#versions-and-upgrades) to a
-2.2 tag. `<version>` is the installed version.
+**Versions.** Local mode with trufo-provenance 2.1.x signs with a notice until
+2027-01-31T00:00:00+00:00, and with 2.0.x or earlier (from 0.3.0, the supported
+minimum) until 2026-12-31T00:00:00+00:00; each is refused from that instant.
+Upgrade `trufo` to 2.2.0 or later with its local engine extra, or move the
+[Docker image](../local/docker.md#versions-and-upgrades) to a 2.2 tag.
+`<version>` is the installed version.
 
 **Notices:**
 
 | When | Text |
 | ---- | ---- |
-| trufo-provenance 2.1 or earlier (from 0.3.0) | `trufo-provenance <version> is deprecated and will stop working after 2027-01-31T00:00:00+00:00. Please upgrade.` |
+| trufo-provenance 2.1.x | `trufo-provenance <version> is deprecated and will stop working after 2027-01-31T00:00:00+00:00. Please upgrade.` |
+| trufo-provenance 2.0.x or earlier (from 0.3.0) | `trufo-provenance <version> is deprecated and will stop working after 2026-12-31T00:00:00+00:00. Please upgrade.` <!-- TODO(sunset-2026-12-31): this row goes; successor none --> |
 
 **Errors:**
 
 | When | Status | `detail` |
 | ---- | ------ | -------- |
-| trufo-provenance 2.1 or earlier (from 0.3.0), after 2027-01-31T00:00:00+00:00 | 400 | `UnsupportedSDKVersion: trufo-provenance <version> is no longer supported (expired 2027-01-31T00:00:00+00:00). Please upgrade.` |
+| trufo-provenance 2.1.x, after 2027-01-31T00:00:00+00:00 | 400 | `UnsupportedSDKVersion: trufo-provenance <version> is no longer supported (expired 2027-01-31T00:00:00+00:00). Please upgrade.` |
+| trufo-provenance 2.0.x or earlier (from 0.3.0), after 2026-12-31T00:00:00+00:00 | 400 | `UnsupportedSDKVersion: trufo-provenance <version> is no longer supported (expired 2026-12-31T00:00:00+00:00). Please upgrade.` <!-- TODO(sunset-2026-12-31): this row goes; successor none --> |
 
 ---
 
