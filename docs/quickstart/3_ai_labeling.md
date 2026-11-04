@@ -57,7 +57,7 @@ recommended `c2pa.ai-disclosure` assertion comes from the optional model disclos
 (`c2pa_ai_disclosure`).
 
 Registering an AI system
-[issues one new watermark ID per type of AI involvement](../api/api_c2pa.md#standalone-binding).
+[issues one new watermark ID per type of AI involvement](../api/api_c2pa.md#watermark-billing).
 Its name, version, model
 disclosure and your organization's validated legal name can appear publicly in
 signed content and watermark lookups.
@@ -160,7 +160,10 @@ In the API, add this to `actions`, in a request with the `ai_system` assertion:
 ["watermark", {"wid_allocation_mode": "per_ai_system"}]
 ```
 
-See [6_watermarking.md](6_watermarking.md).
+See the watermarking quickstart for [the `watermark` action](6_watermarking.md#the-watermark-action),
+[binding without Trufo signing](6_watermarking.md#binding-without-trufo-signing) and
+[reading watermarks](6_watermarking.md#reading-watermarks), and the API reference for
+[watermark billing](../api/api_c2pa.md#watermark-billing).
 
 ---
 

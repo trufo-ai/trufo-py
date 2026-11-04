@@ -22,8 +22,11 @@ certificate enrollment.
 - Watermarking is **off by default**; a `["watermark", {...}]` action requests it, with
   `effort_policy` = `require` (bare default) / `require_if_supported` / `best_effort`
   setting failure tolerance (`WatermarkEffort` enum; `effort` is a deprecated alias)
-  and `mode` = `provenance` (default) / `compliance` selecting the mark kind
-  (`WatermarkMode`; compliance is a placeholder that raises `NotImplementedError`).
+  and `wid_allocation_mode` = `per_embed` (default) / `per_ai_system` (needs an
+  `ai_system` entry) selecting the watermark ID (`WatermarkIDAllocationMode`;
+  `per_asset` raises `NotImplementedError`). `mode` / `WatermarkMode` is a deprecated
+  alias until 2026-12-31T00:00:00+00:00.
+  <!-- TODO(sunset-2026-12-31): the mode sentence goes; successor wid_allocation_mode -->
   Format policy: see `docs/api/media_format_support.md`; do not duplicate its tables.
 - Routes: **C2PA Signing, Cloud / Local** (Trufo signs; `sign_c2pa`,
   `sign_c2pa_distributed`) and **Watermarking, Cloud / Local** (the caller signs with
@@ -31,17 +34,17 @@ certificate enrollment.
   `watermark_media` → `bind_commit`); prose says "Cloud mode" / "Local mode".
   Production bind needs a `watermark-prod` key, a C2PA Signing or
   Watermark API plan, and completed Organization Validation; `_test` variants use the
-  test host with `watermark-test`. Commit
+  test host with `watermark-test`. Commit (per-embed only)
   verifies the manifest declares the mark (soft-binding assertion +
-  `c2pa.watermarked.bound`). Compliance mode is unsupported.
+  `c2pa.watermarked.bound`).
 - In code: the `_distributed` functions; `origin` values `c2pa_hosted`,
   `c2pa_distributed`, `bind_hosted`, `bind_distributed`; tpts/lpts/tpls/lpls in
   docstrings.
 - Every production sign or bind creates a content record. `get_content` looks one up by
   `cid`, `wid`, or `mid`; `list_content` pages them oldest first (status / origin / creation
   window filters, ≤100 per page); `set_content_status(api_key, "inactive", wid=...)`
-  withdraws a mark from public soft-binding resolution and stops its soft-binding
-  resolution maintenance charge from the next UTC day. Production hosts only; no plan
+  withdraws a mark from public soft-binding resolution and from the daily count of
+  active IDs (billed per active ID per year). Production hosts only; no plan
   required.
 - `sign_c2pa_distributed()` uses the production remote signing endpoint and requires
   completed Organization Validation plus a `c2pa-sign-prod` API key.

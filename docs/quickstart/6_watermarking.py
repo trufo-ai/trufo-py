@@ -7,6 +7,7 @@ Demonstrates:
   - signing with a watermark, under each effort level
   - detecting a sign that completed without embedding one
   - recovering the watermark from the signed media
+  - watermarking per AI system, when AI_SYSTEM_ID is set
 
 See docs/quickstart/6_watermarking.md for details.
 Requires a c2pa-sign-test API key, and a content-recover-test key for recovery.
@@ -25,6 +26,13 @@ from trufo.util.credentials import TrufoAPIKey, load_api_key
 # format eligibility: docs/api/media_format_support.md
 INPUT_FILE = Path("photo.jpg")
 OUTPUT_FILE = Path("watermarked.jpg")
+
+# optional, for step 4: the ai_system_id from POST /ai-system/add ("aisys_…");
+# see docs/quickstart/3_ai_labeling.md
+AI_SYSTEM_ID = ""
+# AI output without a C2PA manifest; a signed camera photo is refused
+AI_INPUT_FILE = Path("generated.png")
+AI_OUTPUT_FILE = Path("generated_watermarked.png")
 
 api_key = load_api_key(TrufoAPIKey.C2PA_SIGN_TEST)
 assert api_key, (
@@ -85,3 +93,35 @@ if recover_key:
         print("No watermark detected")
 else:
     print("Skipping recovery: run `trufo set-api-key content-recover-test <KEY>`")
+
+
+# --- 4. watermark per AI system ----------------------------------------------
+# Instead of a new ID, the mark carries the AI system's watermark ID for the
+# ai_involvement, shared by all its output; the request needs the ai_system
+# entry.
+
+if AI_SYSTEM_ID:
+    signed_bytes = sign_c2pa_test(
+        api_key,
+        AI_INPUT_FILE.read_bytes(),
+        assertions=[
+            ["ai_system", {"ai_system_id": AI_SYSTEM_ID, "ai_involvement": "ai_generated"}],
+        ],
+        actions=[["watermark", {"wid_allocation_mode": "per_ai_system"}]],
+    )
+    AI_OUTPUT_FILE.write_bytes(signed_bytes)
+    print(f"Watermarked {AI_INPUT_FILE} -> {AI_OUTPUT_FILE} per AI system")
+
+    if recover_key:
+        result = recover_content(
+            recover_key, AI_OUTPUT_FILE.read_bytes(), trufo_api_url=TRUFO_API_URL_TEST
+        )
+        if result.ai_system:
+            print(
+                f"Recovered {result.wid_allocation_mode} watermark ({result.ai_involvement}): "
+                f"AI system {result.ai_system['name']}"
+            )
+        else:
+            print("No AI system watermark recovered")
+else:
+    print("Skipping per-AI-system watermarking: set AI_SYSTEM_ID")

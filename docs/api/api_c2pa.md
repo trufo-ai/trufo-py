@@ -88,7 +88,8 @@ Messages you may see: a declined watermark
 (`Watermarking is not supported for '<mime>' media…`), a best-effort watermark
 failure (`Watermarking failed: …`), notices about the C2PA data of the input or
 an ingredient (listed under
-[Signed inputs and ingredients](#signed-inputs-and-ingredients)), and, in Local
+[Signed inputs and ingredients](#signed-inputs-and-ingredients)), the deprecated
+watermark `mode` notices (listed under [`watermark`](#watermark)), and, in Local
 mode, SDK-version deprecation notices, which give the date after which signing
 with that version returns `400 UnsupportedSDKVersion`.
 
@@ -100,6 +101,7 @@ Beyond the platform-wide codes in [api_trufo.md](api_trufo.md):
 | ------ | -------- | ------- |
 | 400 | *(message)* | Request validation — malformed `actions`/`assertions`, watermark contract violations, an unsatisfiable redaction, a refused [`ingredient`](#ingredient) or [signed input](#signed-inputs-and-ingredients) |
 | 400 | `AISystemInactive: …` | An inactive AI system (see [`ai_system`](#ai_system)) |
+| 400 | `UnsupportedParameter: …` | The deprecated watermark `mode` after 2026-12-31T00:00:00+00:00 (see [`watermark`](#watermark)) <!-- TODO(sunset-2026-12-31): this row goes; successor none --> |
 | 400 | `InvalidCawgIdentityId` | Unknown `cawg_identity_id` |
 | 400 | `MissingC2PACustomDomain` | A `custom` assertion without a label |
 | 400 | `UnsupportedSDKVersion: …` | Local mode: the SDK or engine version is below the supported minimum, or the engine is too old for a feature the request uses; the detail names the package (`trufo-py` or `trufo-provenance`) and explains why |
@@ -111,12 +113,15 @@ Beyond the platform-wide codes in [api_trufo.md](api_trufo.md):
 | 404 | *(message)* | Unknown `ai_disclosure_id` or `software_agent_id` |
 | 404 | `AISystemNotFound` | Unknown or another organization's `ai_system_id` (see [`ai_system`](#ai_system)) |
 | 404 | `GProductNotFound` | No such generator product in your organization |
+| 501 | *(message)* | An unsupported watermark option: `"per_asset"` allocation, or the deprecated `mode` `"compliance"` (see [`watermark`](#watermark)) <!-- TODO(sunset-2026-12-31): the row's deprecated mode "compliance" clause goes; successor none --> |
 
 **Retries and billing.** A sign is metered when it completes, so a failed request
 never bills. Retries are not deduplicated: if a request completed but its response
 was lost, retrying produces a second signed output and a second billed sign. Prefer
 a generous client timeout over aggressive retries. `/bind/watermark` bills at
-delivery on the same terms; `/bind/commit` is idempotent for an identical retry.
+delivery on the same terms; a per-embed `/bind/reserve` bills at `/bind/commit`,
+and a per-AI-system one when issued; `/bind/commit` is idempotent for an identical
+retry. See [watermark billing](#watermark-billing).
 
 ---
 
@@ -335,7 +340,7 @@ Ordered `[name, params]` pairs. Each media-transforming action feeds the next.
 | Action | Params | Description |
 | ------ | ------ | ----------- |
 | `"transcode"` | `{"target_mime_type": "<mime>"}` | Convert to another format in the same media class |
-| `"watermark"` | `{"mode": "<mode>", "effort_policy": "<effort_policy>", ...}` | Embed a Trufo watermark (off by default) |
+| `"watermark"` | `{"wid_allocation_mode": "<wid_allocation_mode>", "effort_policy": "<effort_policy>"}` | Embed a Trufo watermark (off by default) |
 | `"publish"` | `{}` | Mark for final distribution |
 | `"redact"` | `{"label": "<label>", "reason": "<reason>"}` | Remove an assertion from the input's history |
 
@@ -351,19 +356,26 @@ frames.
 
 #### `watermark`
 
-Embeds an imperceptible Trufo Pawprint watermark, declared in the manifest by a
-`c2pa.watermarked.bound` action and a `c2pa.soft-binding` assertion with algorithm
-`ai.trufo.pawprint.watermark`. **Off unless requested.** At most one watermark
-action per request.
+Embeds an imperceptible Trufo Pawprint watermark that carries a watermark ID.
+**Off unless requested.** At most one watermark action per request.
 
 | Param | Type | Description |
 | ----- | ---- | ----------- |
-| `mode` | string | `"provenance"` (default); `"compliance"` is unsupported (HTTP 501) |
+| `wid_allocation_mode` | string | `"per_embed"` (default) or `"per_ai_system"`, below; `"per_asset"` is unsupported (HTTP 501) |
 | `effort_policy` | string | Failure tolerance, below; `"require"` for a bare action. `effort` is a deprecated alias (a warning is returned; providing both is an error) |
+| `mode` | string | Deprecated, below <!-- TODO(sunset-2026-12-31): this row goes; successor wid_allocation_mode --> |
 
-A watermark ID identifies one content record. To watermark media you sign
-yourself, use [standalone binding](#standalone-binding). Compliance mode is
-unsupported on all hosts.
+- `"per_embed"`: a new watermark ID for this embed, which identifies one content
+  record. The manifest declares it by a `c2pa.watermarked.bound` action and a
+  `c2pa.soft-binding` assertion with algorithm `ai.trufo.pawprint.watermark`.
+- `"per_ai_system"`: the watermark ID of the AI system named by the request's
+  [`ai_system`](#ai_system) entry, for the entry's `ai_involvement`; no new ID is
+  issued. The manifest records a `c2pa.watermarked.unbound` action and no soft
+  binding.
+
+Both work the same in Cloud and Local mode. See
+[watermark billing](#watermark-billing); to watermark media you sign yourself,
+see [Standalone Binding](#standalone-binding).
 
 | `effort_policy` | Unsupported format | Runtime failure |
 | --------------- | ------------------ | --------------- |
@@ -374,6 +386,35 @@ unsupported on all hosts.
 Format eligibility and restrictions are listed in
 [Media format support](media_format_support.md). For examples, see the
 [watermarking quickstart](../quickstart/6_watermarking.md).
+
+**Errors:**
+
+| When | Status | `detail` |
+| ---- | ------ | -------- |
+| `"per_ai_system"` without an `ai_system` entry | 400 | `The watermark's wid_allocation_mode 'per_ai_system' requires an 'ai_system' assertion.` |
+| `"per_asset"` | 501 | `Per-asset watermark ID allocation is not supported.` |
+
+<!-- TODO(sunset-2026-12-31): the deprecated mode paragraph and its two tables go; successor wid_allocation_mode -->
+
+**Deprecated `mode`.** Until 2026-12-31T00:00:00+00:00, `mode` `"provenance"`
+means `"per_embed"`, and the response's `warnings` (a task's result included)
+carry one of these notices; after that date, `mode` is refused. In Local mode,
+the notices and the refusal apply only with trufo-provenance 2.2.0 or later.
+
+**Notices:**
+
+| When | Text |
+| ---- | ---- |
+| `mode` in a request from trufo-py older than 2.2 | `trufo-py <version> sends the deprecated watermark 'mode' parameter, which will stop working after 2026-12-31T00:00:00+00:00. Please upgrade trufo-py.` |
+| `mode` sent by any other caller | `The watermark 'mode' parameter is deprecated and will stop working after 2026-12-31T00:00:00+00:00. Please use 'wid_allocation_mode' ('per_embed' replaces 'provenance').` |
+
+**Errors:**
+
+| When | Status | `detail` |
+| ---- | ------ | -------- |
+| `mode`, after 2026-12-31T00:00:00+00:00 | 400 | `UnsupportedParameter: the watermark 'mode' parameter is no longer supported (expired 2026-12-31T00:00:00+00:00). Please use 'wid_allocation_mode'.` |
+| Both `mode` and `wid_allocation_mode` | 400 | `Provide the watermark 'wid_allocation_mode' parameter or the deprecated 'mode', not both.` |
+| `mode` `"compliance"` | 501 | `Compliance watermarking is not supported.` |
 
 #### `redact`
 
@@ -736,19 +777,26 @@ resolution. Two routes share the commit (see the routes table in the
 Cloud**, where `/bind/watermark` embeds the mark on Trufo's servers, and
 **Watermarking, Local**, where `/bind/reserve` issues the watermark id and you embed
 with the local engine.
-Compliance mode (a single `/bind/watermark` call embedding your organization's
-mark for a declared AI class, 🟠 **test only**) has nothing to commit.
+A per-AI-system bind (`wid_allocation_mode` `"per_ai_system"`, with `ai_system_id`
+and `ai_involvement`) embeds the AI system's watermark ID on either route. It is
+not a C2PA soft binding, and there is nothing to commit.
 
 Production requires a `watermark-prod` key, an active C2PA Signing or Watermark
-API plan, and completed organization validation. Billing: Watermarking, Cloud bills
-one watermark encode plus the media bytes at `/bind/watermark` and the manifest
-bytes at commit; Watermarking, Local bills one encode at commit plus the manifest
-bytes. Every committed production record, on any route, then accrues soft-binding
-resolution maintenance:
-Trufo keeps the link between the watermark and its manifest id for C2PA public
-soft-binding resolution, metered as one active-ID day per day and billed as ID-years.
+API plan, and completed organization validation.
 SDK: `bind_watermark()`, `bind_reserve()`, `watermark_media()`, `bind_commit()`
 (`_test` variants for the test host).
+
+### Watermark billing
+
+Watermarking on every route, including C2PA signing with a watermark action,
+bills watermark ID units: 10 per new ID, 1 per embed, and 1 per active ID per
+year. A per-embed mark is a new ID plus one embed; a per-AI-system mark is one
+embed of the AI system's ID. Registering an AI system issues one new ID per type
+of AI involvement. An ID is active while it resolves: a per-embed ID from its
+committed record until you deactivate it, an AI system's IDs from registration.
+Watermarking, Cloud also bills the media and manifest bytes as data processing;
+Watermarking, Local bills the manifest bytes. Video watermarked on Trufo's servers
+also bills video compute at $0.30/GB, measured by input file size.
 
 ### `POST /bind/watermark`
 
@@ -757,7 +805,10 @@ SDK: `bind_watermark()`, `bind_reserve()`, `watermark_media()`, `bind_commit()`
 | Field | Type | Required | Description |
 | ----- | ---- | -------- | ----------- |
 | `media_input` | string | Yes | base64-encoded media to watermark |
-| `mode` | string | No | `"provenance"` (default); `"compliance"` is unsupported (HTTP 501) |
+| `wid_allocation_mode` | string | No | How the watermark ID is allocated: `per_embed` (a new ID for this embed) or `per_ai_system` (the registered AI system's ID for `ai_involvement`); `per_asset` is reserved and unsupported. When omitted, `per_embed` applies. |
+| `ai_system_id` | string | With `per_ai_system` | The registered AI system whose watermark ID is used. Required with `wid_allocation_mode` `per_ai_system`, and accepted only with it. |
+| `ai_involvement` | string | With `per_ai_system` | `ai_generated` or `ai_modified`, one of the AI system's `ai_involvement_modes`. Required with `wid_allocation_mode` `per_ai_system`, and accepted only with it. |
+| `mode` | string | No | Deprecated: use `wid_allocation_mode` (`per_embed` replaces `provenance`). `compliance` is reserved and unsupported. <!-- TODO(sunset-2026-12-31): this row goes; successor wid_allocation_mode --> |
 
 **Response (200):**
 
@@ -765,10 +816,28 @@ SDK: `bind_watermark()`, `bind_reserve()`, `watermark_media()`, `bind_commit()`
 | ----- | ---- | ----------- |
 | `media_output` | string | base64-encoded watermarked media |
 | `wid` | string | The embedded watermark id |
-| `cid` | string or null | Record id for `/bind/commit` |
+| `cid` | string or null | Record id, for `/bind/commit` on a per-embed bind; null for a per-AI-system bind on the test host |
+| `warnings` | list | Deprecation warnings, empty when none. |
 
 Bind has no effort tiers: the watermark is always required, and an
 unsupported format is an error; see [Media format support](media_format_support.md).
+Unlike in an [`ai_system`](#ai_system) entry, `ai_modified` needs no branded
+generator product on a bind.
+
+**Errors:**
+
+| When | Status | `detail` |
+| ---- | ------ | -------- |
+| `wid_allocation_mode` outside `per_embed`, `per_ai_system` and `per_asset` | 422 | *(field list)* |
+| `ai_system_id` or `ai_involvement` without `per_ai_system` | 400 | `'ai_system_id' and 'ai_involvement' apply only with wid_allocation_mode 'per_ai_system'.` |
+| `per_ai_system` without `ai_system_id` or `ai_involvement` | 400 | `wid_allocation_mode 'per_ai_system' requires 'ai_system_id' and 'ai_involvement'.` |
+| `ai_involvement` unknown | 400 | `ai_involvement must be 'ai_generated' or 'ai_modified'.` |
+| An unknown or another organization's `ai_system_id` | 404 | `AISystemNotFound` |
+| The AI system is inactive | 400 | `AISystemInactive: AI system '<ai_system_id>' is inactive. Use an active AI system (see /ai-system/list).` |
+| `ai_involvement` not in the system's modes | 400 | `ai_involvement '<value>' is not in the AI system's ai_involvement_modes.` |
+
+The `per_asset` and deprecated `mode` refusals are listed under
+[`watermark`](#watermark).
 
 ### `POST /bind/reserve`
 
@@ -777,13 +846,21 @@ unsupported format is an error; see [Media format support](media_format_support.
 | Field | Type | Required | Description |
 | ----- | ---- | -------- | ----------- |
 | `mime_type` | string | Yes | MIME type of the media you will watermark locally (an encode-supported format) |
+| `wid_allocation_mode` | string | No | How the watermark ID is allocated: `per_embed` (a new ID for this embed) or `per_ai_system` (the registered AI system's ID for `ai_involvement`); `per_asset` is reserved and unsupported. When omitted, `per_embed` applies. |
+| `ai_system_id` | string | With `per_ai_system` | The registered AI system whose watermark ID is used. Required with `wid_allocation_mode` `per_ai_system`, and accepted only with it. |
+| `ai_involvement` | string | With `per_ai_system` | `ai_generated` or `ai_modified`, one of the AI system's `ai_involvement_modes`. Required with `wid_allocation_mode` `per_ai_system`, and accepted only with it. |
 
 **Response (200):**
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| `cid` | string | Record id for `/bind/commit` |
-| `wid_package` | object | `{ "wid", "expires_at" }` — the reservation to embed with the engine; valid for 24 hours (1 hour on the test host) |
+| `cid` | string | Record id, for `/bind/commit` on a per-embed bind |
+| `wid_package` | object | `{ "wid", "expires_at" }` — the watermark ID to embed with the engine; a per-embed reservation is valid for 24 hours (1 hour on the test host) |
+
+A per-AI-system bind returns the AI system's watermark ID in the same
+`wid_package`; on the test host, its `cid` is not a record. A per-AI-system
+reservation bills its embed when issued and is valid for 1 hour. The errors for
+these fields are those of [`/bind/watermark`](#post-bindwatermark).
 
 ### `POST /bind/commit`
 
@@ -807,13 +884,17 @@ keeps no copy and soft-binding resolution refers validators to your store;
 otherwise Trufo stores and serves the manifest. An identical retry of a
 completed commit succeeds; a different one is refused.
 
+Commit is for per-embed binds only: committing a per-AI-system bind with the AI
+system's watermark ID is refused with 400 `InvalidWid`; on the test host, a
+per-AI-system `/bind/reserve` `cid` gets 404.
+
 **Response (200):** `cid`, `wid`.
 
 **Errors:**
 
 | Status | Meaning |
 | ------ | ------- |
-| 400 | Malformed `wid`, no parseable manifest, `manifest_id` without an endpoint, or the manifest does not declare the record's mark (the record stays incomplete — fix and resubmit). `/bind/watermark` also rejects an invalid mode/label pairing or an unsupported media format |
+| 400 | Malformed `wid`, no parseable manifest, `manifest_id` without an endpoint, or the manifest does not declare the record's mark (the record stays incomplete — fix and resubmit). `/bind/watermark` also rejects an unsupported media format |
 | 404 | Unknown `cid`, a record not opened by a bind call, or a `wid` that is not a live reservation of yours for the record's route |
 | 409 | The record was already completed with a different manifest |
 
@@ -829,28 +910,57 @@ been stripped.
 **Auth:** API key with the `content-recover-prod` scope on the production hosts, or
 `content-recover-test` on the test host (`test.api.trufo.ai`). Each key works only
 against its own host tier. Production requires an active C2PA Signing or Watermark
-API plan and bills one watermark decode plus the input bytes per call; an input the
-engine cannot decode bills the bytes only.
+API plan and bills the input bytes and returned manifest bytes per call as data
+processing.
 
 | Field | Type | Required |
 | ----- | ---- | -------- |
 | `media_input` | string | Yes — base64-encoded media |
 | `parse_manifest_json` | bool | No (default `false`) — also return the stored manifest parsed as JSON |
 
-**Response (200):**
+**Response (200):** The decoded wid and detection confidence, plus what the wid
+resolves to by its allocation mode: the stored manifest bytes for a `per_embed`
+wid, or the AI system's public information for a `per_ai_system` wid. `oid` is set
+only when the mark belongs to the caller's org.
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
 | `detected` | bool | Whether a Trufo watermark was found |
 | `wid` | string or null | The decoded watermark id |
 | `confidence` | float or null | Detection strength in (0, 1] — how strongly the signal was recovered, not a probability of correctness |
-| `manifest_bytes` | string or null | Provenance marks: the stored C2PA manifest store, base64-encoded, when available for that record; validate it against your own copy of the media |
+| `wid_allocation_mode` | string or null | How the watermark ID was allocated: `per_embed` or `per_ai_system`. |
+| `ai_involvement` | string or null | `ai_generated` or `ai_modified`, for a `per_ai_system` watermark ID. |
+| `ai_system` | object or null | The AI system's public information, for a `per_ai_system` watermark ID. |
+| `manifest_bytes` | string or null | The stored C2PA manifest store, base64-encoded, when available for that record; validate it against your own copy of the media |
 | `manifest_json` | object or null | The same manifest parsed as JSON, only when `parse_manifest_json` was set; a convenience for callers without a local C2PA engine, not a validation result |
+| `status` | string or null | Soft-binding maintenance (`active` \| `inactive`); present only on your own records. |
 | `oid` | string or null | Your organization ID, present only when the mark is your organization's |
 
-Recovery has its own format eligibility and restrictions; see
-[Media format support](media_format_support.md). Provenance marks resolve through
-the content record; reserved and unknown prefixes return detection only.
+`ai_system`, the AI system a `per_ai_system` watermark ID identifies:
+
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+| `name` | string | The AI system's name; with `version`, its C2PA `softwareAgent`. |
+| `version` | string | The AI system's version; a new version is a new registration. |
+| `c2pa_ai_disclosure` | object or null | A `c2pa.ai-disclosure` body (C2PA 2.4 § 18.28) describing the underlying model. |
+| `org_name` | string or null | The organization's validated legal name, while its OV is active. |
+| `ai_system_id` | string or null | Registration identifier; present only on your own AI systems. |
+| `status` | string or null | The AI system's status (`active` \| `inactive`); present only on your own AI systems. |
+
+What a watermark ID resolves to:
+
+- A per-embed ID: its content record's stored manifest, to any recover-key holder
+  while the record is active ([`/content/status`](#post-contentstatus)), and to
+  your own organization always.
+- A per-AI-system ID: the AI system's public information, to any recover-key
+  holder, inactive AI systems included. It is not a C2PA soft binding, so the
+  C2PA soft-binding resolution API does not serve it.
+- Any other ID: detection only.
+
+Each host resolves only its own IDs: on the test host, per-embed test IDs resolve
+to their test records and per-AI-system test IDs to the AI system. Recovery has
+its own format eligibility and restrictions; see
+[Media format support](media_format_support.md).
 
 **Errors:**
 
@@ -863,11 +973,19 @@ the content record; reserved and unknown prefixes return detection only.
 ## Content Records
 
 Every production sign or bind creates a content record. A record with a
-watermark id and a manifest id is what public soft-binding resolution serves
-and what soft-binding resolution maintenance charges for, per ID per UTC day.
+watermark id and a manifest id is what public soft-binding resolution serves; it
+counts as one active ID ([watermark billing](#watermark-billing)) until you
+deactivate it. Active IDs are counted once each UTC day.
 The owner can look records up, list them, and switch each one off and on.
 Production hosts only. SDK: `get_content()`, `list_content()`,
 `set_content_status()`.
+
+A per-AI-system embed's record carries the AI system's watermark ID as
+`ai_system_wid` instead of `wid`. `/content/list` lists these records, except
+under a `status` filter; `/content/get` does not find them by the AI system's
+watermark ID, and they cannot be switched off. The AI system's IDs count as
+active IDs from its registration; an inactive AI system's IDs keep resolving and
+keep counting as active IDs ([watermark billing](#watermark-billing)).
 
 Unlike `/content/recover`, which decodes media and is metered, these take an
 identifier or filters, touch only your own records, and are not metered.
@@ -877,10 +995,12 @@ scope, or a dashboard session. No active plan is required, so a lapsed
 subscriber can still deactivate its marks.
 
 **The record:** `cid` (record id, returned by every sign and bind call), `wid`
-(once the mark is embedded and, on the bind routes, committed), `mid` (once a
-manifest is captured), `status` (`active` or `inactive`), `origin` (the route;
-see [Routes](#routes)), `mime_type`, `create_ts`, `commit_ts`. Fields only ever
-gain members.
+(once the mark is embedded and, on the bind routes, committed), `ai_system_wid`
+(watermark id of the AI system the mark identifies, shared by every item it
+marks; set instead of `wid`), `mid` (once a manifest is captured), `status`
+(`active` or `inactive`; null without a `wid`), `origin` (the route; see
+[Routes](#routes)), `mime_type`, `create_ts`, `commit_ts`. Fields only ever gain
+members.
 
 ### `POST /content/get`
 
@@ -906,11 +1026,11 @@ one more, empty, page. The limit bounds one response.
 ### `POST /content/status`
 
 Exactly one of `cid`, `wid`, `mid`, plus `status`: `inactive` withdraws the
-record from public soft-binding resolution immediately and stops its resolution
-maintenance from the next UTC day, so the day of deactivation is the last one
-charged; `active` restores resolution immediately and counting from the next
-day. Idempotent. Nothing is deleted and the signed asset is untouched. **Response (200):** the record after the
-write. **Errors:** as `get`.
+record from public soft-binding resolution immediately and from active-ID
+counting at the next daily count; `active` reverses both on the same timing.
+Idempotent. Nothing is deleted and the signed asset is untouched. **Response (200):** the record after the
+write. **Errors:** as `get`; 404 also for a record without a `wid`, such as a
+per-AI-system one.
 
 ---
 
@@ -944,8 +1064,8 @@ owner or admin must first accept the Created Assertion Acknowledgement in
 an automated agent may not accept it.
 
 Registration assigns the AI system one production and one test watermark ID for
-each value in `ai_involvement_modes`; see [Standalone Binding](#standalone-binding)
-for billing. Its name, version, model disclosure and your organization's
+each value in `ai_involvement_modes`; see [watermark billing](#watermark-billing).
+Its name, version, model disclosure and your organization's
 validated legal name can appear publicly in signed content and watermark lookups.
 
 **Response (201):** `{"ai_system_id": "aisys_…"}`.
@@ -991,8 +1111,8 @@ Newest first.
 | `status` | string | Yes | `inactive` rejects new signs and embeds that use the AI system; `active` restores it. |
 
 Idempotent, and nothing is deleted. Content already marked with an inactive AI
-system keeps resolving, and the AI system's watermark IDs stay active; see
-[Standalone Binding](#standalone-binding) for billing. **Response (200):** the AI
+system keeps resolving, and the AI system's watermark IDs keep counting as active
+IDs ([watermark billing](#watermark-billing)). **Response (200):** the AI
 system's list entry after the write. **Errors:** 404 `AISystemNotFound` for an
 unknown or another organization's `ai_system_id`.
 
