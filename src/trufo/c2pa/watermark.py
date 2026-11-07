@@ -19,8 +19,9 @@ class WatermarkSettings:
     """Local watermark execution settings, separate from the watermark action.
 
     ``profile`` accepts ``"default"`` or ``"fast"``. Fast requests best-effort
-    CPU video acceleration. An available CUDA GPU uses the original recommended
-    GPU implementation in either profile; otherwise execution uses CPU.
+    CPU acceleration shared by images and video frames. An available CUDA GPU is
+    recommended and uses its original implementation in either profile; otherwise
+    execution uses CPU.
     These settings do not request watermarking or enter the C2PA manifest.
     """
 

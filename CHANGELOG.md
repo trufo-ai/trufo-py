@@ -11,8 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `WatermarkSettings` and `WatermarkProfile` for local watermark embedding with
   `watermark_media` and the distributed signing helpers. Choose the `default` or
-  `fast` profile, which adds best-effort CPU video optimization. An available CUDA
-  GPU is recommended and selected automatically in either profile. Runtime
+  `fast` profile, which opts into a shared CPU encoder for images and video frames.
+  The portable FP32 path needs no compiler. An available CUDA GPU is recommended and
+  selected automatically in either profile, using its original encoder. Runtime
   settings remain local and require an explicit watermark action when signing.
 
 ### Changed
