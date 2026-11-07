@@ -131,7 +131,7 @@ For a per-embed mark, every route except C2PA Signing, Cloud ends in a commit, s
 
 Additional notes for local embedding:
 
-- The engine runs on CPU by default; an NVIDIA GPU (CUDA) is used automatically when available. The full Docker image runs on CPU only.
+- An NVIDIA GPU (CUDA) is recommended and used automatically when available; otherwise the engine uses CPU. The full Docker image runs on CPU only.
 - Watermarking M4A, raw AAC (ADTS), MP4 or MOV needs FFmpeg, and HEIC/HEIF or AVIF needs libheif's `heif-enc`. On Debian or Ubuntu: `apt install ffmpeg libheif-examples libheif-plugin-x265 libheif-plugin-aomenc`. The full Docker image includes both.
 
 ## Binding Without Trufo Signing
@@ -324,7 +324,7 @@ The signing-only image signs without watermarking; see [Choose an Image](../loca
 
 ---
 
-For local embedding profiles and CPU or CUDA selection, see
+For local embedding profiles and CPU optimization, see
 [Local Watermark Settings](../local/python.md#local-watermark-settings). These
 settings do not request watermarking by themselves.
 

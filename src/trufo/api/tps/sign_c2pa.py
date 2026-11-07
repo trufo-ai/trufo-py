@@ -91,7 +91,7 @@ def _watermark_settings_payload(settings: WatermarkSettings) -> dict:
     """Validate and serialize local watermark execution settings."""
     if not isinstance(settings, WatermarkSettings):
         raise TypeError("watermark_settings must be WatermarkSettings or None.")
-    return {"profile": settings.profile.value, "device": settings.device}
+    return {"profile": settings.profile.value}
 
 
 def _validate_manifest_setting_aliases(
@@ -826,7 +826,7 @@ def sign_c2pa_distributed_test(
         ingredient_title: Optional ``parentOf`` ingredient title (``dc:title``);
             see the module docstring for when to set this explicitly.
         manifest_settings: Optional structured C2PA manifest settings.
-        watermark_settings: Optional local embedding profile and device; an explicit
+        watermark_settings: Optional local embedding profile; an explicit
             watermark action is required. These settings stay on this machine.
         branded_gp_id: ID (``gp_...``) of one of your organization's branded
             generator products; the content is signed as that product. ``test``
@@ -928,7 +928,7 @@ def sign_c2pa_distributed(
         ingredient_title: Optional ``parentOf`` ingredient title (``dc:title``);
             see the module docstring for when to set this explicitly.
         manifest_settings: Optional structured C2PA manifest settings.
-        watermark_settings: Optional local embedding profile and device; an explicit
+        watermark_settings: Optional local embedding profile; an explicit
             watermark action is required. These settings stay on this machine.
         branded_gp_id: ID (``gp_...``) of one of your organization's branded
             generator products; the content is signed as that product. Omit to
