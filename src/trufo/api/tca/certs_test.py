@@ -90,7 +90,8 @@ def request_c2pa_test_cert(
         private_key_signer: Leaf private key (PEM bytes, path, or
             ``ec.EllipticCurvePrivateKey``).
         leaf_type: Test leaf type (default: ``C2PA_L1_TEST``).
-        country: Optional country for the certificate subject (C).
+        country: Two-letter country code for the certificate subject (C).
+            The CA refuses an enrollment without one.
         record_id: Optional product record UUID to embed; a UUIDv7 is
             generated when omitted.
 
@@ -109,16 +110,23 @@ def request_c2pa_test_cert(
 def _build_test_cawg_csr_jwt(
     org_name: str,
     common_name: str,
+    *,
+    country: str | None = None,
 ) -> str:
     """Build a CAWG interim test CSR JWT signed with the public test HMAC secret.
 
     Args:
         org_name: Organization name for the certificate subject (O).
         common_name: Common name for the certificate subject (CN).
+        country: Two-letter country code for the certificate subject (C).
 
     Returns:
         Compact-serialized HS256 JWT string.
     """
+    distinguished_name = {"O": org_name, "CN": common_name}
+    if country is not None:
+        distinguished_name["C"] = country
+
     now = int(time.time())
     payload = {
         "iss": "trufo",
@@ -128,10 +136,7 @@ def _build_test_cawg_csr_jwt(
         "iat": now,
         "exp": now + 300,
         "leaf_type": LeafType.CAWG_INTERIM_TEST.value,
-        "distinguished_name": {
-            "O": org_name,
-            "CN": common_name,
-        },
+        "distinguished_name": distinguished_name,
         "record_id": "",
         "instance_id": "",
     }
@@ -142,6 +147,8 @@ def request_cawg_test_cert(
     org_name: str,
     common_name: str,
     private_key_signer: str | Path | bytes | ec.EllipticCurvePrivateKey,
+    *,
+    country: str | None = None,
 ) -> bytes:
     """Obtain a test CAWG interim certificate via the test EST flow.
 
@@ -153,11 +160,13 @@ def request_cawg_test_cert(
         common_name: Common name for the certificate subject.
         private_key_signer: Leaf private key (PEM bytes, path, or
             ``ec.EllipticCurvePrivateKey``).
+        country: Two-letter country code for the certificate subject (C).
+            The CA refuses an enrollment without one.
 
     Returns:
         PEM certificate chain bytes.
     """
-    csr_jwt = _build_test_cawg_csr_jwt(org_name, common_name)
+    csr_jwt = _build_test_cawg_csr_jwt(org_name, common_name, country=country)
     csr_der = build_csr(private_key_signer)
     pkcs7_b64 = est_enroll(csr_jwt, csr_der, LeafType.CAWG_INTERIM_TEST.value)
     cert_chain_pem = extract_cert_chain(pkcs7_b64)

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `request_cawg_test_cert` accepts keyword-only `country`, the certificate
+  subject's country (C). Pass it to either test-cert function: the CA refuses
+  an enrollment without a country.
+
 ## [2.2.0] — 2026-11-04
 
 ### Added

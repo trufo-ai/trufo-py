@@ -127,7 +127,7 @@ The CSR JWT authorizes one enrollment. It is HS256, audience `tca-est`, and live
 | `jti` | string | Yes | Unique token id; redeemed once (production) |
 | `iat`, `exp` | integer | Yes | Issued-at and expiry (UNIX seconds) |
 | `leaf_type` | string | Yes | Must equal the path segment |
-| `distinguished_name` | object | Yes | Subject fields; `O` and `CN` required, `C`, `ST`, `L`, `OU` optional |
+| `distinguished_name` | object | Yes | Subject fields; `C` (two-letter code), `O` and `CN` required, `ST`, `L`, `OU` optional |
 | `validity_days` | integer | No | 1 to the type maximum; omitted means the maximum |
 | `record_id` | string | C2PA only | Product record UUID, embedded in the certificate |
 | `instance_id` | string | C2PA only | Issuing instance id |
@@ -142,7 +142,7 @@ signed with the publicly known HMAC secret `hello-trufo` (HS256), using
 `sub: "test-account"` and a test leaf type. 
 
 `request_c2pa_test_cert()` and `request_cawg_test_cert()` in the Python SDK perform
-the whole flow.
+the whole flow; pass `country` to set `C`, which the CA requires.
 
 ### CA certificate downloads
 
