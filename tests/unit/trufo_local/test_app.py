@@ -311,7 +311,7 @@ def test_gone_client_is_not_signed(client, folders, engine):
     assert engine.calls == []
 
 
-@pytest.mark.parametrize("settings", [{}, {"profile": "fast", "device": "cpu"}])
+@pytest.mark.parametrize("settings", [{}, {"profile": "fast"}])
 def test_watermark_settings_forwarded_separately(sign, engine, settings):
     assert sign(watermark_settings=settings).status_code == 200
     assert engine.calls[0]["watermark_settings"] == settings
@@ -319,7 +319,7 @@ def test_watermark_settings_forwarded_separately(sign, engine, settings):
 
 
 @pytest.mark.parametrize(
-    "settings", [{"profile": "other"}, {"device": False}, {"device": "cuda:01"}, {"unknown": 1}]
+    "settings", [{"profile": "other"}, {"device": "cpu"}, {"unknown": 1}]
 )
 def test_invalid_watermark_settings_refused_before_paths(sign, engine, settings):
     response = sign(watermark_settings=settings, media_input_path="missing")

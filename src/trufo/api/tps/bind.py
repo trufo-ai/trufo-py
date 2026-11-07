@@ -291,7 +291,7 @@ def watermark_media(
         media_bytes: Raw bytes of the media file to watermark.
         wid_package: ``BindReserveResult.wid_package`` (or the ``wid_package``
             of a Trufo API response).
-        watermark_settings: Optional local embedding profile and device.
+        watermark_settings: Optional local embedding profile.
 
     Returns:
         The watermarked media bytes, in the input's format.
@@ -299,7 +299,6 @@ def watermark_media(
     Raises:
         ImportError: If the engine (``trufo[local-full]``) is not installed.
         TypeError: If watermark_settings is not WatermarkSettings or None.
-        ValueError: If an explicit CUDA device is unavailable.
     """
     if watermark_settings is not None and not isinstance(watermark_settings, WatermarkSettings):
         raise TypeError("watermark_settings must be WatermarkSettings or None.")
@@ -309,8 +308,7 @@ def watermark_media(
         raise ImportError(_ENGINE_HINT) from exc
     options = {}
     if watermark_settings is not None:
-        pawprint_import.require_watermark_device(watermark_settings.device)
-        options = {"mode": watermark_settings.profile.value, "device": watermark_settings.device}
+        options = {"mode": watermark_settings.profile.value}
     package = pawprint_import.WatermarkIdPackage(**wid_package)
     return pawprint_import.embed(media_bytes, package, **options)
 
