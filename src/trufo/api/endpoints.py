@@ -15,6 +15,8 @@ TRUFO_API_URL_EUROPE = "https://eu.api.trufo.ai"
 # recovery, binding) for test keys
 TRUFO_API_URL_TEST = "https://test.api.trufo.ai"
 TRUFO_CA_URL = "https://ca.trufo.ai"
+# test enrollment runs on its own host, which serves the test leaf types only
+TRUFO_CA_URL_TEST = "https://test.ca.trufo.ai"
 TRUFO_TSA_URL = "https://tsa.trufo.ai"
 TRUFO_OCSP_URL = "https://ocsp.trufo.ai"
 

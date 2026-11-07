@@ -99,7 +99,13 @@ def build_csr(
     return csr.public_bytes(serialization.Encoding.DER)
 
 
-def est_enroll(csr_jwt: str, csr_der: bytes, leaf_type_value: str) -> bytes:
+def est_enroll(
+    csr_jwt: str,
+    csr_der: bytes,
+    leaf_type_value: str,
+    *,
+    trufo_ca_url: str = TRUFO_CA_URL,
+) -> bytes:
     """Submit a CSR to the CA via EST simpleenroll (RFC 7030).
 
     The CSR JWT is sent as the HTTP Basic auth password (username is
@@ -109,6 +115,7 @@ def est_enroll(csr_jwt: str, csr_der: bytes, leaf_type_value: str) -> bytes:
         csr_jwt: Signed CSR JWT (from RA or test HMAC).
         csr_der: DER-encoded PKCS#10 CSR.
         leaf_type_value: Leaf type string (e.g. ``"c2pa-l1"``).
+        trufo_ca_url: Trufo CA base URL. Defaults to production.
 
     Returns:
         Raw response body (base64-encoded PKCS#7).
@@ -120,7 +127,7 @@ def est_enroll(csr_jwt: str, csr_der: bytes, leaf_type_value: str) -> bytes:
     csr_b64 = base64.b64encode(csr_der).decode()
 
     resp = requests.post(
-        f"{TRUFO_CA_URL}/.well-known/est/{leaf_type_value}/simpleenroll",
+        f"{trufo_ca_url}/.well-known/est/{leaf_type_value}/simpleenroll",
         headers={
             "Content-Type": "application/pkcs10",
             "Authorization": f"Basic {auth_value}",

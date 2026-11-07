@@ -144,7 +144,7 @@ class TestEstEnroll:
         est_enroll("jwt", b"csr", "c2pa-l1-test")
 
         url = mock_post.call_args[0][0]
-        assert "/c2pa-l1-test/simpleenroll" in url
+        assert url == "https://ca.trufo.ai/.well-known/est/c2pa-l1-test/simpleenroll"
 
     @patch("trufo.crypt.tca_certs.requests.post")
     def test_raises_on_failure(self, mock_post):

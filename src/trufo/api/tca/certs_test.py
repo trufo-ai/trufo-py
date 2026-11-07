@@ -14,6 +14,7 @@ import jwt as pyjwt
 from cryptography.hazmat.primitives.asymmetric import ec
 from uuid_utils import uuid7
 
+from trufo.api.endpoints import TRUFO_CA_URL_TEST
 from trufo.crypt.tca_certs import (
     TEST_HMAC_SECRET,
     LeafType,
@@ -101,7 +102,7 @@ def request_c2pa_test_cert(
         leaf_type, org_name, common_name, country=country, record_id=record_id
     )
     csr_der = build_csr(private_key_signer)
-    pkcs7_b64 = est_enroll(csr_jwt, csr_der, leaf_type.value)
+    pkcs7_b64 = est_enroll(csr_jwt, csr_der, leaf_type.value, trufo_ca_url=TRUFO_CA_URL_TEST)
     cert_chain_pem = extract_cert_chain(pkcs7_b64)
     return cert_chain_pem
 
@@ -159,6 +160,8 @@ def request_cawg_test_cert(
     """
     csr_jwt = _build_test_cawg_csr_jwt(org_name, common_name)
     csr_der = build_csr(private_key_signer)
-    pkcs7_b64 = est_enroll(csr_jwt, csr_der, LeafType.CAWG_INTERIM_TEST.value)
+    pkcs7_b64 = est_enroll(
+        csr_jwt, csr_der, LeafType.CAWG_INTERIM_TEST.value, trufo_ca_url=TRUFO_CA_URL_TEST
+    )
     cert_chain_pem = extract_cert_chain(pkcs7_b64)
     return cert_chain_pem

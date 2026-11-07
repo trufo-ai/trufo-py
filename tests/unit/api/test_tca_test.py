@@ -3,7 +3,7 @@
 
 """Unit tests for api/tca/test_cert.py — test certificate enrollment helpers."""
 
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import jwt as pyjwt
 import pytest
@@ -47,9 +47,10 @@ class TestBuildTestCsrJwt:
 class TestRequestC2paTestCert:
     """request_c2pa_test_cert orchestrates test cert enrollment."""
 
-    def test_rejects_non_test_leaf_type(self):
+    @pytest.mark.parametrize("leaf_type", [LeafType.C2PA_L1, LeafType.C2PA_L1_SANDBOX])
+    def test_rejects_non_test_leaf_type(self, leaf_type):
         with pytest.raises(ValueError, match="must be a C2PA test type"):
-            request_c2pa_test_cert("Org", "CN", b"private-key", leaf_type=LeafType.C2PA_L1)
+            request_c2pa_test_cert("Org", "CN", b"private-key", leaf_type=leaf_type)
 
     @patch("trufo.api.tca.certs_test.extract_cert_chain")
     @patch("trufo.api.tca.certs_test.est_enroll")
@@ -107,3 +108,15 @@ class TestRequestCawgTestCert:
 
         assert result == b"chain"
         assert mock_enroll.call_args[0][2] == "cawg-interim-test"
+
+
+class TestTestCertHost:
+    """Both test helpers enroll at the test CA host."""
+
+    @pytest.mark.parametrize("request_cert", [request_c2pa_test_cert, request_cawg_test_cert])
+    @patch("trufo.api.tca.certs_test.extract_cert_chain")
+    @patch("trufo.api.tca.certs_test.build_csr", return_value=b"c")
+    @patch("trufo.crypt.tca_certs.requests.post", return_value=MagicMock(status_code=200))
+    def test_posts_to_test_ca_host(self, mock_post, _mock_csr, _mock_extract_chain, request_cert):
+        request_cert("Org", "CN", b"k")
+        assert mock_post.call_args[0][0].startswith("https://test.ca.trufo.ai/.well-known/est/")

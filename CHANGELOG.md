@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `LeafType.C2PA_L1_SANDBOX` (`c2pa-l1-sandbox`): pass it to `request_c2pa_cert`
+  on a [sandbox](docs/api/api_certs.md#sandbox) product, which Trufo sets up on
+  request.
+- `TRUFO_CA_URL_TEST` and a `trufo_ca_url` parameter on `est_enroll`.
+
+### Changed
+
+- `request_c2pa_test_cert` and `request_cawg_test_cert` enroll at
+  `test.ca.trufo.ai`. Test certificates are not recorded, so they cannot be
+  listed or revoked, and a key can be re-enrolled.
+
 ## [2.2.0] — 2026-11-04
 
 ### Added

@@ -152,3 +152,14 @@ class TestRequestC2paCert:
 
         csr_jwt_arg, _csr_der, _leaf = mock_enroll.call_args[0]
         assert csr_jwt_arg == "RA-issued-csr-jwt"
+
+    @patch(f"{_MODULE}.extract_cert_chain")
+    @patch(f"{_MODULE}.est_enroll")
+    @patch(f"{_MODULE}._request_c2pa_csr_jwt")
+    def test_sandbox_leaf_type_reaches_ra_and_est(self, mock_csr_jwt, mock_enroll, _mock_extract):
+        pem = _ec_p256_pem()
+        request_c2pa_cert("gpi_1", "gpic_1", pem.decode(), pem, leaf_type=LeafType.C2PA_L1_SANDBOX)
+
+        assert mock_csr_jwt.call_args[0][1] == LeafType.C2PA_L1_SANDBOX
+        assert mock_enroll.call_args[0][2] == "c2pa-l1-sandbox"
+        assert mock_enroll.call_args.kwargs == {}

@@ -32,6 +32,7 @@ class LeafType(str, Enum):
     C2PA_L2 = "c2pa-l2"
     C2PA_L1_TEST = "c2pa-l1-test"
     C2PA_L2_TEST = "c2pa-l2-test"
+    C2PA_L1_SANDBOX = "c2pa-l1-sandbox"
     CTSA = "ctsa"
     CTSA_TEST = "ctsa-test"
     CAWG_INTERIM = "cawg-interim"

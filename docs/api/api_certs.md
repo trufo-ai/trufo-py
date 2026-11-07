@@ -4,7 +4,7 @@ Certificate enrollment (EST), revocation checking (OCSP), and timestamping (RFC 
 via the Trufo Certificate Authority, plus the Registration Authority endpoints that
 authorize enrollment: validation, generator products, instances, and credentials.
 
-- **Certificate Authority:** `https://ca.trufo.ai`
+- **Certificate Authority:** `https://ca.trufo.ai` (test: `https://test.ca.trufo.ai`)
 - **OCSP Responder:** `https://ocsp.trufo.ai`
 - **Timestamp Authority:** `https://tsa.trufo.ai` (test: `https://test.tsa.trufo.ai`)
 - **Registration Authority:** the Trufo API (`https://api.trufo.ai`, `https://eu.api.trufo.ai`)
@@ -34,6 +34,7 @@ Registration Authority endpoints live on the Trufo API and follow its convention
 | `c2pa-l2` | Production C2PA claim signing, assurance level 2 | 90 days |
 | `c2pa-l1-test` | Test C2PA claim signing, assurance level 1 | 366 days |
 | `c2pa-l2-test` | Test C2PA claim signing, assurance level 2 | 90 days |
+| `c2pa-l1-sandbox` | [Sandbox](#sandbox) C2PA claim signing, assurance level 1 | 366 days |
 | `cawg-interim` | Production CAWG identity signing | 366 days |
 | `cawg-interim-test` | Test CAWG identity signing | 366 days |
 
@@ -106,10 +107,10 @@ DER PKCS#7 containing the issued leaf followed by the CA chain.
 | 401 | `MalformedJWT`, `JWTExpired`, `InvalidSignature`, `InvalidAudience`, `MissingClaim`, `JWTDecodeError` | CSR JWT rejected |
 | 401 | `UnknownLeafType`, `LeafTypeDisabled`, `InvalidDistinguishedName`, `InvalidValidityDays`, `ValidityExceedsMax`, `InvalidRecordId`, `InvalidInstanceId`, `InvalidIssuer`, `InvalidIat` | CSR JWT claims rejected (several may be joined with `;`) |
 | 401 | `LeafTypeMismatch` | JWT `leaf_type` differs from the path |
-| 401 | `JTIAlreadyUsed` | The CSR JWT was already redeemed (production only) |
+| 401 | `JTIAlreadyUsed` | The CSR JWT was already redeemed (not test leaf types) |
 | 400 | `InvalidContentType`, `InvalidCSR`, `InvalidCSRSignature`, `KeyTypeNotAllowed` | Request or CSR malformed |
-| 404 | `UnknownLeafType` | Unknown path segment |
-| 409 | `PublicKeyAlreadyUsed` | That public key already has a certificate — generate a fresh key pair |
+| 404 | `UnknownLeafType` | Unknown path segment; `test.ca.trufo.ai` returns 404 for production and sandbox leaf types, naming `ca.trufo.ai` |
+| 409 | `PublicKeyAlreadyUsed` | That public key already has a certificate — generate a fresh key pair (not test leaf types) |
 
 The certificate subject comes entirely from the CSR JWT's `distinguished_name`, not
 from the CSR. Test leaf types prefix the common name with `[TESTING] `.
@@ -124,7 +125,7 @@ The CSR JWT authorizes one enrollment. It is HS256, audience `tca-est`, and live
 | `iss` | string | Yes | `"trufo"` |
 | `sub` | string | Yes | Subscriber organization id |
 | `aud` | string | Yes | `"tca-est"` |
-| `jti` | string | Yes | Unique token id; redeemed once (production) |
+| `jti` | string | Yes | Unique token id; redeemed once (not test leaf types) |
 | `iat`, `exp` | integer | Yes | Issued-at and expiry (UNIX seconds) |
 | `leaf_type` | string | Yes | Must equal the path segment |
 | `distinguished_name` | object | Yes | Subject fields; `O` and `CN` required, `C`, `ST`, `L`, `OU` optional |
@@ -141,6 +142,9 @@ Test certificates need no account, organization, or validation. The CSR JWT is
 signed with the publicly known HMAC secret `hello-trufo` (HS256), using
 `sub: "test-account"` and a test leaf type. 
 
+Enroll at `https://test.ca.trufo.ai`. Test certificates are not recorded, so they
+cannot be listed or revoked, and a key can be re-enrolled.
+
 `request_c2pa_test_cert()` and `request_cawg_test_cert()` in the Python SDK perform
 the whole flow.
 
@@ -156,6 +160,7 @@ certificates; fetch them to build a trust store or complete a chain.
 | `/c2pa-ca.crt` | C2PA Claim Signing CA — issuer of `c2pa-l1` leaves |
 | `/ctsa-ca.crt` | C2PA Timestamping CA — issuer of TSA leaves |
 | `/temp-cawg-ca.crt` | Interim CAWG Identity CA — issuer of `cawg-interim` leaves |
+| `/c2pa-sandbox-ca.crt` | Sandbox C2PA CA — issuer of `c2pa-l1-sandbox` leaves |
 
 ---
 
@@ -186,8 +191,8 @@ issuer-pinned routes are optional and reject requests for a different issuer.
 | `TRY_LATER` | Status temporarily unavailable; retry |
 
 Responses are valid for 7 days (`thisUpdate` to `nextUpdate`) and are cached and
-shared, so nonces are not echoed. Malformed requests return `400` with a plain-text
-body.
+shared, so nonces are not echoed. After a revoke, a cached response can be served for
+up to about 11 minutes. Malformed requests return `400` with a plain-text body.
 
 The `root` profile answers for intermediate CA certificates; the others answer for
 end-entity certificates of that type.
@@ -344,7 +349,7 @@ Exchange an instance-credential assertion for a CSR JWT.
 | Field | Type | Required | Description |
 | ----- | ---- | -------- | ----------- |
 | `client_assertion` | string | Yes | JWS signed by the instance credential's private key |
-| `leaf_type` | string | Yes | `c2pa-l1` |
+| `leaf_type` | string | Yes | `c2pa-l1`, or `c2pa-l1-sandbox` on a [sandbox](#sandbox) product |
 | `validity_days` | integer | No | 1 to the type maximum |
 
 **Client assertion claims** — algorithm `ES256` or `EdDSA`, lifetime at most 300
@@ -364,8 +369,8 @@ certificates do not count). The cap never blocks rotation: request a shorter
 `validity_days`, or revoke the certificate being replaced.
 
 **Errors:** `401 ClientAssertionFailed`, `400 InvalidLeafType`,
-`400 InvalidValidityDays`, `403 LeafTypeNotAllowed`, `403 PVNotActive`,
-`403 OVNotActive`, `403 BillingNotActive`, `403 GPCancelled`,
+`400 InvalidValidityDays`, `403 LeafTypeNotAllowed` (the detail names the accepted
+types), `403 PVNotActive`, `403 OVNotActive`, `403 BillingNotActive`, `403 GPCancelled`,
 `403` with an actionable message when the three-active-certificate cap is
 reached (revoke one, or wait for one to expire),
 `404 InstanceNotFound`, `404 ProductNotFound`.
@@ -445,6 +450,28 @@ Omitting the time returns `400 AlreadyRevoked`. A concurrent change returns
 Revocation is permanent and propagates through OCSP. A `502` means the request did
 not complete and **must not be retried blindly** — re-list your certificates to
 check the outcome first.
+
+---
+
+## Sandbox
+
+Trufo sets up a sandbox product for an organization on request: contact
+[support@trufo.ai](mailto:support@trufo.ai). It needs no plan or validation.
+
+Every call is the same as production, with `c2pa-l1-sandbox` as the leaf type in the
+[CSR JWT request](#csr-jwt-issuance) and the EST path. In the Python SDK, pass
+`leaf_type=LeafType.C2PA_L1_SANDBOX` to `request_c2pa_cert()`. An organization can have
+up to three sandbox instances.
+
+The certificate is issued by a separate sandbox CA, carries a placeholder subject,
+and is not trusted. [Listing, revocation](#certificates), and [OCSP](#ocsp) work as
+in production. Use the base OCSP endpoints: the issuer-pinned routes cover production
+CAs only.
+
+### Moving to production
+
+A production certificate needs a new product, instance, credential, and leaf key.
+Reusing a sandbox leaf key returns `409 PublicKeyAlreadyUsed`.
 
 ---
 
