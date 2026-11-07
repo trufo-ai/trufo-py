@@ -60,18 +60,24 @@ def test_bytes_task_uploads_submits_polls_downloads_without_leaking_api_key(oper
     assert "headers" not in get.call_args.kwargs
 
 
-@pytest.mark.parametrize("status,code", [("failed", "execution_timeout"), ("expired", "start_timeout")])
-def test_terminal_failure_keeps_task_id_and_does_not_resubmit(status, code):
+@pytest.mark.parametrize("status,code,http_status,message,expected", [
+    ("failed", "execution_timeout", 504, None, "Task task-1 failed: execution_timeout."),
+    ("expired", "start_timeout", 503, None, "Task task-1 failed: start_timeout."),
+    ("failed", "invalid_input", 400, "Fragmented MP4 is not supported.",
+     "Task task-1 failed: invalid_input. Fragmented MP4 is not supported."),
+])
+def test_terminal_failure_keeps_task_id_and_does_not_resubmit(status, code, http_status, message, expected):
     payload = task(status)
-    payload["error"] = {"code": code, "http_status": 504 if status == "failed" else 503,
+    payload["error"] = {"code": code, "http_status": http_status, "message": message,
                         "additional_error_field": "ignored"}
     with patch("requests.get", return_value=response(payload)), patch("requests.post") as post:
         with pytest.raises(TaskFailedError) as failure:
             wait_for_task("key", "task-1")
     assert failure.value.task_id == "task-1"
     assert failure.value.task.error_code == code
-    assert failure.value.task.error_http_status == payload["error"]["http_status"]
-    assert code in str(failure.value)
+    assert failure.value.task.error_http_status == http_status
+    assert failure.value.task.error_message == message
+    assert str(failure.value) == expected
     post.assert_not_called()
 
 

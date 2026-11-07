@@ -80,7 +80,7 @@ class BindWatermarkTaskResult:
 
 @dataclass(frozen=True)
 class TaskInfo(TaskReceipt):
-    """Task status, progress, result, and optional failure code/status.
+    """Task status, progress, result, and optional failure code/status/message.
 
     error_http_status describes the task failure, not the status-query response.
     """
@@ -96,6 +96,7 @@ class TaskInfo(TaskReceipt):
     error_code: str | None = None
     error_http_status: int | None = None
     result: SignC2PATaskResult | BindWatermarkTaskResult | None = None
+    error_message: str | None = None
 
 
 class TaskFailedError(RuntimeError):
@@ -105,7 +106,8 @@ class TaskFailedError(RuntimeError):
         self.task = task
         self.task_id = task.task_id
         code = task.error_code if task.error_code is not None else task.status.value
-        super().__init__(f"Task {task.task_id} failed: {code}.")
+        detail = f" {task.error_message}" if task.error_message else ""
+        super().__init__(f"Task {task.task_id} failed: {code}.{detail}")
 
 
 class TaskWaitTimeoutError(TimeoutError):
@@ -123,6 +125,7 @@ def _parse_task_response(payload: dict, response_type):
     if response_type is TaskInfo and payload.get("error"):
         values["error_code"] = payload["error"]["code"]
         values["error_http_status"] = payload["error"]["http_status"]
+        values["error_message"] = payload["error"].get("message")
     if values.get("result"):
         result_type = SignC2PATaskResult if values["task_type"] == TaskType.C2PA_SIGN else BindWatermarkTaskResult
         result = values["result"]

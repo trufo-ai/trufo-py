@@ -242,7 +242,7 @@ See [api_c2pa.md](../api/api_c2pa.md#signing-modes) for the full flow comparison
 - A per-embed mark: the stored C2PA manifest store (`manifest_bytes`) when one has been captured.
 - A per-AI-system mark: `ai_involvement` and `ai_system`, the AI system's public information (name, version, model disclosure and, while your Organization Validation is active, your organization's validated legal name), which anyone with a recover key can see; your own organization also sees its `ai_system_id` and `status`.
 
-`oid` is set when the mark belongs to your own organization. `recover_content()` requires an API key with the `content-recover-test` scope (test host) or `content-recover-prod` scope (production hosts); each key works only against its own host tier.
+When the mark belongs to your own organization, `oid` is set and, for a per-embed mark, `status` says whether its watermark ID is `active` or `inactive` ([content records](../api/api_c2pa.md#content-records)). `recover_content()` requires an API key with the `content-recover-test` scope (test host) or `content-recover-prod` scope (production hosts); each key works only against its own host tier.
 
 `recover_content()` defaults to the production host, so test-host recovery — which is what pairs with the test signing flows on this page — must pass the test host explicitly:
 
