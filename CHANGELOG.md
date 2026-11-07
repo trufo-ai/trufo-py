@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - SVG and AVI C2PA generation and validation support in the media-format reference.
+- `TaskInfo.error_message`: the server's explanation of a failed task, when one
+  applies; `TaskFailedError`'s message includes it.
+- `RecoverContentResult.status`: whether your own per-embed record's watermark ID
+  is `active` or `inactive`.
 
 ## [2.2.0] — 2026-11-04
 
