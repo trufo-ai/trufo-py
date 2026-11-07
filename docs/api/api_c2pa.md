@@ -817,7 +817,7 @@ SDK: `bind_watermark()`, `bind_reserve()`, `watermark_media()`, `bind_commit()`
 ### Watermark billing
 
 Watermarking on every route, including C2PA signing with a watermark action,
-bills watermark ID units: 10 per new ID, 1 per embed, and 1 per active ID per
+bills watermark ID units: 1 per new ID, 0.1 per embed, and 0.1 per active ID per
 year. A per-embed mark is one new ID, its first embed included; a per-AI-system
 mark is one embed of the AI system's ID.
 Registering an AI system issues one new ID per type
