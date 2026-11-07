@@ -16,7 +16,7 @@ See [1_certs.py](1_certs.py) for a runnable example of both tracks.
 
 ## Dummy Certificate
 
-For users who cannot yet get a trusted certificate but need a well-formed one to submit their conformance applications. No account authentication required. Uses a publicly known dummy HMAC secret; issued certificates are signed by Trufo's test CA and will not pass public validators. Dummy certificates are not recorded, listed, or revocable.
+For users who cannot yet get a trusted certificate but need a well-formed one to submit their conformance applications. No account authentication required. Uses a publicly known dummy HMAC secret; issued certificates are signed by Trufo's test CA and will not pass public validators. Dummy certificates are not listed or revocable.
 
 ```python
 from trufo import generate_keypair, request_c2pa_dummy_cert

@@ -18,7 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The certificates enrolled with the public `hello-trufo` secret are now called
   dummy certificates. They are for users who cannot yet get a trusted certificate
   but need a well-formed one to submit their conformance applications. They are
-  not recorded, listed, or revocable, and the same key can be enrolled again.
+  not listed or revocable, and the same key can be enrolled again.
 
 ### Deprecated
 

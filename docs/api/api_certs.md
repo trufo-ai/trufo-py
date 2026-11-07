@@ -142,8 +142,8 @@ a well-formed one to submit their conformance applications. They need no account
 organization, or validation. The CSR JWT is signed with the publicly known HMAC
 secret `hello-trufo` (HS256), using `sub: "test-account"` and a dummy leaf type.
 
-Dummy certificates are not recorded, listed, or revocable, and the same key can be
-enrolled again.
+Dummy certificates are not listed or revocable, and the same key can be enrolled
+again.
 
 `request_c2pa_dummy_cert()` and `request_cawg_dummy_cert()` in the Python SDK perform
 the whole flow; pass `country` to set `C`, which the CA requires.
