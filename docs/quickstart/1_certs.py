@@ -3,7 +3,7 @@
 
 """Quickstart: procure a C2PA certificate from Trufo.
 
-Part 1 — Test certificate (no account required).
+Part 1 — Dummy certificate (no account required).
 Part 2 — Production certificate (requires account, OV, PV, subscription).
 
 See docs/quickstart/1_certs.md for prerequisites and explanations.
@@ -19,29 +19,29 @@ OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 
 # ============================================================
-# Part 1 — Test Certificate
+# Part 1 — Dummy Certificate
 # ============================================================
 # No account or API key needed.  Issued by Trufo's test CA — will not
 # pass public validators, but the certificate format is identical to
 # production.
 
-from trufo import request_c2pa_test_cert
+from trufo import request_c2pa_dummy_cert
 
 private_pem, _ = generate_keypair(SigningAlgorithm.ES256)
 
-cert_chain_pem = request_c2pa_test_cert(
+cert_chain_pem = request_c2pa_dummy_cert(
     org_name="My Company",
     common_name="My App",
     private_key_signer=private_pem,
     country="US",
 )
 
-key_path = OUT_DIR / "test_leaf_key.pem"
+key_path = OUT_DIR / "dummy_leaf_key.pem"
 key_path.write_bytes(private_pem)
 key_path.chmod(0o600)
-(OUT_DIR / "test_cert_chain.pem").write_bytes(cert_chain_pem)
+(OUT_DIR / "dummy_cert_chain.pem").write_bytes(cert_chain_pem)
 
-print(f"Test certificate saved to {OUT_DIR}/")
+print(f"Dummy certificate saved to {OUT_DIR}/")
 
 
 # ============================================================

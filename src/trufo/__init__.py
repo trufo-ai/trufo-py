@@ -3,7 +3,7 @@
 
 from trufo.api.tca.certs_c2pa import create_instance, register_credential, request_c2pa_cert
 from trufo.api.tca.certs_cawg_interim import request_cawg_interim_cert
-from trufo.api.tca.certs_test import request_c2pa_test_cert, request_cawg_test_cert
+from trufo.api.tca.certs_test import request_c2pa_dummy_cert, request_cawg_dummy_cert
 from trufo.api.tps.bind import (
     BindWatermarkResult,
     BindReserveResult,
@@ -37,6 +37,7 @@ from trufo.api.tps.sign_c2pa import (
 )
 from trufo.crypt.keygen import generate_keypair
 from trufo.util.credentials import load_api_key, save_api_key
+from trufo.util.deprecation import deprecated_aliases
 from trufo.util.warnings import TrufoServerWarning
 
 __version__ = "2.2.0"
@@ -63,9 +64,9 @@ __all__ = [
     "recover_content",
     "register_credential",
     "request_c2pa_cert",
-    "request_c2pa_test_cert",
+    "request_c2pa_dummy_cert",
+    "request_cawg_dummy_cert",
     "request_cawg_interim_cert",
-    "request_cawg_test_cert",
     "save_api_key",
     "set_content_status",
     "sign_c2pa",
@@ -77,3 +78,11 @@ __all__ = [
     "TrufoServerWarning",
     "watermark_media",
 ]
+
+__getattr__ = deprecated_aliases(
+    globals(),
+    {
+        "request_c2pa_test_cert": "request_c2pa_dummy_cert",
+        "request_cawg_test_cert": "request_cawg_dummy_cert",
+    },
+)

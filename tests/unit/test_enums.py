@@ -68,12 +68,12 @@ STR_ENUMS = {
     LeafType: {
         "C2PA_L1": "c2pa-l1",
         "C2PA_L2": "c2pa-l2",
-        "C2PA_L1_TEST": "c2pa-l1-test",
-        "C2PA_L2_TEST": "c2pa-l2-test",
+        "C2PA_L1_DUMMY": "c2pa-l1-test",
+        "C2PA_L2_DUMMY": "c2pa-l2-test",
         "CTSA": "ctsa",
         "CTSA_TEST": "ctsa-test",
         "CAWG_INTERIM": "cawg-interim",
-        "CAWG_INTERIM_TEST": "cawg-interim-test",
+        "CAWG_INTERIM_DUMMY": "cawg-interim-test",
     },
 }
 
@@ -89,6 +89,12 @@ def test_str_enum_members_values_and_type(enum_cls, expected):
     assert {m.name: m.value for m in enum_cls} == expected
     for name, value in expected.items():
         assert enum_cls[name] == value
+
+
+def test_leaf_type_test_names_alias_the_dummy_members():
+    assert LeafType.C2PA_L1_TEST is LeafType.C2PA_L1_DUMMY
+    assert LeafType.C2PA_L2_TEST is LeafType.C2PA_L2_DUMMY
+    assert LeafType.CAWG_INTERIM_TEST is LeafType.CAWG_INTERIM_DUMMY
 
 
 def test_signing_algorithm_is_structured_not_str():

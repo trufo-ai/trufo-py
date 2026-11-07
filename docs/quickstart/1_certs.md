@@ -2,10 +2,10 @@
 
 A C2PA Signing Certificate identifies the signing entity (software or hardware) embedded in a manifest. Two tracks are available:
 
-| Track          | Purpose                             | Auth Required |
-| -------------- | ----------------------------------- | ------------- |
-| **Test**       | Development and integration testing | No            |
-| **Production** | Real-world publishing               | Yes           |
+| Track          | Purpose                                                 | Auth Required |
+| -------------- | ------------------------------------------------------- | ------------- |
+| **Dummy**      | A well-formed certificate for a conformance application | No            |
+| **Production** | Real-world publishing                                   | Yes           |
 
 
 > **Note:** You do not need a C2PA Signing Certificate to use the Trufo C2PA signing endpoints (`POST /c2pa/sign`) — that endpoint uses Trufo's own C2PA signer. A C2PA Signing Certificate is only required if you are operating your own conformant C2PA Generator Product. See the [C2PA Signing Certificate product page](https://app.trufo.ai/tca/certs/c2pa) for more details.
@@ -14,17 +14,17 @@ See [1_certs.py](1_certs.py) for a runnable example of both tracks.
 
 ---
 
-## Test Certificate
+## Dummy Certificate
 
-No account authentication required. Uses a publicly known test HMAC secret; issued certificates are signed by Trufo's test CA and will not pass public validators.
+For users who cannot yet get a trusted certificate but need a well-formed one to submit their conformance applications. No account authentication required. Uses a publicly known dummy HMAC secret; issued certificates are signed by Trufo's test CA and will not pass public validators. Dummy certificates are not recorded, listed, or revocable.
 
 ```python
-from trufo import generate_keypair, request_c2pa_test_cert
+from trufo import generate_keypair, request_c2pa_dummy_cert
 from trufo.crypt.algorithms import SigningAlgorithm
 
 private_pem, _ = generate_keypair(SigningAlgorithm.ES256)
 
-cert_chain_pem = request_c2pa_test_cert(
+cert_chain_pem = request_c2pa_dummy_cert(
     org_name="My Company",
     common_name="My App",
     private_key_signer=private_pem,
