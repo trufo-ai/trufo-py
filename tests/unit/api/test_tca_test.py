@@ -107,3 +107,13 @@ class TestRequestCawgTestCert:
 
         assert result == b"chain"
         assert mock_enroll.call_args[0][2] == "cawg-interim-test"
+
+    @patch("trufo.api.tca.certs_test.extract_cert_chain")
+    @patch("trufo.api.tca.certs_test.est_enroll")
+    @patch("trufo.api.tca.certs_test.build_csr")
+    def test_country_reaches_csr_jwt(self, mock_csr, mock_enroll, mock_extract_chain):
+        request_cawg_test_cert("Org", "CN", b"k", country="US")
+
+        csr_jwt = mock_enroll.call_args[0][0]
+        payload = pyjwt.decode(csr_jwt, TEST_HMAC_SECRET, algorithms=["HS256"], audience="tca-est")
+        assert payload["distinguished_name"]["C"] == "US"

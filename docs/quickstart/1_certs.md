@@ -28,6 +28,7 @@ cert_chain_pem = request_c2pa_test_cert(
     org_name="My Company",
     common_name="My App",
     private_key_signer=private_pem,
+    country="US",
 )
 ```
 
