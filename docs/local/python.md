@@ -134,6 +134,46 @@ Trufo's [notices](../api/api_c2pa.md#response-warnings) arrive as Python
 SDK call. When the SDK or engine version is deprecated, a notice gives the date
 after which signing with it returns `400 UnsupportedSDKVersion`; upgrade before then.
 
+## Local Watermark Settings
+
+Watermarking is off by default. With `trufo[local-full]`, an explicit `watermark`
+action requests it; `WatermarkSettings` chooses how the local engine runs:
+
+```python
+from trufo import sign_c2pa_distributed, watermark_media
+from trufo.c2pa import WatermarkProfile, WatermarkSettings
+
+settings = WatermarkSettings(profile=WatermarkProfile.FAST)
+signed_bytes = sign_c2pa_distributed(
+    api_key,
+    media_bytes,
+    actions=[["watermark", {}]],
+    watermark_settings=settings,
+)
+
+# with a reservation from bind_reserve(), for media you sign yourself
+marked_bytes = watermark_media(
+    media_bytes, reservation.wid_package, watermark_settings=settings
+)
+```
+
+Both distributed signing helpers and `watermark_media()` accept these settings.
+Omitting them preserves the default embedding behavior. `profile="default"` uses
+the standard path; `profile="fast"` requests best-effort CPU video acceleration
+when available. An NVIDIA CUDA GPU is recommended and selected automatically when
+available; both profiles then use the original GPU implementation. Otherwise the
+engine uses CPU. Other media use the standard embedding path.
+
+Fast CPU acceleration is qualified with PyTorch 2.13 on Linux x86_64, an
+AVX512 BF16-capable CPU, and `g++`. When acceleration prerequisites are absent,
+fast mode warns once and uses the standard CPU path. The first accelerated call
+may compile native kernels and warm up the runtime.
+
+These settings configure local execution. They are separate from action
+parameters, stay out of remote preprocessing and commit requests, and do not
+appear in C2PA assertions. A setting alone does not request watermarking. The
+existing Docker full image embeds on CPU only; see [Docker images](docker.md).
+
 ## Troubleshooting
 
 **`No matching distribution found for trufo-provenance…` or `…for pillow-heif…`** —
