@@ -10,7 +10,13 @@ from trufo.c2pa.manifest import ManifestSettings, SignedIngredientPolicy, Signed
 from trufo.c2pa.redactions import RedactableAssertion, RedactionReason
 from trufo.c2pa.source_types import DigitalSourceType
 from trufo.c2pa.thumbnails import ThumbnailPolicy, ThumbnailSettings, ThumbnailSize
-from trufo.c2pa.watermark import WatermarkEffort, WatermarkIDAllocationMode, WatermarkMode
+from trufo.c2pa.watermark import (
+    WatermarkEffort,
+    WatermarkIDAllocationMode,
+    WatermarkMode,
+    WatermarkProfile,
+    WatermarkSettings,
+)
 
 __all__ = [
     "AIInvolvement",
@@ -28,4 +34,6 @@ __all__ = [
     "WatermarkEffort",
     "WatermarkIDAllocationMode",
     "WatermarkMode",
+    "WatermarkProfile",
+    "WatermarkSettings",
 ]

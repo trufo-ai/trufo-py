@@ -6,8 +6,11 @@
 import importlib.metadata
 import json
 import os
+import subprocess
+import sys
 import threading
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -306,3 +309,62 @@ def test_gone_client_is_not_signed(client, folders, engine):
     # the request reached the slot: an earlier refusal would carry another status
     assert sent[0]["status"] == 499
     assert engine.calls == []
+
+
+@pytest.mark.parametrize("settings", [{}, {"profile": "fast", "device": "cpu"}])
+def test_watermark_settings_forwarded_separately(sign, engine, settings):
+    assert sign(watermark_settings=settings).status_code == 200
+    assert engine.calls[0]["watermark_settings"] == settings
+    assert engine.calls[0]["actions"] == []
+
+
+@pytest.mark.parametrize(
+    "settings", [{"profile": "other"}, {"device": False}, {"device": "cuda:01"}, {"unknown": 1}]
+)
+def test_invalid_watermark_settings_refused_before_paths(sign, engine, settings):
+    response = sign(watermark_settings=settings, media_input_path="missing")
+    assert response.status_code == 400
+    assert "watermark" in response.json()["detail"].lower()
+    assert engine.calls == []
+
+
+def test_fresh_app_with_legacy_engine_symbols(folders):
+    subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            """
+import sys
+from pathlib import Path
+from fastapi.testclient import TestClient
+from trufo import c2pa
+from trufo.c2pa import watermark
+from tfprov.c2pa_generator import cg_request, remote_orchestrator
+for module in (c2pa, watermark, cg_request):
+    for name in ('WatermarkSettings', 'WatermarkProfile', 'normalize_watermark_settings'):
+        if hasattr(module, name): delattr(module, name)
+def legacy(api_key, **kwargs):
+    assert 'watermark_settings' not in kwargs
+    return str(kwargs['media_output_path']), []
+remote_orchestrator.generate_claim_remote = legacy
+sys.path.insert(0, sys.argv[1])
+import app
+app._watermark_engine_version = lambda: None
+folder = Path(sys.argv[2])
+body = {'media_input_path': str(folder/'in/photo.jpg'),
+        'media_output_path': str(folder/'out/signed.jpg'), 'actions': []}
+with TestClient(app.app) as client:
+    assert client.get('/health').status_code == 200
+    response = client.post('/c2pa/sign', json=body, headers={'X-API-Key': 'key'})
+    assert response.status_code == 200, response.text
+    body['watermark_settings'] = {}
+    response = client.post('/c2pa/sign', json=body, headers={'X-API-Key': 'key'})
+    assert response.status_code == 400
+    assert response.json()['detail'] == 'Watermark settings require trufo-provenance 2.3 or later.'
+""",
+            str(Path(service.__file__).parent),
+            str(folders),
+        ],
+        env=os.environ.copy(),
+        check=True,
+    )

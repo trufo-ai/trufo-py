@@ -324,6 +324,10 @@ The signing-only image signs without watermarking; see [Choose an Image](../loca
 
 ---
 
+For local embedding profiles and CPU or CUDA selection, see
+[Local Watermark Settings](../local/python.md#local-watermark-settings). These
+settings do not request watermarking by themselves.
+
 ## Reference
 
 - Authentication setup: [0_setup.md](0_setup.md)

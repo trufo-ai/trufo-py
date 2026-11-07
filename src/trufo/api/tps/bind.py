@@ -51,7 +51,7 @@ from trufo.api.headers import sdk_headers
 from trufo.api.tps.io import _upload_task_input
 from trufo.api.tps.tasks import ExecutionMode, TaskReceipt, _submit_task, wait_for_task, _download_task_output
 from trufo.c2pa.ai_system import AIInvolvement
-from trufo.c2pa.watermark import WatermarkIDAllocationMode, WatermarkMode
+from trufo.c2pa.watermark import WatermarkIDAllocationMode, WatermarkMode, WatermarkSettings
 from trufo.util.deprecation import deprecated_aliases
 from trufo.util.warnings import emit_server_warnings
 
@@ -279,26 +279,40 @@ def bind_reserve(
     )
 
 
-def watermark_media(media_bytes: bytes, wid_package: dict) -> bytes:
+def watermark_media(
+    media_bytes: bytes,
+    wid_package: dict,
+    *,
+    watermark_settings: WatermarkSettings | None = None,
+) -> bytes:
     """lpls step 2: embed a reserved watermark ID with the local Trufo engine.
 
     Args:
         media_bytes: Raw bytes of the media file to watermark.
         wid_package: ``BindReserveResult.wid_package`` (or the ``wid_package``
             of a Trufo API response).
+        watermark_settings: Optional local embedding profile and device.
 
     Returns:
         The watermarked media bytes, in the input's format.
 
     Raises:
         ImportError: If the engine (``trufo[local-full]``) is not installed.
+        TypeError: If watermark_settings is not WatermarkSettings or None.
+        ValueError: If an explicit CUDA device is unavailable.
     """
+    if watermark_settings is not None and not isinstance(watermark_settings, WatermarkSettings):
+        raise TypeError("watermark_settings must be WatermarkSettings or None.")
     try:
         from tfprov.util import pawprint_import
     except ImportError as exc:
         raise ImportError(_ENGINE_HINT) from exc
+    options = {}
+    if watermark_settings is not None:
+        pawprint_import.require_watermark_device(watermark_settings.device)
+        options = {"mode": watermark_settings.profile.value, "device": watermark_settings.device}
     package = pawprint_import.WatermarkIdPackage(**wid_package)
-    return pawprint_import.embed(media_bytes, package)
+    return pawprint_import.embed(media_bytes, package, **options)
 
 
 def _manifest_store_from_media(signed_media_bytes: bytes) -> bytes:
