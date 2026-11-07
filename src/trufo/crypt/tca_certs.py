@@ -24,12 +24,13 @@ from cryptography.x509.oid import NameOID
 
 from trufo.api.endpoints import TRUFO_CA_URL
 from trufo.crypt.algorithms import ALG_TO_CURVE, ALG_TO_HASH, LeafType
+from trufo.util.deprecation import deprecated_aliases
 
-TEST_HMAC_SECRET = "hello-trufo"
+DUMMY_HMAC_SECRET = "hello-trufo"
 
 __all__ = [
+    "DUMMY_HMAC_SECRET",
     "LeafType",
-    "TEST_HMAC_SECRET",
     "build_csr",
     "est_enroll",
     "extract_cert_chain",
@@ -106,7 +107,7 @@ def est_enroll(csr_jwt: str, csr_der: bytes, leaf_type_value: str) -> bytes:
     empty).
 
     Args:
-        csr_jwt: Signed CSR JWT (from RA or test HMAC).
+        csr_jwt: Signed CSR JWT (from RA or dummy HMAC).
         csr_der: DER-encoded PKCS#10 CSR.
         leaf_type_value: Leaf type string (e.g. ``"c2pa-l1"``).
 
@@ -221,3 +222,6 @@ def _order_ca_chain(
     # append any unreachable certs (shouldn't happen with well-formed PKCS#7)
     ordered.extend(by_subject.values())
     return ordered
+
+
+__getattr__ = deprecated_aliases(globals(), {"TEST_HMAC_SECRET": "DUMMY_HMAC_SECRET"})

@@ -9,9 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- `request_cawg_test_cert` accepts keyword-only `country`, the certificate
-  subject's country (C). Pass it to either test-cert function: the CA refuses
-  an enrollment without a country.
+- `request_cawg_dummy_cert` accepts keyword-only `country`, the certificate
+  subject's country (C). Pass it to either dummy certificate function: the CA
+  refuses an enrollment without a country.
+
+### Changed
+
+- The certificates enrolled with the public `hello-trufo` secret are now called
+  dummy certificates. They are for users who cannot yet get a trusted certificate
+  but need a well-formed one to submit their conformance applications. They are
+  not listed or revocable, and the same key can be enrolled again.
+
+### Deprecated
+
+- `request_c2pa_test_cert`, `request_cawg_test_cert`, and `TEST_HMAC_SECRET`: use
+  `request_c2pa_dummy_cert`, `request_cawg_dummy_cert`, and `DUMMY_HMAC_SECRET`.
+- `LeafType.C2PA_L1_TEST`, `LeafType.C2PA_L2_TEST`, and
+  `LeafType.CAWG_INTERIM_TEST`: use `LeafType.C2PA_L1_DUMMY`,
+  `LeafType.C2PA_L2_DUMMY`, and `LeafType.CAWG_INTERIM_DUMMY`. The values, such as
+  `c2pa-l1-test`, do not change, but `.name` and `str()` on the old members now
+  give the `_DUMMY` names.
+- The old names above stay importable until the next major release. A star import
+  no longer brings them.
 
 ## [2.2.0] — 2026-11-04
 

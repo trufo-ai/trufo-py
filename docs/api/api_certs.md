@@ -32,16 +32,16 @@ Registration Authority endpoints live on the Trufo API and follow its convention
 | --------- | ------- | ---------------- |
 | `c2pa-l1` | Production C2PA claim signing, assurance level 1 | 366 days |
 | `c2pa-l2` | Production C2PA claim signing, assurance level 2 | 90 days |
-| `c2pa-l1-test` | Test C2PA claim signing, assurance level 1 | 366 days |
-| `c2pa-l2-test` | Test C2PA claim signing, assurance level 2 | 90 days |
+| `c2pa-l1-test` | Dummy C2PA claim signing, assurance level 1 | 366 days |
+| `c2pa-l2-test` | Dummy C2PA claim signing, assurance level 2. Disabled: enrollment returns `401 LeafTypeDisabled` | 90 days |
 | `cawg-interim` | Production CAWG identity signing | 366 days |
-| `cawg-interim-test` | Test CAWG identity signing | 366 days |
+| `cawg-interim-test` | Dummy CAWG identity signing | 366 days |
 
 Level 2 requires hardware-backed key protection; contact
 [support@trufo.ai](mailto:support@trufo.ai) to enable it for your product.
 
 A certificate is issued at the maximum validity unless the enrollment requests a
-shorter `validity_days`. Test leaf types are issued by a separate test CA: they are
+shorter `validity_days`. Dummy leaf types are issued by a separate test CA: they are
 structurally valid but deliberately outside the production trust chain, and
 conformant validators will not accept them.
 
@@ -112,7 +112,7 @@ DER PKCS#7 containing the issued leaf followed by the CA chain.
 | 409 | `PublicKeyAlreadyUsed` | That public key already has a certificate — generate a fresh key pair |
 
 The certificate subject comes entirely from the CSR JWT's `distinguished_name`, not
-from the CSR. Test leaf types prefix the common name with `[TESTING] `.
+from the CSR. Dummy leaf types prefix the common name with `[TESTING] `.
 
 ### CSR JWT
 
@@ -135,13 +135,17 @@ The CSR JWT authorizes one enrollment. It is HS256, audience `tca-est`, and live
 For production, Trufo's RA mints this token for you (see
 [CSR JWT issuance](#csr-jwt-issuance)); you never construct it yourself.
 
-### Test enrollment
+### Dummy enrollment
 
-Test certificates need no account, organization, or validation. The CSR JWT is
-signed with the publicly known HMAC secret `hello-trufo` (HS256), using
-`sub: "test-account"` and a test leaf type. 
+Dummy certificates are for users who cannot yet get a trusted certificate but need
+a well-formed one to submit their conformance applications. They need no account,
+organization, or validation. The CSR JWT is signed with the publicly known HMAC
+secret `hello-trufo` (HS256), using `sub: "test-account"` and a dummy leaf type.
 
-`request_c2pa_test_cert()` and `request_cawg_test_cert()` in the Python SDK perform
+Dummy certificates are not listed or revocable, and the same key can be enrolled
+again.
+
+`request_c2pa_dummy_cert()` and `request_cawg_dummy_cert()` in the Python SDK perform
 the whole flow; pass `country` to set `C`, which the CA requires.
 
 ### CA certificate downloads

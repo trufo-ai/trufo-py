@@ -19,6 +19,12 @@ import pytest
         ("trufo.api.tps.bind", "BindReservation", "BindReserveResult"),
         ("trufo.api.tps.sign_c2pa", "C2PAS3SignedOutput", "SignC2PAS3Result"),
         ("trufo.api.endpoints", "TPS_C2PA_SIGN", "TPS_C2PA_SIGN_PATH"),
+        ("trufo", "request_c2pa_test_cert", "request_c2pa_dummy_cert"),
+        ("trufo", "request_cawg_test_cert", "request_cawg_dummy_cert"),
+        ("trufo.api.tca.certs_test", "request_c2pa_test_cert", "request_c2pa_dummy_cert"),
+        ("trufo.api.tca.certs_test", "request_cawg_test_cert", "request_cawg_dummy_cert"),
+        ("trufo.crypt.tca_certs", "TEST_HMAC_SECRET", "DUMMY_HMAC_SECRET"),
+        ("trufo.api.tca.certs_test", "TEST_HMAC_SECRET", "DUMMY_HMAC_SECRET"),
     ],
 )
 def test_old_name_warns_and_resolves_to_new(module_path, old, new):
