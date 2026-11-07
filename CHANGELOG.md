@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `WatermarkSettings` and `WatermarkProfile` for local watermark embedding with
+  `watermark_media` and the distributed signing helpers. Choose the `default` or
+  `fast` profile and automatic, CPU, or explicit CUDA device selection. Runtime
+  settings remain local and require an explicit watermark action when signing.
+
+### Changed
+
+- Local-engine extras require trufo-provenance 2.3.
+
 ## [2.2.1] — 2026-11-08
 
 ### Added

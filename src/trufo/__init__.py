@@ -53,7 +53,7 @@ from trufo.util.credentials import load_api_key, save_api_key
 from trufo.util.deprecation import deprecated_aliases
 from trufo.util.warnings import TrufoServerWarning
 
-__version__ = "2.2.1"
+__version__ = "2.3.0"
 
 __all__ = [
     "ExecutionMode",

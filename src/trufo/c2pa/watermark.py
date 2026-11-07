@@ -3,7 +3,44 @@
 
 """User-facing C2PA watermark types supported by Trufo."""
 
+import re
+from dataclasses import dataclass
 from enum import Enum
+
+
+class WatermarkProfile(str, Enum):
+    """Local watermark embedding profile."""
+
+    DEFAULT = "default"
+    FAST = "fast"
+
+
+@dataclass(frozen=True)
+class WatermarkSettings:
+    """Local watermark execution settings, separate from the watermark action.
+
+    ``profile`` accepts ``"default"`` or ``"fast"``. Fast requests best-effort
+    video acceleration; GPU acceleration requires NVIDIA CUDA.
+    ``device=None`` chooses CUDA when available, otherwise CPU; ``"cpu"``
+    forces CPU, ``"cuda"`` uses the current visible GPU, and ``"cuda:N"``
+    selects visible GPU index N (a canonical nonnegative decimal integer).
+    An unavailable explicit CUDA selection raises ValueError at execution.
+    These settings do not request watermarking or enter the C2PA manifest.
+    """
+
+    profile: WatermarkProfile = WatermarkProfile.DEFAULT
+    device: str | None = None
+
+    def __post_init__(self) -> None:
+        try:
+            object.__setattr__(self, "profile", WatermarkProfile(self.profile))
+        except (TypeError, ValueError) as exc:
+            raise ValueError("Watermark profile must be 'default' or 'fast'.") from exc
+        if self.device is not None and (
+            not isinstance(self.device, str)
+            or re.fullmatch(r"cpu|cuda(?::(?:0|[1-9][0-9]*))?", self.device) is None
+        ):
+            raise ValueError("Watermark device must be None, 'cpu', 'cuda', or 'cuda:N'.")
 
 
 class WatermarkEffort(str, Enum):
