@@ -2,7 +2,7 @@
 
 This reference defines media eligibility for C2PA generation and validation, and
 Trufo watermark embedding and recovery. It covers Cloud mode and Local mode as of
-Trufo SDK 2.2.0 with Provenance 2.2.0 and Pawprint 0.5.4.
+Trufo SDK 2.2.1 with Provenance 2.2.1 and Pawprint 0.5.4.
 
 A file is supported when its MIME type is eligible for the operation and the file
 passes that operation's checks; a supported container does not make every file in
@@ -30,7 +30,8 @@ does not guarantee that an ID is detected or recovered.
 | PDF | `application/pdf` | Yes | Yes | No | No |
 | Raw AAC (ADTS) | `audio/aac` | No | No | Yes | Yes |
 | BMP, OGG (Vorbis, Opus), AIFF | `image/bmp`, `audio/ogg`, `audio/aiff` | No | No | No | Yes |
-| SVG, WebM, AVI | `image/svg+xml`, `video/webm`, `video/avi`, `video/x-msvideo` | No | No | No | No |
+| SVG, AVI | `image/svg+xml`, `video/avi`, `video/x-msvideo` | Yes | Yes | No | No |
+| WebM | `video/webm` | No | No | No | No |
 
 Types not listed as eligible are unsupported. C2PA signing accepts images of at
 most 400 million pixels. The restrictions sections below apply to watermark
