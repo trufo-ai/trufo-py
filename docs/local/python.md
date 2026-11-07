@@ -176,15 +176,16 @@ marked_bytes = watermark_media(
 
 Both distributed signing helpers and `watermark_media()` accept these settings.
 Omitting them preserves the default embedding behavior. `profile="default"` uses
-the standard path; `profile="fast"` requests best-effort CPU video acceleration
-when available. An NVIDIA CUDA GPU is recommended and selected automatically when
-available; both profiles then use the original GPU implementation. Otherwise the
-engine uses CPU. Other media use the standard embedding path.
+the standard path; `profile="fast"` opts into a shared CPU encoder for still
+images and video frames. An NVIDIA CUDA GPU is recommended and selected
+automatically when available; both profiles then use the original GPU
+implementation. Otherwise the engine uses CPU. Audio uses its standard encoder.
 
-Fast CPU acceleration is qualified with PyTorch 2.13 on Linux x86_64, an
-AVX512 BF16-capable CPU, and `g++`. When acceleration prerequisites are absent,
-fast mode warns once and uses the standard CPU path. The first accelerated call
-may compile native kernels and warm up the runtime.
+The portable fast CPU path uses FP32 Torch operations and needs no external
+compiler. The existing local-engine platform requirements still apply. The
+prepared model is cached after first use, so cold startup and warmed throughput
+have different costs; no compilation runs. Performance depends on the CPU and
+workload.
 
 These settings configure local execution. They are separate from action
 parameters, stay out of remote preprocessing and commit requests, and do not
