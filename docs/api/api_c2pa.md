@@ -274,7 +274,7 @@ not replace the subsequent `/bind/commit` step. With a per-AI-system watermark,
 | Checked | Which checks | A refusal |
 | --- | --- | --- |
 | At submission | Those a REQUEST runs before processing the media: a sign's watermark action, `branded_gp_id` and `assertions`; a bind's `mode` and watermark ID allocation | The HTTP status and `detail` a REQUEST would get; no task is created |
-| While processing | The others, among them the [signed-input](#signed-inputs-and-ingredients) refusals and every [`ingredient`](#ingredient) error except the created-placement and unbranded `parentOf` refusals | `status: "failed"` and an `error` with `code` and `http_status`, plus `message` only when the media's format cannot be watermarked |
+| While processing | The others, among them the [signed-input](#signed-inputs-and-ingredients) refusals and every [`ingredient`](#ingredient) error except the created-placement and unbranded `parentOf` refusals | `status: "failed"` and an `error` with `code` and `http_status`, plus `message` for a refusal (4xx): the `detail` a REQUEST would get |
 
 Error `code`s, with their `http_status`: `invalid_input` (400),
 `permission_denied` (403), `input_not_found` (404), `capacity_exceeded` (429),
