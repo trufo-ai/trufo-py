@@ -80,7 +80,7 @@ organization, not Organization Validation, Product Validation or a subscription.
 
 - **Test product.** Created in the dashboard
   ([app.trufo.ai/tca/certs/c2pa](https://app.trufo.ai/tca/certs/c2pa), Test view,
-  **Create test product**), not through the API or the SDK. Its name becomes the
+  **Create Test Product**), not through the API or the SDK. Its name becomes the
   certificate's `CN` as `[TESTING] <name>`, so it can be at most 54 UTF-8 bytes.
 - **Instances and credentials.** The [instance](#instances) and
   [credential](#instance-credentials) endpoints on `test.api.trufo.ai`, or the

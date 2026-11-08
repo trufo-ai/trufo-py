@@ -52,7 +52,7 @@ Requests use the same paths and bodies as production. Only the host changes, to
 ### Create a test product
 
 On [app.trufo.ai/tca/certs/c2pa](https://app.trufo.ai/tca/certs/c2pa), switch to the
-**Test** view and choose **Create test product**. The name you enter becomes the
+**Test** view and choose **Create Test Product**. The name you enter becomes the
 certificate's common name as `[TESTING] <name>`, so it can be at most 54 UTF-8 bytes.
 The dashboard shows the new product's `gp_id`.
 
