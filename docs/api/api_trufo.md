@@ -5,7 +5,7 @@ endpoint: request format, errors, warnings, and regions.
 
 - **Global API:** `https://api.trufo.ai`
 - **Europe API:** `https://eu.api.trufo.ai`
-- **Test API:** `https://test.api.trufo.ai` (C2PA signing, watermark recovery and standalone binding; see [api_c2pa.md](api_c2pa.md))
+- **Test API:** `https://test.api.trufo.ai` (C2PA signing, watermark recovery, standalone binding and the certificate test flow; see [api_c2pa.md](api_c2pa.md) and [api_certs.md](api_certs.md#test-flow))
 
 ---
 

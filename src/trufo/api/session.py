@@ -22,7 +22,7 @@ from trufo.api.auth import (
     poll_for_tokens,
     refresh_tokens,
 )
-from trufo.api.endpoints import TRUFO_API_URL
+from trufo.api.endpoints import TRUFO_API_URL, TRUFO_API_URL_TEST
 from trufo.api.loopback_auth import BrowserUnavailableError, run_loopback_login
 
 logger = logging.getLogger(__name__)
@@ -55,6 +55,12 @@ class TrufoSession:
         self.refresh_token = refresh_token
         self.base_api_url = base_api_url
 
+    @property
+    def _auth_api_url(self) -> str:
+        """Base URL for sign-in and token refresh."""
+        # the test host has no sign-in or refresh routes; it accepts tokens issued by TRUFO_API_URL
+        return TRUFO_API_URL if self.base_api_url == TRUFO_API_URL_TEST else self.base_api_url
+
     def init_session(self, api_key: str, use_device: bool = False) -> None:
         """Sign in and obtain tokens.
 
@@ -72,7 +78,7 @@ class TrufoSession:
         """
         if not use_device:
             try:
-                tokens = run_loopback_login(api_key, base_url=self.base_api_url)
+                tokens = run_loopback_login(api_key, base_url=self._auth_api_url)
                 self.access_token = tokens.access_token
                 self.refresh_token = tokens.refresh_token
                 return
@@ -88,7 +94,7 @@ class TrufoSession:
         Prints the verification URL for the user, then polls until
         the user approves (or the code expires).
         """
-        auth_resp = initiate_device_auth(api_key, base_url=self.base_api_url)
+        auth_resp = initiate_device_auth(api_key, base_url=self._auth_api_url)
 
         # keep the pre-filled URL: the /device page has no code-entry field yet,
         # so the bare verification_uri would land the user on "Invalid link"
@@ -98,7 +104,7 @@ class TrufoSession:
         tokens = poll_for_tokens(
             api_key,
             auth_resp.device_code,
-            base_url=self.base_api_url,
+            base_url=self._auth_api_url,
             interval=auth_resp.interval,
             timeout=auth_resp.expires_in,
         )
@@ -141,7 +147,7 @@ class TrufoSession:
         if not self.refresh_token:
             raise AuthError("No refresh token available.")
         try:
-            tokens = refresh_tokens(self.refresh_token, base_url=self.base_api_url)
+            tokens = refresh_tokens(self.refresh_token, base_url=self._auth_api_url)
         except RuntimeError as exc:
             raise AuthError("Session expired. Please log in again.") from exc
         self.access_token = tokens.access_token

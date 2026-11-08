@@ -1,7 +1,12 @@
 # Copyright 2025-2026 Trufo, Inc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-from trufo.api.tca.certs_c2pa import create_instance, register_credential, request_c2pa_cert
+from trufo.api.tca.certs_c2pa import (
+    create_instance,
+    register_credential,
+    request_c2pa_cert,
+    request_c2pa_cert_test,
+)
 from trufo.api.tca.certs_cawg_interim import request_cawg_interim_cert
 from trufo.api.tca.certs_test import request_c2pa_dummy_cert, request_cawg_dummy_cert
 from trufo.api.tps.bind import (
@@ -64,6 +69,7 @@ __all__ = [
     "recover_content",
     "register_credential",
     "request_c2pa_cert",
+    "request_c2pa_cert_test",
     "request_c2pa_dummy_cert",
     "request_cawg_dummy_cert",
     "request_cawg_interim_cert",
