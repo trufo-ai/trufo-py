@@ -37,7 +37,8 @@ def create_instance(client: TrufoSession, gp_id: str, name: str) -> str:
     """Create a generator product instance.
 
     Corresponds to: POST /gproduct/instance/create
-    Requires: authenticated session (Bearer JWT), product must have PV approved.
+    Requires: authenticated session (Bearer JWT), product must have PV approved
+        (a test product's PV is approved when it is created).
 
     Args:
         client: Authenticated TrufoSession.
