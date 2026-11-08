@@ -443,7 +443,7 @@ Errors return `{"detail": …}`.
 The service and the `trufo` package are under the Apache License 2.0. The engine
 (`trufo-provenance`) and the full image's watermark engine (`trufo-pawprint`) are
 under the
-[Trufo Library License](https://trufo.ai/legal/trufo_library_license/v_1_0_0.html).
+[Trufo Library License](https://trufo.ai/legal/trufo_library_license/v_1_1_0.html).
 
 Each image's NOTICE, at `/usr/share/doc/trufo-local/NOTICE` inside the image
 ([signing-only](../../trufo-local/NOTICE), [full](../../trufo-local/NOTICE-full)),
