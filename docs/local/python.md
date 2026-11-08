@@ -181,11 +181,23 @@ images and video frames. An NVIDIA CUDA GPU is recommended and selected
 automatically when available; both profiles then use the original GPU
 implementation. Otherwise the engine uses CPU. Audio uses its standard encoder.
 
-The portable fast CPU path uses FP32 Torch operations and needs no external
-compiler. The existing local-engine platform requirements still apply. The
-prepared model is cached after first use, so cold startup and warmed throughput
-have different costs; no compilation runs. Performance depends on the CPU and
-workload.
+`profile="skip4"` is opt-in and video-only: it infers a watermark residual at
+frames 0, 4, 8, ... and the final frame, interpolating the intervening residuals.
+It uses the same best-effort CPU BF16 acceleration as `fast`, with weaker
+robustness. On an AMD Ryzen 9 9950X3D with eight threads, warm BF16 watermark
+processing improved from 22.89 frames/s for independent-frame embedding to 69.78
+for skip4 (3.05×). This excludes media decoding, encoding and audio processing.
+In a 40-clip, 360-case durability benchmark, CPU BF16 skip4 recovered 74.4% of
+cases and FP32 GPU skip4 recovered 72.8%, versus 87.2% for independent-frame BF16
+embedding; PixelSeal recovered 76–78% under the same protocol. All Pawprint renditions used
+the same fixed GPU decoder. These results are separate from the website's practical100
+benchmark. Still images, GIF/TIFF pages and pure audio are rejected for skip4.
+
+An NVIDIA CUDA GPU is recommended and selected automatically when available.
+Default and fast retain the original GPU implementation. Explicit skip4 is
+honored on GPU with FP32 anchors, but is not recommended there: a complete-file
+GPU measurement improved throughput by only 1.10×. Audio tracks inside a video
+keep their standard encoder in every profile.
 
 These settings configure local execution. They are separate from action
 parameters, stay out of remote preprocessing and commit requests, and do not
