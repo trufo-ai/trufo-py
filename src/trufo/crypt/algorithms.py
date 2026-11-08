@@ -30,12 +30,17 @@ class LeafType(str, Enum):
 
     C2PA_L1 = "c2pa-l1"
     C2PA_L2 = "c2pa-l2"
-    C2PA_L1_TEST = "c2pa-l1-test"
-    C2PA_L2_TEST = "c2pa-l2-test"
+    C2PA_L1_DUMMY = "c2pa-l1-test"
+    C2PA_L2_DUMMY = "c2pa-l2-test"
     CTSA = "ctsa"
     CTSA_TEST = "ctsa-test"
     CAWG_INTERIM = "cawg-interim"
-    CAWG_INTERIM_TEST = "cawg-interim-test"
+    CAWG_INTERIM_DUMMY = "cawg-interim-test"
+
+    # deprecated aliases: enum members cannot warn the way module names do
+    C2PA_L1_TEST = C2PA_L1_DUMMY
+    C2PA_L2_TEST = C2PA_L2_DUMMY
+    CAWG_INTERIM_TEST = CAWG_INTERIM_DUMMY
 
 
 ALG_TO_CURVE = {

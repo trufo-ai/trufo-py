@@ -6,9 +6,11 @@
 from unittest.mock import MagicMock, patch
 
 import jwt as pyjwt
+import pytest
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives.serialization import Encoding, NoEncryption, PrivateFormat
 
+from trufo import request_c2pa_cert_test
 from trufo.api.tca.certs_c2pa import (
     _build_gpic_assertion,
     create_instance,
@@ -102,37 +104,31 @@ class TestBuildGpicAssertion:
 class TestRequestC2paCert:
     """request_c2pa_cert orchestrates assertion -> CSR JWT -> EST -> PEM chain."""
 
+    @pytest.mark.parametrize(
+        ("request_cert", "api_url", "ca_url"),
+        [
+            (request_c2pa_cert, "https://api.trufo.ai", "https://ca.trufo.ai"),
+            (request_c2pa_cert_test, "https://test.api.trufo.ai", "https://test.ca.trufo.ai"),
+        ],
+    )
     @patch(f"{_MODULE}.extract_cert_chain")
-    @patch(f"{_MODULE}.est_enroll")
-    @patch(f"{_MODULE}.build_csr")
-    @patch(f"{_MODULE}._request_c2pa_csr_jwt")
-    def test_returns_cert_chain(self, mock_csr_jwt, mock_build_csr, mock_enroll, mock_extract):
-        mock_csr_jwt.return_value = "csr-jwt-x"
-        mock_build_csr.return_value = b"csr-der"
-        mock_enroll.return_value = b"pkcs7"
-        mock_extract.return_value = b"-----BEGIN CERTIFICATE-----\n..."
-
-        key_pem = _ec_p256_pem()
-        result = request_c2pa_cert("gpi_1", "gpic_1", key_pem.decode(), key_pem)
-
-        assert result == b"-----BEGIN CERTIFICATE-----\n..."
-
-    @patch(f"{_MODULE}.extract_cert_chain")
-    @patch(f"{_MODULE}.est_enroll")
-    @patch(f"{_MODULE}.build_csr")
-    @patch(f"{_MODULE}._request_c2pa_csr_jwt")
-    def test_uses_c2pa_l1_as_default(self, mock_csr_jwt, mock_build_csr, mock_enroll, mock_extract):
-        mock_csr_jwt.return_value = "csr-jwt"
-        mock_build_csr.return_value = b"csr-der"
-        mock_enroll.return_value = b"pkcs7"
+    @patch("requests.post")
+    def test_enrolls_c2pa_l1_at_hosts(self, mock_post, mock_extract, request_cert, api_url, ca_url):
+        mock_post.side_effect = [
+            MagicMock(status_code=200, **{"json.return_value": {"csr_jwt": "csr-jwt"}}),
+            MagicMock(status_code=200, content=b"pkcs7"),
+        ]
         mock_extract.return_value = b"pem"
 
         key_pem = _ec_p256_pem()
-        request_c2pa_cert("gpi_1", "gpic_1", key_pem.decode(), key_pem)
+        result = request_cert("gpi_1", "gpic_1", key_pem.decode(), key_pem)
 
-        # est_enroll(csr_jwt, csr_der, leaf_type_value)
-        _, _, leaf_type_value = mock_enroll.call_args[0]
-        assert leaf_type_value == "c2pa-l1"
+        assert result == b"pem"
+        mock_extract.assert_called_once_with(b"pkcs7")
+        assert [call.args[0] for call in mock_post.call_args_list] == [
+            f"{api_url}/ra/c2pa/csr-jwt",
+            f"{ca_url}/.well-known/est/c2pa-l1/simpleenroll",
+        ]
 
     @patch(f"{_MODULE}.extract_cert_chain")
     @patch(f"{_MODULE}.est_enroll")

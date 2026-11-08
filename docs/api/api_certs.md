@@ -4,10 +4,10 @@ Certificate enrollment (EST), revocation checking (OCSP), and timestamping (RFC 
 via the Trufo Certificate Authority, plus the Registration Authority endpoints that
 authorize enrollment: validation, generator products, instances, and credentials.
 
-- **Certificate Authority:** `https://ca.trufo.ai`
-- **OCSP Responder:** `https://ocsp.trufo.ai`
+- **Certificate Authority:** `https://ca.trufo.ai` (test: `https://test.ca.trufo.ai`)
+- **OCSP Responder:** `https://ocsp.trufo.ai` (test: `https://test.ocsp.trufo.ai`)
 - **Timestamp Authority:** `https://tsa.trufo.ai` (test: `https://test.tsa.trufo.ai`)
-- **Registration Authority:** the Trufo API (`https://api.trufo.ai`, `https://eu.api.trufo.ai`)
+- **Registration Authority:** the Trufo API (`https://api.trufo.ai`, `https://eu.api.trufo.ai`; test: `https://test.api.trufo.ai`)
 
 Most organizations never call these endpoints directly — signing through
 [api_c2pa.md](api_c2pa.md) uses Trufo's own certificates. These endpoints are for
@@ -32,18 +32,21 @@ Registration Authority endpoints live on the Trufo API and follow its convention
 | --------- | ------- | ---------------- |
 | `c2pa-l1` | Production C2PA claim signing, assurance level 1 | 366 days |
 | `c2pa-l2` | Production C2PA claim signing, assurance level 2 | 90 days |
-| `c2pa-l1-test` | Test C2PA claim signing, assurance level 1 | 366 days |
-| `c2pa-l2-test` | Test C2PA claim signing, assurance level 2 | 90 days |
+| `c2pa-l1-test` | Dummy C2PA claim signing, assurance level 1 | 366 days |
+| `c2pa-l2-test` | Dummy C2PA claim signing, assurance level 2. Disabled: enrollment returns `401 LeafTypeDisabled` | 90 days |
 | `cawg-interim` | Production CAWG identity signing | 366 days |
-| `cawg-interim-test` | Test CAWG identity signing | 366 days |
+| `cawg-interim-test` | Dummy CAWG identity signing | 366 days |
 
 Level 2 requires hardware-backed key protection; contact
 [support@trufo.ai](mailto:support@trufo.ai) to enable it for your product.
 
 A certificate is issued at the maximum validity unless the enrollment requests a
-shorter `validity_days`. Test leaf types are issued by a separate test CA: they are
+shorter `validity_days`. Dummy leaf types are issued by a separate test CA: they are
 structurally valid but deliberately outside the production trust chain, and
-conformant validators will not accept them.
+conformant validators will not accept them. The `-test` leaf types (such as
+`c2pa-l1-test`) are dummy certificates only; the [test flow](#test-flow) enrolls
+`c2pa-l1`. Dummy C2PA certificates and test-flow certificates are both issued by
+`TCA Test C2PA Issuing CA`.
 
 ### Accepted keys
 
@@ -68,6 +71,39 @@ PKCS#10 CSR ─────────►  POST /.well-known/est/…/simpleenro
 Production enrollment requires, in order: completed Organization Validation, an
 approved Product Validation for the generator product, an active subscription, a
 registered instance, and a registered instance credential.
+
+### Test flow
+
+The test hosts above run production enrollment with the same paths and bodies; only
+the host changes. You need a Trufo account with MFA and an owner or admin role in an
+organization, not Organization Validation, Product Validation or a subscription.
+
+- **Test product.** Created in the dashboard
+  ([app.trufo.ai/tca/certs/c2pa](https://app.trufo.ai/tca/certs/c2pa), Test view,
+  **Create test product**), not through the API or the SDK. Its name becomes the
+  certificate's `CN` as `[TESTING] <name>`, so it can be at most 54 UTF-8 bytes.
+- **Instances and credentials.** The [instance](#instances) and
+  [credential](#instance-credentials) endpoints on `test.api.trufo.ai`, or the
+  dashboard's Test view.
+- **Enrollment.** `POST https://test.api.trufo.ai/ra/c2pa/csr-jwt`, then
+  `POST https://test.ca.trufo.ai/.well-known/est/c2pa-l1/simpleenroll`;
+  `request_c2pa_cert_test()` in the Python SDK runs both. `c2pa-l1` is the only leaf
+  type: Level 2, CAWG and CTSA certificates are not part of the test flow. An instance
+  may hold at most three active certificates, as in production.
+- **Certificates.** Issued by `TCA Test C2PA Issuing CA` under `TCA Test Root CA`,
+  which C2PA validators do not trust. The subject is `O=Trufo CA User Testing`,
+  `C=US`, `CN=[TESTING] <test product name>`; AIA names `test.ca.trufo.ai` and
+  `test.ocsp.trufo.ai`.
+- **Status and revocation.** `https://test.ocsp.trufo.ai/` answers good or revoked.
+  Revoke in the dashboard's Test view or with
+  `POST https://test.api.trufo.ai/cert/revoke`.
+- **Timestamps.** The [test endpoint](#test-endpoint), `https://test.tsa.trufo.ai/`.
+
+The test hosts do not serve Product Validation, product rename or cancellation, or
+CAWG; those are production only.
+
+Nothing carries over to production: start at Organization Validation with a new
+product, instance, credential and key.
 
 ---
 
@@ -106,13 +142,14 @@ DER PKCS#7 containing the issued leaf followed by the CA chain.
 | 401 | `MalformedJWT`, `JWTExpired`, `InvalidSignature`, `InvalidAudience`, `MissingClaim`, `JWTDecodeError` | CSR JWT rejected |
 | 401 | `UnknownLeafType`, `LeafTypeDisabled`, `InvalidDistinguishedName`, `InvalidValidityDays`, `ValidityExceedsMax`, `InvalidRecordId`, `InvalidInstanceId`, `InvalidIssuer`, `InvalidIat` | CSR JWT claims rejected (several may be joined with `;`) |
 | 401 | `LeafTypeMismatch` | JWT `leaf_type` differs from the path |
-| 401 | `JTIAlreadyUsed` | The CSR JWT was already redeemed (production only) |
+| 401 | `JTIAlreadyUsed` | The CSR JWT was already redeemed (not for dummy leaf types) |
 | 400 | `InvalidContentType`, `InvalidCSR`, `InvalidCSRSignature`, `KeyTypeNotAllowed` | Request or CSR malformed |
 | 404 | `UnknownLeafType` | Unknown path segment |
 | 409 | `PublicKeyAlreadyUsed` | That public key already has a certificate — generate a fresh key pair |
 
 The certificate subject comes entirely from the CSR JWT's `distinguished_name`, not
-from the CSR. Test leaf types prefix the common name with `[TESTING] `.
+from the CSR. Dummy leaf types, and every certificate from `test.ca.trufo.ai`, prefix
+the common name with `[TESTING] `.
 
 ### CSR JWT
 
@@ -124,25 +161,29 @@ The CSR JWT authorizes one enrollment. It is HS256, audience `tca-est`, and live
 | `iss` | string | Yes | `"trufo"` |
 | `sub` | string | Yes | Subscriber organization id |
 | `aud` | string | Yes | `"tca-est"` |
-| `jti` | string | Yes | Unique token id; redeemed once (production) |
+| `jti` | string | Yes | Unique token id; redeemed once (not for dummy leaf types) |
 | `iat`, `exp` | integer | Yes | Issued-at and expiry (UNIX seconds) |
 | `leaf_type` | string | Yes | Must equal the path segment |
-| `distinguished_name` | object | Yes | Subject fields; `O` and `CN` required, `C`, `ST`, `L`, `OU` optional |
+| `distinguished_name` | object | Yes | Subject fields; `C` (two-letter code), `O` and `CN` required, `ST`, `L`, `OU` optional |
 | `validity_days` | integer | No | 1 to the type maximum; omitted means the maximum |
 | `record_id` | string | C2PA only | Product record UUID, embedded in the certificate |
 | `instance_id` | string | C2PA only | Issuing instance id |
 
-For production, Trufo's RA mints this token for you (see
+For production and the test flow, Trufo's RA mints this token for you (see
 [CSR JWT issuance](#csr-jwt-issuance)); you never construct it yourself.
 
-### Test enrollment
+### Dummy enrollment
 
-Test certificates need no account, organization, or validation. The CSR JWT is
-signed with the publicly known HMAC secret `hello-trufo` (HS256), using
-`sub: "test-account"` and a test leaf type. 
+Dummy certificates are for users who cannot yet get a trusted certificate but need
+a well-formed one to submit their conformance applications. They need no account,
+organization, or validation. The CSR JWT is signed with the publicly known HMAC
+secret `hello-trufo` (HS256), using `sub: "test-account"` and a dummy leaf type.
 
-`request_c2pa_test_cert()` and `request_cawg_test_cert()` in the Python SDK perform
-the whole flow.
+Dummy certificates are not listed or revocable, and the same key can be enrolled
+again.
+
+`request_c2pa_dummy_cert()` and `request_cawg_dummy_cert()` in the Python SDK perform
+the whole flow; pass `country` to set `C`, which the CA requires.
 
 ### CA certificate downloads
 
@@ -156,6 +197,10 @@ certificates; fetch them to build a trust store or complete a chain.
 | `/c2pa-ca.crt` | C2PA Claim Signing CA — issuer of `c2pa-l1` leaves |
 | `/ctsa-ca.crt` | C2PA Timestamping CA — issuer of TSA leaves |
 | `/temp-cawg-ca.crt` | Interim CAWG Identity CA — issuer of `cawg-interim` leaves |
+
+For the test flow, `https://test.ca.trufo.ai/root-ca.crt` returns `TCA Test Root CA`
+and `https://test.ca.trufo.ai/c2pa-ca.crt` returns `TCA Test C2PA Issuing CA`. Use the
+test root as a local trust anchor when testing.
 
 ---
 
@@ -266,7 +311,8 @@ Both must be **active** (approved and unexpired) at the moment of enrollment.
 
 A generator product represents one C2PA-producing product. Products are created in
 the [Trufo dashboard](https://app.trufo.ai) as part of submitting a Product
-Validation application; there is no API to create one.
+Validation application; there is no API to create one. Test products are created
+in the dashboard's Test view ([Test flow](#test-flow)).
 
 | Endpoint | Auth | Request | Response |
 | -------- | ---- | ------- | -------- |
@@ -293,7 +339,7 @@ certificate it signs. Endpoints that require it return `403 PVNotActive` or
 
 ### Instances
 
-An instance is one signing identity within a validated product: it holds its own
+An instance is one signing identity within a product: it holds its own
 credentials and is issued its own certificates. Model one instance per independent
 key holder — a single signing service, one regional server with its own HSM key, or
 one device in a fleet. Deployments with many independent keys register many

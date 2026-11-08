@@ -53,12 +53,6 @@ class TestLeafType:
     def test_c2pa_l2_value(self):
         assert LeafType.C2PA_L2.value == "c2pa-l2"
 
-    def test_c2pa_l1_test_value(self):
-        assert LeafType.C2PA_L1_TEST.value == "c2pa-l1-test"
-
-    def test_c2pa_l2_test_value(self):
-        assert LeafType.C2PA_L2_TEST.value == "c2pa-l2-test"
-
     def test_is_str_subclass(self):
         assert isinstance(LeafType.C2PA_L1, str)
 

@@ -2,9 +2,9 @@
 # SPDX-License-Identifier: Apache-2.0
 
 """
-Test certificate enrollment helpers for Trufo TCA.
+Dummy certificate enrollment helpers for Trufo TCA.
 
-Provides test-only enrollment for C2PA and CAWG interim profiles.
+Provides dummy certificate enrollment for C2PA and CAWG interim profiles.
 """
 
 import time
@@ -15,15 +15,16 @@ from cryptography.hazmat.primitives.asymmetric import ec
 from uuid_utils import uuid7
 
 from trufo.crypt.tca_certs import (
-    TEST_HMAC_SECRET,
+    DUMMY_HMAC_SECRET,
     LeafType,
     build_csr,
     est_enroll,
     extract_cert_chain,
 )
+from trufo.util.deprecation import deprecated_aliases
 
 
-def _build_test_c2pa_csr_jwt(
+def _build_dummy_c2pa_csr_jwt(
     leaf_type: LeafType,
     org_name: str,
     common_name: str,
@@ -31,10 +32,10 @@ def _build_test_c2pa_csr_jwt(
     country: str | None = None,
     record_id: str | None = None,
 ) -> str:
-    """Build a C2PA test CSR JWT signed with the public test HMAC secret.
+    """Build a C2PA dummy CSR JWT signed with the public dummy HMAC secret.
 
     Args:
-        leaf_type: Must be ``C2PA_L1_TEST`` or ``C2PA_L2_TEST``.
+        leaf_type: Must be ``C2PA_L1_DUMMY`` or ``C2PA_L2_DUMMY``.
         org_name: Organization name for the certificate subject (O).
         common_name: Common name for the certificate subject (CN).
         country: Optional country for the certificate subject (C).
@@ -45,10 +46,10 @@ def _build_test_c2pa_csr_jwt(
         Compact-serialized HS256 JWT string.
 
     Raises:
-        ValueError: If *leaf_type* is not a C2PA test type.
+        ValueError: If *leaf_type* is not a C2PA dummy type.
     """
-    if leaf_type not in (LeafType.C2PA_L1_TEST, LeafType.C2PA_L2_TEST):
-        raise ValueError(f"leaf_type must be a C2PA test type, got {leaf_type.value}")
+    if leaf_type not in (LeafType.C2PA_L1_DUMMY, LeafType.C2PA_L2_DUMMY):
+        raise ValueError(f"leaf_type must be a C2PA dummy type, got {leaf_type.value}")
 
     distinguished_name = {"O": org_name, "CN": common_name}
     if country is not None:
@@ -67,37 +68,38 @@ def _build_test_c2pa_csr_jwt(
         "record_id": record_id if record_id is not None else str(uuid7()),
         "instance_id": f"gpi_{uuid7()}",
     }
-    return pyjwt.encode(payload, TEST_HMAC_SECRET, algorithm="HS256")
+    return pyjwt.encode(payload, DUMMY_HMAC_SECRET, algorithm="HS256")
 
 
-def request_c2pa_test_cert(
+def request_c2pa_dummy_cert(
     org_name: str,
     common_name: str,
     private_key_signer: str | Path | bytes | ec.EllipticCurvePrivateKey,
-    leaf_type: LeafType = LeafType.C2PA_L1_TEST,
+    leaf_type: LeafType = LeafType.C2PA_L1_DUMMY,
     *,
     country: str | None = None,
     record_id: str | None = None,
 ) -> bytes:
-    """Obtain a test C2PA certificate via the test EST flow.
+    """Obtain a dummy C2PA certificate via the dummy EST flow.
 
     No account authentication is required — the CSR JWT is signed with
-    the publicly known test HMAC secret.
+    the publicly known dummy HMAC secret.
 
     Args:
         org_name: Organization name for the certificate subject.
         common_name: Common name for the certificate subject.
         private_key_signer: Leaf private key (PEM bytes, path, or
             ``ec.EllipticCurvePrivateKey``).
-        leaf_type: Test leaf type (default: ``C2PA_L1_TEST``).
-        country: Optional country for the certificate subject (C).
+        leaf_type: Dummy leaf type (default: ``C2PA_L1_DUMMY``).
+        country: Two-letter country code for the certificate subject (C).
+            The CA refuses an enrollment without one.
         record_id: Optional product record UUID to embed; a UUIDv7 is
             generated when omitted.
 
     Returns:
         PEM certificate chain bytes.
     """
-    csr_jwt = _build_test_c2pa_csr_jwt(
+    csr_jwt = _build_dummy_c2pa_csr_jwt(
         leaf_type, org_name, common_name, country=country, record_id=record_id
     )
     csr_der = build_csr(private_key_signer)
@@ -106,19 +108,26 @@ def request_c2pa_test_cert(
     return cert_chain_pem
 
 
-def _build_test_cawg_csr_jwt(
+def _build_dummy_cawg_csr_jwt(
     org_name: str,
     common_name: str,
+    *,
+    country: str | None = None,
 ) -> str:
-    """Build a CAWG interim test CSR JWT signed with the public test HMAC secret.
+    """Build a CAWG interim dummy CSR JWT signed with the public dummy HMAC secret.
 
     Args:
         org_name: Organization name for the certificate subject (O).
         common_name: Common name for the certificate subject (CN).
+        country: Two-letter country code for the certificate subject (C).
 
     Returns:
         Compact-serialized HS256 JWT string.
     """
+    distinguished_name = {"O": org_name, "CN": common_name}
+    if country is not None:
+        distinguished_name["C"] = country
+
     now = int(time.time())
     payload = {
         "iss": "trufo",
@@ -127,38 +136,49 @@ def _build_test_cawg_csr_jwt(
         "jti": str(uuid7()),
         "iat": now,
         "exp": now + 300,
-        "leaf_type": LeafType.CAWG_INTERIM_TEST.value,
-        "distinguished_name": {
-            "O": org_name,
-            "CN": common_name,
-        },
+        "leaf_type": LeafType.CAWG_INTERIM_DUMMY.value,
+        "distinguished_name": distinguished_name,
         "record_id": "",
         "instance_id": "",
     }
-    return pyjwt.encode(payload, TEST_HMAC_SECRET, algorithm="HS256")
+    return pyjwt.encode(payload, DUMMY_HMAC_SECRET, algorithm="HS256")
 
 
-def request_cawg_test_cert(
+def request_cawg_dummy_cert(
     org_name: str,
     common_name: str,
     private_key_signer: str | Path | bytes | ec.EllipticCurvePrivateKey,
+    *,
+    country: str | None = None,
 ) -> bytes:
-    """Obtain a test CAWG interim certificate via the test EST flow.
+    """Obtain a dummy CAWG interim certificate via the dummy EST flow.
 
     No account authentication is required — the CSR JWT is signed with
-    the publicly known test HMAC secret.
+    the publicly known dummy HMAC secret.
 
     Args:
         org_name: Organization name for the certificate subject.
         common_name: Common name for the certificate subject.
         private_key_signer: Leaf private key (PEM bytes, path, or
             ``ec.EllipticCurvePrivateKey``).
+        country: Two-letter country code for the certificate subject (C).
+            The CA refuses an enrollment without one.
 
     Returns:
         PEM certificate chain bytes.
     """
-    csr_jwt = _build_test_cawg_csr_jwt(org_name, common_name)
+    csr_jwt = _build_dummy_cawg_csr_jwt(org_name, common_name, country=country)
     csr_der = build_csr(private_key_signer)
-    pkcs7_b64 = est_enroll(csr_jwt, csr_der, LeafType.CAWG_INTERIM_TEST.value)
+    pkcs7_b64 = est_enroll(csr_jwt, csr_der, LeafType.CAWG_INTERIM_DUMMY.value)
     cert_chain_pem = extract_cert_chain(pkcs7_b64)
     return cert_chain_pem
+
+
+__getattr__ = deprecated_aliases(
+    globals(),
+    {
+        "request_c2pa_test_cert": "request_c2pa_dummy_cert",
+        "request_cawg_test_cert": "request_cawg_dummy_cert",
+        "TEST_HMAC_SECRET": "DUMMY_HMAC_SECRET",
+    },
+)

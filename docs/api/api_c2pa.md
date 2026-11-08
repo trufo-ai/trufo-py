@@ -6,7 +6,7 @@ assertion records reused across signing requests.
 
 - **Global API:** `https://api.trufo.ai`
 - **Europe API:** `https://eu.api.trufo.ai`
-- **Test API:** `https://test.api.trufo.ai` — C2PA signing with a test certificate, in Cloud mode (direct) and Local mode; watermark recovery and standalone binding
+- **Test API:** `https://test.api.trufo.ai` — C2PA signing with a test certificate, in Cloud mode (direct) and Local mode; watermark recovery and standalone binding; the certificate [test flow](api_certs.md#test-flow)
 
 See [api_trufo.md](api_trufo.md) for authentication, error conventions, and regions.
 

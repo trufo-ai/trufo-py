@@ -18,6 +18,9 @@ from trufo.api.endpoints import (
     GP_INSTANCE_CREATE_PATH,
     RA_CSR_JWT_PATH,
     TRUFO_API_URL,
+    TRUFO_API_URL_TEST,
+    TRUFO_CA_URL,
+    TRUFO_CA_URL_TEST,
 )
 from trufo.api.session import TrufoSession
 from trufo.api.headers import sdk_headers
@@ -34,7 +37,8 @@ def create_instance(client: TrufoSession, gp_id: str, name: str) -> str:
     """Create a generator product instance.
 
     Corresponds to: POST /gproduct/instance/create
-    Requires: authenticated session (Bearer JWT), product must have PV approved.
+    Requires: authenticated session (Bearer JWT), product must have PV approved
+        (a test product's PV is approved when it is created).
 
     Args:
         client: Authenticated TrufoSession.
@@ -128,6 +132,8 @@ def _request_c2pa_csr_jwt(
     gpic_assertion: str,
     leaf_type: LeafType,
     validity_days: int | None = None,
+    *,
+    trufo_api_url: str,
 ) -> str:
     """Request a CSR JWT from the Registration Authority.
 
@@ -138,6 +144,7 @@ def _request_c2pa_csr_jwt(
         leaf_type: Certificate type to request.
         validity_days: Requested validity in days.  If ``None``, the
             server uses its default for the leaf type.
+        trufo_api_url: Trufo API base URL.
 
     Returns:
         The CSR JWT string.
@@ -154,7 +161,7 @@ def _request_c2pa_csr_jwt(
 
     # RA authenticates via client_assertion in the body, not Bearer JWT
     resp = requests.post(
-        f"{TRUFO_API_URL}{RA_CSR_JWT_PATH}",
+        f"{trufo_api_url}{RA_CSR_JWT_PATH}",
         headers=sdk_headers(**{"Content-Type": "application/json"}),
         json=body,
         timeout=30,
@@ -173,6 +180,9 @@ def request_c2pa_cert(
     private_key_signer: str | Path | bytes | ec.EllipticCurvePrivateKey,
     leaf_type: LeafType = LeafType.C2PA_L1,
     validity_days: int | None = None,
+    *,
+    trufo_api_url: str = TRUFO_API_URL,
+    trufo_ca_url: str = TRUFO_CA_URL,
 ) -> bytes:
     """Run the full C2PA certificate enrollment pipeline.
 
@@ -190,6 +200,8 @@ def request_c2pa_cert(
         leaf_type: Certificate type (default: ``C2PA_L1``).
         validity_days: Requested validity in days.  ``None`` lets the
             server decide.
+        trufo_api_url: Trufo API base URL. Defaults to production.
+        trufo_ca_url: Trufo CA base URL. Defaults to production.
 
     Returns:
         PEM bytes for the certificate chain (leaf + intermediates,
@@ -207,14 +219,62 @@ def request_c2pa_cert(
 
     # 2. build GPIC assertion, request CSR JWT
     assertion = _build_gpic_assertion(gpi_id, gpic_id, instance_key_pem, instance_alg.alg_name)
-    csr_jwt = _request_c2pa_csr_jwt(assertion, leaf_type, validity_days)
+    csr_jwt = _request_c2pa_csr_jwt(
+        assertion, leaf_type, validity_days, trufo_api_url=trufo_api_url
+    )
 
     # 3. build CSR with leaf signing key
     csr_der = build_csr(private_key_signer)
 
     # 4. EST enrollment
-    pkcs7_b64 = est_enroll(csr_jwt, csr_der, leaf_type.value)
+    pkcs7_b64 = est_enroll(csr_jwt, csr_der, leaf_type.value, trufo_ca_url=trufo_ca_url)
 
     # 5. extract certs
     cert_chain_pem = extract_cert_chain(pkcs7_b64)
     return cert_chain_pem
+
+
+def request_c2pa_cert_test(
+    gpi_id: str,
+    gpic_id: str,
+    instance_key_pem: str,
+    private_key_signer: str | Path | bytes | ec.EllipticCurvePrivateKey,
+    validity_days: int | None = None,
+    *,
+    trufo_api_url: str = TRUFO_API_URL_TEST,
+    trufo_ca_url: str = TRUFO_CA_URL_TEST,
+) -> bytes:
+    """Request a C2PA certificate from the Trufo test CA.
+
+    Same enrollment as :func:`request_c2pa_cert`, against the Trufo test hosts.
+    Create the instance and credential with
+    ``TrufoSession(base_api_url=TRUFO_API_URL_TEST)``. The leaf type is always
+    ``C2PA_L1``. Unlike :func:`request_c2pa_dummy_cert`, this needs a Trufo account.
+
+    Args:
+        gpi_id: Instance ID (e.g. ``"gpi_..."``)
+        gpic_id: Credential ID (e.g. ``"gpic_..."``)
+        instance_key_pem: Instance private key PEM (signs the GPIC
+            assertion).
+        private_key_signer: Leaf private key — PEM ``bytes``, a
+            filesystem path (``str`` / ``Path``), or an
+            ``ec.EllipticCurvePrivateKey`` (e.g. AWS KMS adapter).
+        validity_days: Requested validity in days.  ``None`` lets the
+            server decide.
+        trufo_api_url: Trufo API base URL. Defaults to the Trufo test host (test.api.trufo.ai).
+        trufo_ca_url: Trufo CA base URL. Defaults to the Trufo test CA (test.ca.trufo.ai).
+
+    Returns:
+        PEM bytes for the certificate chain (leaf + intermediates,
+        self-signed root excluded).
+    """
+    return request_c2pa_cert(
+        gpi_id,
+        gpic_id,
+        instance_key_pem,
+        private_key_signer,
+        LeafType.C2PA_L1,
+        validity_days,
+        trufo_api_url=trufo_api_url,
+        trufo_ca_url=trufo_ca_url,
+    )
