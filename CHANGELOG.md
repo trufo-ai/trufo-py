@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.2.1] — 2026-11-08
+
 ### Added
 
 - SVG and AVI C2PA generation and validation support in the media-format reference.
@@ -17,6 +19,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `request_cawg_dummy_cert` accepts keyword-only `country`, the certificate
   subject's country (C). Pass it to either dummy certificate function: the CA
   refuses an enrollment without a country.
+- `request_c2pa_cert_test`, which requests a C2PA certificate through the
+  [test flow](docs/quickstart/1_certs.md#test-flow), and the test host constants
+  `TRUFO_CA_URL_TEST`, `TRUFO_TSA_URL_TEST` and `TRUFO_OCSP_URL_TEST`.
+- `request_c2pa_cert` takes keyword-only `trufo_api_url` and `trufo_ca_url`, and
+  `est_enroll` takes `trufo_ca_url`. Both default to production.
 
 ### Changed
 
@@ -24,6 +31,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   dummy certificates. They are for users who cannot yet get a trusted certificate
   but need a well-formed one to submit their conformance applications. They are
   not listed or revocable, and the same key can be enrolled again.
+- A `TrufoSession` with `base_api_url=TRUFO_API_URL_TEST` signs in and refreshes
+  its tokens at `TRUFO_API_URL`.
+- The `local-sign-only`, `local-full` and `provenance` extras require
+  trufo-provenance 2.2.1 or later, which accepts test flow certificates for OCSP
+  stapling.
 
 ### Deprecated
 
@@ -623,7 +635,8 @@ Minor-version bump marks the general availability of the production C2PA signing
 - `trufo.intf`: credential storage and loading (env vars + file), CLI entry point.
 - PyPI trusted publishing via GitHub Actions (OIDC, no API tokens required).
 
-[Unreleased]: https://github.com/trufo-ai/trufo-py/compare/v2.2.0...HEAD
+[Unreleased]: https://github.com/trufo-ai/trufo-py/compare/v2.2.1...HEAD
+[2.2.1]: https://github.com/trufo-ai/trufo-py/compare/v2.2.0...v2.2.1
 [2.2.0]: https://github.com/trufo-ai/trufo-py/compare/v2.1.0...v2.2.0
 [2.1.0]: https://github.com/trufo-ai/trufo-py/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/trufo-ai/trufo-py/compare/v1.5.4...v2.0.0
