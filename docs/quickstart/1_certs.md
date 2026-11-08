@@ -1,16 +1,17 @@
 # Quickstart: C2PA Signing Certificates
 
-A C2PA Signing Certificate identifies the signing entity (software or hardware) embedded in a manifest. Two tracks are available:
+A C2PA Signing Certificate identifies the signing entity (software or hardware) embedded in a manifest. Three tracks are available:
 
-| Track          | Purpose                                                 | Auth Required |
-| -------------- | ------------------------------------------------------- | ------------- |
-| **Dummy**      | A well-formed certificate for a conformance application | No            |
-| **Production** | Real-world publishing                                   | Yes           |
+| Track | Purpose | Requires |
+| ----- | ------- | -------- |
+| **[Dummy](#dummy-certificate)** | A well-formed certificate for a conformance application | Nothing |
+| **[Test flow](#test-flow)** | The whole production flow on test hosts, before you buy | A Trufo account with MFA and an owner or admin role in an organization |
+| **[Production](#production-certificate)** | Real-world publishing | Organization Validation, Product Validation and a subscription |
 
 
 > **Note:** You do not need a C2PA Signing Certificate to use the Trufo C2PA signing endpoints (`POST /c2pa/sign`) — that endpoint uses Trufo's own C2PA signer. A C2PA Signing Certificate is only required if you are operating your own conformant C2PA Generator Product. See the [C2PA Signing Certificate product page](https://app.trufo.ai/tca/certs/c2pa) for more details.
 
-See [1_certs.py](1_certs.py) for a runnable example of both tracks.
+See [1_certs.py](1_certs.py) for a runnable example of the dummy and production certificates.
 
 ---
 
@@ -31,6 +32,92 @@ cert_chain_pem = request_c2pa_dummy_cert(
     country="US",
 )
 ```
+
+---
+
+## Test Flow
+
+Run the whole production flow before you buy: instances, credentials, enrollment,
+OCSP status and revocation. You need a Trufo account with MFA and an owner or admin
+role in an organization; there is no Organization Validation, Product Validation or
+subscription. Test certificates are signed by Trufo's test CA and are not trusted by
+C2PA validators.
+
+Requests use the same paths and bodies as production. Only the host changes, to
+`test.api.trufo.ai`, `test.ca.trufo.ai`, `test.ocsp.trufo.ai` and `test.tsa.trufo.ai`
+(`TRUFO_API_URL_TEST`, `TRUFO_CA_URL_TEST`, `TRUFO_OCSP_URL_TEST` and
+`TRUFO_TSA_URL_TEST` in `trufo.api.endpoints`). See the
+[certificate API reference](../api/api_certs.md#test-flow) for details.
+
+### Create a test product
+
+On [app.trufo.ai/tca/certs/c2pa](https://app.trufo.ai/tca/certs/c2pa), switch to the
+**Test** view and choose **Create test product**. The name you enter becomes the
+certificate's common name as `[TESTING] <name>`, so it can be at most 54 UTF-8 bytes.
+The dashboard shows the new product's `gp_id`.
+
+### Create an instance and a credential
+
+Use the dashboard's Test view, or the SDK as in production
+[steps 3 and 4](#step-3--create-an-instance). Build the session with
+`TrufoSession(base_api_url=TRUFO_API_URL_TEST)`, not `load_session()`: it signs in at
+`api.trufo.ai` with your `trufo-api` key and sends requests to `test.api.trufo.ai`.
+To reuse an earlier sign-in, pass its tokens instead:
+`TrufoSession(access_token=..., refresh_token=..., base_api_url=TRUFO_API_URL_TEST)`.
+
+```python
+from trufo import create_instance, generate_keypair, register_credential
+from trufo.api.endpoints import TRUFO_API_URL_TEST
+from trufo.api.session import TrufoSession
+from trufo.crypt.algorithms import SigningAlgorithm
+from trufo.util.credentials import TrufoAPIKey, load_api_key
+
+session = TrufoSession(base_api_url=TRUFO_API_URL_TEST)
+session.init_session(api_key=load_api_key(TrufoAPIKey.TRUFO_API))
+
+gpi_id = create_instance(session, gp_id="gp_...", name="Test signer")
+
+instance_private_pem, instance_public_pem = generate_keypair(SigningAlgorithm.ES256)
+gpic_id = register_credential(
+    session,
+    gpi_id=gpi_id,
+    label="test-key-1",
+    key_algorithm="ES256",
+    public_key_pem=instance_public_pem.decode(),
+)
+```
+
+### Enroll a test certificate
+
+```python
+from trufo import generate_keypair, request_c2pa_cert_test
+from trufo.crypt.algorithms import SigningAlgorithm
+
+leaf_private_pem, _ = generate_keypair(SigningAlgorithm.ES256)
+
+cert_chain_pem = request_c2pa_cert_test(
+    gpi_id=gpi_id,
+    gpic_id=gpic_id,
+    instance_key_pem=instance_private_pem,
+    private_key_signer=leaf_private_pem,
+)
+```
+
+`request_c2pa_cert_test()` is `request_c2pa_cert()` on the test hosts. It issues C2PA
+Level 1 certificates only. As in production, use a fresh leaf key each time; an
+instance holds at most three active certificates.
+
+### Sign, check status and revoke
+
+Sign as in [production step 6](#step-6--sign), using the test hosts for
+[timestamps](#timestamping), [OCSP](#ocsp-stapling) and
+[revocation](#revocation-and-rotation).
+
+### Move to production
+
+Nothing from the test flow carries over. Start at
+[step 1](#step-1--validate-your-organization) with a new product, instance,
+credential and key.
 
 ---
 
@@ -177,6 +264,9 @@ an HTTP `X-API-Key` header containing a `tsa`-scoped key from
 [dashboard → API Keys](https://app.trufo.ai/settings/org). Copy the complete key,
 including any `tsa:` prefix; do not add another. See [credential setup](0_setup.md#api-key-scopes).
 
+For dummy and test certificates, use `https://test.tsa.trufo.ai/` instead; it needs
+no key ([test endpoint](../api/api_certs.md#test-endpoint)).
+
 **Using Trufo's signing helpers?** Timestamping is automatic with your stored
 credentials. The instructions below are for your own signing toolchain.
 
@@ -305,11 +395,13 @@ the dashboard, or `POST /cert/revoke` with the serial number and a reason. Choos
 **Now** or specify an effective date, time, and named timezone in the dashboard.
 API callers can provide `revocation_time`; omitting it uses the processing time.
 See the [certificate API reference](../api/api_certs.md#certificates) for the
-request format and authentication requirements.
+request format and authentication requirements. Revoke a test certificate in the
+dashboard's Test view or with `POST https://test.api.trufo.ai/cert/revoke`.
 
-Revocation is permanent and publishes through OCSP. A trusted timestamp lets
-validators assess whether content was signed before the effective revocation
-cutoff, subject to the applicable validation rules.
+Revocation is permanent and publishes through OCSP (`https://test.ocsp.trufo.ai/`
+for test certificates). A trusted timestamp lets validators assess whether content
+was signed before the effective revocation cutoff, subject to the applicable
+validation rules.
 
 ### OCSP stapling
 
@@ -320,8 +412,9 @@ asset and remains checkable offline, and long after the OCSP responder has moved
 This matters because a validator that cannot reach the responder may otherwise
 report the signature as unverifiable.
 
-Trufo certificates carry `https://ocsp.trufo.ai` in their AIA extension, so tooling
-finds the responder automatically.
+Trufo certificates carry `https://ocsp.trufo.ai` in their AIA extension, and test
+certificates `https://test.ocsp.trufo.ai`, so tooling finds the responder
+automatically. trufo-provenance 2.2.1 or later accepts both for stapling.
 
 **With trufo-py**, stapling happens on every sign: the SDK fetches a response for
 the signing chain and hands it to the engine, which places it in the COSE header.

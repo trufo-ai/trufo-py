@@ -54,7 +54,8 @@ systems, and certificate enrollment.
 - `sign_c2pa_distributed_test()` uses the test remote signing endpoint and requires
   a `c2pa-sign-test` API key.
 - Test signing runs on its own host (`test.api.trufo.ai`, `TRUFO_API_URL_TEST`), which
-  serves the content routes (signing, recovery, binding), not the registries. The
+  serves the content routes (signing, recovery, binding) and the certificate test flow
+  (`request_c2pa_cert_test`), not the registries. The
   production hosts refuse test keys for Local mode and upload links (410); the legacy
   `/test/c2pa/sign` path answers 410.
 
