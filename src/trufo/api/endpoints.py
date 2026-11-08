@@ -11,12 +11,15 @@ from trufo.util.deprecation import deprecated_aliases
 
 TRUFO_API_URL = "https://api.trufo.ai"
 TRUFO_API_URL_EUROPE = "https://eu.api.trufo.ai"
-# test signing runs on its own host, which serves the content routes (signing,
-# recovery, binding) for test keys
+# test host: serves test-key requests (signing, recovery, binding) and test
+# certificate enrollment; sign-in and token refresh stay on TRUFO_API_URL
 TRUFO_API_URL_TEST = "https://test.api.trufo.ai"
 TRUFO_CA_URL = "https://ca.trufo.ai"
+TRUFO_CA_URL_TEST = "https://test.ca.trufo.ai"
 TRUFO_TSA_URL = "https://tsa.trufo.ai"
+TRUFO_TSA_URL_TEST = "https://test.tsa.trufo.ai"
 TRUFO_OCSP_URL = "https://ocsp.trufo.ai"
+TRUFO_OCSP_URL_TEST = "https://test.ocsp.trufo.ai"
 
 # webapp origin — where the browser is sent during loopback sign-in.
 # Overridable so the flow can be exercised against a non-production webapp; the

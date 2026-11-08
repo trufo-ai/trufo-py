@@ -8,6 +8,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from trufo.api.auth import DeviceAuthResponse, TokenPair
+from trufo.api.endpoints import TRUFO_API_URL, TRUFO_API_URL_EUROPE, TRUFO_API_URL_TEST
 from trufo.api.session import AuthError, TrufoSession
 
 
@@ -58,6 +59,43 @@ class TestInitSession:
 
         assert session.access_token == "new-at"
         assert session.refresh_token == "new-rt"
+
+
+class TestAuthHost:
+    """Sign-in and refresh go to the host that issues tokens; requests go to base_api_url."""
+
+    @pytest.mark.parametrize(
+        ("base_api_url", "auth_url"),
+        [(TRUFO_API_URL_TEST, TRUFO_API_URL), (TRUFO_API_URL_EUROPE, TRUFO_API_URL_EUROPE)],
+    )
+    @patch("trufo.api.session.requests.post")
+    @patch("trufo.api.session.refresh_tokens")
+    @patch("trufo.api.session.poll_for_tokens")
+    @patch("trufo.api.session.initiate_device_auth")
+    @patch("trufo.api.session.run_loopback_login")
+    def test_signs_in_and_refreshes_at_auth_host(
+        self, mock_loopback, mock_init, mock_poll, mock_refresh, mock_post, base_api_url, auth_url
+    ):
+        tokens = TokenPair(access_token="at", refresh_token="rt")
+        mock_loopback.return_value = mock_poll.return_value = mock_refresh.return_value = tokens
+        mock_init.return_value = DeviceAuthResponse(
+            device_code="dc",
+            user_code="UC",
+            verification_uri="v",
+            verification_uri_complete="vc",
+            expires_in=60,
+            interval=1,
+        )
+        mock_post.side_effect = [_mock_response(401, {}), _mock_response(200, {})]
+
+        session = TrufoSession(base_api_url=base_api_url)
+        session.init_session("api-key")
+        session.init_session("api-key", use_device=True)
+        session.make_request("/path", {})
+
+        for mock_auth in (mock_loopback, mock_init, mock_poll, mock_refresh):
+            assert mock_auth.call_args.kwargs["base_url"] == auth_url
+        assert [call.args[0] for call in mock_post.call_args_list] == [f"{base_api_url}/path"] * 2
 
 
 class TestMakeRequest:
