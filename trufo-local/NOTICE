@@ -5,8 +5,8 @@ trufo-local and the trufo package are distributed under the Apache License 2.0.
 
 The Trufo provenance engine (trufo-provenance) is not part of this image. The
 container downloads it at start with your sdk-download key. It is distributed
-under the Trufo Library License v1.0.0
-(https://trufo.ai/legal/trufo_library_license/v_1_0_0.html).
+under the Trufo Library License v1.1.0
+(https://trufo.ai/legal/trufo_library_license/v_1_1_0.html).
 
 This image contains third-party software under its own licenses, including
 software under the GNU GPL and LGPL: a GPL build of FFmpeg from Debian,
