@@ -58,6 +58,7 @@ class TestRecoverContent:
                 "confidence": 0.9,
                 "manifest_bytes": base64.b64encode(store).decode(),
                 "manifest_json": {"manifests": [1]},
+                "status": "inactive",
             }
         )
 
@@ -65,6 +66,7 @@ class TestRecoverContent:
 
         assert result.manifest_bytes == store
         assert result.manifest_json == {"manifests": [1]}
+        assert result.status == "inactive"
         assert mock_post.call_args.kwargs["json"]["parse_manifest_json"] is True
 
 

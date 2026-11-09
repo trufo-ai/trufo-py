@@ -171,7 +171,7 @@ For other platforms, use [Local mode with the Docker image](docker.md), or conta
 
 The `trufo` package is under the Apache License 2.0. The engine, `trufo-provenance`,
 is under the
-[Trufo Library License](https://trufo.ai/legal/trufo_library_license/v_1_0_0.html).
+[Trufo Library License](https://trufo.ai/legal/trufo_library_license/v_1_1_0.html).
 
 ## Reference
 

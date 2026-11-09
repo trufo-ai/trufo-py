@@ -236,9 +236,9 @@ arbitrary S3 URLs are not accepted. Download from `download_url`, not the opaque
 `media_output_s3` reference. `submit_c2pa_sign()` raises `requests.HTTPError` for a
 request Trufo refuses; read the reason from `err.response.json()["detail"]`. No task
 is created. `wait_for_task()` raises `TaskFailedError` for a failed or expired task;
-its `.task.error_code` and `.task.error_http_status` say why
-([Tasks](../api/api_c2pa.md#tasks)). Increasing `wait_seconds` does not increase the
-server's execution timeout.
+its `.task.error_code`, `.task.error_http_status` and, when one applies,
+`.task.error_message` say why ([Tasks](../api/api_c2pa.md#tasks)). Increasing
+`wait_seconds` does not increase the server's execution timeout.
 
 ---
 

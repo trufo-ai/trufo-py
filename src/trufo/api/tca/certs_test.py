@@ -38,7 +38,7 @@ def _build_dummy_c2pa_csr_jwt(
         leaf_type: Must be ``C2PA_L1_DUMMY`` or ``C2PA_L2_DUMMY``.
         org_name: Organization name for the certificate subject (O).
         common_name: Common name for the certificate subject (CN).
-        country: Optional country for the certificate subject (C).
+        country: Two-letter country code for the certificate subject (C).
         record_id: Optional product record UUID to embed; a UUIDv7 is
             generated when omitted.
 

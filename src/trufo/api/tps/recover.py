@@ -24,7 +24,8 @@ class RecoverContentResult:
     AI system's public information (``ai_system``) and the type of AI
     involvement (``ai_involvement``), not a manifest.
     ``oid`` is set only when the mark belongs to your own
-    organization. Unknown future fields are ignored.
+    organization; so is a per-embed record's ``status`` (``"active"`` or
+    ``"inactive"``). Unknown future fields are ignored.
     """
 
     detected: bool
@@ -36,6 +37,7 @@ class RecoverContentResult:
     wid_allocation_mode: str | None = None
     ai_involvement: str | None = None
     ai_system: dict | None = None
+    status: str | None = None
 
 
 def recover_content(
@@ -94,6 +96,7 @@ def recover_content(
         wid_allocation_mode=payload.get("wid_allocation_mode"),
         ai_involvement=payload.get("ai_involvement"),
         ai_system=payload.get("ai_system"),
+        status=payload.get("status"),
     )
 
 
