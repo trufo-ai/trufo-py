@@ -105,8 +105,8 @@ appears, and create them before the first start. Set `user:` to their owner. Kee
 docker compose up -d
 docker compose ps    # wait for "(healthy)"
 curl -s http://127.0.0.1:8080/health
-# {"status":"healthy","version":"2.2.0","engine_version":"2.2.0"}
-# full image: {"status":"healthy","version":"2.2.0-full","engine_version":"2.2.0","watermark_engine_version":"0.5.4"}
+# {"status":"healthy","version":"2.2.1","engine_version":"2.2.1"}
+# full image: {"status":"healthy","version":"2.2.1-full","engine_version":"2.2.1","watermark_engine_version":"0.5.4"}
 ```
 
 A new container first downloads and installs its packages, and is healthy after
@@ -356,14 +356,16 @@ versions of its engines.
 
 | Image | Engine (trufo-provenance) | Watermark engine (trufo-pawprint) | Source image |
 | ----- | ------------------------- | --------------------------------- | ------------ |
+| `2.2.1-full` | 2.2.1 | 0.5.4 | `2.2.1-full-source` |
+| `2.2.1` | 2.2.1 | — | `2.2.1-source` |
 | `2.2.0-full` | 2.2.0 | 0.5.4 | `2.2.0-full-source` |
 | `2.2.0` | 2.2.0 | — | `2.2.0-source` |
 | `2.1.2` | 2.1.2 | — | `2.1.2-source` |
 | `2.1.1` | 2.1.1 | — | `2.1.1-source` |
 
 To move to the newest 2.2.x, run `docker compose pull && docker compose up -d`. To
-stay on one version, set `image: ghcr.io/trufo-ai/trufo-local:2.2.0` (or
-`2.2.0-full`).
+stay on one version, set `image: ghcr.io/trufo-ai/trufo-local:2.2.1` (or
+`2.2.1-full`).
 
 <!-- TODO(sunset-2027-01-31): the next paragraph goes; successor none -->
 
@@ -449,18 +451,18 @@ Each image's NOTICE, at `/usr/share/doc/trufo-local/NOTICE` inside the image
 ([signing-only](../../trufo-local/NOTICE), [full](../../trufo-local/NOTICE-full)),
 describes its third-party software, including software under the GNU GPL and LGPL,
 and points to each Debian package's license in `/usr/share/doc/`. In
-`/usr/share/doc/trufo-local/licenses/`, the full image adds the license texts its
+`/usr/share/doc/trufo-local/licenses/`, each image adds the license texts its
 Python packages omit for the libraries they bundle.
 
 Each image version has a source image in the same repository, tagged with its
-version plus `-source` (`2.2.0-source`, `2.2.0-full-source`), holding the complete
+version plus `-source` (`2.2.1-source`, `2.2.1-full-source`), holding the complete
 corresponding source code of its GPL-, LGPL- and MPL-licensed software. The full
 image's source image also holds the signing-only image's sources. The signing-only
 source image is about 1.3 GB, and the full one about 1.4 GB. To extract one:
 
 ```bash
-docker create --platform linux/amd64 --name trufo-local-source ghcr.io/trufo-ai/trufo-local:2.2.0-source none
-docker cp trufo-local-source:/sources ./trufo-local-2.2.0-source
+docker create --platform linux/amd64 --name trufo-local-source ghcr.io/trufo-ai/trufo-local:2.2.1-source none
+docker cp trufo-local-source:/sources ./trufo-local-2.2.1-source
 docker rm trufo-local-source
 ```
 
