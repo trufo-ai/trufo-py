@@ -160,6 +160,7 @@ action requests it; `WatermarkSettings` chooses how the local engine runs:
 from trufo import sign_c2pa_distributed, watermark_media
 from trufo.c2pa import WatermarkProfile, WatermarkSettings
 
+media_bytes = Path("input.mp4").read_bytes()
 settings = WatermarkSettings(profile=WatermarkProfile.FAST)
 signed_bytes = sign_c2pa_distributed(
     api_key,
@@ -174,30 +175,36 @@ marked_bytes = watermark_media(
 )
 ```
 
-Both distributed signing helpers and `watermark_media()` accept these settings.
-Omitting them preserves the default embedding behavior. `profile="default"` uses
-the standard path; `profile="fast"` opts into a shared CPU encoder for still
-images and video frames. An NVIDIA CUDA GPU is recommended and selected
-automatically when available; both profiles then use the original GPU
-implementation. Otherwise the engine uses CPU. Audio uses its standard encoder.
+Both distributed signing helpers and `watermark_media()` accept these settings;
+`WatermarkSettings(profile="fast")` also accepts the string directly. Omitting
+settings preserves the default embedding behavior. `profile="default"` uses
+FP32 on CPU; `profile="fast"` permits selective BF16 when the CPU and backend
+support it, shared by still images, GIF/TIFF pages and video anchors. The prepared
+CPU encoder attempts compilation on first use and caches the result. Unavailable compilation
+uses prepared eager execution; recoverable BF16 execution failures use prepared
+FP32. Cold startup and warmed throughput have different costs.
 
-`profile="skip4"` is opt-in and video-only: it infers a watermark residual at
+For video containers, `profile="fast"` currently infers a watermark residual at
 frames 0, 4, 8, ... and the final frame, interpolating the intervening residuals.
-It uses the same best-effort CPU BF16 acceleration as `fast`, with weaker
-robustness. On an AMD Ryzen 9 9950X3D with eight threads, warm BF16 watermark
-processing improved from 22.89 frames/s for independent-frame embedding to 69.78
-for skip4 (3.05×). This excludes media decoding, encoding and audio processing.
-In a 40-clip, 360-case durability benchmark, CPU BF16 skip4 recovered 74.4% of
-cases and FP32 GPU skip4 recovered 72.8%, versus 87.2% for independent-frame BF16
-embedding; PixelSeal recovered 76–78% under the same protocol. All Pawprint renditions used
+Default embeds each video frame independently. Fast trades robustness for CPU
+throughput, using the same best-effort BF16 as fast images. On an AMD Ryzen 9
+9950X3D with eight threads, six paired 96-frame warm CPU comparisons with
+alternating profile order measured median rates of 15.19 frames/s for the independent-frame
+FP32 default and 75.45 for fast BF16 interpolation (4.97×). This excludes setup,
+input copies, media decoding, encoding and audio processing; the speedup depends on the
+workload and hardware. In a 40-clip, 360-case durability benchmark, fast CPU BF16
+interpolation recovered 74.4% of cases and interpolated GPU FP32 recovered 72.8%,
+versus 86.7% for the independent-frame CPU FP32 default. PixelSeal recovered
+76–78% under the same protocol. All Pawprint renditions used
 the same fixed GPU decoder. These results are separate from the website's practical100
-benchmark. Still images, GIF/TIFF pages and pure audio are rejected for skip4.
+benchmark.
 
 An NVIDIA CUDA GPU is recommended and selected automatically when available.
-Default and fast retain the original GPU implementation. Explicit skip4 is
-honored on GPU with FP32 anchors, but is not recommended there: a complete-file
-GPU measurement improved throughput by only 1.10×. Audio tracks inside a video
-keep their standard encoder in every profile.
+Default video and both image profiles retain the original GPU implementation.
+Explicit fast video is honored on GPU with FP32 anchors, but is not recommended
+there: a complete-file GPU measurement of interpolated versus independent-frame
+FP32 improved throughput by only 1.10×. Audio, including tracks inside a video,
+keeps its ordinary encoder in both profiles.
 
 These settings configure local execution. They are separate from action
 parameters, stay out of remote preprocessing and commit requests, and do not

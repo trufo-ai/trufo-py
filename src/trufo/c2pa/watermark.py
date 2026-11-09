@@ -18,10 +18,12 @@ class WatermarkProfile(str, Enum):
 class WatermarkSettings:
     """Local watermark execution settings, separate from the watermark action.
 
-    ``profile`` accepts ``"default"`` or ``"fast"``. Fast requests best-effort
-    CPU acceleration shared by images and video frames. An available CUDA GPU is
-    recommended and uses its original implementation in either profile; otherwise
-    execution uses CPU.
+    ``profile`` accepts ``"default"`` or ``"fast"``. Default uses CPU FP32 and
+    independent video frames. Fast permits supported CPU BF16 for images and
+    currently interpolates four-frame residual anchors in video containers,
+    trading robustness for CPU throughput. CUDA is selected automatically when
+    available; fast video uses FP32 anchors and is not recommended on GPU.
+    Audio uses its ordinary encoder in both profiles.
     These settings do not request watermarking or enter the C2PA manifest.
     """
 

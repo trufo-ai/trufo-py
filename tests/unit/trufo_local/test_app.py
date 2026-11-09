@@ -319,7 +319,7 @@ def test_watermark_settings_forwarded_separately(sign, engine, settings):
 
 
 @pytest.mark.parametrize(
-    "settings", [{"profile": "other"}, {"device": "cpu"}, {"unknown": 1}]
+    "settings", [{"profile": "other"}, {"profile": "skip4"}, {"device": "cpu"}, {"unknown": 1}]
 )
 def test_invalid_watermark_settings_refused_before_paths(sign, engine, settings):
     response = sign(watermark_settings=settings, media_input_path="missing")

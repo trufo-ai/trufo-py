@@ -17,7 +17,7 @@ def test_public_settings(profile):
     assert settings.profile is WatermarkProfile(profile)
 
 
-@pytest.mark.parametrize("profile", [None, True, 1, {}, "FAST", "other"])
+@pytest.mark.parametrize("profile", [None, True, 1, {}, "FAST", "other", "skip4"])
 def test_invalid_profile(profile):
     with pytest.raises(ValueError, match="Watermark profile"):
         WatermarkSettings(profile=profile)
