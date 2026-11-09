@@ -14,7 +14,8 @@ including x264 and x265, which runs as a separate program; the FFmpeg,
 libgfortran and libquadmath libraries bundled with opencv-python-headless and
 numpy (libquadmath on amd64 only); and the libheif and libde265 libraries
 bundled with pillow-heif. The copyright and license of each Debian package are
-in /usr/share/doc/.
+in /usr/share/doc/. The license texts that the bundled libraries' Python
+packages leave out are in /usr/share/doc/trufo-local/licenses/.
 
 The complete corresponding source code of the GPL-, LGPL- and MPL-licensed
 software in this image is published in the same repository as this image (for

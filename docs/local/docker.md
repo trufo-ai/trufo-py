@@ -451,7 +451,7 @@ Each image's NOTICE, at `/usr/share/doc/trufo-local/NOTICE` inside the image
 ([signing-only](../../trufo-local/NOTICE), [full](../../trufo-local/NOTICE-full)),
 describes its third-party software, including software under the GNU GPL and LGPL,
 and points to each Debian package's license in `/usr/share/doc/`. In
-`/usr/share/doc/trufo-local/licenses/`, the full image adds the license texts its
+`/usr/share/doc/trufo-local/licenses/`, each image adds the license texts its
 Python packages omit for the libraries they bundle.
 
 Each image version has a source image in the same repository, tagged with its

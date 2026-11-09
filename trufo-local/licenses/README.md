@@ -1,17 +1,22 @@
 # trufo-local Licenses
 
-The trufo-local images contain third-party software under its own licenses, including the GNU GPL and LGPL. Each image's NOTICE, at `/usr/share/doc/trufo-local/NOTICE` inside it, lists that software. This folder holds the license texts that the full image's Python packages leave out.
+The trufo-local images contain third-party software under its own licenses, including the GNU GPL and LGPL. Each image's NOTICE, at `/usr/share/doc/trufo-local/NOTICE` inside it, lists that software. This folder holds the license texts that the images' Python packages leave out, and both images carry it at `/usr/share/doc/trufo-local/licenses/`.
 
 ## What Each Image Carries
 
-The signing-only image, built from [`Dockerfile`](https://github.com/trufo-ai/trufo-py/blob/main/trufo-local/Dockerfile), carries Debian's GPL build of FFmpeg, the LGPL libheif and libde265 libraries bundled with pillow-heif, the FFmpeg libraries bundled with opencv-python-headless, and more. Its [NOTICE](https://github.com/trufo-ai/trufo-py/blob/main/trufo-local/NOTICE) lists them all, and [`extra-sources.txt`](https://github.com/trufo-ai/trufo-py/blob/main/trufo-local/extra-sources.txt) lists the sources of the libraries its Python packages bundle.
+The signing-only image, built from [`Dockerfile`](https://github.com/trufo-ai/trufo-py/blob/main/trufo-local/Dockerfile), carries Debian's GPL build of FFmpeg, the LGPL libheif and libde265 libraries bundled with pillow-heif, the FFmpeg libraries bundled with opencv-python-headless, and more. Its [NOTICE](https://github.com/trufo-ai/trufo-py/blob/main/trufo-local/NOTICE) lists them all, and [`extra-sources.txt`](https://github.com/trufo-ai/trufo-py/blob/main/trufo-local/extra-sources.txt) lists the sources of the libraries its Python packages bundle. It also carries the JPEG XL library libjxl, with skcms, Highway and Brotli, bundled with jxlpy.
 
-The full image adds watermarking. It is built from [`Dockerfile.full`](https://github.com/trufo-ai/trufo-py/blob/main/trufo-local/Dockerfile.full) on the signing-only image, and adds the libraries bundled with the torch, imagecodecs and soundfile Python packages, among them Intel MKL, OpenBLAS, GCC's libgomp and libgfortran, LAME, mpg123, FLAC, Ogg, Vorbis and Opus. It also adds Debian's `heif-enc`, with its x265 and libaom encoders. Its NOTICE is [`NOTICE-full`](https://github.com/trufo-ai/trufo-py/blob/main/trufo-local/NOTICE-full), and [`extra-sources-full.txt`](https://github.com/trufo-ai/trufo-py/blob/main/trufo-local/extra-sources-full.txt) lists the sources of the libraries those Python packages bundle. It carries this folder at `/usr/share/doc/trufo-local/licenses/`.
+The full image adds watermarking. It is built from [`Dockerfile.full`](https://github.com/trufo-ai/trufo-py/blob/main/trufo-local/Dockerfile.full) on the signing-only image, and adds the libraries bundled with the torch, imagecodecs and soundfile Python packages, among them Intel MKL, OpenBLAS, GCC's libgomp and libgfortran, LAME, mpg123, FLAC, Ogg, Vorbis and Opus. It also adds Debian's `heif-enc`, with its x265 and libaom encoders. Its NOTICE is [`NOTICE-full`](https://github.com/trufo-ai/trufo-py/blob/main/trufo-local/NOTICE-full), and [`extra-sources-full.txt`](https://github.com/trufo-ai/trufo-py/blob/main/trufo-local/extra-sources-full.txt) lists the sources of the libraries those Python packages bundle.
 
 ## Files
 
 | File | Covers |
 |---|---|
+| `libjxl.txt` | libjxl, the JPEG XL library bundled with jxlpy (BSD-3-Clause) |
+| `libjxl-patents.txt` | Google's patent grant for libjxl |
+| `skcms.txt` | skcms, in the libjxl_cms library bundled with jxlpy (BSD-3-Clause) |
+| `highway.txt` | Highway, in the libjxl library bundled with jxlpy (BSD-3-Clause) |
+| `brotli.txt` | Brotli, bundled with jxlpy (MIT) |
 | `libgomp.txt` | GCC's OpenMP library, bundled with torch and imagecodecs (GPL-3.0 with the GCC Runtime Library Exception) |
 | `libgfortran.txt` | GCC's Fortran library, bundled with torch on arm64 (GPL-3.0 with the GCC Runtime Library Exception) |
 | `mkl.txt` | Intel oneAPI Math Kernel Library (MKL), built into torch on amd64 (Intel Simplified Software License) |
@@ -36,7 +41,7 @@ Trufo's own code is not under the GPL or LGPL. Debian's FFmpeg and `heif-enc` wi
 
 As distributor, Trufo provides:
 
-- **License texts and notices** in each image: its NOTICE, each Debian package's copyright and license in `/usr/share/doc/`, and, in the full image, this folder.
+- **License texts and notices** in each image: its NOTICE, each Debian package's copyright and license in `/usr/share/doc/`, and this folder.
 - **A source image** for each image version, in the image's repository (`ghcr.io/trufo-ai/trufo-local`), tagged with the image's exact version plus `-source`: `2.2.0-source` for `2.2.0`, `2.2.0-full-source` for `2.2.0-full`. It holds the complete corresponding source code of the image's GPL-, LGPL- and MPL-licensed software. The image's `ai.trufo.trufo-local.source` label names it, and [Licenses and Source](https://github.com/trufo-ai/trufo-py/blob/main/docs/local/docker.md#licenses-and-source) shows how to extract it.
 - **A written offer** in each NOTICE, to provide the same source on request for at least three years after Trufo last distributes that image version.
 

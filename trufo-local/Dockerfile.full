@@ -38,7 +38,6 @@ RUN --mount=type=secret,id=TRUFO_SDK_DOWNLOAD_API_KEY,required=true \
     && pip uninstall -y trufo-provenance trufo-pawprint
 
 COPY NOTICE-full /usr/share/doc/trufo-local/NOTICE
-COPY licenses /usr/share/doc/trufo-local/licenses
 
 LABEL ai.trufo.trufo-local.source=ghcr.io/trufo-ai/trufo-local:${VERSION}-full-source
 
