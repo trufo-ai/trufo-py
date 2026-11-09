@@ -5,7 +5,7 @@ A C2PA Signing Certificate identifies the signing entity (software or hardware) 
 | Track | Purpose | Requires |
 | ----- | ------- | -------- |
 | **[Dummy](#dummy-certificate)** | A well-formed certificate for a conformance application | Nothing |
-| **[Test flow](#test-flow)** | The whole production flow on test hosts, before you buy | A Trufo account with MFA and an owner or admin role in an organization |
+| **[Test flow](#test-flow)** | The whole production flow on test hosts | A Trufo account with MFA and an owner or admin role in an organization |
 | **[Production](#production-certificate)** | Real-world publishing | Organization Validation, Product Validation and a subscription |
 
 
@@ -38,10 +38,12 @@ cert_chain_pem = request_c2pa_dummy_cert(
 ## Test Flow
 
 Run the whole production flow before you buy: instances, credentials, enrollment,
-OCSP status and revocation. You need a Trufo account with MFA and an owner or admin
-role in an organization; there is no Organization Validation, Product Validation or
-subscription. Test certificates are signed by Trufo's test CA and are not trusted by
-C2PA validators.
+OCSP status and revocation. A conformance application's security document
+describes this enrollment workflow, so run it before you apply; the certificate you
+submit can still be a dummy certificate, which carries your organization's name. You
+need a Trufo account with MFA and an owner or admin role in an organization; there
+is no Organization Validation, Product Validation or subscription. Test certificates
+are signed by Trufo's test CA and are not trusted by C2PA validators.
 
 Requests use the same paths and bodies as production. Only the host changes, to
 `test.api.trufo.ai`, `test.ca.trufo.ai`, `test.ocsp.trufo.ai` and `test.tsa.trufo.ai`
