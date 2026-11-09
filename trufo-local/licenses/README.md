@@ -15,7 +15,7 @@ The full image adds watermarking. It is built from [`Dockerfile.full`](https://g
 | `libjxl.txt` | libjxl, the JPEG XL library bundled with jxlpy (BSD-3-Clause) |
 | `libjxl-patents.txt` | Google's patent grant for libjxl |
 | `skcms.txt` | skcms, in the libjxl_cms library bundled with jxlpy (BSD-3-Clause) |
-| `highway.txt` | Highway, in the libjxl library bundled with jxlpy (BSD-3-Clause) |
+| `highway.txt` | Highway, in the libjxl and libjxl_cms libraries bundled with jxlpy (BSD-3-Clause) |
 | `brotli.txt` | Brotli, bundled with jxlpy (MIT) |
 | `libgomp.txt` | GCC's OpenMP library, bundled with torch and imagecodecs (GPL-3.0 with the GCC Runtime Library Exception) |
 | `libgfortran.txt` | GCC's Fortran library, bundled with torch on arm64 (GPL-3.0 with the GCC Runtime Library Exception) |
