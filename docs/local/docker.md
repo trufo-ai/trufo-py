@@ -58,7 +58,7 @@ If you run a 2.1 image, see [Versions and Upgrades](#versions-and-upgrades).
 - **For production**, completed Organization Validation and the C2PA Signing plan:
   signing on `api.trufo.ai` or `eu.api.trufo.ai` needs both. Until then, set
   `TRUFO_API_URL` to the test host and send a `c2pa-sign-test` key (see
-  [Prerequisites](../quickstart/0_setup.md#prerequisites)).
+  [Try It on the Test Host](#try-it-on-the-test-host)).
 - **Outbound HTTPS** to `packages.trufo.ai` when a new container starts, and to the
   host in `TRUFO_API_URL` for each signing request.
 
@@ -164,6 +164,20 @@ To check the result, open the signed file at [verify.trufo.ai](https://verify.tr
 Files signed through the production hosts validate against the C2PA Trust List; files
 signed on the test host carry Trufo's test certificate, which validators report as
 untrusted.
+
+## Try It on the Test Host
+
+You can try Local mode on the test host without a plan or Organization Validation:
+
+1. Accept the Trufo Library License at
+   [Organization Settings → Agreements](https://app.trufo.ai/settings/org#agreements).
+2. Email support@trufo.ai with your Organization ID
+   ([Organization Settings](https://app.trufo.ai/settings/org)) to request SDK download
+   access.
+3. Once it is granted, create an `sdk-download` key and a `c2pa-sign-test` key.
+4. Follow [Quick Start](#quick-start) with `TRUFO_API_URL` set to
+   `https://test.api.trufo.ai`, and sign with your `c2pa-sign-test` key. To try
+   [branded signing](../api/api_c2pa.md#post-c2pasign), send `"branded_gp_id": "test"`.
 
 ## AI Labeling
 

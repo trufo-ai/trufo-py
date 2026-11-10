@@ -45,6 +45,7 @@ at [app.trufo.ai/settings/org](https://app.trufo.ai/settings/org#api-access) und
 *API Access → API Keys*. Creating one requires an active C2PA Signing or
 Watermark API plan and the Trufo Library License, accepted at
 [Organization Settings → Agreements](https://app.trufo.ai/settings/org#agreements).
+Before purchasing a plan, see [Try It on the Test Host](#try-it-on-the-test-host).
 
 Store the key in `~/.netrc` rather than in the index URL. pip sends it as an HTTP
 basic-auth credential either way, but a URL-embedded key also lands in your shell
@@ -134,6 +135,22 @@ Trufo's [notices](../api/api_c2pa.md#response-warnings) arrive as Python
 SDK call. When the SDK or engine version is deprecated, a notice gives the date
 after which signing with it returns `400 UnsupportedSDKVersion`; upgrade before then.
 
+## Try It on the Test Host
+
+You can try Local mode on the test host without a plan or Organization Validation:
+
+1. Accept the Trufo Library License at
+   [Organization Settings → Agreements](https://app.trufo.ai/settings/org#agreements).
+2. Email support@trufo.ai with your Organization ID
+   ([Organization Settings](https://app.trufo.ai/settings/org)) to request SDK download
+   access.
+3. Once it is granted, create an `sdk-download` key and a `c2pa-sign-test` key.
+4. Install as above and sign with `sign_c2pa_distributed_test()`. To try
+   [branded signing](../quickstart/2_c2pa_signing.md#direct-signing), pass
+   `branded_gp_id="test"`.
+
+Signed files carry Trufo's test certificate, which validators report as untrusted.
+
 ## Troubleshooting
 
 **`No matching distribution found for trufo-provenance…` or `…for pillow-heif…`** —
@@ -143,8 +160,8 @@ host other than Linux with CPython 3.12, use
 [Local mode with the Docker image](docker.md).
 
 **pip reports HTTP 401 or 403 from `packages.trufo.ai`** — the key in `~/.netrc` is
-not an active `sdk-download` key, or your organization lacks the plan or the Trufo
-Library License (see [Private Package Index](#private-package-index)).
+not an active `sdk-download` key, or your organization has neither a plan nor SDK
+download access (see [Private Package Index](#private-package-index)).
 
 **`ImportError: The optional trufo-provenance dependency is required`**, or an
 `ImportError` naming trufo-pawprint — install `trufo[local-sign-only]`, or

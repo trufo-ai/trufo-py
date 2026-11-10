@@ -294,7 +294,7 @@ organization owner or admin with MFA creates and revokes keys at
 | `watermark-test` | Standalone binding (`/bind/*`, test host); the production hosts' upload link refuses it (410, [Deprecations](#deprecations)) | — |
 | `watermark-prod` | Standalone binding (`/bind/*`, production hosts) | C2PA Signing or Watermark API plan |
 | `tsa` | RFC 3161 timestamping (`tsa.trufo.ai`) | C2PA TSA plan |
-| `sdk-download` | Downloading the local engine packages from Trufo's private package index, for the [Python SDK](../local/python.md) or the [Docker image](../local/docker.md) | C2PA Signing or Watermark API plan, and the Trufo Library License accepted ([Agreements](#agreements)) |
+| `sdk-download` | Downloading the local engine packages from Trufo's private package index, for the [Python SDK](../local/python.md) or the [Docker image](../local/docker.md) | C2PA Signing or Watermark API plan (or, for the test host, SDK download access from support@trufo.ai), and the Trufo Library License accepted ([Agreements](#agreements)) |
 
 Keys are issued as `{scope}:{key}`; Trufo stores only a hash and shows the full key
 once, at creation. Keys last up to 390 days — the dashboard shows each key's expiry
