@@ -1,0 +1,23 @@
+name: ci
+
+on:
+  pull_request:
+    branches: [main, "v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Install package
+        # the engine comes from Trufo's index, so the trufo-local service tests skip here; they
+        # run on release tags in build-images.yml
+        run: pip install -e '.[test]'
+      - name: Run unit tests
+        run: python -m pytest tests/unit -v
