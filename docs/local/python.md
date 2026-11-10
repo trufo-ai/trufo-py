@@ -157,6 +157,8 @@ Watermarking is off by default. With `trufo[local-full]`, an explicit `watermark
 action requests it; `WatermarkSettings` chooses how the local engine runs:
 
 ```python
+from pathlib import Path
+
 from trufo import sign_c2pa_distributed, watermark_media
 from trufo.c2pa import WatermarkProfile, WatermarkSettings
 
@@ -209,7 +211,8 @@ keeps its ordinary encoder in both profiles.
 These settings configure local execution. They are separate from action
 parameters, stay out of remote preprocessing and commit requests, and do not
 appear in C2PA assertions. A setting alone does not request watermarking. The
-existing Docker full image embeds on CPU only; see [Docker images](docker.md).
+shipped Docker images listed in the [Docker guide](docker.md) use fixed engine
+versions and do not support these profiles.
 
 ## Troubleshooting
 
