@@ -137,8 +137,11 @@ def list_content(
     """
     body: dict = {"limit": limit}
     for name, value in (
-        ("status", status), ("origin", origin), ("created_after", created_after),
-        ("created_before", created_before), ("cursor", cursor),
+        ("status", status),
+        ("origin", origin),
+        ("created_after", created_after),
+        ("created_before", created_before),
+        ("cursor", cursor),
     ):
         if value is not None:
             body[name] = value

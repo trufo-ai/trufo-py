@@ -27,8 +27,11 @@ _M = "trufo.api.tps.bind"
 
 _MARKED_B64 = base64.b64encode(b"marked").decode()
 _WID = "v1.001abcdef12"
-_PER_AI_SYSTEM = {"wid_allocation_mode": "per_ai_system", "ai_system_id": "aisys_1",
-                  "ai_involvement": "ai_generated"}
+_PER_AI_SYSTEM = {
+    "wid_allocation_mode": "per_ai_system",
+    "ai_system_id": "aisys_1",
+    "ai_involvement": "ai_generated",
+}
 
 
 def _response(payload, status=200):
@@ -57,13 +60,19 @@ class TestBindWatermark:
             "media_input": base64.b64encode(b"media-bytes").decode(),
         }
 
-    @pytest.mark.parametrize("bind, arg, kwargs", [
-        (bind_watermark, b"media-bytes", {}),
-        (bind_watermark, b"media-bytes",
-         {"execution_mode": ExecutionMode.TASK, "mime_type": "image/jpeg"}),
-        (bind_watermark_test, b"media-bytes", {}),
-        (bind_reserve_test, "image/jpeg", {}),
-    ])
+    @pytest.mark.parametrize(
+        "bind, arg, kwargs",
+        [
+            (bind_watermark, b"media-bytes", {}),
+            (
+                bind_watermark,
+                b"media-bytes",
+                {"execution_mode": ExecutionMode.TASK, "mime_type": "image/jpeg"},
+            ),
+            (bind_watermark_test, b"media-bytes", {}),
+            (bind_reserve_test, "image/jpeg", {}),
+        ],
+    )
     @patch(f"{_M}._download_task_output", return_value=b"marked")
     @patch(f"{_M}.wait_for_task")
     @patch(f"{_M}._upload_task_input", return_value="s3-ref")
@@ -71,11 +80,20 @@ class TestBindWatermark:
     def test_allocation_keys_sent_when_set(
         self, post, _upload, _wait, _download, bind, arg, kwargs
     ):
-        post.return_value = _response({
-            "media_output": _MARKED_B64, "wid": _WID, "cid": "c_1", "task_id": "t_1",
-            "wid_package": {"wid": _WID, "expires_at": "x"}, "task_type": "watermark",
-            "status": "queued", "startby_ts": "x", "timeout_seconds": 60,
-        }, status=202)
+        post.return_value = _response(
+            {
+                "media_output": _MARKED_B64,
+                "wid": _WID,
+                "cid": "c_1",
+                "task_id": "t_1",
+                "wid_package": {"wid": _WID, "expires_at": "x"},
+                "task_type": "watermark",
+                "status": "queued",
+                "startby_ts": "x",
+                "timeout_seconds": 60,
+            },
+            status=202,
+        )
         bind("key", arg, **kwargs, **_PER_AI_SYSTEM)
         assert post.call_args.kwargs["json"].items() >= _PER_AI_SYSTEM.items()
 
@@ -88,14 +106,17 @@ class TestBindWatermark:
             bind_watermark("key", b"media-bytes", mode="provenance")
         assert mock_post.call_args.kwargs["json"]["mode"] == "provenance"
 
-    @pytest.mark.parametrize("kwargs, error", [
-        ({"mode": "compliance"}, NotImplementedError),
-        ({"ai_compliance_label": "ai_generated"}, TypeError),
-        ({"mode": "attestation"}, ValueError),
-        ({"mode": "provenance", "wid_allocation_mode": "per_embed"}, ValueError),
-        ({"wid_allocation_mode": "per_asset"}, NotImplementedError),
-        ({"ai_involvement": "ai_assisted"}, ValueError),
-    ])
+    @pytest.mark.parametrize(
+        "kwargs, error",
+        [
+            ({"mode": "compliance"}, NotImplementedError),
+            ({"ai_compliance_label": "ai_generated"}, TypeError),
+            ({"mode": "attestation"}, ValueError),
+            ({"mode": "provenance", "wid_allocation_mode": "per_embed"}, ValueError),
+            ({"wid_allocation_mode": "per_asset"}, NotImplementedError),
+            ({"ai_involvement": "ai_assisted"}, ValueError),
+        ],
+    )
     @patch(f"{_M}.requests.post")
     def test_unsupported_options_do_not_send_request(self, post, kwargs, error):
         with pytest.raises(error):

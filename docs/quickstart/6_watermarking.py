@@ -35,9 +35,7 @@ AI_INPUT_FILE = Path("generated.png")
 AI_OUTPUT_FILE = Path("generated_watermarked.png")
 
 api_key = load_api_key(TrufoAPIKey.C2PA_SIGN_TEST)
-assert api_key, (
-    "Set TRUFO_C2PA_SIGN_TEST_API_KEY or run: trufo set-api-key c2pa-sign-test <KEY>"
-)
+assert api_key, "Set TRUFO_C2PA_SIGN_TEST_API_KEY or run: trufo set-api-key c2pa-sign-test <KEY>"
 
 media_bytes = INPUT_FILE.read_bytes()
 
@@ -65,9 +63,7 @@ with warnings.catch_warnings(record=True) as caught:
     signed_bytes = sign_c2pa_test(
         api_key,
         media_bytes,
-        actions=[
-            ["watermark", {"effort_policy": WatermarkEffort.REQUIRE_IF_SUPPORTED.value}]
-        ],
+        actions=[["watermark", {"effort_policy": WatermarkEffort.REQUIRE_IF_SUPPORTED.value}]],
     )
 
 if caught:

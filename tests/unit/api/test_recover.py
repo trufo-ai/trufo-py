@@ -10,8 +10,8 @@ import pytest
 import requests
 
 from trufo.api.endpoints import TRUFO_API_URL
-from trufo.api.tps.recover import recover_content
 from trufo.api.headers import sdk_headers
+from trufo.api.tps.recover import recover_content
 
 _M = "trufo.api.tps.recover"
 
@@ -29,7 +29,12 @@ class TestRecoverContent:
     @patch(f"{_M}.requests.post")
     def test_posts_media_and_parses_detection(self, mock_post):
         mock_post.return_value = _response(
-            {"detected": True, "wid": "image.001a1b2c3d4", "confidence": 0.98, "manifest_bytes": None}
+            {
+                "detected": True,
+                "wid": "image.001a1b2c3d4",
+                "confidence": 0.98,
+                "manifest_bytes": None,
+            }
         )
 
         result = recover_content("key", b"media-bytes")
@@ -69,7 +74,6 @@ class TestRecoverContent:
         assert result.status == "inactive"
         assert mock_post.call_args.kwargs["json"]["parse_manifest_json"] is True
 
-
     @patch(f"{_M}.requests.post")
     def test_not_detected_returns_bare_result(self, mock_post):
         mock_post.return_value = _response({"detected": False})
@@ -84,12 +88,18 @@ class TestRecoverContent:
     def test_per_ai_system_fields_parsed(self, mock_post):
         ai_system = {"name": "Example Model"}
         mock_post.return_value = _response(
-            {"detected": True, "wid_allocation_mode": "per_ai_system",
-             "ai_involvement": "ai_generated", "ai_system": ai_system}
+            {
+                "detected": True,
+                "wid_allocation_mode": "per_ai_system",
+                "ai_involvement": "ai_generated",
+                "ai_system": ai_system,
+            }
         )
         result = recover_content("key", b"media-bytes")
         assert (result.wid_allocation_mode, result.ai_involvement, result.ai_system) == (
-            "per_ai_system", "ai_generated", ai_system
+            "per_ai_system",
+            "ai_generated",
+            ai_system,
         )
 
     @patch(f"{_M}.requests.post")

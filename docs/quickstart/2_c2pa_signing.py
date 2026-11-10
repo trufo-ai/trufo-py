@@ -28,9 +28,7 @@ INPUT_FILE = Path("photo.jpg")
 OUTPUT_FILE = Path("signed.jpg")
 
 api_key = load_api_key(TrufoAPIKey.C2PA_SIGN_TEST)
-assert api_key, (
-    "Set TRUFO_C2PA_SIGN_TEST_API_KEY or run: trufo set-api-key c2pa-sign-test <KEY>"
-)
+assert api_key, "Set TRUFO_C2PA_SIGN_TEST_API_KEY or run: trufo set-api-key c2pa-sign-test <KEY>"
 
 media_bytes = INPUT_FILE.read_bytes()
 

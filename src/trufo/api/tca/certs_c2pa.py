@@ -22,8 +22,8 @@ from trufo.api.endpoints import (
     TRUFO_CA_URL,
     TRUFO_CA_URL_TEST,
 )
-from trufo.api.session import TrufoSession
 from trufo.api.headers import sdk_headers
+from trufo.api.session import TrufoSession
 from trufo.crypt.algorithms import infer_signing_algorithm
 from trufo.crypt.tca_certs import LeafType, build_csr, est_enroll, extract_cert_chain
 

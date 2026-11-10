@@ -9,6 +9,7 @@ import types
 from unittest.mock import MagicMock, patch
 
 import pytest
+
 from trufo import GetS3UploadURLResult, SignC2PAS3Result
 from trufo.api.endpoints import (
     TPS_C2PA_SIGN_PATH,
@@ -17,7 +18,6 @@ from trufo.api.endpoints import (
     TRUFO_API_URL_TEST,
 )
 from trufo.api.headers import sdk_headers
-from trufo.api.tps.tasks import ExecutionMode
 from trufo.api.tps.sign_c2pa import (
     _validate_actions,
     _validate_assertions,
@@ -33,6 +33,7 @@ from trufo.api.tps.sign_c2pa import (
     sign_c2pa_via_s3_test,
     submit_c2pa_sign,
 )
+from trufo.api.tps.tasks import ExecutionMode
 from trufo.c2pa import (
     ManifestSettings,
     SignedIngredientPolicy,
@@ -61,10 +62,15 @@ def _mock_response(json_data: dict):
 
 
 def _accepted_task():
-    response = _mock_response({
-        "task_id": "task-1", "task_type": "c2pa_sign", "status": "queued",
-        "startby_ts": "2026-09-19T12:05:00Z", "timeout_seconds": 60,
-    })
+    response = _mock_response(
+        {
+            "task_id": "task-1",
+            "task_type": "c2pa_sign",
+            "status": "queued",
+            "startby_ts": "2026-09-19T12:05:00Z",
+            "timeout_seconds": 60,
+        }
+    )
     response.status_code = 202
     return response
 
@@ -464,8 +470,10 @@ class TestS3C2PASigning:
 
     @patch("trufo.api.tps.sign_c2pa.requests.post")
     def test_s3_request_and_test_signing_reject_before_network(self, mock_post):
-        with pytest.warns(DeprecationWarning, match="use submit_c2pa_sign"), \
-             pytest.raises(ValueError, match="S3 input requires"):
+        with (
+            pytest.warns(DeprecationWarning, match="use submit_c2pa_sign"),
+            pytest.raises(ValueError, match="S3 input requires"),
+        ):
             sign_c2pa_s3("prod-key", "signed-input-reference")
         with pytest.raises(ValueError, match="REQUEST execution with bytes only"):
             sign_c2pa_s3_test("test-key", "signed-input-reference")
@@ -490,7 +498,9 @@ class TestS3C2PASigning:
             expires_at=1770000000,
             duration="5m",
         )
-        mock_sign_s3.return_value = SignC2PAS3Result(media_output_s3="output-reference", download_url="https://download.example")
+        mock_sign_s3.return_value = SignC2PAS3Result(
+            media_output_s3="output-reference", download_url="https://download.example"
+        )
         mock_get.return_value.content = b"signed-media"
 
         result = sign_c2pa_via_s3(
@@ -563,8 +573,15 @@ class TestS3C2PASigning:
             ),
             _accepted_task(),
         ]
-        mock_wait.return_value = types.SimpleNamespace(task_id="task-1", result=types.SimpleNamespace(
-            media_output_s3="output-reference", download_url="https://download.example", cid=None, wid=None))
+        mock_wait.return_value = types.SimpleNamespace(
+            task_id="task-1",
+            result=types.SimpleNamespace(
+                media_output_s3="output-reference",
+                download_url="https://download.example",
+                cid=None,
+                wid=None,
+            ),
+        )
         mock_get.return_value.content = b"s3-signed"
 
         assert (
@@ -590,8 +607,9 @@ class TestS3C2PASigning:
         ]
         assert mock_post.call_args_list[2].kwargs["json"]["signed_input_policy"] == "auto"
         assert mock_post.call_args_list[2].kwargs["json"]["signed_ingredient_policy"] == "auto"
-        mock_wait.assert_called_once_with("prod-key", "task-1", wait_seconds=600, trufo_api_url=trufo_api_url)
-
+        mock_wait.assert_called_once_with(
+            "prod-key", "task-1", wait_seconds=600, trufo_api_url=trufo_api_url
+        )
 
     @patch("trufo.api.tps.sign_c2pa.requests.post")
     def test_s3_assertions_without_cawg_identity_pass_silently(self, mock_post, caplog):

@@ -9,8 +9,15 @@ import pytest
 import requests
 
 from trufo import (
-    ExecutionMode, TaskFailedError, TaskWaitTimeoutError, TrufoServerWarning, bind_watermark,
-    bind_watermark_test, sign_c2pa, sign_c2pa_test, wait_for_task,
+    ExecutionMode,
+    TaskFailedError,
+    TaskWaitTimeoutError,
+    TrufoServerWarning,
+    bind_watermark,
+    bind_watermark_test,
+    sign_c2pa,
+    sign_c2pa_test,
+    wait_for_task,
 )
 
 
@@ -20,18 +27,32 @@ def response(payload=None, *, status=200, content=b""):
 
 def task(status="succeeded", task_type="c2pa_sign"):
     return {
-        "task_id": "task-1", "task_type": task_type, "status": status,
-        "startby_ts": "2026-09-19T12:05:00Z", "timeout_seconds": 60,
-        "create_ts": "2026-09-19T12:00:00Z", "update_ts": "2026-09-19T12:00:01Z",
-        "file_size_bytes": 123, "file_mime_type": "image/jpeg",
-        "result": {
-            "media_output_s3": "output-reference", "download_url": "https://output.example",
-            "expires_ts": "2026-09-20T12:00:00Z", "cid": "content-1", "wid": "watermark-1",
-        } if status == "succeeded" else None,
+        "task_id": "task-1",
+        "task_type": task_type,
+        "status": status,
+        "startby_ts": "2026-09-19T12:05:00Z",
+        "timeout_seconds": 60,
+        "create_ts": "2026-09-19T12:00:00Z",
+        "update_ts": "2026-09-19T12:00:01Z",
+        "file_size_bytes": 123,
+        "file_mime_type": "image/jpeg",
+        "result": (
+            {
+                "media_output_s3": "output-reference",
+                "download_url": "https://output.example",
+                "expires_ts": "2026-09-20T12:00:00Z",
+                "cid": "content-1",
+                "wid": "watermark-1",
+            }
+            if status == "succeeded"
+            else None
+        ),
     }
 
 
-@pytest.mark.parametrize("operation,task_type", [(sign_c2pa, "c2pa_sign"), (bind_watermark, "watermark")])
+@pytest.mark.parametrize(
+    "operation,task_type", [(sign_c2pa, "c2pa_sign"), (bind_watermark, "watermark")]
+)
 def test_bytes_task_uploads_submits_polls_downloads_without_leaking_api_key(operation, task_type):
     accepted = task("queued", task_type)
     completed = task(task_type=task_type)
@@ -39,14 +60,29 @@ def test_bytes_task_uploads_submits_polls_downloads_without_leaking_api_key(oper
     completed["additional_status_field"] = "ignored"
     completed["result"]["additional_result_field"] = "ignored"
     completed["result"]["warnings"] = ["server notice"]
-    upload = {"upload_url": "https://input.example", "media_input_s3": "input-reference",
-              "expires_at": 1770000000, "duration": "5m"}
-    with patch("requests.post", side_effect=[response(upload), response(accepted, status=202)]) as post, \
-         patch("requests.put", return_value=response()) as put, \
-         patch("requests.get", side_effect=[response(completed), response(content=b"output")]) as get:
+    upload = {
+        "upload_url": "https://input.example",
+        "media_input_s3": "input-reference",
+        "expires_at": 1770000000,
+        "duration": "5m",
+    }
+    with (
+        patch(
+            "requests.post", side_effect=[response(upload), response(accepted, status=202)]
+        ) as post,
+        patch("requests.put", return_value=response()) as put,
+        patch(
+            "requests.get", side_effect=[response(completed), response(content=b"output")]
+        ) as get,
+    ):
         with pytest.warns(TrufoServerWarning, match="server notice"):
-            result = operation("secret-key", b"input", execution_mode=ExecutionMode.TASK,
-                               mime_type="image/jpeg", trufo_api_url="https://selected.example")
+            result = operation(
+                "secret-key",
+                b"input",
+                execution_mode=ExecutionMode.TASK,
+                mime_type="image/jpeg",
+                trufo_api_url="https://selected.example",
+            )
     assert (result if task_type == "c2pa_sign" else result.media) == b"output"
     if task_type == "watermark":
         assert (result.wid, result.cid) == ("watermark-1", "content-1")
@@ -60,16 +96,30 @@ def test_bytes_task_uploads_submits_polls_downloads_without_leaking_api_key(oper
     assert "headers" not in get.call_args.kwargs
 
 
-@pytest.mark.parametrize("status,code,http_status,message,expected", [
-    ("failed", "execution_timeout", 504, None, "Task task-1 failed: execution_timeout."),
-    ("expired", "start_timeout", 503, None, "Task task-1 failed: start_timeout."),
-    ("failed", "invalid_input", 400, "Fragmented MP4 is not supported.",
-     "Task task-1 failed: invalid_input. Fragmented MP4 is not supported."),
-])
-def test_terminal_failure_keeps_task_id_and_does_not_resubmit(status, code, http_status, message, expected):
+@pytest.mark.parametrize(
+    "status,code,http_status,message,expected",
+    [
+        ("failed", "execution_timeout", 504, None, "Task task-1 failed: execution_timeout."),
+        ("expired", "start_timeout", 503, None, "Task task-1 failed: start_timeout."),
+        (
+            "failed",
+            "invalid_input",
+            400,
+            "Fragmented MP4 is not supported.",
+            "Task task-1 failed: invalid_input. Fragmented MP4 is not supported.",
+        ),
+    ],
+)
+def test_terminal_failure_keeps_task_id_and_does_not_resubmit(
+    status, code, http_status, message, expected
+):
     payload = task(status)
-    payload["error"] = {"code": code, "http_status": http_status, "message": message,
-                        "additional_error_field": "ignored"}
+    payload["error"] = {
+        "code": code,
+        "http_status": http_status,
+        "message": message,
+        "additional_error_field": "ignored",
+    }
     with patch("requests.get", return_value=response(payload)), patch("requests.post") as post:
         with pytest.raises(TaskFailedError) as failure:
             wait_for_task("key", "task-1")
@@ -111,9 +161,11 @@ def test_polling_slows_down_and_stops_at_wait_budget(wait_seconds):
         polls.append(now)
         return response(task("queued"))
 
-    with patch("trufo.api.tps.tasks.time.monotonic", side_effect=lambda: now), \
-         patch("trufo.api.tps.tasks.time.sleep", side_effect=sleep), \
-         patch("requests.get", side_effect=get):
+    with (
+        patch("trufo.api.tps.tasks.time.monotonic", side_effect=lambda: now),
+        patch("trufo.api.tps.tasks.time.sleep", side_effect=sleep),
+        patch("requests.get", side_effect=get),
+    ):
         with pytest.raises(TaskWaitTimeoutError):
             wait_for_task("key", "task-1", wait_seconds=wait_seconds)
     expected = list(range(11)) + list(range(20, 600, 10))

@@ -36,9 +36,13 @@ from trufo.api.endpoints import (
     TRUFO_API_URL_TEST,
 )
 from trufo.api.headers import sdk_headers
-from trufo.api.tps.io import GetS3UploadURLResult, get_s3_upload_url, _upload_task_input
+from trufo.api.tps.io import GetS3UploadURLResult, _upload_task_input, get_s3_upload_url
 from trufo.api.tps.tasks import (
-    ExecutionMode, TaskReceipt, _submit_task, wait_for_task, _download_task_output,
+    ExecutionMode,
+    TaskReceipt,
+    _download_task_output,
+    _submit_task,
+    wait_for_task,
 )
 from trufo.c2pa.actions import TrufoAction
 from trufo.c2pa.assertions import UserAssertion
@@ -318,8 +322,11 @@ def get_c2pa_s3_upload_url(
     Raises:
         requests.HTTPError: If the API returns a non-2xx response.
     """
-    warnings.warn("get_c2pa_s3_upload_url() is deprecated; use get_s3_upload_url().",
-                  DeprecationWarning, stacklevel=2)
+    warnings.warn(
+        "get_c2pa_s3_upload_url() is deprecated; use get_s3_upload_url().",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     return get_s3_upload_url(api_key, mime_type, duration, trufo_api_url=trufo_api_url)
 
 
@@ -416,8 +423,11 @@ def sign_c2pa_s3(
     For TASK bytes, provide mime_type; submit_c2pa_sign() accepts an existing
     Trufo upload reference without waiting.
     """
-    warnings.warn("sign_c2pa_s3() is deprecated; use submit_c2pa_sign() and wait_for_task().",
-                  DeprecationWarning, stacklevel=2)
+    warnings.warn(
+        "sign_c2pa_s3() is deprecated; use submit_c2pa_sign() and wait_for_task().",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     if ExecutionMode.validate(execution_mode) != ExecutionMode.TASK:
         raise ValueError("S3 input requires execution_mode=ExecutionMode.TASK.")
     if wait_seconds <= 0:
@@ -434,9 +444,16 @@ def sign_c2pa_s3(
         signed_ingredient_policy=signed_ingredient_policy,
         trufo_api_url=trufo_api_url,
     )
-    task = wait_for_task(api_key, receipt.task_id, wait_seconds=wait_seconds, trufo_api_url=trufo_api_url)
-    return SignC2PAS3Result(task.result.media_output_s3, task.result.download_url,
-                             task.task_id, task.result.cid, task.result.wid)
+    task = wait_for_task(
+        api_key, receipt.task_id, wait_seconds=wait_seconds, trufo_api_url=trufo_api_url
+    )
+    return SignC2PAS3Result(
+        task.result.media_output_s3,
+        task.result.download_url,
+        task.task_id,
+        task.result.cid,
+        task.result.wid,
+    )
 
 
 def sign_c2pa_s3_test(
@@ -451,7 +468,9 @@ def sign_c2pa_s3_test(
     trufo_api_url: str = TRUFO_API_URL_TEST,
 ) -> SignC2PAS3Result:
     """Deprecated and unsupported: use sign_c2pa_test() with REQUEST bytes."""
-    raise ValueError("The test endpoint supports REQUEST execution with bytes only; use sign_c2pa_test().")
+    raise ValueError(
+        "The test endpoint supports REQUEST execution with bytes only; use sign_c2pa_test()."
+    )
 
 
 def sign_c2pa_via_s3(
@@ -508,8 +527,11 @@ def sign_c2pa_via_s3(
     For TASK bytes, provide mime_type; submit_c2pa_sign() accepts an existing
     Trufo upload reference without waiting.
     """
-    warnings.warn("sign_c2pa_via_s3() is deprecated; use sign_c2pa() with execution_mode=ExecutionMode.TASK.",
-                  DeprecationWarning, stacklevel=2)
+    warnings.warn(
+        "sign_c2pa_via_s3() is deprecated; use sign_c2pa() with execution_mode=ExecutionMode.TASK.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     if ExecutionMode.validate(execution_mode) != ExecutionMode.TASK:
         raise ValueError("S3 input requires execution_mode=ExecutionMode.TASK.")
     if wait_seconds <= 0:
@@ -543,7 +565,9 @@ def sign_c2pa_via_s3(
         trufo_api_url=trufo_api_url,
     )
     if signed_output.download_url is None:
-        raise ValueError(f"Output for task {signed_output.task_id} is no longer available to download.")
+        raise ValueError(
+            f"Output for task {signed_output.task_id} is no longer available to download."
+        )
     return _download_c2pa_s3_media(signed_output.download_url)
 
 
@@ -563,7 +587,9 @@ def sign_c2pa_via_s3_test(
     trufo_api_url: str = TRUFO_API_URL_TEST,
 ) -> bytes:
     """Deprecated and unsupported: use sign_c2pa_test() with REQUEST bytes."""
-    raise ValueError("The test endpoint supports REQUEST execution with bytes only; use sign_c2pa_test().")
+    raise ValueError(
+        "The test endpoint supports REQUEST execution with bytes only; use sign_c2pa_test()."
+    )
 
 
 def _upload_c2pa_s3_media(upload_url: str, media_bytes: bytes, mime_type: str) -> None:
@@ -648,13 +674,21 @@ def sign_c2pa(
             SignedIngredientPolicy.validate(signed_ingredient_policy)
         reference = _upload_task_input(api_key, media_bytes, mime_type, trufo_api_url=trufo_api_url)
         receipt = submit_c2pa_sign(
-            api_key, reference, actions, assertions, manifest_title, ingredient_title,
-            manifest_settings=manifest_settings, branded_gp_id=branded_gp_id,
+            api_key,
+            reference,
+            actions,
+            assertions,
+            manifest_title,
+            ingredient_title,
+            manifest_settings=manifest_settings,
+            branded_gp_id=branded_gp_id,
             signed_input_policy=signed_input_policy,
             signed_ingredient_policy=signed_ingredient_policy,
             trufo_api_url=trufo_api_url,
         )
-        task = wait_for_task(api_key, receipt.task_id, wait_seconds=wait_seconds, trufo_api_url=trufo_api_url)
+        task = wait_for_task(
+            api_key, receipt.task_id, wait_seconds=wait_seconds, trufo_api_url=trufo_api_url
+        )
         return _download_task_output(task)
     return _sign_c2pa_direct(
         TPS_C2PA_SIGN_PATH,

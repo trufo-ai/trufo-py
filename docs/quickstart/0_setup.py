@@ -19,7 +19,9 @@ from trufo.util.credentials import TrufoAPIKey, load_api_key, load_session, save
 # --- load api key ---
 
 api_key = load_api_key(TrufoAPIKey.TRUFO_API)
-assert api_key, "trufo-api key not found. Set TRUFO_API_KEY or run: trufo set-api-key trufo-api <KEY>"
+assert (
+    api_key
+), "trufo-api key not found. Set TRUFO_API_KEY or run: trufo set-api-key trufo-api <KEY>"
 
 # --- device authorization flow ---
 
