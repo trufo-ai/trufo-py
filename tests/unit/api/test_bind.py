@@ -132,9 +132,8 @@ class TestWatermarkMedia:
         engine = MagicMock()
         engine.WatermarkIdPackage.side_effect = lambda **kw: kw
         engine.embed.return_value = b"marked"
-        with patch.dict("sys.modules", {"tfprov.util.pawprint_import": engine}):
-            with patch("tfprov.util.pawprint_import", engine, create=True):
-                assert watermark_media(b"media", {"wid": _WID, "expires_at": "x"}) == b"marked"
+        with patch.dict("sys.modules", {"tfprov.util": MagicMock(pawprint_import=engine)}):
+            assert watermark_media(b"media", {"wid": _WID, "expires_at": "x"}) == b"marked"
         engine.embed.assert_called_once_with(b"media", {"wid": _WID, "expires_at": "x"})
 
     def test_missing_engine_gives_the_install_hint(self):
