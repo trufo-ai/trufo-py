@@ -109,6 +109,9 @@ Beyond the platform-wide codes in [api_trufo.md](api_trufo.md):
 | 400 | `InvalidCawgIdentityId` | Unknown `cawg_identity_id` |
 | 400 | `MissingC2PACustomDomain` | A `custom` assertion without a label |
 | 400 | `UnsupportedSDKVersion: …` | Local mode: the `trufo-py` or `trufo-provenance` version is below the minimum or past its support, or the engine is too old for a feature the request uses; the detail names the package and the reason (see [Local mode](#local-mode)) |
+| 400 | `ImageTooLarge: …` | An input image over 400 megapixels |
+| 400 | `InvalidWidAllocationMode: …` | A watermark `wid_allocation_mode` other than `"per_embed"`, `"per_ai_system"` or `"per_asset"` (see [`watermark`](#watermark)) |
+| 400 | `MissingInputManifest: …` | A `transcode` action on an input without a readable C2PA manifest (see [`transcode`](#transcode)) |
 | 403 | `MissingOrganizationValidation` | Production signing before OV completes |
 | 403 | `InvalidC2PACustomDomain` | The label's domain is not domain-validated for your organization |
 | 403 | `NoEligiblePlan` | The organization lacks the required plan |
@@ -119,6 +122,7 @@ Beyond the platform-wide codes in [api_trufo.md](api_trufo.md):
 | 404 | `GProductNotFound` | No such generator product in your organization |
 | 410 | `Test keys are not accepted on this host. …` | Local mode with a `c2pa-sign-test` key on a production host (see [Signing Modes](#signing-modes)) |
 | 410 | `Test keys can't use upload links. …` | A test key on a production host's upload link (see [`POST /io/get-s3-upload-url`](#post-ioget-s3-upload-url)) |
+| 429 | `ReservationLimitExceeded: …` | A `"per_embed"` watermark while your organization holds its limit of live watermark ID reservations (see [`watermark`](#watermark)) |
 | 501 | *(message)* | An unsupported watermark option: `"per_asset"` allocation, or the deprecated `mode` `"compliance"` (see [`watermark`](#watermark)) <!-- TODO(sunset-2027-01-31): the row's deprecated mode "compliance" clause goes; successor none --> |
 
 **Retries and billing.** A sign is metered when it completes, so a failed request
@@ -403,6 +407,12 @@ keeps every frame, so its target must be `image/gif`, `image/png`, `image/webp`
 or `image/avif`; it may hold up to 10,000 frames and 400 megapixels across
 frames.
 
+**Errors:**
+
+| When | Status | `detail` |
+| ---- | ------ | -------- |
+| The input carries no readable C2PA manifest | 400 | `MissingInputManifest: The 'transcode' action requires an input that already carries a readable C2PA manifest.` |
+
 #### `watermark`
 
 Embeds an imperceptible Trufo Pawprint watermark that carries a watermark ID.
@@ -440,7 +450,9 @@ Format eligibility and restrictions are listed in
 
 | When | Status | `detail` |
 | ---- | ------ | -------- |
+| A `wid_allocation_mode` other than `"per_embed"`, `"per_ai_system"` or `"per_asset"` | 400 | `InvalidWidAllocationMode: The watermark 'wid_allocation_mode' parameter must be 'per_embed' or 'per_ai_system'.` |
 | `"per_ai_system"` without an `ai_system` entry | 400 | `The watermark's wid_allocation_mode 'per_ai_system' requires an 'ai_system' assertion.` |
+| A `"per_embed"` watermark on a production host while your organization holds 10,000 live watermark ID reservations | 429 | `ReservationLimitExceeded: Your organization has reached its limit of 10,000 live watermark ID reservations. Live reservations end when they are committed or expire; to raise the limit, contact support@trufo.ai.` |
 | `"per_asset"` | 501 | `Per-asset watermark ID allocation is not supported.` |
 
 <!-- TODO(sunset-2027-01-31): the deprecated mode paragraph and its two tables go; successor wid_allocation_mode -->
@@ -869,6 +881,7 @@ generator product on a bind.
 | An unknown or another organization's `ai_system_id` | 404 | `AISystemNotFound` |
 | The AI system is inactive | 400 | `AISystemInactive: AI system '<ai_system_id>' is inactive. Use an active AI system (see /ai-system/list).` |
 | `ai_involvement` not in the system's modes | 400 | `ai_involvement '<value>' is not in the AI system's ai_involvement_modes.` |
+| A `"per_embed"` watermark on a production host while your organization holds 10,000 live watermark ID reservations | 429 | `ReservationLimitExceeded: Your organization has reached its limit of 10,000 live watermark ID reservations. Live reservations end when they are committed or expire; to raise the limit, contact support@trufo.ai.` |
 
 The `per_asset` and deprecated `mode` refusals are listed under
 [`watermark`](#watermark).
