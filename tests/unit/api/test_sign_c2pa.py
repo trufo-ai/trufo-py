@@ -41,6 +41,7 @@ from trufo.c2pa import (
     ThumbnailPolicy,
     ThumbnailSettings,
     ThumbnailSize,
+    WatermarkSettings,
 )
 
 
@@ -273,6 +274,7 @@ class TestRemoteC2PASigning:
             branded_gp_id="gp_x",
             signed_input_policy="keep",
             signed_ingredient_policy="keep",
+            watermark_settings=WatermarkSettings("fast"),
         )
 
         assert result == b"signed-test"
@@ -291,6 +293,7 @@ class TestRemoteC2PASigning:
             "manifest_settings": {"thumbnail_settings": {"policy": "auto", "size": "high"}},
             "signed_input_policy": "keep",
             "signed_ingredient_policy": "keep",
+            "watermark_settings": {"profile": "fast"},
         }
 
     def test_prod_signing_delegates_with_endpoint_overrides(self, monkeypatch):
@@ -303,6 +306,7 @@ class TestRemoteC2PASigning:
             assertions=[["cawg_identity", {"cawg_identity_id": "org_interim"}]],
             trufo_api_url="https://api.trufo.example",
             branded_gp_id="gp_x",
+            watermark_settings=WatermarkSettings(),
         )
 
         assert result == b"signed-prod"
@@ -312,6 +316,7 @@ class TestRemoteC2PASigning:
         assert kwargs["test"] is False
         assert kwargs["trufo_api_url"] == "https://api.trufo.example"
         assert kwargs["branded_gp_id"] == "gp_x"
+        assert kwargs["watermark_settings"] == {"profile": "default"}
 
     def test_prod_signing_uses_default_api_url(self, monkeypatch):
         calls = _install_fake_remote_stack(monkeypatch)
@@ -323,6 +328,7 @@ class TestRemoteC2PASigning:
         assert kwargs["trufo_api_url"] == TRUFO_API_URL
         assert "signed_input_policy" not in kwargs
         assert "signed_ingredient_policy" not in kwargs
+        assert "watermark_settings" not in kwargs
 
     @pytest.mark.parametrize("signer", _REMOTE_SIGNERS)
     def test_returns_signed_bytes_discarding_orchestrator_warnings(self, monkeypatch, signer):
@@ -336,19 +342,26 @@ class TestRemoteC2PASigning:
         assert result == b"signed"
 
     @pytest.mark.parametrize("signer", _REMOTE_SIGNERS)
-    def test_validates_before_optional_imports(self, monkeypatch, signer):
+    @pytest.mark.parametrize(
+        "kwargs, error, match",
+        [
+            (
+                {"assertions": [["cawg_identity", {"cawg_identity_id": ""}]]},
+                ValueError,
+                "requires a non-empty",
+            ),
+            ({"watermark_settings": {}}, TypeError, "WatermarkSettings"),
+        ],
+    )
+    def test_validates_before_optional_imports(self, monkeypatch, signer, kwargs, error, match):
         require_provenance_module = MagicMock()
         monkeypatch.setattr(
             "trufo.api.tps.sign_c2pa.require_provenance_module",
             require_provenance_module,
         )
 
-        with pytest.raises(ValueError, match="requires a non-empty"):
-            signer(
-                "remote-sign-key",
-                b"input-media",
-                assertions=[["cawg_identity", {"cawg_identity_id": ""}]],
-            )
+        with pytest.raises(error, match=match):
+            signer("remote-sign-key", b"input-media", **kwargs)
 
         require_provenance_module.assert_not_called()
 

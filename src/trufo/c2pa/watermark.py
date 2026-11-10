@@ -3,7 +3,37 @@
 
 """User-facing C2PA watermark types supported by Trufo."""
 
+from dataclasses import dataclass
 from enum import Enum
+
+
+class WatermarkProfile(str, Enum):
+    """Local watermark embedding profile."""
+
+    DEFAULT = "default"
+    FAST = "fast"
+
+
+@dataclass(frozen=True)
+class WatermarkSettings:
+    """Local watermark execution settings, separate from the watermark action.
+
+    ``profile`` accepts ``"default"`` or ``"fast"``. Default uses CPU FP32 and
+    independent video frames. Fast permits supported CPU BF16 for images and
+    currently interpolates four-frame residual anchors in video containers,
+    trading robustness for CPU throughput. CUDA is selected automatically when
+    available; fast video uses FP32 anchors and is not recommended on GPU.
+    Audio uses its ordinary encoder in both profiles.
+    These settings do not request watermarking or enter the C2PA manifest.
+    """
+
+    profile: WatermarkProfile = WatermarkProfile.DEFAULT
+
+    def __post_init__(self) -> None:
+        try:
+            object.__setattr__(self, "profile", WatermarkProfile(self.profile))
+        except (TypeError, ValueError) as exc:
+            raise ValueError("Watermark profile must be 'default' or 'fast'.") from exc
 
 
 class WatermarkEffort(str, Enum):

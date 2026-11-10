@@ -151,6 +151,53 @@ You can try Local mode on the test host without a plan or Organization Validatio
 
 Signed files carry Trufo's test certificate, which validators report as untrusted.
 
+## Local Watermark Settings
+
+Watermarking is off by default. With `trufo[local-full]`, an explicit `watermark`
+action requests it; `WatermarkSettings` chooses how the local engine runs:
+
+```python
+from pathlib import Path
+
+from trufo import sign_c2pa_distributed, watermark_media
+from trufo.c2pa import WatermarkProfile, WatermarkSettings
+
+media_bytes = Path("input.mp4").read_bytes()
+settings = WatermarkSettings(profile=WatermarkProfile.FAST)
+signed_bytes = sign_c2pa_distributed(
+    api_key,
+    media_bytes,
+    actions=[["watermark", {}]],
+    watermark_settings=settings,
+)
+
+# with a reservation from bind_reserve(), for media you sign yourself
+marked_bytes = watermark_media(
+    media_bytes, reservation.wid_package, watermark_settings=settings
+)
+```
+
+Both distributed signing helpers and `watermark_media()` accept these settings;
+`WatermarkSettings(profile="fast")` accepts the string directly. Omitting settings
+uses `default`: CPU FP32 and independent video frames. `fast` permits supported
+CPU BF16 for images and video anchors, with FP32 fallback. The CPU encoder attempts
+cached compilation on first use, so cold startup differs from warmed throughput.
+
+Fast video interpolates watermark residuals between frames 0, 4, 8, ... and the
+final frame, trading robustness for CPU throughput. Warm encoder comparisons on an
+eight-thread AMD Ryzen 9 9950X3D measured 4.97× throughput, excluding startup, input
+copies and codecs; a separate 40-clip, 360-case durability test recovered 74.4% with
+fast CPU BF16 versus 86.7% with default CPU FP32.
+
+An NVIDIA CUDA GPU is recommended and selected automatically when available.
+Default video and both image profiles retain the original GPU implementation;
+fast video uses FP32 anchors and is not recommended on GPU. Audio, including video
+audio tracks, keeps its ordinary encoder in both profiles.
+
+Settings stay local, outside action parameters, network requests and C2PA
+assertions. Settings alone do not request watermarking. The shipped
+[Docker images](docker.md) use fixed engine versions and do not support these profiles.
+
 ## Troubleshooting
 
 **`No matching distribution found for trufo-provenance…` or `…for pillow-heif…`** —

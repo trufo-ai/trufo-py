@@ -6,8 +6,11 @@
 import importlib.metadata
 import json
 import os
+import subprocess
+import sys
 import threading
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -134,6 +137,18 @@ def _remove_input(kwargs):
         pytest.param(
             {"actions": [["watermark", {}]]}, 400, "WatermarkNotAvailable", id="watermark"
         ),
+        pytest.param(
+            {IN: "missing", "watermark_settings": {"profile": "skip4"}},
+            400,
+            "Watermark profile must be 'default' or 'fast'.",
+            id="watermark profile",
+        ),
+        pytest.param(
+            {IN: "missing", "watermark_settings": {"device": "cpu"}},
+            400,
+            "watermark_settings must contain only 'profile'.",
+            id="watermark key",
+        ),
     ],
 )
 def test_refused_before_the_engine(sign, folders, engine, fields, status, detail):
@@ -146,7 +161,8 @@ def test_refused_before_the_engine(sign, folders, engine, fields, status, detail
     assert engine.calls == []
 
 
-def test_accepted(sign, folders, engine):
+@pytest.mark.parametrize("settings", [None, {}, {"profile": "fast"}])
+def test_accepted(sign, folders, engine, settings):
     (folders / "in/link.jpg").symlink_to(folders / "in/photo.jpg")
     (folders / "both/signed.jpg").write_bytes(b"old")
     fields = {
@@ -159,6 +175,8 @@ def test_accepted(sign, folders, engine):
         "signed_input_policy": "keep",
         "signed_ingredient_policy": "auto",
     }
+    if settings is not None:
+        fields["watermark_settings"] = settings
     response = sign(
         **{IN: f"{folders}/in/link.jpg", OUT: f"{folders}/both/signed.jpg"},
         unknown_field="ignored",
@@ -306,3 +324,42 @@ def test_gone_client_is_not_signed(client, folders, engine):
     # the request reached the slot: an earlier refusal would carry another status
     assert sent[0]["status"] == 499
     assert engine.calls == []
+
+
+def test_fresh_app_with_legacy_engine_symbols(folders):
+    subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            """
+import sys
+from fastapi.testclient import TestClient
+from trufo import c2pa
+from trufo.c2pa import watermark
+from tfprov.c2pa_generator import cg_request, remote_orchestrator
+del c2pa.WatermarkSettings, c2pa.WatermarkProfile
+del watermark.WatermarkSettings, watermark.WatermarkProfile
+del cg_request.WatermarkSettings, cg_request.normalize_watermark_settings
+def legacy(api_key, **kwargs):
+    assert 'watermark_settings' not in kwargs
+    return str(kwargs['media_output_path']), []
+remote_orchestrator.generate_claim_remote = legacy
+sys.path.insert(0, sys.argv[1])
+import app
+app._watermark_engine_version = lambda: None
+body = {'media_input_path': sys.argv[2] + '/in/photo.jpg',
+        'media_output_path': sys.argv[2] + '/out/signed.jpg', 'actions': []}
+with TestClient(app.app) as client:
+    response = client.post('/c2pa/sign', json=body, headers={'X-API-Key': 'key'})
+    assert response.status_code == 200, response.text
+    body['watermark_settings'] = {}
+    response = client.post('/c2pa/sign', json=body, headers={'X-API-Key': 'key'})
+    assert (response.status_code, response.json()) == (
+        400, {'detail': 'Watermark settings require trufo-provenance 2.3 or later.'})
+""",
+            str(Path(service.__file__).parent),
+            str(folders),
+        ],
+        env=os.environ.copy(),
+        check=True,
+    )

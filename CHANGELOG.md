@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `WatermarkSettings` and `WatermarkProfile` for local watermark embedding with
+  `watermark_media` and the distributed signing helpers. `default` uses CPU FP32;
+  `fast` permits supported CPU BF16 and four-frame video interpolation, trading
+  robustness for CPU throughput. CUDA selection remains automatic. Settings stay
+  local and require an explicit watermark action when signing. See
+  [Local Watermark Settings](docs/local/python.md#local-watermark-settings) for
+  platform behavior and measured tradeoffs.
+
+### Changed
+
+- Local-engine extras require trufo-provenance 2.3.
+
 ## [2.2.1] — 2026-11-08
 
 ### Added

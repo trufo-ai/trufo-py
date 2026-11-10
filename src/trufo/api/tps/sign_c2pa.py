@@ -48,7 +48,12 @@ from trufo.c2pa.actions import TrufoAction
 from trufo.c2pa.assertions import UserAssertion
 from trufo.c2pa.manifest import ManifestSettings, SignedIngredientPolicy, SignedInputPolicy
 from trufo.c2pa.redactions import RedactableAssertion, RedactionReason
-from trufo.c2pa.watermark import WatermarkEffort, WatermarkIDAllocationMode, WatermarkMode
+from trufo.c2pa.watermark import (
+    WatermarkEffort,
+    WatermarkIDAllocationMode,
+    WatermarkMode,
+    WatermarkSettings,
+)
 from trufo.util.deprecation import deprecated_aliases
 from trufo.util.optional_imports import require_provenance_module
 from trufo.util.warnings import emit_server_warnings
@@ -80,6 +85,13 @@ def _manifest_settings_payload(settings: ManifestSettings) -> dict:
     if settings.all_actions_included is not None:
         payload["all_actions_included"] = settings.all_actions_included
     return payload
+
+
+def _watermark_settings_payload(settings: WatermarkSettings) -> dict:
+    """Validate and serialize local watermark execution settings."""
+    if not isinstance(settings, WatermarkSettings):
+        raise TypeError("watermark_settings must be WatermarkSettings or None.")
+    return {"profile": settings.profile.value}
 
 
 def _validate_manifest_setting_aliases(
@@ -788,6 +800,7 @@ def sign_c2pa_distributed_test(
     manifest_title: str | None = None,
     ingredient_title: str | None = None,
     manifest_settings: ManifestSettings | None = None,
+    watermark_settings: WatermarkSettings | None = None,
     branded_gp_id: str | None = None,
     signed_input_policy: SignedInputPolicy | str | None = None,
     signed_ingredient_policy: SignedIngredientPolicy | str | None = None,
@@ -813,6 +826,8 @@ def sign_c2pa_distributed_test(
         ingredient_title: Optional ``parentOf`` ingredient title (``dc:title``);
             see the module docstring for when to set this explicitly.
         manifest_settings: Optional structured C2PA manifest settings.
+        watermark_settings: Optional local embedding profile; an explicit
+            watermark action is required. These settings stay on this machine.
         branded_gp_id: ID (``gp_...``) of one of your organization's branded
             generator products; the content is signed as that product. ``test``
             may be used in place of a product ID. Omit to sign with Trufo's own
@@ -833,6 +848,11 @@ def sign_c2pa_distributed_test(
     if signed_ingredient_policy is not None:
         SignedIngredientPolicy.validate(signed_ingredient_policy)
 
+    watermark_options = (
+        {"watermark_settings": _watermark_settings_payload(watermark_settings)}
+        if watermark_settings is not None
+        else {}
+    )
     remote_orchestrator = require_provenance_module("tfprov.c2pa_generator.remote_orchestrator")
 
     signed, _ = remote_orchestrator.generate_claim_remote(
@@ -845,6 +865,7 @@ def sign_c2pa_distributed_test(
         manifest_title=manifest_title,
         ingredient_title=ingredient_title,
         branded_gp_id=branded_gp_id,
+        **watermark_options,
         **(
             {"manifest_settings": _manifest_settings_payload(manifest_settings)}
             if manifest_settings is not None
@@ -880,6 +901,7 @@ def sign_c2pa_distributed(
     manifest_title: str | None = None,
     ingredient_title: str | None = None,
     manifest_settings: ManifestSettings | None = None,
+    watermark_settings: WatermarkSettings | None = None,
     branded_gp_id: str | None = None,
     signed_input_policy: SignedInputPolicy | str | None = None,
     signed_ingredient_policy: SignedIngredientPolicy | str | None = None,
@@ -906,6 +928,8 @@ def sign_c2pa_distributed(
         ingredient_title: Optional ``parentOf`` ingredient title (``dc:title``);
             see the module docstring for when to set this explicitly.
         manifest_settings: Optional structured C2PA manifest settings.
+        watermark_settings: Optional local embedding profile; an explicit
+            watermark action is required. These settings stay on this machine.
         branded_gp_id: ID (``gp_...``) of one of your organization's branded
             generator products; the content is signed as that product. Omit to
             sign with Trufo's own C2PA signer.
@@ -925,6 +949,11 @@ def sign_c2pa_distributed(
     if signed_ingredient_policy is not None:
         SignedIngredientPolicy.validate(signed_ingredient_policy)
 
+    watermark_options = (
+        {"watermark_settings": _watermark_settings_payload(watermark_settings)}
+        if watermark_settings is not None
+        else {}
+    )
     remote_orchestrator = require_provenance_module("tfprov.c2pa_generator.remote_orchestrator")
 
     signed, _ = remote_orchestrator.generate_claim_remote(
@@ -937,6 +966,7 @@ def sign_c2pa_distributed(
         manifest_title=manifest_title,
         ingredient_title=ingredient_title,
         branded_gp_id=branded_gp_id,
+        **watermark_options,
         **(
             {"manifest_settings": _manifest_settings_payload(manifest_settings)}
             if manifest_settings is not None
