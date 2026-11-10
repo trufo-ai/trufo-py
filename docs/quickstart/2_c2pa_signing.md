@@ -75,6 +75,8 @@ BRANDED_GP_ID = "gp_..."  # dashboard: C2PA Signing API > Manage
 signed_bytes = sign_c2pa(api_key, media_bytes, branded_gp_id=BRANDED_GP_ID)
 ```
 
+To try it on the test host without a product, pass `branded_gp_id="test"` to `sign_c2pa_test()`.
+
 ---
 
 ## Manifest Settings

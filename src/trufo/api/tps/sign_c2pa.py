@@ -700,8 +700,9 @@ def sign_c2pa_test(
             see the module docstring for when to set this explicitly.
         manifest_settings: Optional structured C2PA manifest settings.
         branded_gp_id: ID (``gp_...``) of one of your organization's branded
-            generator products; the content is signed as that product. Omit to
-            sign with Trufo's own C2PA signer.
+            generator products; the content is signed as that product. ``test``
+            may be used in place of a product ID. Omit to sign with Trufo's own
+            C2PA signer.
         signed_input_policy: What to do when the input is already C2PA-signed; omit for ``auto``.
         signed_ingredient_policy: What to do when an ingredient's media is already
             C2PA-signed; omit for ``auto``.
@@ -779,8 +780,9 @@ def sign_c2pa_distributed_test(
             see the module docstring for when to set this explicitly.
         manifest_settings: Optional structured C2PA manifest settings.
         branded_gp_id: ID (``gp_...``) of one of your organization's branded
-            generator products; the content is signed as that product. Omit to
-            sign with Trufo's own C2PA signer.
+            generator products; the content is signed as that product. ``test``
+            may be used in place of a product ID. Omit to sign with Trufo's own
+            C2PA signer.
         signed_input_policy: What to do when the input is already C2PA-signed; omit for ``auto``.
         signed_ingredient_policy: What to do when an ingredient's media is already
             C2PA-signed; omit for ``auto``.
