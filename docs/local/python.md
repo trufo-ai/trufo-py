@@ -184,31 +184,25 @@ CPU encoder attempts compilation on first use and caches the result. Unavailable
 uses prepared eager execution; recoverable BF16 execution failures use prepared
 FP32. Cold startup and warmed throughput have different costs.
 
-For video containers, `profile="fast"` infers watermark residuals at the first and
-final frames, both sides of scene cuts, and at most four frames apart. Four-frame
-spacing restarts after each cut; interpolation stays within each scene.
+For video containers, `profile="fast"` currently infers a watermark residual at
+frames 0, 4, 8, ... and the final frame, interpolating the intervening residuals.
 Default embeds each video frame independently. Fast trades robustness for CPU
 throughput, using the same best-effort BF16 as fast images. On an AMD Ryzen 9
-9950X3D with eight threads, six paired 96-frame warm CPU comparisons measured
-median rates of 16.91 frames/s for the independent-frame FP32 default and 59.33
-for cut-aware fast BF16 interpolation (3.51×). The prior fixed-stride fast
-implementation measured 74.76 frames/s in the same paired run; cut-aware fast
-throughput was 20.6% lower. This excludes setup,
+9950X3D with eight threads, six paired 96-frame warm CPU comparisons with
+alternating profile order measured median rates of 15.19 frames/s for the independent-frame
+FP32 default and 75.45 for fast BF16 interpolation (4.97×). This excludes setup,
 input copies, media decoding, encoding and audio processing; the speedup depends on the
-workload and hardware. In a 40-clip, 360-case durability benchmark, cut-aware fast
-CPU BF16 interpolation recovered 269/360 IDs (74.7%), versus 268/360 (74.4%) for
-prior fixed-stride fast and 312/360 (86.7%) for the independent-frame CPU FP32
-default. Recovery was effectively unchanged from fixed-stride fast: +0.28 percentage
-points, with a paired clip-bootstrap 95% interval of −2.78 to +3.33 percentage points.
-Historical results under the same protocol were 72.8% for fixed-stride GPU FP32
-interpolation and 76–78% for PixelSeal. All Pawprint renditions used
+workload and hardware. In a 40-clip, 360-case durability benchmark, fast CPU BF16
+interpolation recovered 74.4% of cases and interpolated GPU FP32 recovered 72.8%,
+versus 86.7% for the independent-frame CPU FP32 default. PixelSeal recovered
+76–78% under the same protocol. All Pawprint renditions used
 the same fixed GPU decoder. These results are separate from the website's practical100
 benchmark.
 
 An NVIDIA CUDA GPU is recommended and selected automatically when available.
 Default video and both image profiles retain the original GPU implementation.
 Explicit fast video is honored on GPU with FP32 anchors, but is not recommended
-there: a prior fixed-stride complete-file GPU measurement of interpolated versus independent-frame
+there: a complete-file GPU measurement of interpolated versus independent-frame
 FP32 improved throughput by only 1.10×. Audio, including tracks inside a video,
 keeps its ordinary encoder in both profiles.
 
