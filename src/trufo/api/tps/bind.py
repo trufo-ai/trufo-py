@@ -49,7 +49,13 @@ from trufo.api.endpoints import (
 )
 from trufo.api.headers import sdk_headers
 from trufo.api.tps.io import _upload_task_input
-from trufo.api.tps.tasks import ExecutionMode, TaskReceipt, _submit_task, wait_for_task, _download_task_output
+from trufo.api.tps.tasks import (
+    ExecutionMode,
+    TaskReceipt,
+    _download_task_output,
+    _submit_task,
+    wait_for_task,
+)
 from trufo.c2pa.ai_system import AIInvolvement
 from trufo.c2pa.watermark import WatermarkIDAllocationMode, WatermarkMode
 from trufo.util.deprecation import deprecated_aliases
@@ -193,7 +199,9 @@ def bind_watermark(
             mode=mode,
             trufo_api_url=trufo_api_url,
         )
-        task = wait_for_task(api_key, receipt.task_id, wait_seconds=wait_seconds, trufo_api_url=trufo_api_url)
+        task = wait_for_task(
+            api_key, receipt.task_id, wait_seconds=wait_seconds, trufo_api_url=trufo_api_url
+        )
         return BindWatermarkResult(_download_task_output(task), task.result.wid, task.result.cid)
     body: dict = {
         "media_input": base64.b64encode(media_bytes).decode(),
@@ -275,7 +283,10 @@ def bind_reserve(
     payload = _post(api_key, trufo_api_url + TPS_BIND_RESERVE_PATH, body)
     package = payload["wid_package"]
     return BindReserveResult(
-        cid=payload["cid"], wid=package["wid"], expires_at=package["expires_at"], wid_package=dict(package)
+        cid=payload["cid"],
+        wid=package["wid"],
+        expires_at=package["expires_at"],
+        wid_package=dict(package),
     )
 
 

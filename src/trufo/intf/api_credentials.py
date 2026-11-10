@@ -66,8 +66,8 @@ def register_subcommands(sub: argparse._SubParsersAction) -> None:
         "--device",
         action="store_true",
         help="Use the device code flow instead of opening a local browser. "
-             "Needed when the CLI and your browser are on different machines, "
-             "e.g. over SSH.",
+        "Needed when the CLI and your browser are on different machines, "
+        "e.g. over SSH.",
     )
     p.set_defaults(func=cmd_login)
 

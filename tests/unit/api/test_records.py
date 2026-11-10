@@ -66,12 +66,20 @@ class TestListContent:
     @patch(f"{_M}.requests.post")
     def test_sends_only_the_given_filters(self, mock_post):
         mock_post.return_value = _response({"items": [_ITEM], "next_cursor": "0199-0001"})
-        page = list_content("key", status="active", created_after="2026-04-01T00:00:00Z",
-                            cursor="0198-ffff", limit=1)
+        page = list_content(
+            "key",
+            status="active",
+            created_after="2026-04-01T00:00:00Z",
+            cursor="0198-ffff",
+            limit=1,
+        )
         assert page.next_cursor == "0199-0001" and page.items[0].wid == "v1.001a1b2c3d4"
         assert mock_post.call_args.args[0] == f"{TRUFO_API_URL}/content/list"
         assert mock_post.call_args.kwargs["json"] == {
-            "limit": 1, "status": "active", "created_after": "2026-04-01T00:00:00Z", "cursor": "0198-ffff",
+            "limit": 1,
+            "status": "active",
+            "created_after": "2026-04-01T00:00:00Z",
+            "cursor": "0198-ffff",
         }
 
     @patch(f"{_M}.requests.post")

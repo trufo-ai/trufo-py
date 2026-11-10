@@ -59,12 +59,8 @@ class TestExchangeLoopbackCode:
 
     @patch("trufo.api.loopback_auth.requests.post")
     def test_returns_token_pair(self, mock_post):
-        mock_post.return_value = _mock_response(
-            200, {"access_token": "at", "refresh_token": "rt"}
-        )
-        tokens = exchange_loopback_code(
-            "key", "code", "verifier", "http://127.0.0.1:1234/callback"
-        )
+        mock_post.return_value = _mock_response(200, {"access_token": "at", "refresh_token": "rt"})
+        tokens = exchange_loopback_code("key", "code", "verifier", "http://127.0.0.1:1234/callback")
 
         assert tokens.access_token == "at"
         assert tokens.refresh_token == "rt"
@@ -79,17 +75,13 @@ class TestExchangeLoopbackCode:
     def test_invalid_grant_raises_actionable_error(self, mock_post):
         mock_post.return_value = _mock_response(400, {"detail": "invalid_grant"})
         with pytest.raises(RuntimeError, match="rejected or expired"):
-            exchange_loopback_code(
-                "key", "code", "verifier", "http://127.0.0.1:1234/callback"
-            )
+            exchange_loopback_code("key", "code", "verifier", "http://127.0.0.1:1234/callback")
 
     @patch("trufo.api.loopback_auth.requests.post")
     def test_other_failure_surfaces_status_and_detail(self, mock_post):
         mock_post.return_value = _mock_response(500, {"detail": "boom"})
         with pytest.raises(RuntimeError, match="500"):
-            exchange_loopback_code(
-                "key", "code", "verifier", "http://127.0.0.1:1234/callback"
-            )
+            exchange_loopback_code("key", "code", "verifier", "http://127.0.0.1:1234/callback")
 
 
 class TestRunLoopbackLogin:
@@ -122,7 +114,10 @@ class TestRunLoopbackLogin:
     @patch("trufo.api.loopback_auth.webbrowser.open", return_value=True)
     @patch("trufo.api.loopback_auth.HTTPServer")
     def test_sends_challenge_not_verifier_to_browser(
-        self, mock_server_cls, mock_open, mock_exchange,
+        self,
+        mock_server_cls,
+        mock_open,
+        mock_exchange,
     ):
         """The verifier must never leave the machine in the browser URL."""
         server = MagicMock()
@@ -204,7 +199,10 @@ class TestRunLoopbackLogin:
     @patch("trufo.api.loopback_auth.webbrowser.open", return_value=True)
     @patch("trufo.api.loopback_auth.HTTPServer")
     def test_callback_without_code_is_not_reported_as_timeout(
-        self, mock_server_cls, mock_open, mock_exchange,
+        self,
+        mock_server_cls,
+        mock_open,
+        mock_exchange,
     ):
         server = MagicMock()
         server.server_address = ("127.0.0.1", 54321)
