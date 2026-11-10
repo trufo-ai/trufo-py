@@ -21,6 +21,7 @@ from trufo.api.tps.bind import (
     watermark_media,
 )
 from trufo.api.tps.tasks import ExecutionMode
+from trufo.c2pa import WatermarkSettings
 from trufo.util.warnings import TrufoServerWarning
 
 _M = "trufo.api.tps.bind"
@@ -149,13 +150,25 @@ class TestBindReserve:
 
 
 class TestWatermarkMedia:
-    def test_embeds_through_the_engine_boundary(self):
+    @pytest.mark.parametrize("settings", [None, WatermarkSettings(), WatermarkSettings("fast")])
+    def test_embeds_through_the_engine_boundary(self, settings):
         engine = MagicMock()
         engine.WatermarkIdPackage.side_effect = lambda **kw: kw
         engine.embed.return_value = b"marked"
         with patch.dict("sys.modules", {"tfprov.util": MagicMock(pawprint_import=engine)}):
-            assert watermark_media(b"media", {"wid": _WID, "expires_at": "x"}) == b"marked"
-        engine.embed.assert_called_once_with(b"media", {"wid": _WID, "expires_at": "x"})
+            assert (
+                watermark_media(
+                    b"media", {"wid": _WID, "expires_at": "x"}, watermark_settings=settings
+                )
+                == b"marked"
+            )
+        options = {} if settings is None else {"mode": settings.profile.value}
+        engine.embed.assert_called_once_with(b"media", {"wid": _WID, "expires_at": "x"}, **options)
+
+    def test_wrong_settings_type_precedes_optional_import(self):
+        with patch.dict("sys.modules", {"tfprov.util": None}):
+            with pytest.raises(TypeError, match="WatermarkSettings"):
+                watermark_media(b"media", {}, watermark_settings="fast")
 
     def test_missing_engine_gives_the_install_hint(self):
         with patch.dict("sys.modules", {"tfprov.util.pawprint_import": None, "tfprov.util": None}):

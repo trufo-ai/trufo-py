@@ -16,10 +16,11 @@ class BlockEngine(importlib.abc.MetaPathFinder):
             raise AssertionError(f'Base SDK imported optional dependency: {fullname}')
 sys.meta_path.insert(0, BlockEngine())
 import trufo
-from trufo.c2pa import ManifestSettings, DigitalSourceType
+from trufo.c2pa import ManifestSettings, DigitalSourceType, WatermarkSettings
 assert trufo.__version__
 assert callable(trufo.sign_c2pa)
 assert ManifestSettings().thumbnail_settings is None
+assert WatermarkSettings('fast').profile.value == 'fast'
 """
     env = dict(os.environ, PYTHONPATH=str(Path(__file__).resolve().parents[2] / "src"))
     subprocess.run([sys.executable, "-c", code], env=env, check=True)

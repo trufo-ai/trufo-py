@@ -178,41 +178,25 @@ marked_bytes = watermark_media(
 ```
 
 Both distributed signing helpers and `watermark_media()` accept these settings;
-`WatermarkSettings(profile="fast")` also accepts the string directly. Omitting
-settings preserves the default embedding behavior. `profile="default"` uses
-FP32 on CPU; `profile="fast"` permits selective BF16 when the CPU and backend
-support it, shared by still images, GIF/TIFF pages and video anchors. The prepared
-CPU encoder attempts compilation on first use and caches the result. Unavailable compilation
-uses prepared eager execution; recoverable BF16 execution failures use prepared
-FP32. Cold startup and warmed throughput have different costs.
+`WatermarkSettings(profile="fast")` accepts the string directly. Omitting settings
+uses `default`: CPU FP32 and independent video frames. `fast` permits supported
+CPU BF16 for images and video anchors, with FP32 fallback. The CPU encoder attempts
+cached compilation on first use, so cold startup differs from warmed throughput.
 
-For video containers, `profile="fast"` currently infers a watermark residual at
-frames 0, 4, 8, ... and the final frame, interpolating the intervening residuals.
-Default embeds each video frame independently. Fast trades robustness for CPU
-throughput, using the same best-effort BF16 as fast images. On an AMD Ryzen 9
-9950X3D with eight threads, six paired 96-frame warm CPU comparisons with
-alternating profile order measured median rates of 15.19 frames/s for the independent-frame
-FP32 default and 75.45 for fast BF16 interpolation (4.97×). This excludes setup,
-input copies, media decoding, encoding and audio processing; the speedup depends on the
-workload and hardware. In a 40-clip, 360-case durability benchmark, fast CPU BF16
-interpolation recovered 74.4% of cases and interpolated GPU FP32 recovered 72.8%,
-versus 86.7% for the independent-frame CPU FP32 default. PixelSeal recovered
-76–78% under the same protocol. All Pawprint renditions used
-the same fixed GPU decoder. These results are separate from the website's practical100
-benchmark.
+Fast video interpolates watermark residuals between frames 0, 4, 8, ... and the
+final frame, trading robustness for CPU throughput. Warm encoder comparisons on an
+eight-thread AMD Ryzen 9 9950X3D measured 4.97× throughput, excluding startup, input
+copies and codecs; a separate 40-clip, 360-case durability test recovered 74.4% with
+fast CPU BF16 versus 86.7% with default CPU FP32.
 
 An NVIDIA CUDA GPU is recommended and selected automatically when available.
-Default video and both image profiles retain the original GPU implementation.
-Explicit fast video is honored on GPU with FP32 anchors, but is not recommended
-there: a complete-file GPU measurement of interpolated versus independent-frame
-FP32 improved throughput by only 1.10×. Audio, including tracks inside a video,
-keeps its ordinary encoder in both profiles.
+Default video and both image profiles retain the original GPU implementation;
+fast video uses FP32 anchors and is not recommended on GPU. Audio, including video
+audio tracks, keeps its ordinary encoder in both profiles.
 
-These settings configure local execution. They are separate from action
-parameters, stay out of remote preprocessing and commit requests, and do not
-appear in C2PA assertions. A setting alone does not request watermarking. The
-shipped Docker images listed in the [Docker guide](docker.md) use fixed engine
-versions and do not support these profiles.
+Settings stay local, outside action parameters, network requests and C2PA
+assertions. Settings alone do not request watermarking. The shipped
+[Docker images](docker.md) use fixed engine versions and do not support these profiles.
 
 ## Troubleshooting
 
