@@ -21,6 +21,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Local-engine extras require trufo-provenance 2.3.
 
+## [2.2.2] — 2026-11-11
+
+### Added
+
+- To try branded signing on the test host without a product, pass
+  `branded_gp_id="test"` to `sign_c2pa_test()` or `sign_c2pa_distributed_test()`.
+  Signed files carry Trufo's test certificate, which validators report as untrusted.
+- To try Local mode on the test host before purchasing a plan, email
+  support@trufo.ai with your Organization ID to request SDK download access
+  ([Try It on the Test Host](docs/local/python.md#try-it-on-the-test-host)).
+
 ## [2.2.1] — 2026-11-08
 
 ### Added
@@ -649,7 +660,8 @@ Minor-version bump marks the general availability of the production C2PA signing
 - `trufo.intf`: credential storage and loading (env vars + file), CLI entry point.
 - PyPI trusted publishing via GitHub Actions (OIDC, no API tokens required).
 
-[Unreleased]: https://github.com/trufo-ai/trufo-py/compare/v2.2.1...HEAD
+[Unreleased]: https://github.com/trufo-ai/trufo-py/compare/v2.2.2...HEAD
+[2.2.2]: https://github.com/trufo-ai/trufo-py/compare/v2.2.1...v2.2.2
 [2.2.1]: https://github.com/trufo-ai/trufo-py/compare/v2.2.0...v2.2.1
 [2.2.0]: https://github.com/trufo-ai/trufo-py/compare/v2.1.0...v2.2.0
 [2.1.0]: https://github.com/trufo-ai/trufo-py/compare/v2.0.0...v2.1.0
