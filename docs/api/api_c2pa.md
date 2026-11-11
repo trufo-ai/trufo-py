@@ -106,7 +106,7 @@ Beyond the platform-wide codes in [api_trufo.md](api_trufo.md):
 | 400 | `AISystemInactive: …` | An inactive AI system (see [`ai_system`](#ai_system)) |
 | 400 | `UnsupportedAssertion: …` | The deprecated `ai_disclosure` entry from 2027-01-31T23:59:00+00:00 (see [`ai_disclosure`](#ai_disclosure)) <!-- TODO(sunset-2027-01-31): this row goes; successor none --> |
 | 400 | `UnsupportedParameter: …` | The deprecated watermark `mode` from 2027-01-31T23:59:00+00:00 (see [`watermark`](#watermark)) <!-- TODO(sunset-2027-01-31): this row goes; successor none --> |
-| 400 | `InvalidCawgIdentityId` | Unknown `cawg_identity_id` |
+| 400 | `InvalidCawgIdentityId` | Unknown `cawg_identity_id`, or `"test"` on a production host |
 | 400 | `MissingC2PACustomDomain` | A `custom` assertion without a label |
 | 400 | `UnsupportedSDKVersion: …` | Local mode: the `trufo-py` or `trufo-provenance` version is below the minimum or past its support, or the engine is too old for a feature the request uses; the detail names the package and the reason (see [Local mode](#local-mode)) |
 | 400 | `ImageTooLarge: …` | An input image over 400 megapixels |
