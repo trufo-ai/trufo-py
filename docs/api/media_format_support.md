@@ -34,7 +34,8 @@ does not guarantee that an ID is detected or recovered.
 | WebM | `video/webm` | No | No | No | No |
 
 Types not listed as eligible are unsupported. C2PA signing accepts images of at
-most 400 million pixels. The restrictions sections below apply to watermark
+most 400 million pixels. Local mode with the Python SDK does not sign JPEG XL on
+Python 3.13 or later. The restrictions sections below apply to watermark
 operations only; they do not define C2PA codec or pixel-depth limits.
 
 An ingredient sent as `media` must be in a format with **Yes** under C2PA

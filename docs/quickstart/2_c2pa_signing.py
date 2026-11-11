@@ -79,6 +79,6 @@ except ImportError as exc:
 
 
 # --- going to production -----------------------------------------------------
-# Swap the helpers (sign_c2pa, sign_c2pa_distributed) and use a
-# c2pa-sign-prod key. Production signing requires completed Organization
-# Validation for your organization.
+# Swap the helpers (sign_c2pa, sign_c2pa_distributed), use a c2pa-sign-prod
+# key, and set cawg_identity_id to "org_interim" or drop the entry. Production
+# signing requires completed Organization Validation for your organization.

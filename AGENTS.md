@@ -7,8 +7,9 @@ systems, and certificate enrollment.
 ## Key facts for AI assistants
 
 - Current version: see `pyproject.toml` (`version = "X.Y.Z"`).
-- The local-engine extras require **Linux x86_64 or arm64 (glibc 2.28+) + CPython 3.12**
-  — trufo-provenance is published as Linux wheels (manylinux_2_28, x86_64 and aarch64).
+- The local-engine extras require **Linux x86_64 or arm64 (glibc 2.28+) +
+  CPython 3.10 to 3.15** — trufo-provenance is published as Linux wheels (manylinux_2_28,
+  x86_64 and aarch64).
   The base `trufo` package is pure Python (3.10+, any platform). Two tiers:
   `local-sign-only` (C2PA Signing in Local mode, no watermark engine, no torch) and
   `local-full` (adds `trufo-pawprint` + torch for local watermark embedding);

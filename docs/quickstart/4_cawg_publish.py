@@ -8,7 +8,7 @@ Attaches a C2PA manifest with:
   - CAWG training/mining permissions
     - CAWG identity assertion  (organization interim)
 
-See docs/quickstart/3_cawg_publish.md for details.
+See docs/quickstart/4_cawg_publish.md for details.
 Requires a c2pa-sign-prod API key — set TRUFO_C2PA_SIGN_PROD_API_KEY
 or save it to ~/.trufo/credentials/c2pa_sign_prod_api_key.
 """

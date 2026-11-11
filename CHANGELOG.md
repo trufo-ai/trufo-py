@@ -25,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   [exempt](docs/api/api_c2pa.md#assertions); without one, the API returns
   `400 MissingDigitalSourceType`. A created action without one previously
   returned `403 C2PACreatedUserAssertionsNotAuthorized`.
+- Local mode with the Python SDK supports CPython 3.10 to 3.15; watermark
+  embedding needs 3.12 or later, and JPEG XL signing 3.12 or earlier.
 
 ## [2.2.2] — 2026-11-11
 
