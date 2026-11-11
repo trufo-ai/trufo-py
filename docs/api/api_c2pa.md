@@ -112,6 +112,7 @@ Beyond the platform-wide codes in [api_trufo.md](api_trufo.md):
 | 400 | `ImageTooLarge: …` | An input image over 400 megapixels |
 | 400 | `InvalidWidAllocationMode: …` | A watermark `wid_allocation_mode` other than `"per_embed"`, `"per_ai_system"` or `"per_asset"` (see [`watermark`](#watermark)) |
 | 400 | `MissingInputManifest: …` | A `transcode` action on an input without a readable C2PA manifest (see [`transcode`](#transcode)) |
+| 400 | `MissingDigitalSourceType: …` | A C2PA action in an [`ingredient`](#ingredient)'s `action_history` without a `digitalSourceType`, unless [exempt](#assertions) |
 | 403 | `MissingOrganizationValidation` | Production signing before OV completes |
 | 403 | `InvalidC2PACustomDomain` | The label's domain is not domain-validated for your organization |
 | 403 | `NoEligiblePlan` | The organization lacks the required plan |
@@ -278,7 +279,7 @@ not replace the subsequent `/bind/commit` step. With a per-AI-system watermark,
 | Checked | Which checks | A refusal |
 | --- | --- | --- |
 | At submission | Those a REQUEST runs before processing the media: a sign's watermark action, `branded_gp_id` and `assertions`; a bind's `mode` and watermark ID allocation | The HTTP status and `detail` a REQUEST would get; no task is created |
-| While processing | The others, among them the [signed-input](#signed-inputs-and-ingredients) refusals and every [`ingredient`](#ingredient) error except the created-placement and unbranded `parentOf` refusals | `status: "failed"` and an `error` with `code` and `http_status`, plus `message` for a refusal (4xx): the `detail` a REQUEST would get |
+| While processing | The others, among them the [signed-input](#signed-inputs-and-ingredients) refusals and every [`ingredient`](#ingredient) error except the created-placement, unbranded `parentOf` and missing `digitalSourceType` refusals | `status: "failed"` and an `error` with `code` and `http_status`, plus `message` for a refusal (4xx): the `detail` a REQUEST would get |
 
 Error `code`s, with their `http_status`: `invalid_input` (400),
 `permission_denied` (403), `input_not_found` (404), `capacity_exceeded` (429),
@@ -514,7 +515,8 @@ Ordered `[name, params]` pairs. Assertions are gathered unless their documented
 schema fixes or permits created placement. Created declarations require an
 authorized branded generator product (`branded_gp_id`), limited to the source
 types the product is approved for; without one, the only created declarations
-are an [`ai_system`](#ai_system) entry's source-type labels. A created C2PA action requires
+are an [`ai_system`](#ai_system) entry's source-type labels. A C2PA action in an
+[`ingredient`](#ingredient)'s `action_history`, created or gathered, requires
 a `digitalSourceType`, except `c2pa.converted`, `c2pa.edited.metadata`,
 `c2pa.enhanced`, `c2pa.opened`, `c2pa.placed`, `c2pa.published`,
 `c2pa.redacted`, `c2pa.repackaged`, `c2pa.resized.proportional`,
@@ -682,7 +684,7 @@ of the asset, not a Trufo attestation.
 | `media` | string | For `parentOf` | base64 bytes, in a format with **Yes** under C2PA validate in [Media format support](media_format_support.md); declare other formats with `format` (`componentOf` or `inputTo`). A `componentOf` entry needs `media` or `format`; an `inputTo` entry, neither |
 | `format` | string | No | The media type of a declared ingredient (one without `media`), such as `video/mp4`; not with `media` |
 | `placement` | string | No | `gathered` (default) or `created`, on a request authorized for created assertions; `parentOf` is always created. A declared ingredient is always gathered; created placement for it is refused for now and may be supported later. |
-| `action_history` | list | No | Actions between a `parentOf` source and the supplied input; entries may independently set `placement`, `digitalSourceType` and `description`. An entry's action is a C2PA action or a custom one in a domain your organization has validated (for example `com.example.upscaled`) |
+| `action_history` | list | No | Actions between a `parentOf` source and the supplied input; entries may independently set `placement`, `digitalSourceType` and `description`. An entry's action is a C2PA action or a custom one in a domain your organization has validated (for example `com.example.upscaled`). A C2PA action requires a `digitalSourceType` (such as `DigitalSourceType.HUMAN_EDITS`), unless [exempt](#assertions) |
 
 - Sent (`media`): a readable C2PA history is always kept with the ingredient,
   validation failures included;
@@ -708,6 +710,7 @@ already the parent, so it cannot take a `creation` entry or a `parentOf` you sen
 | A `parentOf` ingredient without `branded_gp_id` | 403 | `C2PACreatedUserAssertionsNotAuthorized: created user assertions are not authorized.` |
 | A `parentOf` ingredient with `branded_gp_id` but no `media` | 400 | `The parentOf relationship requires ingredient 'media'.` |
 | `digital_source_type` with `media` that carries a C2PA manifest | 400 | `The ingredient 'digital_source_type' cannot be combined with media that carries a C2PA manifest (mutually exclusive per the spec).` |
+| A C2PA action in `action_history` without a `digitalSourceType`, unless [exempt](#assertions) | 400 | `MissingDigitalSourceType: The action '<action>' in action_history requires a 'digitalSourceType', an IPTC source type URI such as humanEdits (an edit made without generative AI) or compositeWithTrainedAlgorithmicMedia (an AI edit).` |
 
 In the format refusal, `<mime>` reads `Unknown format` when the media type cannot
 be detected.

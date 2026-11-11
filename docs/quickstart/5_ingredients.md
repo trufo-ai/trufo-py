@@ -42,10 +42,11 @@ WebM has no C2PA support, so `intro.webm` can only be declared.
 ## Branded provenance declarations
 
 The forms below require a branded generator product
-(`branded_gp_id`), limited to the source types the product is approved for. A
-created C2PA action needs a `digitalSourceType` unless its action is
-[exempt](../api/api_c2pa.md#assertions). Otherwise the API returns
-`403 C2PACreatedUserAssertionsNotAuthorized`.
+(`branded_gp_id`), limited to the source types the product is approved for.
+Otherwise the API returns `403 C2PACreatedUserAssertionsNotAuthorized`. A C2PA
+action in `action_history`, created or gathered, needs a `digitalSourceType`
+unless [exempt](../api/api_c2pa.md#assertions); without one, the API returns
+`400 MissingDigitalSourceType`.
 
 Use `parentOf` when asset A was edited into the supplied asset B. Record the
 operations between A and B in that ingredient's `action_history`; individual
@@ -61,7 +62,10 @@ assertions = [[
         "title": "source-a.png",
         "media": source_a_base64,
         "action_history": [
-            {"action": "c2pa.cropped"},
+            {
+                "action": "c2pa.cropped",
+                "digitalSourceType": DigitalSourceType.HUMAN_EDITS.value,
+            },
             {
                 "action": "c2pa.resized",
                 "digitalSourceType": DigitalSourceType.ALGORITHMICALLY_ENHANCED.value,

@@ -20,6 +20,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Local-engine extras require trufo-provenance 2.3.
+- A C2PA action in an ingredient's `action_history`, created or gathered,
+  requires a `digitalSourceType` unless
+  [exempt](docs/api/api_c2pa.md#assertions); without one, the API returns
+  `400 MissingDigitalSourceType`. A created action without one previously
+  returned `403 C2PACreatedUserAssertionsNotAuthorized`.
 
 ## [2.2.2] — 2026-11-11
 
