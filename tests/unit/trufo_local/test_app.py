@@ -174,6 +174,7 @@ def test_accepted(sign, folders, engine, settings):
         "branded_gp_id": "gp_1",
         "signed_input_policy": "keep",
         "signed_ingredient_policy": "auto",
+        "skip_manifest_storage": True,
     }
     if settings is not None:
         fields["watermark_settings"] = settings
@@ -342,6 +343,7 @@ del watermark.WatermarkSettings, watermark.WatermarkProfile
 del cg_request.WatermarkSettings, cg_request.normalize_watermark_settings
 def legacy(api_key, **kwargs):
     assert 'watermark_settings' not in kwargs
+    assert 'skip_manifest_storage' not in kwargs
     return str(kwargs['media_output_path']), []
 remote_orchestrator.generate_claim_remote = legacy
 sys.path.insert(0, sys.argv[1])

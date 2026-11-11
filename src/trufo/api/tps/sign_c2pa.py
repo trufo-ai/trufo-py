@@ -269,6 +269,7 @@ def _sign_c2pa_direct(
     branded_gp_id: str | None = None,
     signed_input_policy: SignedInputPolicy | str | None = None,
     signed_ingredient_policy: SignedIngredientPolicy | str | None = None,
+    skip_manifest_storage: bool = False,
     trufo_api_url: str = TRUFO_API_URL,
 ) -> bytes:
     """Sign media bytes through a C2PA signing endpoint."""
@@ -295,6 +296,8 @@ def _sign_c2pa_direct(
         body["signed_ingredient_policy"] = SignedIngredientPolicy.validate(
             signed_ingredient_policy
         ).value
+    if skip_manifest_storage:
+        body["skip_manifest_storage"] = True
 
     resp = requests.post(
         trufo_api_url + endpoint,
@@ -354,6 +357,7 @@ def submit_c2pa_sign(
     branded_gp_id: str | None = None,
     signed_input_policy: SignedInputPolicy | str | None = None,
     signed_ingredient_policy: SignedIngredientPolicy | str | None = None,
+    skip_manifest_storage: bool = False,
     trufo_api_url: str = TRUFO_API_URL,
 ) -> TaskReceipt:
     """Submit an existing Trufo upload reference for signing without waiting.
@@ -384,6 +388,8 @@ def submit_c2pa_sign(
         body["signed_ingredient_policy"] = SignedIngredientPolicy.validate(
             signed_ingredient_policy
         ).value
+    if skip_manifest_storage:
+        body["skip_manifest_storage"] = True
 
     return _submit_task(api_key, TPS_C2PA_SIGN_PATH, body, trufo_api_url=trufo_api_url)
 
@@ -634,6 +640,7 @@ def sign_c2pa(
     branded_gp_id: str | None = None,
     signed_input_policy: SignedInputPolicy | str | None = None,
     signed_ingredient_policy: SignedIngredientPolicy | str | None = None,
+    skip_manifest_storage: bool = False,
     execution_mode: ExecutionMode = ExecutionMode.REQUEST,
     mime_type: str | None = None,
     wait_seconds: float = 600,
@@ -660,6 +667,8 @@ def sign_c2pa(
         signed_input_policy: What to do when the input is already C2PA-signed; omit for ``auto``.
         signed_ingredient_policy: What to do when an ingredient's media is already
             C2PA-signed; omit for ``auto``.
+        skip_manifest_storage: Ask Trufo not to keep a copy of the signed manifest;
+            refused with a per-embed watermark.
         trufo_api_url: Freeform Trufo API base URL. Defaults to production.
 
     Returns:
@@ -696,6 +705,7 @@ def sign_c2pa(
             branded_gp_id=branded_gp_id,
             signed_input_policy=signed_input_policy,
             signed_ingredient_policy=signed_ingredient_policy,
+            skip_manifest_storage=skip_manifest_storage,
             trufo_api_url=trufo_api_url,
         )
         task = wait_for_task(
@@ -714,6 +724,7 @@ def sign_c2pa(
         branded_gp_id=branded_gp_id,
         signed_input_policy=signed_input_policy,
         signed_ingredient_policy=signed_ingredient_policy,
+        skip_manifest_storage=skip_manifest_storage,
         trufo_api_url=trufo_api_url,
     )
 
@@ -730,6 +741,7 @@ def sign_c2pa_test(
     branded_gp_id: str | None = None,
     signed_input_policy: SignedInputPolicy | str | None = None,
     signed_ingredient_policy: SignedIngredientPolicy | str | None = None,
+    skip_manifest_storage: bool = False,
     execution_mode: ExecutionMode = ExecutionMode.REQUEST,
     trufo_api_url: str = TRUFO_API_URL_TEST,
 ) -> bytes:
@@ -752,6 +764,8 @@ def sign_c2pa_test(
         signed_input_policy: What to do when the input is already C2PA-signed; omit for ``auto``.
         signed_ingredient_policy: What to do when an ingredient's media is already
             C2PA-signed; omit for ``auto``.
+        skip_manifest_storage: Ask Trufo not to keep a copy of the signed manifest;
+            refused with a per-embed watermark.
         trufo_api_url: Trufo API base URL. Defaults to the Trufo test host (test.api.trufo.ai).
 
     Returns:
@@ -773,6 +787,7 @@ def sign_c2pa_test(
         branded_gp_id=branded_gp_id,
         signed_input_policy=signed_input_policy,
         signed_ingredient_policy=signed_ingredient_policy,
+        skip_manifest_storage=skip_manifest_storage,
         trufo_api_url=trufo_api_url,
     )
 
@@ -804,6 +819,7 @@ def sign_c2pa_distributed_test(
     branded_gp_id: str | None = None,
     signed_input_policy: SignedInputPolicy | str | None = None,
     signed_ingredient_policy: SignedIngredientPolicy | str | None = None,
+    skip_manifest_storage: bool = False,
 ) -> bytes:
     """Sign media locally using the Trufo test remote-signing endpoint.
 
@@ -835,6 +851,8 @@ def sign_c2pa_distributed_test(
         signed_input_policy: What to do when the input is already C2PA-signed; omit for ``auto``.
         signed_ingredient_policy: What to do when an ingredient's media is already
             C2PA-signed; omit for ``auto``.
+        skip_manifest_storage: Ask Trufo not to keep a copy of the signed manifest;
+            refused with a per-embed watermark.
 
     Returns:
         Signed media bytes.
@@ -885,6 +903,7 @@ def sign_c2pa_distributed_test(
             if signed_ingredient_policy is not None
             else {}
         ),
+        **({"skip_manifest_storage": True} if skip_manifest_storage else {}),
     )
     return signed
 
@@ -905,6 +924,7 @@ def sign_c2pa_distributed(
     branded_gp_id: str | None = None,
     signed_input_policy: SignedInputPolicy | str | None = None,
     signed_ingredient_policy: SignedIngredientPolicy | str | None = None,
+    skip_manifest_storage: bool = False,
 ) -> bytes:
     """Sign media locally using the Trufo production remote-signing endpoint.
 
@@ -936,6 +956,8 @@ def sign_c2pa_distributed(
         signed_input_policy: What to do when the input is already C2PA-signed; omit for ``auto``.
         signed_ingredient_policy: What to do when an ingredient's media is already
             C2PA-signed; omit for ``auto``.
+        skip_manifest_storage: Ask Trufo not to keep a copy of the signed manifest;
+            refused with a per-embed watermark.
 
     Returns:
         Signed media bytes.
@@ -986,6 +1008,7 @@ def sign_c2pa_distributed(
             if signed_ingredient_policy is not None
             else {}
         ),
+        **({"skip_manifest_storage": True} if skip_manifest_storage else {}),
     )
     return signed
 
