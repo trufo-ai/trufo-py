@@ -21,9 +21,10 @@ when uploading the media is fine.
 
 ## Requirements
 
-- **Linux on x86_64 or arm64 (glibc 2.28+) with CPython 3.12.** The engine is
-  published as Linux wheels (manylinux_2_28, x86_64 and aarch64), built and tested for
-  CPython 3.12.
+- **Linux on x86_64 or arm64 (glibc 2.28+) with CPython 3.10 to 3.15.** The engine is
+  published as Linux wheels (manylinux_2_28, x86_64 and aarch64), tested on CPython
+  3.10 to 3.15. Watermark embedding (`trufo[local-full]`) needs 3.12 or later, and
+  JPEG XL signing 3.12 or earlier.
   The base `trufo` package is pure Python and runs on any platform with Python 3.10+.
 - **System packages:** `libmagic` for file-type detection (Debian and Ubuntu:
   `libmagic1`), and `ffprobe` on the PATH to sign any audio or video (Debian and
@@ -203,7 +204,7 @@ assertions. Settings alone do not request watermarking. The shipped
 **`No matching distribution found for trufo-provenance…` or `…for pillow-heif…`** —
 pip cannot see the private index: set it up as in
 [Private Package Index](#private-package-index). On a
-host other than Linux with CPython 3.12, use
+host other than Linux with CPython 3.10 to 3.15, use
 [Local mode with the Docker image](docker.md).
 
 **pip reports HTTP 401 or 403 from `packages.trufo.ai`** — the key in `~/.netrc` is
