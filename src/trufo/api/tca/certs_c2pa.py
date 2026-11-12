@@ -193,11 +193,14 @@ def request_c2pa_cert(
         gpi_id: Instance ID (e.g. ``"gpi_..."``)
         gpic_id: Credential ID (e.g. ``"gpic_..."``)
         instance_key_pem: Instance private key — PEM (``str`` or
-            ``bytes``) or an ``ec.EllipticCurvePrivateKey`` (e.g. a KMS
-            adapter); signs the GPIC assertion.
+            ``bytes``) or an ``ec.EllipticCurvePrivateKey`` (e.g.
+            ``trufo.crypt.kms.AWSKMSPrivateKey`` or
+            ``GCPKMSPrivateKey``); signs the GPIC assertion.
         private_key_signer: Leaf private key — PEM ``bytes``, a
             filesystem path (``str`` / ``Path``), or an
-            ``ec.EllipticCurvePrivateKey`` (e.g. AWS KMS adapter).
+            ``ec.EllipticCurvePrivateKey`` (e.g.
+            ``trufo.crypt.kms.AWSKMSPrivateKey`` or
+            ``GCPKMSPrivateKey``).
         leaf_type: Certificate type (default: ``C2PA_L1``).
         validity_days: Requested validity in days.  ``None`` lets the
             server decide.
@@ -258,11 +261,14 @@ def request_c2pa_cert_test(
         gpi_id: Instance ID (e.g. ``"gpi_..."``)
         gpic_id: Credential ID (e.g. ``"gpic_..."``)
         instance_key_pem: Instance private key — PEM (``str`` or
-            ``bytes``) or an ``ec.EllipticCurvePrivateKey`` (e.g. a KMS
-            adapter); signs the GPIC assertion.
+            ``bytes``) or an ``ec.EllipticCurvePrivateKey`` (e.g.
+            ``trufo.crypt.kms.AWSKMSPrivateKey`` or
+            ``GCPKMSPrivateKey``); signs the GPIC assertion.
         private_key_signer: Leaf private key — PEM ``bytes``, a
             filesystem path (``str`` / ``Path``), or an
-            ``ec.EllipticCurvePrivateKey`` (e.g. AWS KMS adapter).
+            ``ec.EllipticCurvePrivateKey`` (e.g.
+            ``trufo.crypt.kms.AWSKMSPrivateKey`` or
+            ``GCPKMSPrivateKey``).
         validity_days: Requested validity in days.  ``None`` lets the
             server decide.
         trufo_api_url: Trufo API base URL. Defaults to the Trufo test host (test.api.trufo.ai).

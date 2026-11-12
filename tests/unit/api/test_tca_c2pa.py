@@ -8,12 +8,7 @@ from unittest.mock import MagicMock, patch
 import jwt as pyjwt
 import pytest
 from cryptography.hazmat.primitives.asymmetric import ec
-from cryptography.hazmat.primitives.serialization import (
-    Encoding,
-    NoEncryption,
-    PrivateFormat,
-    load_pem_private_key,
-)
+from cryptography.hazmat.primitives.serialization import Encoding, NoEncryption, PrivateFormat
 
 from trufo import generate_keypair, request_c2pa_cert_test
 from trufo.api.tca.certs_c2pa import create_instance, register_credential, request_c2pa_cert
@@ -27,32 +22,6 @@ def _ec_p256_pem() -> bytes:
     """Generate a fresh EC P-256 private key in PKCS8 PEM form."""
     key = ec.generate_private_key(ec.SECP256R1())
     return key.private_bytes(Encoding.PEM, PrivateFormat.PKCS8, NoEncryption())
-
-
-class _NonExportableKey(ec.EllipticCurvePrivateKey):
-    """KMS-adapter stand-in: signs with a local key but never exports it."""
-
-    curve = ec.SECP256R1()
-    key_size = 256
-
-    def __init__(self, private_pem: bytes):
-        self._key = load_pem_private_key(private_pem, password=None)
-
-    def sign(self, data, signature_algorithm):
-        return self._key.sign(data, signature_algorithm)
-
-    def public_key(self):
-        return self._key.public_key()
-
-    def __copy__(self, *args):
-        return self
-
-    __deepcopy__ = __copy__
-
-    def _refuse_export(self, *args):
-        raise NotImplementedError
-
-    exchange = private_numbers = private_bytes = _refuse_export
 
 
 # --- GP operations (mocked session) ---
@@ -138,24 +107,26 @@ class TestRequestC2paCert:
         ]
 
     @pytest.mark.parametrize(
-        ("algorithm", "to_instance_key"),
+        ("algorithm", "key_form"),
         [
-            (SigningAlgorithm.ES256, bytes.decode),
-            (SigningAlgorithm.ES256, _NonExportableKey),
-            (SigningAlgorithm.EDDSA, bytes),
+            (SigningAlgorithm.ES256, "pem-str"),
+            (SigningAlgorithm.ES256, "aws-kms"),
+            (SigningAlgorithm.ES256, "gcp-kms"),
+            (SigningAlgorithm.EDDSA, "pem-bytes"),
         ],
-        ids=["ec-pem-str", "kms-adapter", "ed25519-pem-bytes"],
+        ids=["ec-pem-str", "aws-kms", "gcp-kms", "ed25519-pem-bytes"],
     )
     @patch(f"{_MODULE}.extract_cert_chain")
     @patch("requests.post")
     def test_client_assertion_verifies_against_registered_key(
-        self, mock_post, _mock_extract, algorithm, to_instance_key
+        self, mock_post, _mock_extract, kms_keys, algorithm, key_form
     ):
         mock_post.side_effect = [
             MagicMock(status_code=200, **{"json.return_value": {"csr_jwt": "csr-jwt"}}),
             MagicMock(status_code=200, content=b"pkcs7"),
         ]
         private_pem, public_pem = generate_keypair(algorithm)
+        to_instance_key = {"pem-str": bytes.decode, "pem-bytes": bytes, **kms_keys}[key_form]
 
         request_c2pa_cert("gpi_1", "gpic_1", to_instance_key(private_pem), _ec_p256_pem())
 

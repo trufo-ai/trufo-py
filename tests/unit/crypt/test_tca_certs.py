@@ -16,6 +16,8 @@ from cryptography.hazmat.primitives.serialization.pkcs7 import (
 )
 from cryptography.x509.oid import NameOID
 
+from trufo.crypt.algorithms import SigningAlgorithm
+from trufo.crypt.keygen import generate_keypair
 from trufo.crypt.tca_certs import build_csr, est_enroll, extract_cert_chain
 
 # --- Fixtures ---
@@ -108,6 +110,12 @@ class TestBuildCsr:
             serialization.Encoding.PEM, serialization.PublicFormat.SubjectPublicKeyInfo
         )
         assert actual_pub == expected_pub
+
+    @pytest.mark.parametrize("provider", ["aws-kms", "gcp-kms"])
+    def test_p384_kms_key_signs_valid_csr(self, kms_keys, provider):
+        private_pem, _ = generate_keypair(SigningAlgorithm.ES384)
+        csr = x509.load_der_x509_csr(build_csr(kms_keys[provider](private_pem)))
+        assert csr.is_signature_valid
 
 
 # --- est_enroll tests ---
