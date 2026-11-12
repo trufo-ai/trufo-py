@@ -192,20 +192,18 @@ class TestBindCommit:
         }
 
     @patch(f"{_M}.requests.post")
-    def test_manifest_id_with_own_endpoint(self, mock_post):
+    def test_test_variant_targets_the_test_host(self, mock_post):
         mock_post.return_value = _response({"cid": "c_1", "wid": _WID})
-
-        bind_commit_test(
-            "key", "c_1", _WID, manifest_id="urn:c2pa:1", manifest_endpoint="https://m.example/c2pa"
-        )
-
+        bind_commit_test("key", "c_1", _WID, manifest_bytes=b"store")
         assert mock_post.call_args.args[0] == f"{TRUFO_API_URL_TEST}/bind/commit"
-        assert mock_post.call_args.kwargs["json"] == {
-            "cid": "c_1",
-            "wid": _WID,
-            "manifest_id": "urn:c2pa:1",
-            "manifest_endpoint": "https://m.example/c2pa",
-        }
+
+    @patch(f"{_M}.requests.post")
+    def test_server_warnings_reemitted(self, mock_post):
+        mock_post.return_value = _response(
+            {"cid": "c_1", "wid": _WID, "warnings": ["The mark is not declared."]}
+        )
+        with pytest.warns(TrufoServerWarning, match="The mark is not declared"):
+            bind_commit("key", "c_1", _WID, manifest_bytes=b"store")
 
     @patch(f"{_M}._manifest_store_from_media", return_value=b"store")
     @patch(f"{_M}.requests.post")
@@ -227,11 +225,12 @@ class TestBindCommit:
         [
             {},  # no manifest source
             {"signed_media_bytes": b"signed-bytes", "manifest_bytes": b"store"},  # two
-            {"manifest_id": "urn:c2pa:1"},  # id without the customer's endpoint
         ],
     )
     def test_manifest_source_rules_enforced_locally(self, kwargs):
-        with pytest.raises(ValueError):
+        with pytest.raises(
+            ValueError, match="Provide exactly one of manifest_bytes or signed_media_bytes"
+        ):
             bind_commit("key", "c_1", _WID, **kwargs)
 
     @patch(f"{_M}.requests.post")

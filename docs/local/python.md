@@ -123,8 +123,8 @@ signed_bytes = sign_c2pa_distributed(api_key, media_bytes)
 ```
 
 Both helpers take the same `actions`, `assertions`, `manifest_settings`,
-`branded_gp_id`, `signed_input_policy`, `signed_ingredient_policy` and
-`trufo_api_url` as `sign_c2pa()`, `transcode` included; see the
+`branded_gp_id`, `signed_input_policy`, `signed_ingredient_policy`,
+`skip_manifest_storage` and `trufo_api_url` as `sign_c2pa()`, `transcode` included; see the
 [C2PA Signing Quickstart](../quickstart/2_c2pa_signing.md) and
 [`actions`](../api/api_c2pa.md#actions). With `trufo[local-full]`, a `watermark`
 action embeds the mark locally; see the

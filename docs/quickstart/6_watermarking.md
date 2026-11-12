@@ -16,7 +16,7 @@ There are two ways to get either watermark:
 - **As part of C2PA signing** — a `["watermark", {...}]` action in a `sign_c2pa*` call; Trufo embeds the mark and signs the manifest in one step. **Off by default** — the action requests it.
 - **Standalone binding** — `bind_watermark()` embeds the mark and *you* sign the media with your own certificate; see [Binding Without Trufo Signing](#binding-without-trufo-signing).
 
-Either way, the signed manifest declares a per-embed mark per the C2PA specification: a `c2pa.watermarked.bound` action plus a `c2pa.soft-binding` assertion with algorithm `ai.trufo.pawprint.watermark`, Trufo's entry in the official C2PA soft-binding algorithm registry. Trufo writes these when it signs; a bind requires your manifest to carry them. A per-AI-system mark is not a soft binding.
+Either way, the signed manifest declares a per-embed mark per the C2PA specification: a `c2pa.watermarked.bound` action plus a `c2pa.soft-binding` assertion with algorithm `ai.trufo.pawprint.watermark`, Trufo's entry in the official C2PA soft-binding algorithm registry. Trufo writes these when it signs; on a bind, your manifest should carry them. A per-AI-system mark is not a soft binding.
 
 ## Supported Formats
 
@@ -120,12 +120,12 @@ Four routes produce a signed, watermarked asset. They differ in where the mark i
 | ----- | ------ | ------ | ------ | ------ | -------- |
 | **C2PA Signing, Cloud** | `POST /c2pa/sign`: Trufo embeds the mark (when the `watermark` action is present) and signs; the record is complete | | | | `sign_c2pa` |
 | **C2PA Signing, Local** | Trufo reserves the watermark ID and opens the record | you embed locally (Trufo engine) and build the manifest | Trufo signs the claim | Trufo stamps the ID and stores the manifest | `sign_c2pa_distributed` runs all four |
-| **Watermarking, Cloud** | `POST /bind/watermark`: Trufo embeds the mark, reserves the ID, opens the record, returns the marked media | you sign with your own certificate | | `POST /bind/commit`: Trufo checks the manifest declares the ID, stamps, stores or refers | `bind_watermark`, then `bind_commit` |
+| **Watermarking, Cloud** | `POST /bind/watermark`: Trufo embeds the mark, reserves the ID, opens the record, returns the marked media | you sign with your own certificate | | `POST /bind/commit`: Trufo checks the manifest declares the ID, stamps and stores | `bind_watermark`, then `bind_commit` |
 | **Watermarking, Local** | `POST /bind/reserve`: Trufo reserves the ID and opens the record for a MIME type | you embed locally (Trufo engine) | you sign with your own certificate | `POST /bind/commit`, as above | `bind_reserve`, `watermark_media`, then `bind_commit` |
 
-Whoever embeds needs the engine: `trufo[local-full]` ([Local mode with the Python SDK](../local/python.md)) on either Local route, or the [full Docker image](../local/docker.md#choose-an-image) on C2PA Signing, Local (neither Docker image has the `/bind` routes); the Cloud routes need only the API. Whoever signs needs a certificate: Trufo's on the C2PA Signing routes, yours on the Watermarking routes, where your manifest must [declare a per-embed mark](../api/api_c2pa.md#post-bindcommit).
+Whoever embeds needs the engine: `trufo[local-full]` ([Local mode with the Python SDK](../local/python.md)) on either Local route, or the [full Docker image](../local/docker.md#choose-an-image) on C2PA Signing, Local (neither Docker image has the `/bind` routes); the Cloud routes need only the API. Whoever signs needs a certificate: Trufo's on the C2PA Signing routes, yours on the Watermarking routes, where your manifest should [declare the mark](../api/api_c2pa.md#post-bindcommit).
 
-For a per-embed mark, every route except C2PA Signing, Cloud ends in a commit, since the record needs the manifest; the mark resolves publicly only once committed, so complete the flow before publishing a marked asset. A per-AI-system bind has nothing to commit: the AI system's ID resolves from its registration.
+For a per-embed mark, every route except C2PA Signing, Cloud ends in a commit, since the record needs the manifest; the mark resolves publicly only once committed, so complete the flow before publishing a marked asset. A per-AI-system bind's commit is optional, since the AI system's ID resolves from its registration.
 
 **Without the watermark engine** (a `local-sign-only` or legacy `provenance` installation), C2PA Signing in Local mode works normally — but a watermark request **always fails immediately** with an install hint (`ImportError`: the trufo-pawprint dependency is required), regardless of `effort_policy`, before anything is sent to the server. The `effort_policy` levels govern what happens when the *installed* engine cannot watermark a particular input; requesting a watermark without the engine installed is refused outright.
 
@@ -154,7 +154,7 @@ result = bind_watermark(api_key, media_bytes)
 #    value = result.wid) paired with a c2pa.watermarked.bound action
 store_bytes = your_signer(result.media, wid=result.wid)  # the C2PA manifest store
 
-# 3. the commit verifies the declaration and completes the record
+# 3. the commit completes the record (and warns if the manifest does not declare the mark)
 bind_commit(api_key, result.cid, result.wid, manifest_bytes=store_bytes)
 ```
 
@@ -171,7 +171,7 @@ bind_commit(api_key, reservation.cid, reservation.wid, manifest_bytes=store_byte
 
 If you have `trufo[local-sign-only]` or `trufo[local-full]` installed, you can also directly pass in the media file `signed_media_bytes=` instead of manifest `manifest_bytes=`.
 
-A per-AI-system bind embeds your AI system's watermark ID instead of a new one, and there is nothing to commit. Register the AI system with a `c2pa-sign-*` key, not a `watermark-*` key ([AI labeling, step 2](3_ai_labeling.md#step-2--register-an-ai-system)):
+A per-AI-system bind embeds your [AI system's](3_ai_labeling.md#step-2--register-an-ai-system) watermark ID instead of a new one. Pass `wid_allocation_mode="per_ai_system"`, `ai_system_id` and `ai_involvement`:
 
 ```python
 result = bind_watermark(api_key, media_bytes, wid_allocation_mode="per_ai_system",
@@ -179,20 +179,21 @@ result = bind_watermark(api_key, media_bytes, wid_allocation_mode="per_ai_system
 # result.wid is the AI system's watermark ID; sign result.media with YOUR certificate
 ```
 
-In production, `result.cid` is the ID of the embed's [content record](#managing-your-marks); on the test host it is null. On the **Watermarking, Local** route, pass the same three arguments to `bind_reserve()` and embed within the hour. Trufo-signed manifests record a per-AI-system mark with a `c2pa.watermarked.unbound` action and no soft binding. Trufo does not check your manifest; declare the mark the same way.
+On the **Watermarking, Local** route, pass the same arguments to `bind_reserve()`:
+
+```python
+reservation = bind_reserve(api_key, "image/jpeg", wid_allocation_mode="per_ai_system",
+                           ai_system_id=ai_system_id, ai_involvement="ai_generated")
+marked = watermark_media(media_bytes, reservation.wid_package)
+store_bytes = your_signer(marked)  # the C2PA manifest store
+bind_commit(api_key, reservation.cid, reservation.wid, manifest_bytes=store_bytes)  # optional
+```
+
+Declare the mark in your manifest the way Trufo-signed manifests do: a `c2pa.watermarked.unbound` action.
 
 ### Custom Manifest Storage
 
-By default Trufo stores the committed manifest and serves it to validators that resolve the watermark. To keep manifests in your own C2PA manifest store instead, add `manifest_endpoint=` to the commit. This works the same way for per-embed binds on both Watermarking routes:
-
-```python
-bind_commit(api_key, cid, wid, manifest_bytes=store_bytes,
-            manifest_endpoint="https://manifests.example.com/c2pa")
-```
-
-Trufo checks that the manifest declares the soft-binding correctly (an error is returned otherwise) and records only the manifest ID (required for soft-binding to work). If you prefer to not upload the manifest, you may commit with `manifest_id=` (the active manifest's urn) instead of `manifest_bytes=`.
-
-When a validator resolves the watermark, Trufo's soft-binding resolution service returns the `manifestId` with your `manifest_endpoint` as the match's `endpoint`. Per the C2PA Soft Binding Resolution API, the validator then requests `GET {manifest_endpoint}/manifests/{manifestId}`. That request must return the C2PA manifest store you committed, the same bytes as `manifest_bytes`, for as long as the mark should resolve.
+To host manifests in your own C2PA manifest store, contact support@trufo.ai.
 
 ## Managing Your Marks
 
@@ -295,10 +296,6 @@ Add an `ai_system` entry naming your registered AI system to `assertions` ([AI l
 **`AISystemInactive: AI system '<ai_system_id>' is inactive. Use an active AI system (see /ai-system/list).`**
 
 Use an active AI system, or reactivate this one with [`/ai-system/status`](../api/api_c2pa.md#post-ai-systemstatus). Content already marked with it keeps resolving.
-
-**`400 InvalidWid` or a 404 from `bind_commit()` after a per-AI-system bind**
-
-A per-AI-system bind has nothing to commit: once you have signed the marked media, you are done.
 
 <!-- TODO(sunset-2027-01-31): the deprecated-mode entry (warning and UnsupportedParameter) and the not-both entry below go, and the 501 entry drops its compliance text; successor wid_allocation_mode -->
 

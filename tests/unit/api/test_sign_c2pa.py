@@ -174,6 +174,7 @@ class TestDirectC2PASigning:
             branded_gp_id="gp_x",
             signed_input_policy=SignedInputPolicy.KEEP,
             signed_ingredient_policy=SignedIngredientPolicy.KEEP,
+            skip_manifest_storage=True,
         )
 
         assert result == signed
@@ -199,6 +200,7 @@ class TestDirectC2PASigning:
                 "branded_gp_id": "gp_x",
                 "signed_input_policy": "keep",
                 "signed_ingredient_policy": "keep",
+                "skip_manifest_storage": True,
             },
             headers=_expected_headers("prod-key"),
             timeout=60,
@@ -274,6 +276,7 @@ class TestRemoteC2PASigning:
             branded_gp_id="gp_x",
             signed_input_policy="keep",
             signed_ingredient_policy="keep",
+            skip_manifest_storage=True,
             watermark_settings=WatermarkSettings("fast"),
         )
 
@@ -293,6 +296,7 @@ class TestRemoteC2PASigning:
             "manifest_settings": {"thumbnail_settings": {"policy": "auto", "size": "high"}},
             "signed_input_policy": "keep",
             "signed_ingredient_policy": "keep",
+            "skip_manifest_storage": True,
             "watermark_settings": {"profile": "fast"},
         }
 
@@ -328,6 +332,7 @@ class TestRemoteC2PASigning:
         assert kwargs["trufo_api_url"] == TRUFO_API_URL
         assert "signed_input_policy" not in kwargs
         assert "signed_ingredient_policy" not in kwargs
+        assert "skip_manifest_storage" not in kwargs
         assert "watermark_settings" not in kwargs
 
     @pytest.mark.parametrize("signer", _REMOTE_SIGNERS)
@@ -475,11 +480,13 @@ class TestS3C2PASigning:
             branded_gp_id="gp_x",
             signed_input_policy="keep",
             signed_ingredient_policy="keep",
+            skip_manifest_storage=True,
         )
 
         assert mock_post.call_args.kwargs["json"]["branded_gp_id"] == "gp_x"
         assert mock_post.call_args.kwargs["json"]["signed_input_policy"] == "keep"
         assert mock_post.call_args.kwargs["json"]["signed_ingredient_policy"] == "keep"
+        assert mock_post.call_args.kwargs["json"]["skip_manifest_storage"] is True
 
     @patch("trufo.api.tps.sign_c2pa.requests.post")
     def test_s3_request_and_test_signing_reject_before_network(self, mock_post):

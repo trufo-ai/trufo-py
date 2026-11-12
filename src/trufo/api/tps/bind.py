@@ -9,8 +9,7 @@ media with your own certificate, then complete the record with
 the mark with a ``c2pa.soft-binding`` assertion (algorithm
 ``ai.trufo.pawprint.watermark``, block value = the watermark ID) paired with a
 ``c2pa.watermarked.bound`` action, per the C2PA specification. Trufo hosts the
-manifest for soft-binding resolution unless you name your own manifest store
-with ``manifest_endpoint``.
+manifest for soft-binding resolution.
 
 Two routes share the commit step:
 
@@ -25,7 +24,8 @@ Two routes share the commit step:
 A per-AI-system bind (``wid_allocation_mode="per_ai_system"`` with
 ``ai_system_id`` and ``ai_involvement``) embeds your AI system's watermark ID
 for that AI involvement instead of a new one. It is not a C2PA soft binding,
-and there is nothing to commit.
+and its commit is optional but recommended. Declare it with a
+``c2pa.watermarked.unbound`` action.
 
 Production requires a ``watermark-prod`` key, an active C2PA Signing or
 Watermark API plan, and completed organization validation; the ``_test``
@@ -76,8 +76,7 @@ _C2PA_HINT = (
 class BindWatermarkResult:
     """Result of :func:`bind_watermark`.
 
-    ``cid`` addresses the record for the commit step; a per-AI-system bind has
-    nothing to commit.
+    ``cid`` addresses the record for the commit step.
     """
 
     media: bytes
@@ -346,21 +345,17 @@ def bind_commit(
     wid: str,
     *,
     manifest_bytes: bytes | None = None,
-    manifest_id: str | None = None,
-    manifest_endpoint: str | None = None,
     signed_media_bytes: bytes | None = None,
     trufo_api_url: str = TRUFO_API_URL,
 ) -> None:
     """Complete a bind record with your signed C2PA manifest.
 
-    Give exactly one manifest source: ``manifest_bytes`` (the serialized
-    C2PA manifest store), ``signed_media_bytes`` (the signed media; the store
-    is read out locally, which needs ``trufo[local-sign-only]``), or
-    ``manifest_id`` together with ``manifest_endpoint`` when the manifest
-    lives in your own store and you want Trufo to record only its id. With
-    bytes, the manifest must declare the mark issued with the record (see the
-    module docstring); the API returns 400 and leaves the record incomplete
-    otherwise.
+    Give exactly one manifest source: ``manifest_bytes`` (the serialized C2PA
+    manifest store) or ``signed_media_bytes`` (the signed media; the store is
+    read out locally, which needs ``trufo[local-sign-only]``). The manifest
+    should declare the mark issued with the record (see the module docstring);
+    otherwise the API still commits it and emits a
+    :class:`~trufo.util.warnings.TrufoServerWarning`.
 
     Args:
         api_key: API key with scope ``watermark-prod`` (``watermark-test`` on
@@ -368,38 +363,23 @@ def bind_commit(
         cid: Record ID from :func:`bind_watermark` or :func:`bind_reserve`.
         wid: Watermark ID issued with that record.
         manifest_bytes: Raw bytes of the C2PA manifest store.
-        manifest_id: The manifest's id (its urn); requires ``manifest_endpoint``.
-        manifest_endpoint: Base URI of your own C2PA manifest store
-            (``https://…``; the manifest must be reachable at
-            ``{manifest_endpoint}/manifests/{manifestId}``). Omit to have
-            Trufo host the manifest.
         signed_media_bytes: Raw bytes of the C2PA-signed watermarked media.
         trufo_api_url: Trufo API base URL. Defaults to production.
 
     Raises:
-        ValueError: If not exactly one manifest source is given, or
-            ``manifest_id`` comes without ``manifest_endpoint``.
+        ValueError: If not exactly one manifest source is given.
         ImportError: If ``signed_media_bytes`` is given without the local
             C2PA library.
         requests.HTTPError: If the API returns a non-2xx response.
     """
-    sources = [s for s in (manifest_bytes, manifest_id, signed_media_bytes) if s is not None]
+    sources = [s for s in (manifest_bytes, signed_media_bytes) if s is not None]
     if len(sources) != 1:
-        raise ValueError(
-            "Provide exactly one of manifest_bytes, manifest_id, or signed_media_bytes."
-        )
-    if manifest_id is not None and manifest_endpoint is None:
-        raise ValueError("manifest_id requires manifest_endpoint.")
+        raise ValueError("Provide exactly one of manifest_bytes or signed_media_bytes.")
     if signed_media_bytes is not None:
         manifest_bytes = _manifest_store_from_media(signed_media_bytes)
-    body: dict = {"cid": cid, "wid": wid}
-    if manifest_bytes is not None:
-        body["manifest"] = base64.b64encode(manifest_bytes).decode()
-    else:
-        body["manifest_id"] = manifest_id
-    if manifest_endpoint is not None:
-        body["manifest_endpoint"] = manifest_endpoint
-    _post(api_key, trufo_api_url + TPS_BIND_COMMIT_PATH, body)
+    body = {"cid": cid, "wid": wid, "manifest": base64.b64encode(manifest_bytes).decode()}
+    payload = _post(api_key, trufo_api_url + TPS_BIND_COMMIT_PATH, body)
+    emit_server_warnings(payload)
 
 
 def bind_watermark_test(
@@ -452,8 +432,6 @@ def bind_commit_test(
     wid: str,
     *,
     manifest_bytes: bytes | None = None,
-    manifest_id: str | None = None,
-    manifest_endpoint: str | None = None,
     signed_media_bytes: bytes | None = None,
     trufo_api_url: str = TRUFO_API_URL_TEST,
 ) -> None:
@@ -463,8 +441,6 @@ def bind_commit_test(
         cid,
         wid,
         manifest_bytes=manifest_bytes,
-        manifest_id=manifest_id,
-        manifest_endpoint=manifest_endpoint,
         signed_media_bytes=signed_media_bytes,
         trufo_api_url=trufo_api_url,
     )

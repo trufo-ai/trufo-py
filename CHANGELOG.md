@@ -16,6 +16,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   local and require an explicit watermark action when signing. See
   [Local Watermark Settings](docs/local/python.md#local-watermark-settings) for
   platform behavior and measured tradeoffs.
+- `skip_manifest_storage` on `sign_c2pa`, `submit_c2pa_sign`, `sign_c2pa_test`,
+  `sign_c2pa_distributed` and `sign_c2pa_distributed_test`: ask Trufo not to
+  store a copy of the signed manifest. A per-embed watermark refuses it
+  (`400 ManifestStorageRequired`). See
+  [`POST /c2pa/sign`](docs/api/api_c2pa.md#post-c2pasign).
+- `bind_commit` and `bind_commit_test` re-emit the server's `warnings` as
+  `TrufoServerWarning`.
 
 ### Changed
 
@@ -27,6 +34,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   returned `403 C2PACreatedUserAssertionsNotAuthorized`.
 - Local mode with the Python SDK supports CPython 3.10 to 3.15; watermark
   embedding needs 3.12 or later, and JPEG XL signing 3.12 or earlier.
+- `bind_commit` accepts a per-AI-system bind: the commit is optional but
+  recommended, and a manifest without a `c2pa.watermarked.unbound` action commits
+  with a warning. It previously returned `400 InvalidWid`.
+- `bind_commit` commits a per-embed manifest that does not declare its watermark
+  and emits a `TrufoServerWarning`; it previously returned `400`.
+- The [AI system endpoints](docs/api/api_c2pa.md#ai-systems) accept
+  `watermark-prod` and `watermark-test` keys as well as C2PA signing keys.
+
+### Removed
+
+- Customer-hosted manifests (suspended): `bind_commit` and `bind_commit_test` no
+  longer take `manifest_id` or `manifest_endpoint`. To host manifests in your own
+  C2PA manifest store, contact support@trufo.ai.
 
 ## [2.2.2] — 2026-11-11
 

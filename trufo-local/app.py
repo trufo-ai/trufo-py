@@ -56,6 +56,7 @@ class C2PASignRequest(BaseModel):
     branded_gp_id: str | None = None
     signed_input_policy: SignedInputPolicy | None = None
     signed_ingredient_policy: SignedIngredientPolicy | None = None
+    skip_manifest_storage: bool = False
 
 
 @asynccontextmanager
@@ -150,6 +151,8 @@ async def sign(body: C2PASignRequest, request: Request) -> dict | Response:
                 branded_gp_id=body.branded_gp_id,
                 signed_input_policy=body.signed_input_policy,
                 signed_ingredient_policy=body.signed_ingredient_policy,
+                # only when set, so an engine without this parameter still signs
+                **({"skip_manifest_storage": True} if body.skip_manifest_storage else {}),
             )
         except RemoteSignError as exc:
             # trufo's own 4xx errors pass through; any other trufo failure is upstream's
