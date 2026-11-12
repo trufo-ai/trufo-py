@@ -23,6 +23,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   [`POST /c2pa/sign`](docs/api/api_c2pa.md#post-c2pasign).
 - `bind_commit` and `bind_commit_test` re-emit the server's `warnings` as
   `TrufoServerWarning`.
+- `request_c2pa_cert` and `request_c2pa_cert_test` accept the instance key as an
+  `ec.EllipticCurvePrivateKey`, such as a key held in a KMS. `AWSKMSPrivateKey` and
+  `GCPKMSPrivateKey` in `trufo.crypt.kms` wrap AWS KMS and Google Cloud KMS keys. See
+  [Keep the instance key in a KMS](docs/quickstart/1_certs.md#keep-the-instance-key-in-a-kms).
 
 ### Changed
 

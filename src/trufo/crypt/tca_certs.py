@@ -71,7 +71,8 @@ def build_csr(
         private_key_signer: Leaf private key.  Accepts PEM bytes,
             a filesystem path (``str`` or ``Path``) to a PEM file,
             or an ``ec.EllipticCurvePrivateKey`` instance
-            (e.g. an AWS KMS adapter).
+            (e.g. ``trufo.crypt.kms.AWSKMSPrivateKey`` or
+            ``GCPKMSPrivateKey``).
 
     Returns:
         DER-encoded CSR bytes.

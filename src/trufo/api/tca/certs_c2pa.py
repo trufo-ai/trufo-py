@@ -10,7 +10,7 @@ from pathlib import Path
 import jwt as pyjwt
 import requests
 from cryptography.hazmat.primitives import serialization
-from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.primitives.asymmetric import ec, ed25519
 
 from trufo.api.auth import extract_detail
 from trufo.api.endpoints import (
@@ -99,7 +99,7 @@ def register_credential(
 def _build_gpic_assertion(
     gpi_id: str,
     gpic_id: str,
-    instance_key_pem: str,
+    instance_key: ec.EllipticCurvePrivateKey | ed25519.Ed25519PrivateKey,
     algorithm: str,
 ) -> str:
     """Build a GPIC assertion JWT signed with the instance private key.
@@ -111,7 +111,7 @@ def _build_gpic_assertion(
     Args:
         gpi_id: Generator product instance ID (``"gpi_..."``)
         gpic_id: Instance credential ID (``"gpic_..."``)
-        instance_key_pem: PEM-encoded instance private key.
+        instance_key: Instance private key.
         algorithm: JWA algorithm name (e.g. ``"ES256"``).
 
     Returns:
@@ -125,7 +125,7 @@ def _build_gpic_assertion(
         "iat": now,
         "exp": now + 60,
     }
-    return pyjwt.encode(payload, instance_key_pem, algorithm=algorithm)
+    return pyjwt.encode(payload, instance_key, algorithm=algorithm)
 
 
 def _request_c2pa_csr_jwt(
@@ -176,7 +176,7 @@ def _request_c2pa_csr_jwt(
 def request_c2pa_cert(
     gpi_id: str,
     gpic_id: str,
-    instance_key_pem: str,
+    instance_key_pem: str | bytes | ec.EllipticCurvePrivateKey,
     private_key_signer: str | Path | bytes | ec.EllipticCurvePrivateKey,
     leaf_type: LeafType = LeafType.C2PA_L1,
     validity_days: int | None = None,
@@ -192,11 +192,15 @@ def request_c2pa_cert(
     Args:
         gpi_id: Instance ID (e.g. ``"gpi_..."``)
         gpic_id: Credential ID (e.g. ``"gpic_..."``)
-        instance_key_pem: Instance private key PEM (signs the GPIC
-            assertion).
+        instance_key_pem: Instance private key — PEM (``str`` or
+            ``bytes``) or an ``ec.EllipticCurvePrivateKey`` (e.g.
+            ``trufo.crypt.kms.AWSKMSPrivateKey`` or
+            ``GCPKMSPrivateKey``); signs the GPIC assertion.
         private_key_signer: Leaf private key — PEM ``bytes``, a
             filesystem path (``str`` / ``Path``), or an
-            ``ec.EllipticCurvePrivateKey`` (e.g. AWS KMS adapter).
+            ``ec.EllipticCurvePrivateKey`` (e.g.
+            ``trufo.crypt.kms.AWSKMSPrivateKey`` or
+            ``GCPKMSPrivateKey``).
         leaf_type: Certificate type (default: ``C2PA_L1``).
         validity_days: Requested validity in days.  ``None`` lets the
             server decide.
@@ -207,18 +211,20 @@ def request_c2pa_cert(
         PEM bytes for the certificate chain (leaf + intermediates,
         self-signed root excluded).
     """
-    # 1. infer instance key algorithm for JWT signing
-    instance_key_bytes = (
-        instance_key_pem.encode() if isinstance(instance_key_pem, str) else instance_key_pem
-    )
+    # 1. load the instance key, infer its algorithm for JWT signing
+    instance_key = instance_key_pem
+    if isinstance(instance_key, str):
+        instance_key = instance_key.encode()
+    if isinstance(instance_key, bytes):
+        instance_key = serialization.load_pem_private_key(instance_key, password=None)
     instance_alg = infer_signing_algorithm(
-        serialization.load_pem_private_key(instance_key_bytes, password=None)
-        .public_key()
-        .public_bytes(serialization.Encoding.PEM, serialization.PublicFormat.SubjectPublicKeyInfo)
+        instance_key.public_key().public_bytes(
+            serialization.Encoding.PEM, serialization.PublicFormat.SubjectPublicKeyInfo
+        )
     )
 
     # 2. build GPIC assertion, request CSR JWT
-    assertion = _build_gpic_assertion(gpi_id, gpic_id, instance_key_pem, instance_alg.alg_name)
+    assertion = _build_gpic_assertion(gpi_id, gpic_id, instance_key, instance_alg.alg_name)
     csr_jwt = _request_c2pa_csr_jwt(
         assertion, leaf_type, validity_days, trufo_api_url=trufo_api_url
     )
@@ -237,7 +243,7 @@ def request_c2pa_cert(
 def request_c2pa_cert_test(
     gpi_id: str,
     gpic_id: str,
-    instance_key_pem: str,
+    instance_key_pem: str | bytes | ec.EllipticCurvePrivateKey,
     private_key_signer: str | Path | bytes | ec.EllipticCurvePrivateKey,
     validity_days: int | None = None,
     *,
@@ -254,11 +260,15 @@ def request_c2pa_cert_test(
     Args:
         gpi_id: Instance ID (e.g. ``"gpi_..."``)
         gpic_id: Credential ID (e.g. ``"gpic_..."``)
-        instance_key_pem: Instance private key PEM (signs the GPIC
-            assertion).
+        instance_key_pem: Instance private key — PEM (``str`` or
+            ``bytes``) or an ``ec.EllipticCurvePrivateKey`` (e.g.
+            ``trufo.crypt.kms.AWSKMSPrivateKey`` or
+            ``GCPKMSPrivateKey``); signs the GPIC assertion.
         private_key_signer: Leaf private key — PEM ``bytes``, a
             filesystem path (``str`` / ``Path``), or an
-            ``ec.EllipticCurvePrivateKey`` (e.g. AWS KMS adapter).
+            ``ec.EllipticCurvePrivateKey`` (e.g.
+            ``trufo.crypt.kms.AWSKMSPrivateKey`` or
+            ``GCPKMSPrivateKey``).
         validity_days: Requested validity in days.  ``None`` lets the
             server decide.
         trufo_api_url: Trufo API base URL. Defaults to the Trufo test host (test.api.trufo.ai).
