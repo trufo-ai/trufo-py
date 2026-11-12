@@ -194,6 +194,75 @@ are what lets this deployment request certificates. An instance may hold two act
 credentials at once, which is what makes rotation non-disruptive (see
 [Revocation and Rotation](#revocation-and-rotation)).
 
+#### Keep the instance key in Google Cloud KMS
+
+Any P-256 `ec.EllipticCurvePrivateKey` whose `sign()` calls your KMS works as the
+instance key, so the private key never leaves the KMS. For Google Cloud KMS, create a
+key with purpose `ASYMMETRIC_SIGN` and algorithm `EC_SIGN_P256_SHA256`, and
+`pip install google-cloud-kms`:
+
+```python
+import hashlib
+
+from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.primitives.serialization import (
+    Encoding,
+    PublicFormat,
+    load_pem_public_key,
+)
+from google.cloud import kms
+
+
+class CloudKMSPrivateKey(ec.EllipticCurvePrivateKey):
+    """EC P-256 instance key held in Google Cloud KMS."""
+
+    curve = ec.SECP256R1()
+    key_size = 256
+
+    def __init__(self, key_version_name):
+        self._client = kms.KeyManagementServiceClient()
+        self._key_version_name = key_version_name
+        public_key = self._client.get_public_key(request={"name": key_version_name})
+        self._public_key = load_pem_public_key(public_key.pem.encode())
+
+    def sign(self, data, signature_algorithm):
+        digest = hashlib.sha256(data).digest()
+        response = self._client.asymmetric_sign(
+            request={"name": self._key_version_name, "digest": {"sha256": digest}}
+        )
+        return response.signature
+
+    def public_key(self):
+        return self._public_key
+
+    def exchange(self, algorithm, peer_public_key):
+        raise NotImplementedError
+
+    def private_numbers(self):
+        raise NotImplementedError
+
+    def private_bytes(self, encoding, format, encryption_algorithm):
+        raise NotImplementedError
+
+    def __copy__(self):
+        return self
+
+    def __deepcopy__(self, memo):
+        return self
+
+
+instance_private_key = CloudKMSPrivateKey(
+    "projects/<project>/locations/<location>/keyRings/<ring>/cryptoKeys/<key>/cryptoKeyVersions/1"
+)
+instance_public_pem = instance_private_key.public_key().public_bytes(
+    Encoding.PEM, PublicFormat.SubjectPublicKeyInfo
+)
+```
+
+Register `instance_public_pem` as above, then in [step 5](#step-5--enroll-a-certificate)
+pass `instance_key_pem=instance_private_key` to `request_c2pa_cert()`. The leaf key
+(`private_key_signer`) can be a KMS key in the same way.
+
 ### Step 5 — Enroll a certificate
 
 Repeat each renewal cycle. Generate a **fresh leaf key every time** — a public key
