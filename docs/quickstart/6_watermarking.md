@@ -16,7 +16,7 @@ There are two ways to get either watermark:
 - **As part of C2PA signing** — a `["watermark", {...}]` action in a `sign_c2pa*` call; Trufo embeds the mark and signs the manifest in one step. **Off by default** — the action requests it.
 - **Standalone binding** — `bind_watermark()` embeds the mark and *you* sign the media with your own certificate; see [Binding Without Trufo Signing](#binding-without-trufo-signing).
 
-Either way, the signed manifest declares a per-embed mark per the C2PA specification: a `c2pa.watermarked.bound` action plus a `c2pa.soft-binding` assertion with algorithm `ai.trufo.pawprint.watermark`, Trufo's entry in the official C2PA soft-binding algorithm registry. Trufo writes these when it signs; a bind requires your manifest to carry them. A per-AI-system mark is not a soft binding.
+Either way, the signed manifest declares a per-embed mark per the C2PA specification: a `c2pa.watermarked.bound` action plus a `c2pa.soft-binding` assertion with algorithm `ai.trufo.pawprint.watermark`, Trufo's entry in the official C2PA soft-binding algorithm registry. Trufo writes these when it signs; on a bind, your manifest should carry them. A per-AI-system mark is not a soft binding.
 
 ## Supported Formats
 
@@ -123,7 +123,7 @@ Four routes produce a signed, watermarked asset. They differ in where the mark i
 | **Watermarking, Cloud** | `POST /bind/watermark`: Trufo embeds the mark, reserves the ID, opens the record, returns the marked media | you sign with your own certificate | | `POST /bind/commit`: Trufo checks the manifest declares the ID, stamps and stores | `bind_watermark`, then `bind_commit` |
 | **Watermarking, Local** | `POST /bind/reserve`: Trufo reserves the ID and opens the record for a MIME type | you embed locally (Trufo engine) | you sign with your own certificate | `POST /bind/commit`, as above | `bind_reserve`, `watermark_media`, then `bind_commit` |
 
-Whoever embeds needs the engine: `trufo[local-full]` ([Local mode with the Python SDK](../local/python.md)) on either Local route, or the [full Docker image](../local/docker.md#choose-an-image) on C2PA Signing, Local (neither Docker image has the `/bind` routes); the Cloud routes need only the API. Whoever signs needs a certificate: Trufo's on the C2PA Signing routes, yours on the Watermarking routes, where your manifest must [declare a per-embed mark](../api/api_c2pa.md#post-bindcommit).
+Whoever embeds needs the engine: `trufo[local-full]` ([Local mode with the Python SDK](../local/python.md)) on either Local route, or the [full Docker image](../local/docker.md#choose-an-image) on C2PA Signing, Local (neither Docker image has the `/bind` routes); the Cloud routes need only the API. Whoever signs needs a certificate: Trufo's on the C2PA Signing routes, yours on the Watermarking routes, where your manifest should [declare the mark](../api/api_c2pa.md#post-bindcommit).
 
 For a per-embed mark, every route except C2PA Signing, Cloud ends in a commit, since the record needs the manifest; the mark resolves publicly only once committed, so complete the flow before publishing a marked asset. A per-AI-system bind's commit is optional, since the AI system's ID resolves from its registration.
 
@@ -154,7 +154,7 @@ result = bind_watermark(api_key, media_bytes)
 #    value = result.wid) paired with a c2pa.watermarked.bound action
 store_bytes = your_signer(result.media, wid=result.wid)  # the C2PA manifest store
 
-# 3. the commit verifies the declaration and completes the record
+# 3. the commit completes the record (and warns if the manifest does not declare the mark)
 bind_commit(api_key, result.cid, result.wid, manifest_bytes=store_bytes)
 ```
 
@@ -189,7 +189,7 @@ store_bytes = your_signer(marked)  # the C2PA manifest store
 bind_commit(api_key, reservation.cid, reservation.wid, manifest_bytes=store_bytes)  # optional
 ```
 
-Declare the mark in your manifest the way Trufo-signed manifests do: a `c2pa.watermarked.unbound` action and no soft binding.
+Declare the mark in your manifest the way Trufo-signed manifests do: a `c2pa.watermarked.unbound` action.
 
 ### Custom Manifest Storage
 

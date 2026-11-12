@@ -40,7 +40,8 @@ systems, and certificate enrollment.
   Watermark API plan, and completed Organization Validation; `_test` variants use the
   test host with `watermark-test`. Commit is required for per-embed (soft-binding
   assertion + `c2pa.watermarked.bound`) and optional for per-AI-system
-  (`c2pa.watermarked.unbound`, else a warning).
+  (`c2pa.watermarked.unbound`); a manifest that does not declare its mark commits
+  with a warning.
 - In code: the `_distributed` functions; `origin` values `c2pa_hosted`,
   `c2pa_distributed`, `bind_hosted`, `bind_distributed`; tpts/lpts/tpls/lpls in
   docstrings.

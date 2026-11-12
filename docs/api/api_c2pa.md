@@ -921,13 +921,13 @@ reservation bills its embed when issued and is valid for 1 hour.
 | ----- | ---- | -------- | ----------- |
 | `cid` | string | Yes | Record id from `/bind/watermark` or `/bind/reserve` |
 | `wid` | string | Yes | The watermark id issued with that record |
-| `manifest` | string | Yes | base64-encoded C2PA manifest store declaring the mark |
+| `manifest` | string | Yes | base64-encoded C2PA manifest store that should declare the mark |
 
-The store must declare the mark. For a per-embed bind: a `c2pa.soft-binding`
+The store should declare the mark. For a per-embed bind: a `c2pa.soft-binding`
 assertion (algorithm `ai.trufo.pawprint.watermark`, the record's watermark id as
-its block value) with a `c2pa.watermarked.bound` action, or the commit is
-refused. For a per-AI-system bind: a `c2pa.watermarked.unbound` action, or the
-commit returns a warning. Trust status is not checked. An identical retry
+its block value) with a `c2pa.watermarked.bound` action. For a per-AI-system
+bind: a `c2pa.watermarked.unbound` action. A store that does not declare it is
+still committed, with a warning. Trust status is not checked. An identical retry
 succeeds; a different one is refused.
 
 A per-embed bind must be committed. For a per-AI-system bind, the commit is
@@ -939,7 +939,7 @@ optional but recommended, and `wid` is the AI system's watermark ID.
 
 | Status | Meaning |
 | ------ | ------- |
-| 400 | Malformed `wid`, a per-AI-system `wid` other than the AI system's watermark ID, no parseable manifest, or a per-embed manifest that does not declare the record's mark (the record stays incomplete — fix and resubmit). `/bind/watermark` also rejects an unsupported media format |
+| 400 | Malformed `wid`, a per-AI-system `wid` other than the AI system's watermark ID, or no parseable manifest. `/bind/watermark` also rejects an unsupported media format |
 | 404 | Unknown `cid`, a record not opened by a bind call, or a `wid` that is not a live reservation of yours for the record's route |
 | 409 | The record was already completed with a different manifest |
 | 422 | A missing `manifest`, or the suspended `manifest_endpoint` parameter |

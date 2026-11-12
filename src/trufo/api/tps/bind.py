@@ -25,7 +25,7 @@ A per-AI-system bind (``wid_allocation_mode="per_ai_system"`` with
 ``ai_system_id`` and ``ai_involvement``) embeds your AI system's watermark ID
 for that AI involvement instead of a new one. It is not a C2PA soft binding,
 and its commit is optional but recommended. Declare it with a
-``c2pa.watermarked.unbound`` action and no soft binding.
+``c2pa.watermarked.unbound`` action.
 
 Production requires a ``watermark-prod`` key, an active C2PA Signing or
 Watermark API plan, and completed organization validation; the ``_test``
@@ -353,9 +353,8 @@ def bind_commit(
     Give exactly one manifest source: ``manifest_bytes`` (the serialized C2PA
     manifest store) or ``signed_media_bytes`` (the signed media; the store is
     read out locally, which needs ``trufo[local-sign-only]``). The manifest
-    must declare the mark issued with the record (see the module docstring).
-    For a per-embed bind, the API returns 400 and leaves the record incomplete
-    otherwise; for a per-AI-system bind, it commits and emits a
+    should declare the mark issued with the record (see the module docstring);
+    otherwise the API still commits it and emits a
     :class:`~trufo.util.warnings.TrufoServerWarning`.
 
     Args:

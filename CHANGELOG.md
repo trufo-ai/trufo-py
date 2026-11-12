@@ -37,6 +37,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `bind_commit` accepts a per-AI-system bind: the commit is optional but
   recommended, and a manifest without a `c2pa.watermarked.unbound` action commits
   with a warning. It previously returned `400 InvalidWid`.
+- `bind_commit` commits a per-embed manifest that does not declare its watermark
+  and emits a `TrufoServerWarning`; it previously returned `400`.
 - The [AI system endpoints](docs/api/api_c2pa.md#ai-systems) accept
   `watermark-prod` and `watermark-test` keys as well as C2PA signing keys.
 
