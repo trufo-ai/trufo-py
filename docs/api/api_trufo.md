@@ -291,8 +291,8 @@ organization owner or admin with MFA creates and revokes keys at
 | `c2pa-sign-prod` | C2PA signing and the [AI system endpoints](api_c2pa.md#ai-systems) on the production hosts | C2PA Signing plan |
 | `content-recover-test` | Watermark recovery (`/content/recover`, test host) | — |
 | `content-recover-prod` | Watermark recovery (`/content/recover`, production hosts) | C2PA Signing or Watermark API plan |
-| `watermark-test` | Standalone binding (`/bind/*`, test host); the production hosts' upload link refuses it (410, [Deprecations](#deprecations)) | — |
-| `watermark-prod` | Standalone binding (`/bind/*`, production hosts) | C2PA Signing or Watermark API plan |
+| `watermark-test` | Standalone binding (`/bind/*`, test host) and the [AI system endpoints](api_c2pa.md#ai-systems) on the production hosts; the production hosts' upload link refuses it (410, [Deprecations](#deprecations)) | — |
+| `watermark-prod` | Standalone binding (`/bind/*`) and the [AI system endpoints](api_c2pa.md#ai-systems) on the production hosts | C2PA Signing or Watermark API plan |
 | `tsa` | RFC 3161 timestamping (`tsa.trufo.ai`) | C2PA TSA plan |
 | `sdk-download` | Downloading the local engine packages from Trufo's private package index, for the [Python SDK](../local/python.md) or the [Docker image](../local/docker.md) | C2PA Signing or Watermark API plan (or, for the test host, SDK download access from support@trufo.ai), and the Trufo Library License accepted ([Agreements](#agreements)) |
 

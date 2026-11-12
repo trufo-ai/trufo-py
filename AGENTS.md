@@ -38,9 +38,9 @@ systems, and certificate enrollment.
   `watermark_media` → `bind_commit`); prose says "Cloud mode" / "Local mode".
   Production bind needs a `watermark-prod` key, a C2PA Signing or
   Watermark API plan, and completed Organization Validation; `_test` variants use the
-  test host with `watermark-test`. Commit (per-embed only)
-  verifies the manifest declares the mark (soft-binding assertion +
-  `c2pa.watermarked.bound`).
+  test host with `watermark-test`. Commit is required for per-embed (soft-binding
+  assertion + `c2pa.watermarked.bound`) and optional for per-AI-system
+  (`c2pa.watermarked.unbound`, else a warning).
 - In code: the `_distributed` functions; `origin` values `c2pa_hosted`,
   `c2pa_distributed`, `bind_hosted`, `bind_distributed`; tpts/lpts/tpls/lpls in
   docstrings.
