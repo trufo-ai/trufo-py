@@ -26,6 +26,7 @@ STR_ENUMS = {
     UserAssertion: {
         "AI_DISCLOSURE": "ai_disclosure",
         "AI_SYSTEM": "ai_system",
+        "C2PA_METADATA": "c2pa_metadata",
         "CAWG_IDENTITY": "cawg_identity",
         "CAWG_METADATA": "cawg_metadata",
         "CAWG_TRAINING": "cawg_training",
