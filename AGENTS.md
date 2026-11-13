@@ -18,8 +18,8 @@ systems, and certificate enrollment.
   `docs/local/python.md`.
 - The Docker image `ghcr.io/trufo-ai/trufo-local` runs C2PA Signing in Local mode as
   an HTTP service: `POST /c2pa/sign` names input and output files by path. Two
-  images: the signing-only image (`2.2`, the shipped default) and the full image
-  (`2.2-full`), which adds watermark embedding, on CPU only; neither has the `/bind`
+  images: the signing-only image (`2.3`, the shipped default) and the full image
+  (`2.3-full`), which adds watermark embedding, on CPU only; neither has the `/bind`
   routes. The `sdk-download` key goes in its `.env`; the `c2pa-sign-*` key is sent
   with each request and never stored. Source in `trufo-local/`; guide
   `docs/local/docker.md`.
@@ -91,4 +91,4 @@ Two modes exist; see `docs/api/api_c2pa.md` for the full comparison.
 |---|---|---|---|
 | Cloud | `sign_c2pa`, `sign_c2pa_test` | No | Yes |
 | Local, Python SDK | `sign_c2pa_distributed`, `sign_c2pa_distributed_test` | Yes (`trufo[local-sign-only]`; `trufo[local-full]` for watermarking) | No |
-| Local, Docker image | `POST /c2pa/sign` on `trufo-local` | No (the container downloads the engine; `2.2-full` for watermarking) | No |
+| Local, Docker image | `POST /c2pa/sign` on `trufo-local` | No (the container downloads the engine; `2.3-full` for watermarking) | No |

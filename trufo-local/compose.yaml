@@ -5,7 +5,7 @@
 
 services:
   trufo-local:
-    image: ghcr.io/trufo-ai/trufo-local:2.2
+    image: ghcr.io/trufo-ai/trufo-local:2.3
     user: "1000:1000"   # owner of the folders below; on the host: id -u and id -g
     env_file: .env
     environment:
