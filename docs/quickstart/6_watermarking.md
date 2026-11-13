@@ -317,7 +317,7 @@ Embedding a watermark locally needs `trufo[local-full]` (C2PA Signing, Local or 
 
 **`400 WatermarkNotAvailable` from the Docker image**
 
-The signing-only image signs without watermarking; see [Choose an Image](../local/docker.md#choose-an-image). To embed a watermark while signing, use the full image (`2.2-full`), Cloud mode or `trufo[local-full]`.
+The signing-only image signs without watermarking; see [Choose an Image](../local/docker.md#choose-an-image). To embed a watermark while signing, use the full image (`2.3-full`), Cloud mode or `trufo[local-full]`.
 
 ---
 

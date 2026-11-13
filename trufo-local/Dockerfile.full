@@ -2,7 +2,7 @@
 # Build the signing-only image (Dockerfile) first, then this one on it, from the trufo-py root,
 # with an sdk-download key in TRUFO_SDK_DOWNLOAD_API_KEY:
 # docker build -f trufo-local/Dockerfile.full --build-arg BASE_IMAGE=<signing-only image> \
-#   --secret id=TRUFO_SDK_DOWNLOAD_API_KEY --build-arg VERSION=2.2.0 trufo-local
+#   --secret id=TRUFO_SDK_DOWNLOAD_API_KEY --build-arg VERSION=2.3.0 trufo-local
 
 ARG BASE_IMAGE
 FROM ${BASE_IMAGE}

@@ -11,7 +11,7 @@ file by path, and the service signs one into the other:
   general audit records.
 
 Any language that can send an HTTP request can call it. The service comes in two
-images: the signing-only image (`2.2`) and the full image (`2.2-full`), which also
+images: the signing-only image (`2.3`) and the full image (`2.3-full`), which also
 embeds Trufo watermarks; see [Choose an Image](#choose-an-image).
 
 ## When to Use It
@@ -27,19 +27,19 @@ Both images run the same service from the same `compose.yaml`, and serve only
 `/health` and `/c2pa/sign`, not the
 [Watermarking routes](../quickstart/6_watermarking.md#routes) (`/bind/*`).
 
-- **The signing-only image (`2.2`)**, the shipped default, signs without
+- **The signing-only image (`2.3`)**, the shipped default, signs without
   watermarking.
-- **The full image (`2.2-full`)** also embeds Trufo watermarks while signing, on CPU
+- **The full image (`2.3-full`)** also embeds Trufo watermarks while signing, on CPU
   only, in every format that [Media format support](../api/media_format_support.md)
   lists for watermark embedding (HEIC, HEIF and AVIF included).
 
 | | Signing-only | Full |
 | --- | ------------ | ---- |
-| Pulled (compressed), linux/amd64 | about 340 MB | about 620 MB |
+| Pulled (compressed), linux/amd64 | about 350 MB | about 620 MB |
 | Pulled (compressed), linux/arm64 | about 320 MB | about 550 MB |
 | Unpacked, linux/amd64 | about 0.9 GB | about 1.9 GB |
 | Unpacked, linux/arm64 | about 0.8 GB | about 1.7 GB |
-| Idle memory, linux/amd64 | about 100 MiB | about 300 MiB |
+| Idle memory, linux/amd64 | about 110 MiB | about 300 MiB |
 
 To switch images, change the tag in `image:` and run `docker compose up -d`.
 
@@ -80,7 +80,7 @@ chmod 600 .env
 ```yaml
 services:
   trufo-local:
-    image: ghcr.io/trufo-ai/trufo-local:2.2   # signing only; with watermarking: 2.2-full
+    image: ghcr.io/trufo-ai/trufo-local:2.3   # signing only; with watermarking: 2.3-full
     user: "1000:1000"   # owner of the folders below; on the host: id -u and id -g
     env_file: .env
     environment:
@@ -105,8 +105,8 @@ appears, and create them before the first start. Set `user:` to their owner. Kee
 docker compose up -d
 docker compose ps    # wait for "(healthy)"
 curl -s http://127.0.0.1:8080/health
-# {"status":"healthy","version":"2.2.1","engine_version":"2.2.1"}
-# full image: {"status":"healthy","version":"2.2.1-full","engine_version":"2.2.1","watermark_engine_version":"0.5.4"}
+# {"status":"healthy","version":"2.3.0","engine_version":"2.3.0"}
+# full image: {"status":"healthy","version":"2.3.0-full","engine_version":"2.3.0","watermark_engine_version":"0.6.1"}
 ```
 
 A new container first downloads and installs its packages, and is healthy after
@@ -133,6 +133,7 @@ curl -s http://127.0.0.1:8080/c2pa/sign \
 | `media_output_path` | Yes | Absolute path for the signed file, inside an output folder |
 | `actions` | Yes | As in [`POST /c2pa/sign`](../api/api_c2pa.md#post-c2pasign) |
 | `assertions`, `manifest_title`, `ingredient_title`, `manifest_settings`, `branded_gp_id`, `signed_input_policy`, `signed_ingredient_policy`, `skip_manifest_storage` | No | As in [`POST /c2pa/sign`](../api/api_c2pa.md#post-c2pasign) |
+| `watermark_settings` | No | The local watermark profile, `{"profile": "default"}` or `{"profile": "fast"}`; see [Local watermark settings](python.md#local-watermark-settings). Full image, 2.3 or later. |
 
 `actions` and `assertions` take the same entries as in Cloud mode, `transcode` included
 (see [`actions`](../api/api_c2pa.md#actions)). `signed_input_policy`,
@@ -335,6 +336,22 @@ reclaims it.
 Both images' health checks call `/health`, with a 60-second start period. `docker stop`
 lets signing requests in progress finish within Docker's stop timeout.
 
+### Faster CPU Watermarking
+
+The full image ships no C++ compiler, so its watermark encoder runs uncompiled. To
+let it compile on first use (later watermarks run faster on CPU; the first is slower),
+build on the image with `g++` added:
+
+```dockerfile
+FROM ghcr.io/trufo-ai/trufo-local:2.3-full
+USER root
+RUN apt-get update && apt-get install -y --no-install-recommends g++ \
+    && rm -rf /var/lib/apt/lists/*
+USER 10001
+```
+
+The `fast` profile speeds up CPU video watermarking with or without a compiler.
+
 ### Read-Only Root Filesystem
 
 The service writes only to `/tmp` and the output folders. The packages install into
@@ -363,14 +380,16 @@ To also drop every capability and set `no-new-privileges`, add under the service
 
 ## Versions and Upgrades
 
-The shipped `compose.yaml` uses `2.2`, which moves to each 2.2.x release; an exact
-version such as `2.2.0` never changes. Fixes, including security fixes, ship in the
-newest minor version. The full image's `2.2-full` and `2.2.0-full` behave the same
+The shipped `compose.yaml` uses `2.3`, which moves to each 2.3.x release; an exact
+version such as `2.3.0` never changes. Fixes, including security fixes, ship in the
+newest minor version. The full image's `2.3-full` and `2.3.0-full` behave the same
 way; there is no `latest` tag. `/health` reports the image's `version` and the
 versions of its engines.
 
 | Image | Engine (trufo-provenance) | Watermark engine (trufo-pawprint) | Source image |
 | ----- | ------------------------- | --------------------------------- | ------------ |
+| `2.3.0-full` | 2.3.0 | 0.6.1 | `2.3.0-full-source` |
+| `2.3.0` | 2.3.0 | — | `2.3.0-source` |
 | `2.2.1-full` | 2.2.1 | 0.5.4 | `2.2.1-full-source` |
 | `2.2.1` | 2.2.1 | — | `2.2.1-source` |
 | `2.2.0-full` | 2.2.0 | 0.5.4 | `2.2.0-full-source` |
@@ -378,15 +397,15 @@ versions of its engines.
 | `2.1.2` | 2.1.2 | — | `2.1.2-source` |
 | `2.1.1` | 2.1.1 | — | `2.1.1-source` |
 
-To move to the newest 2.2.x, run `docker compose pull && docker compose up -d`. To
-stay on one version, set `image: ghcr.io/trufo-ai/trufo-local:2.2.1` (or
-`2.2.1-full`).
+To move to the newest 2.3.x, run `docker compose pull && docker compose up -d`. To
+stay on one version, set `image: ghcr.io/trufo-ai/trufo-local:2.3.0` (or
+`2.3.0-full`).
 
 <!-- TODO(sunset-2027-01-31): the next paragraph goes; successor none -->
 
-A `2.1` tag never moves to 2.2, and the 2.1 images stop signing from
+A `2.1` tag never moves to 2.3, and the 2.1 images stop signing from
 2027-01-31T23:59:00+00:00 (see [Local mode](../api/api_c2pa.md#local-mode)). To
-upgrade from 2.1, set `image:` to `ghcr.io/trufo-ai/trufo-local:2.2` (or `2.2-full`)
+upgrade from 2.1, set `image:` to `ghcr.io/trufo-ai/trufo-local:2.3` (or `2.3-full`)
 and run `docker compose up -d`.
 
 When a signing response's `warnings` says a version is deprecated, move to a newer
@@ -444,7 +463,7 @@ Errors return `{"detail": …}`.
 | 400 | `InvalidMediaOutputPath` | The output path is not absolute, is outside every output folder, or names an existing directory, or its folder is missing or not writable |
 | 400 | `The output path is an existing directory.` | After the extension changes, the new name (for example `photo.jpg`) is an existing directory |
 | 400 | `The output path is the input file.` | The output, with the signed format's extension, would replace the input |
-| 400 | `WatermarkNotAvailable` | A `watermark` action sent to the signing-only image; use the full image (`2.2-full`) |
+| 400 | `WatermarkNotAvailable` | A `watermark` action sent to the signing-only image; use the full image (`2.3-full`) |
 | 400 | `Watermarking failed: …` | Full image: the mark could not be embedded, under `effort_policy` `require` or `require_if_supported`; under `best_effort`, the file is signed without it and this text is in `warnings` |
 | 400 | *(message)* | The engine rejected the request, for example a malformed action |
 | 400 | `UnsupportedSDKVersion: …` | The image's SDK or engine version is not supported, or the engine is too old for a feature the request uses; the detail names the package and the reason. See [Versions and Upgrades](#versions-and-upgrades) |
@@ -470,14 +489,14 @@ and points to each Debian package's license in `/usr/share/doc/`. In
 Python packages omit for the libraries they bundle.
 
 Each image version has a source image in the same repository, tagged with its
-version plus `-source` (`2.2.1-source`, `2.2.1-full-source`), holding the complete
+version plus `-source` (`2.3.0-source`, `2.3.0-full-source`), holding the complete
 corresponding source code of its GPL-, LGPL- and MPL-licensed software. The full
 image's source image also holds the signing-only image's sources. The signing-only
 source image is about 1.3 GB, and the full one about 1.4 GB. To extract one:
 
 ```bash
-docker create --platform linux/amd64 --name trufo-local-source ghcr.io/trufo-ai/trufo-local:2.2.1-source none
-docker cp trufo-local-source:/sources ./trufo-local-2.2.1-source
+docker create --platform linux/amd64 --name trufo-local-source ghcr.io/trufo-ai/trufo-local:2.3.0-source none
+docker cp trufo-local-source:/sources ./trufo-local-2.3.0-source
 docker rm trufo-local-source
 ```
 

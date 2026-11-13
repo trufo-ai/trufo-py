@@ -183,6 +183,8 @@ Both distributed signing helpers and `watermark_media()` accept these settings;
 uses `default`: CPU FP32 and independent video frames. `fast` permits supported
 CPU BF16 for images and video anchors, with FP32 fallback. The CPU encoder attempts
 cached compilation on first use, so cold startup differs from warmed throughput.
+Compilation needs a C++ compiler (`g++` on Linux); without one, the encoder runs
+uncompiled and logs a warning once.
 
 Fast video interpolates watermark residuals between frames 0, 4, 8, ... and the
 final frame, trading robustness for CPU throughput. Warm encoder comparisons on an
@@ -196,8 +198,8 @@ fast video uses FP32 anchors and is not recommended on GPU. Audio, including vid
 audio tracks, keeps its ordinary encoder in both profiles.
 
 Settings stay local, outside action parameters, network requests and C2PA
-assertions. Settings alone do not request watermarking. The shipped
-[Docker images](docker.md) use fixed engine versions and do not support these profiles.
+assertions. Settings alone do not request watermarking. The full
+[Docker image](docker.md) takes them as `watermark_settings`, from 2.3.
 
 ## Troubleshooting
 
