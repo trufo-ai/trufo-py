@@ -178,19 +178,18 @@ marked_bytes = watermark_media(
 )
 ```
 
-Both distributed signing helpers and `watermark_media()` accept these settings;
+Both distributed signing helpers and `watermark_media()` accept these settings, and
 `WatermarkSettings(profile="fast")` accepts the string directly. Omitting settings
-uses `default`: CPU FP32 and independent video frames. `fast` permits supported
-CPU BF16 for images and video anchors, with FP32 fallback. The CPU encoder attempts
-cached compilation on first use, so cold startup differs from warmed throughput.
-Compilation needs a C++ compiler (`g++` on Linux); without one, the encoder runs
-uncompiled and logs a warning once.
+uses `default`.
 
-Fast video interpolates watermark residuals between frames 0, 4, 8, ... and the
-final frame, trading robustness for CPU throughput. Warm encoder comparisons on an
-eight-thread AMD Ryzen 9 9950X3D measured 4.97× throughput, excluding startup, input
-copies and codecs; a separate 40-clip, 360-case durability test recovered 74.4% with
-fast CPU BF16 versus 86.7% with default CPU FP32.
+- `default`: standard every-frame computation.
+- `fast`: every-fourth-frame computation with interpolation; lower-precision
+  computations; about 5x faster on CPU but with lower durability (87% -> 74% in our
+  tests).
+
+The first watermark after startup is slower while the engine prepares. This uses a
+C++ compiler such as `g++`; without one, watermarking still works, more slowly, and
+logs a warning once.
 
 An NVIDIA CUDA GPU is recommended and selected automatically when available.
 Default video and both image profiles retain the original GPU implementation;
