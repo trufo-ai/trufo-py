@@ -7,6 +7,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.3.0] — 2026-11-13
+
+### Added
+
+- `WatermarkSettings` and `WatermarkProfile` for local watermark embedding with
+  `watermark_media` and the distributed signing helpers. `default` uses CPU FP32;
+  `fast` permits supported CPU BF16 and four-frame video interpolation, trading
+  robustness for CPU throughput. CUDA selection remains automatic. Settings stay
+  local and require an explicit watermark action when signing. See
+  [Local Watermark Settings](docs/local/python.md#local-watermark-settings) for
+  platform behavior and measured tradeoffs.
+- `skip_manifest_storage` on `sign_c2pa`, `submit_c2pa_sign`, `sign_c2pa_test`,
+  `sign_c2pa_distributed` and `sign_c2pa_distributed_test`: ask Trufo not to
+  store a copy of the signed manifest. A per-embed watermark refuses it
+  (`400 ManifestStorageRequired`). See
+  [`POST /c2pa/sign`](docs/api/api_c2pa.md#post-c2pasign).
+- `bind_commit` and `bind_commit_test` re-emit the server's `warnings` as
+  `TrufoServerWarning`.
+- `request_c2pa_cert` and `request_c2pa_cert_test` accept the instance key as an
+  `ec.EllipticCurvePrivateKey`, such as a key held in a KMS. `AWSKMSPrivateKey` and
+  `GCPKMSPrivateKey` in `trufo.crypt.kms` wrap AWS KMS and Google Cloud KMS keys. See
+  [Keep the instance key in a KMS](docs/quickstart/1_certs.md#keep-the-instance-key-in-a-kms).
+
+### Changed
+
+- Local-engine extras require trufo-provenance 2.3.
+- A C2PA action in an ingredient's `action_history`, created or gathered,
+  requires a `digitalSourceType` unless
+  [exempt](docs/api/api_c2pa.md#assertions); without one, the API returns
+  `400 MissingDigitalSourceType`. A created action without one previously
+  returned `403 C2PACreatedUserAssertionsNotAuthorized`.
+- Local mode with the Python SDK supports CPython 3.10 to 3.15; watermark
+  embedding needs 3.12 or later, and JPEG XL signing 3.12 or earlier.
+- `bind_commit` accepts a per-AI-system bind: the commit is optional but
+  recommended, and a manifest without a `c2pa.watermarked.unbound` action commits
+  with a warning. It previously returned `400 InvalidWid`.
+- `bind_commit` commits a per-embed manifest that does not declare its watermark
+  and emits a `TrufoServerWarning`; it previously returned `400`.
+- The [AI system endpoints](docs/api/api_c2pa.md#ai-systems) accept
+  `watermark-prod` and `watermark-test` keys as well as C2PA signing keys.
+
+### Removed
+
+- Customer-hosted manifests (suspended): `bind_commit` and `bind_commit_test` no
+  longer take `manifest_id` or `manifest_endpoint`. To host manifests in your own
+  C2PA manifest store, contact support@trufo.ai.
+
 ## [2.2.2] — 2026-11-11
 
 ### Added
@@ -646,7 +693,8 @@ Minor-version bump marks the general availability of the production C2PA signing
 - `trufo.intf`: credential storage and loading (env vars + file), CLI entry point.
 - PyPI trusted publishing via GitHub Actions (OIDC, no API tokens required).
 
-[Unreleased]: https://github.com/trufo-ai/trufo-py/compare/v2.2.2...HEAD
+[Unreleased]: https://github.com/trufo-ai/trufo-py/compare/v2.3.0...HEAD
+[2.3.0]: https://github.com/trufo-ai/trufo-py/compare/v2.2.2...v2.3.0
 [2.2.2]: https://github.com/trufo-ai/trufo-py/compare/v2.2.1...v2.2.2
 [2.2.1]: https://github.com/trufo-ai/trufo-py/compare/v2.2.0...v2.2.1
 [2.2.0]: https://github.com/trufo-ai/trufo-py/compare/v2.1.0...v2.2.0

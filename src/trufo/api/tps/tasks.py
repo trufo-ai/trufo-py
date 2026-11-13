@@ -115,7 +115,9 @@ class TaskWaitTimeoutError(TimeoutError):
 
     def __init__(self, task_id: str):
         self.task_id = task_id
-        super().__init__(f"Stopped waiting for task {task_id}; server execution was not cancelled. Use get_task() to check its status.")
+        super().__init__(
+            f"Stopped waiting for task {task_id}; server execution was not cancelled. Use get_task() to check its status."
+        )
 
 
 def _parse_task_response(payload: dict, response_type):
@@ -127,31 +129,47 @@ def _parse_task_response(payload: dict, response_type):
         values["error_http_status"] = payload["error"]["http_status"]
         values["error_message"] = payload["error"].get("message")
     if values.get("result"):
-        result_type = SignC2PATaskResult if values["task_type"] == TaskType.C2PA_SIGN else BindWatermarkTaskResult
+        result_type = (
+            SignC2PATaskResult
+            if values["task_type"] == TaskType.C2PA_SIGN
+            else BindWatermarkTaskResult
+        )
         result = values["result"]
-        values["result"] = result_type(**{f.name: result[f.name] for f in fields(result_type) if f.name in result})
+        values["result"] = result_type(
+            **{f.name: result[f.name] for f in fields(result_type) if f.name in result}
+        )
     return response_type(**values)
 
 
 def _submit_task(api_key: str, endpoint: str, body: dict, *, trufo_api_url: str) -> TaskReceipt:
-    response = requests.post(trufo_api_url + endpoint, json={**body, "execution_mode": "task"},
-                             headers=sdk_headers(api_key), timeout=60)
+    response = requests.post(
+        trufo_api_url + endpoint,
+        json={**body, "execution_mode": "task"},
+        headers=sdk_headers(api_key),
+        timeout=60,
+    )
     response.raise_for_status()
     if response.status_code != 202:
-        raise ValueError("Expected task acceptance (HTTP 202); check that the endpoint supports TASK execution.")
+        raise ValueError(
+            "Expected task acceptance (HTTP 202); check that the endpoint supports TASK execution."
+        )
     return _parse_task_response(response.json(), TaskReceipt)
 
 
 def get_task(api_key: str, task_id: str, *, trufo_api_url: str = TRUFO_API_URL) -> TaskInfo:
     """Read status from the same API region used to submit the task."""
-    response = requests.get(trufo_api_url + "/tasks/" + quote(task_id, safe=""),
-                            headers=sdk_headers(api_key), timeout=30)
+    response = requests.get(
+        trufo_api_url + "/tasks/" + quote(task_id, safe=""),
+        headers=sdk_headers(api_key),
+        timeout=30,
+    )
     response.raise_for_status()
     return _parse_task_response(response.json(), TaskInfo)
 
 
-def wait_for_task(api_key: str, task_id: str, *, wait_seconds: float = 600,
-                  trufo_api_url: str = TRUFO_API_URL) -> TaskInfo:
+def wait_for_task(
+    api_key: str, task_id: str, *, wait_seconds: float = 600, trufo_api_url: str = TRUFO_API_URL
+) -> TaskInfo:
     """Wait synchronously without retrying submission or server failures.
 
     Check immediately, then every second for 10 seconds, every 10 seconds until
@@ -172,7 +190,9 @@ def wait_for_task(api_key: str, task_id: str, *, wait_seconds: float = 600,
         except requests.Timeout as exc:
             raise TaskWaitTimeoutError(task_id) from exc
         except requests.RequestException as exc:
-            raise RuntimeError(f"Could not read task {task_id}; use get_task() to check its status.") from exc
+            raise RuntimeError(
+                f"Could not read task {task_id}; use get_task() to check its status."
+            ) from exc
         if task.status == TaskStatus.SUCCEEDED:
             if task.result is None:
                 raise ValueError(f"Succeeded task {task_id} has no output reference.")

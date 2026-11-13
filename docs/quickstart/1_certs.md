@@ -194,6 +194,55 @@ are what lets this deployment request certificates. An instance may hold two act
 credentials at once, which is what makes rotation non-disruptive (see
 [Revocation and Rotation](#revocation-and-rotation)).
 
+#### Keep the instance key in a KMS
+
+Keep the instance key in AWS KMS or Google Cloud KMS so it never leaves the KMS. The
+instance key must be P-256. Any other P-256 `ec.EllipticCurvePrivateKey` that signs in
+your KMS also works.
+
+**AWS KMS:** create a key with key spec `ECC_NIST_P256` and key usage `SIGN_VERIFY`, and
+`pip install boto3`:
+
+```python
+import boto3
+
+from trufo.crypt.kms import AWSKMSPrivateKey
+
+instance_private_key = AWSKMSPrivateKey(boto3.client("kms"), "alias/<your-key>")
+```
+
+**Google Cloud KMS:** create a key with purpose `ASYMMETRIC_SIGN` and algorithm
+`EC_SIGN_P256_SHA256`, and `pip install google-cloud-kms`:
+
+```python
+from google.cloud import kms
+
+from trufo.crypt.kms import GCPKMSPrivateKey
+
+instance_private_key = GCPKMSPrivateKey(
+    kms.KeyManagementServiceClient(),
+    "projects/<project>/locations/<location>/keyRings/<ring>/cryptoKeys/<key>/cryptoKeyVersions/1",
+)
+```
+
+Then register its public key:
+
+```python
+from trufo import register_credential
+
+gpic_id = register_credential(
+    session,
+    gpi_id=gpi_id,
+    label="prod-key-1",
+    key_algorithm="ES256",
+    public_key_pem=instance_private_key.public_key_pem,
+)
+```
+
+In [step 5](#step-5--enroll-a-certificate), pass `instance_key_pem=instance_private_key`
+to `request_c2pa_cert()`. The leaf key (`private_key_signer`) can be a KMS key in the
+same way.
+
 ### Step 5 — Enroll a certificate
 
 Repeat each renewal cycle. Generate a **fresh leaf key every time** — a public key

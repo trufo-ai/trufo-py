@@ -10,13 +10,9 @@ import pytest
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives.serialization import Encoding, NoEncryption, PrivateFormat
 
-from trufo import request_c2pa_cert_test
-from trufo.api.tca.certs_c2pa import (
-    _build_gpic_assertion,
-    create_instance,
-    register_credential,
-    request_c2pa_cert,
-)
+from trufo import generate_keypair, request_c2pa_cert_test
+from trufo.api.tca.certs_c2pa import create_instance, register_credential, request_c2pa_cert
+from trufo.crypt.algorithms import SigningAlgorithm
 from trufo.crypt.tca_certs import LeafType
 
 _MODULE = "trufo.api.tca.certs_c2pa"
@@ -78,26 +74,6 @@ class TestRegisterCredential:
         assert body["public_key_pem"] == "pub-pem"
 
 
-# --- GPIC assertion JWT ---
-
-
-class TestBuildGpicAssertion:
-    """_build_gpic_assertion produces a valid JWT."""
-
-    def test_returns_decodable_jwt(self):
-        key = ec.generate_private_key(ec.SECP256R1())
-        private_pem = key.private_bytes(Encoding.PEM, PrivateFormat.PKCS8, NoEncryption()).decode()
-
-        jwt_str = _build_gpic_assertion("gpi_1", "gpic_2", private_pem, "ES256")
-
-        payload = pyjwt.decode(jwt_str, options={"verify_signature": False})
-        assert payload["iss"] == "gpi_1"
-        assert payload["sub"] == "gpic_2"
-        assert payload["aud"] == "trufo-ra"
-        assert "iat" in payload
-        assert "exp" in payload
-
-
 # --- end-to-end procurement (sub-steps mocked) ---
 
 
@@ -129,6 +105,36 @@ class TestRequestC2paCert:
             f"{api_url}/ra/c2pa/csr-jwt",
             f"{ca_url}/.well-known/est/c2pa-l1/simpleenroll",
         ]
+
+    @pytest.mark.parametrize(
+        ("algorithm", "key_form"),
+        [
+            (SigningAlgorithm.ES256, "pem-str"),
+            (SigningAlgorithm.ES256, "aws-kms"),
+            (SigningAlgorithm.ES256, "gcp-kms"),
+            (SigningAlgorithm.EDDSA, "pem-bytes"),
+        ],
+        ids=["ec-pem-str", "aws-kms", "gcp-kms", "ed25519-pem-bytes"],
+    )
+    @patch(f"{_MODULE}.extract_cert_chain")
+    @patch("requests.post")
+    def test_client_assertion_verifies_against_registered_key(
+        self, mock_post, _mock_extract, kms_keys, algorithm, key_form
+    ):
+        mock_post.side_effect = [
+            MagicMock(status_code=200, **{"json.return_value": {"csr_jwt": "csr-jwt"}}),
+            MagicMock(status_code=200, content=b"pkcs7"),
+        ]
+        private_pem, public_pem = generate_keypair(algorithm)
+        to_instance_key = {"pem-str": bytes.decode, "pem-bytes": bytes, **kms_keys}[key_form]
+
+        request_c2pa_cert("gpi_1", "gpic_1", to_instance_key(private_pem), _ec_p256_pem())
+
+        assertion = mock_post.call_args_list[0].kwargs["json"]["client_assertion"]
+        claims = pyjwt.decode(
+            assertion, public_pem, algorithms=["ES256", "EdDSA"], audience="trufo-ra"
+        )
+        assert (claims["iss"], claims["sub"]) == ("gpi_1", "gpic_1")
 
     @patch(f"{_MODULE}.extract_cert_chain")
     @patch(f"{_MODULE}.est_enroll")

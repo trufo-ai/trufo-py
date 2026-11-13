@@ -9,6 +9,7 @@ import types
 from unittest.mock import MagicMock, patch
 
 import pytest
+
 from trufo import GetS3UploadURLResult, SignC2PAS3Result
 from trufo.api.endpoints import (
     TPS_C2PA_SIGN_PATH,
@@ -17,7 +18,6 @@ from trufo.api.endpoints import (
     TRUFO_API_URL_TEST,
 )
 from trufo.api.headers import sdk_headers
-from trufo.api.tps.tasks import ExecutionMode
 from trufo.api.tps.sign_c2pa import (
     _validate_actions,
     _validate_assertions,
@@ -33,6 +33,7 @@ from trufo.api.tps.sign_c2pa import (
     sign_c2pa_via_s3_test,
     submit_c2pa_sign,
 )
+from trufo.api.tps.tasks import ExecutionMode
 from trufo.c2pa import (
     ManifestSettings,
     SignedIngredientPolicy,
@@ -40,6 +41,7 @@ from trufo.c2pa import (
     ThumbnailPolicy,
     ThumbnailSettings,
     ThumbnailSize,
+    WatermarkSettings,
 )
 
 
@@ -61,10 +63,15 @@ def _mock_response(json_data: dict):
 
 
 def _accepted_task():
-    response = _mock_response({
-        "task_id": "task-1", "task_type": "c2pa_sign", "status": "queued",
-        "startby_ts": "2026-09-19T12:05:00Z", "timeout_seconds": 60,
-    })
+    response = _mock_response(
+        {
+            "task_id": "task-1",
+            "task_type": "c2pa_sign",
+            "status": "queued",
+            "startby_ts": "2026-09-19T12:05:00Z",
+            "timeout_seconds": 60,
+        }
+    )
     response.status_code = 202
     return response
 
@@ -167,6 +174,7 @@ class TestDirectC2PASigning:
             branded_gp_id="gp_x",
             signed_input_policy=SignedInputPolicy.KEEP,
             signed_ingredient_policy=SignedIngredientPolicy.KEEP,
+            skip_manifest_storage=True,
         )
 
         assert result == signed
@@ -192,6 +200,7 @@ class TestDirectC2PASigning:
                 "branded_gp_id": "gp_x",
                 "signed_input_policy": "keep",
                 "signed_ingredient_policy": "keep",
+                "skip_manifest_storage": True,
             },
             headers=_expected_headers("prod-key"),
             timeout=60,
@@ -267,6 +276,8 @@ class TestRemoteC2PASigning:
             branded_gp_id="gp_x",
             signed_input_policy="keep",
             signed_ingredient_policy="keep",
+            skip_manifest_storage=True,
+            watermark_settings=WatermarkSettings("fast"),
         )
 
         assert result == b"signed-test"
@@ -285,6 +296,8 @@ class TestRemoteC2PASigning:
             "manifest_settings": {"thumbnail_settings": {"policy": "auto", "size": "high"}},
             "signed_input_policy": "keep",
             "signed_ingredient_policy": "keep",
+            "skip_manifest_storage": True,
+            "watermark_settings": {"profile": "fast"},
         }
 
     def test_prod_signing_delegates_with_endpoint_overrides(self, monkeypatch):
@@ -297,6 +310,7 @@ class TestRemoteC2PASigning:
             assertions=[["cawg_identity", {"cawg_identity_id": "org_interim"}]],
             trufo_api_url="https://api.trufo.example",
             branded_gp_id="gp_x",
+            watermark_settings=WatermarkSettings(),
         )
 
         assert result == b"signed-prod"
@@ -306,6 +320,7 @@ class TestRemoteC2PASigning:
         assert kwargs["test"] is False
         assert kwargs["trufo_api_url"] == "https://api.trufo.example"
         assert kwargs["branded_gp_id"] == "gp_x"
+        assert kwargs["watermark_settings"] == {"profile": "default"}
 
     def test_prod_signing_uses_default_api_url(self, monkeypatch):
         calls = _install_fake_remote_stack(monkeypatch)
@@ -317,6 +332,8 @@ class TestRemoteC2PASigning:
         assert kwargs["trufo_api_url"] == TRUFO_API_URL
         assert "signed_input_policy" not in kwargs
         assert "signed_ingredient_policy" not in kwargs
+        assert "skip_manifest_storage" not in kwargs
+        assert "watermark_settings" not in kwargs
 
     @pytest.mark.parametrize("signer", _REMOTE_SIGNERS)
     def test_returns_signed_bytes_discarding_orchestrator_warnings(self, monkeypatch, signer):
@@ -330,19 +347,26 @@ class TestRemoteC2PASigning:
         assert result == b"signed"
 
     @pytest.mark.parametrize("signer", _REMOTE_SIGNERS)
-    def test_validates_before_optional_imports(self, monkeypatch, signer):
+    @pytest.mark.parametrize(
+        "kwargs, error, match",
+        [
+            (
+                {"assertions": [["cawg_identity", {"cawg_identity_id": ""}]]},
+                ValueError,
+                "requires a non-empty",
+            ),
+            ({"watermark_settings": {}}, TypeError, "WatermarkSettings"),
+        ],
+    )
+    def test_validates_before_optional_imports(self, monkeypatch, signer, kwargs, error, match):
         require_provenance_module = MagicMock()
         monkeypatch.setattr(
             "trufo.api.tps.sign_c2pa.require_provenance_module",
             require_provenance_module,
         )
 
-        with pytest.raises(ValueError, match="requires a non-empty"):
-            signer(
-                "remote-sign-key",
-                b"input-media",
-                assertions=[["cawg_identity", {"cawg_identity_id": ""}]],
-            )
+        with pytest.raises(error, match=match):
+            signer("remote-sign-key", b"input-media", **kwargs)
 
         require_provenance_module.assert_not_called()
 
@@ -456,16 +480,20 @@ class TestS3C2PASigning:
             branded_gp_id="gp_x",
             signed_input_policy="keep",
             signed_ingredient_policy="keep",
+            skip_manifest_storage=True,
         )
 
         assert mock_post.call_args.kwargs["json"]["branded_gp_id"] == "gp_x"
         assert mock_post.call_args.kwargs["json"]["signed_input_policy"] == "keep"
         assert mock_post.call_args.kwargs["json"]["signed_ingredient_policy"] == "keep"
+        assert mock_post.call_args.kwargs["json"]["skip_manifest_storage"] is True
 
     @patch("trufo.api.tps.sign_c2pa.requests.post")
     def test_s3_request_and_test_signing_reject_before_network(self, mock_post):
-        with pytest.warns(DeprecationWarning, match="use submit_c2pa_sign"), \
-             pytest.raises(ValueError, match="S3 input requires"):
+        with (
+            pytest.warns(DeprecationWarning, match="use submit_c2pa_sign"),
+            pytest.raises(ValueError, match="S3 input requires"),
+        ):
             sign_c2pa_s3("prod-key", "signed-input-reference")
         with pytest.raises(ValueError, match="REQUEST execution with bytes only"):
             sign_c2pa_s3_test("test-key", "signed-input-reference")
@@ -490,7 +518,9 @@ class TestS3C2PASigning:
             expires_at=1770000000,
             duration="5m",
         )
-        mock_sign_s3.return_value = SignC2PAS3Result(media_output_s3="output-reference", download_url="https://download.example")
+        mock_sign_s3.return_value = SignC2PAS3Result(
+            media_output_s3="output-reference", download_url="https://download.example"
+        )
         mock_get.return_value.content = b"signed-media"
 
         result = sign_c2pa_via_s3(
@@ -563,8 +593,15 @@ class TestS3C2PASigning:
             ),
             _accepted_task(),
         ]
-        mock_wait.return_value = types.SimpleNamespace(task_id="task-1", result=types.SimpleNamespace(
-            media_output_s3="output-reference", download_url="https://download.example", cid=None, wid=None))
+        mock_wait.return_value = types.SimpleNamespace(
+            task_id="task-1",
+            result=types.SimpleNamespace(
+                media_output_s3="output-reference",
+                download_url="https://download.example",
+                cid=None,
+                wid=None,
+            ),
+        )
         mock_get.return_value.content = b"s3-signed"
 
         assert (
@@ -590,8 +627,9 @@ class TestS3C2PASigning:
         ]
         assert mock_post.call_args_list[2].kwargs["json"]["signed_input_policy"] == "auto"
         assert mock_post.call_args_list[2].kwargs["json"]["signed_ingredient_policy"] == "auto"
-        mock_wait.assert_called_once_with("prod-key", "task-1", wait_seconds=600, trufo_api_url=trufo_api_url)
-
+        mock_wait.assert_called_once_with(
+            "prod-key", "task-1", wait_seconds=600, trufo_api_url=trufo_api_url
+        )
 
     @patch("trufo.api.tps.sign_c2pa.requests.post")
     def test_s3_assertions_without_cawg_identity_pass_silently(self, mock_post, caplog):

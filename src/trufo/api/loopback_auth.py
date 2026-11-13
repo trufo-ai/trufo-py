@@ -168,11 +168,13 @@ def run_loopback_login(
         port = httpd.server_address[1]
         redirect_uri = f"http://127.0.0.1:{port}/callback"
 
-        query = urlencode({
-            "code_challenge": pkce.challenge,
-            "state": state,
-            "redirect_uri": redirect_uri,
-        })
+        query = urlencode(
+            {
+                "code_challenge": pkce.challenge,
+                "state": state,
+                "redirect_uri": redirect_uri,
+            }
+        )
         authorize_url = f"{app_url}{LOOPBACK_AUTH_PATH}?{query}"
 
         # webbrowser.open returns False when it cannot find a browser to launch,

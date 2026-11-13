@@ -66,9 +66,10 @@ def request_cawg_interim_cert(
         client: Authenticated TrufoSession (Bearer JWT).
         private_key_signer: Leaf private key — PEM ``bytes``, a
             filesystem path (``str``/``Path``), or an
-            ``ec.EllipticCurvePrivateKey`` (e.g. an AWS KMS adapter).
-            The CA enforces the allowed key algorithms (currently
-            EC P-256 / P-384).
+            ``ec.EllipticCurvePrivateKey`` (e.g.
+            ``trufo.crypt.kms.AWSKMSPrivateKey`` or
+            ``GCPKMSPrivateKey``). The CA enforces the allowed key
+            algorithms (currently EC P-256 / P-384).
         validity_days: Requested validity in days. Must be in
             ``[1, 366]``. ``None`` lets the server use its default
             (366).

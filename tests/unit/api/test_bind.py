@@ -21,14 +21,18 @@ from trufo.api.tps.bind import (
     watermark_media,
 )
 from trufo.api.tps.tasks import ExecutionMode
+from trufo.c2pa import WatermarkSettings
 from trufo.util.warnings import TrufoServerWarning
 
 _M = "trufo.api.tps.bind"
 
 _MARKED_B64 = base64.b64encode(b"marked").decode()
 _WID = "v1.001abcdef12"
-_PER_AI_SYSTEM = {"wid_allocation_mode": "per_ai_system", "ai_system_id": "aisys_1",
-                  "ai_involvement": "ai_generated"}
+_PER_AI_SYSTEM = {
+    "wid_allocation_mode": "per_ai_system",
+    "ai_system_id": "aisys_1",
+    "ai_involvement": "ai_generated",
+}
 
 
 def _response(payload, status=200):
@@ -57,13 +61,19 @@ class TestBindWatermark:
             "media_input": base64.b64encode(b"media-bytes").decode(),
         }
 
-    @pytest.mark.parametrize("bind, arg, kwargs", [
-        (bind_watermark, b"media-bytes", {}),
-        (bind_watermark, b"media-bytes",
-         {"execution_mode": ExecutionMode.TASK, "mime_type": "image/jpeg"}),
-        (bind_watermark_test, b"media-bytes", {}),
-        (bind_reserve_test, "image/jpeg", {}),
-    ])
+    @pytest.mark.parametrize(
+        "bind, arg, kwargs",
+        [
+            (bind_watermark, b"media-bytes", {}),
+            (
+                bind_watermark,
+                b"media-bytes",
+                {"execution_mode": ExecutionMode.TASK, "mime_type": "image/jpeg"},
+            ),
+            (bind_watermark_test, b"media-bytes", {}),
+            (bind_reserve_test, "image/jpeg", {}),
+        ],
+    )
     @patch(f"{_M}._download_task_output", return_value=b"marked")
     @patch(f"{_M}.wait_for_task")
     @patch(f"{_M}._upload_task_input", return_value="s3-ref")
@@ -71,11 +81,20 @@ class TestBindWatermark:
     def test_allocation_keys_sent_when_set(
         self, post, _upload, _wait, _download, bind, arg, kwargs
     ):
-        post.return_value = _response({
-            "media_output": _MARKED_B64, "wid": _WID, "cid": "c_1", "task_id": "t_1",
-            "wid_package": {"wid": _WID, "expires_at": "x"}, "task_type": "watermark",
-            "status": "queued", "startby_ts": "x", "timeout_seconds": 60,
-        }, status=202)
+        post.return_value = _response(
+            {
+                "media_output": _MARKED_B64,
+                "wid": _WID,
+                "cid": "c_1",
+                "task_id": "t_1",
+                "wid_package": {"wid": _WID, "expires_at": "x"},
+                "task_type": "watermark",
+                "status": "queued",
+                "startby_ts": "x",
+                "timeout_seconds": 60,
+            },
+            status=202,
+        )
         bind("key", arg, **kwargs, **_PER_AI_SYSTEM)
         assert post.call_args.kwargs["json"].items() >= _PER_AI_SYSTEM.items()
 
@@ -88,14 +107,17 @@ class TestBindWatermark:
             bind_watermark("key", b"media-bytes", mode="provenance")
         assert mock_post.call_args.kwargs["json"]["mode"] == "provenance"
 
-    @pytest.mark.parametrize("kwargs, error", [
-        ({"mode": "compliance"}, NotImplementedError),
-        ({"ai_compliance_label": "ai_generated"}, TypeError),
-        ({"mode": "attestation"}, ValueError),
-        ({"mode": "provenance", "wid_allocation_mode": "per_embed"}, ValueError),
-        ({"wid_allocation_mode": "per_asset"}, NotImplementedError),
-        ({"ai_involvement": "ai_assisted"}, ValueError),
-    ])
+    @pytest.mark.parametrize(
+        "kwargs, error",
+        [
+            ({"mode": "compliance"}, NotImplementedError),
+            ({"ai_compliance_label": "ai_generated"}, TypeError),
+            ({"mode": "attestation"}, ValueError),
+            ({"mode": "provenance", "wid_allocation_mode": "per_embed"}, ValueError),
+            ({"wid_allocation_mode": "per_asset"}, NotImplementedError),
+            ({"ai_involvement": "ai_assisted"}, ValueError),
+        ],
+    )
     @patch(f"{_M}.requests.post")
     def test_unsupported_options_do_not_send_request(self, post, kwargs, error):
         with pytest.raises(error):
@@ -128,14 +150,25 @@ class TestBindReserve:
 
 
 class TestWatermarkMedia:
-    def test_embeds_through_the_engine_boundary(self):
+    @pytest.mark.parametrize("settings", [None, WatermarkSettings(), WatermarkSettings("fast")])
+    def test_embeds_through_the_engine_boundary(self, settings):
         engine = MagicMock()
         engine.WatermarkIdPackage.side_effect = lambda **kw: kw
         engine.embed.return_value = b"marked"
-        with patch.dict("sys.modules", {"tfprov.util.pawprint_import": engine}):
-            with patch("tfprov.util.pawprint_import", engine, create=True):
-                assert watermark_media(b"media", {"wid": _WID, "expires_at": "x"}) == b"marked"
-        engine.embed.assert_called_once_with(b"media", {"wid": _WID, "expires_at": "x"})
+        with patch.dict("sys.modules", {"tfprov.util": MagicMock(pawprint_import=engine)}):
+            assert (
+                watermark_media(
+                    b"media", {"wid": _WID, "expires_at": "x"}, watermark_settings=settings
+                )
+                == b"marked"
+            )
+        options = {} if settings is None else {"mode": settings.profile.value}
+        engine.embed.assert_called_once_with(b"media", {"wid": _WID, "expires_at": "x"}, **options)
+
+    def test_wrong_settings_type_precedes_optional_import(self):
+        with patch.dict("sys.modules", {"tfprov.util": None}):
+            with pytest.raises(TypeError, match="WatermarkSettings"):
+                watermark_media(b"media", {}, watermark_settings="fast")
 
     def test_missing_engine_gives_the_install_hint(self):
         with patch.dict("sys.modules", {"tfprov.util.pawprint_import": None, "tfprov.util": None}):
@@ -159,20 +192,18 @@ class TestBindCommit:
         }
 
     @patch(f"{_M}.requests.post")
-    def test_manifest_id_with_own_endpoint(self, mock_post):
+    def test_test_variant_targets_the_test_host(self, mock_post):
         mock_post.return_value = _response({"cid": "c_1", "wid": _WID})
-
-        bind_commit_test(
-            "key", "c_1", _WID, manifest_id="urn:c2pa:1", manifest_endpoint="https://m.example/c2pa"
-        )
-
+        bind_commit_test("key", "c_1", _WID, manifest_bytes=b"store")
         assert mock_post.call_args.args[0] == f"{TRUFO_API_URL_TEST}/bind/commit"
-        assert mock_post.call_args.kwargs["json"] == {
-            "cid": "c_1",
-            "wid": _WID,
-            "manifest_id": "urn:c2pa:1",
-            "manifest_endpoint": "https://m.example/c2pa",
-        }
+
+    @patch(f"{_M}.requests.post")
+    def test_server_warnings_reemitted(self, mock_post):
+        mock_post.return_value = _response(
+            {"cid": "c_1", "wid": _WID, "warnings": ["The mark is not declared."]}
+        )
+        with pytest.warns(TrufoServerWarning, match="The mark is not declared"):
+            bind_commit("key", "c_1", _WID, manifest_bytes=b"store")
 
     @patch(f"{_M}._manifest_store_from_media", return_value=b"store")
     @patch(f"{_M}.requests.post")
@@ -194,11 +225,12 @@ class TestBindCommit:
         [
             {},  # no manifest source
             {"signed_media_bytes": b"signed-bytes", "manifest_bytes": b"store"},  # two
-            {"manifest_id": "urn:c2pa:1"},  # id without the customer's endpoint
         ],
     )
     def test_manifest_source_rules_enforced_locally(self, kwargs):
-        with pytest.raises(ValueError):
+        with pytest.raises(
+            ValueError, match="Provide exactly one of manifest_bytes or signed_media_bytes"
+        ):
             bind_commit("key", "c_1", _WID, **kwargs)
 
     @patch(f"{_M}.requests.post")

@@ -23,6 +23,7 @@ from entrypoint import parse_folder_list
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel
+from tfprov.c2pa_generator import cg_request
 from tfprov.c2pa_generator.remote_orchestrator import generate_claim_remote
 from tfprov.c2pa_generator.sb_watermark import (
     is_watermark_entry,
@@ -51,9 +52,11 @@ class C2PASignRequest(BaseModel):
     manifest_title: str | None = None
     ingredient_title: str | None = None
     manifest_settings: dict[str, Any] | None = None
+    watermark_settings: dict[str, Any] | None = None
     branded_gp_id: str | None = None
     signed_input_policy: SignedInputPolicy | None = None
     signed_ingredient_policy: SignedIngredientPolicy | None = None
+    skip_manifest_storage: bool = False
 
 
 @asynccontextmanager
@@ -99,6 +102,19 @@ async def sign(body: C2PASignRequest, request: Request) -> dict | Response:
         raise HTTPException(status_code=401, detail="MissingAuthentication")
     state = request.app.state
     validation_warnings = []
+    watermark_options = {}
+    if body.watermark_settings is not None:
+        normalize_settings = getattr(cg_request, "normalize_watermark_settings", None)
+        if normalize_settings is None:
+            raise HTTPException(
+                status_code=400,
+                detail="Watermark settings require trufo-provenance 2.3 or later.",
+            )
+        try:
+            normalize_settings(body.watermark_settings)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        watermark_options["watermark_settings"] = body.watermark_settings
     if any(is_watermark_entry(entry) for entry in body.actions):
         if state.watermark_engine_version is None:
             raise HTTPException(status_code=400, detail="WatermarkNotAvailable")
@@ -131,9 +147,12 @@ async def sign(body: C2PASignRequest, request: Request) -> dict | Response:
                 manifest_title=body.manifest_title,
                 ingredient_title=body.ingredient_title,
                 manifest_settings=body.manifest_settings,
+                **watermark_options,
                 branded_gp_id=body.branded_gp_id,
                 signed_input_policy=body.signed_input_policy,
                 signed_ingredient_policy=body.signed_ingredient_policy,
+                # only when set, so an engine without this parameter still signs
+                **({"skip_manifest_storage": True} if body.skip_manifest_storage else {}),
             )
         except RemoteSignError as exc:
             # trufo's own 4xx errors pass through; any other trufo failure is upstream's

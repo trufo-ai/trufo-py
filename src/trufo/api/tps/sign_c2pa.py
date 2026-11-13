@@ -36,15 +36,24 @@ from trufo.api.endpoints import (
     TRUFO_API_URL_TEST,
 )
 from trufo.api.headers import sdk_headers
-from trufo.api.tps.io import GetS3UploadURLResult, get_s3_upload_url, _upload_task_input
+from trufo.api.tps.io import GetS3UploadURLResult, _upload_task_input, get_s3_upload_url
 from trufo.api.tps.tasks import (
-    ExecutionMode, TaskReceipt, _submit_task, wait_for_task, _download_task_output,
+    ExecutionMode,
+    TaskReceipt,
+    _download_task_output,
+    _submit_task,
+    wait_for_task,
 )
 from trufo.c2pa.actions import TrufoAction
 from trufo.c2pa.assertions import UserAssertion
 from trufo.c2pa.manifest import ManifestSettings, SignedIngredientPolicy, SignedInputPolicy
 from trufo.c2pa.redactions import RedactableAssertion, RedactionReason
-from trufo.c2pa.watermark import WatermarkEffort, WatermarkIDAllocationMode, WatermarkMode
+from trufo.c2pa.watermark import (
+    WatermarkEffort,
+    WatermarkIDAllocationMode,
+    WatermarkMode,
+    WatermarkSettings,
+)
 from trufo.util.deprecation import deprecated_aliases
 from trufo.util.optional_imports import require_provenance_module
 from trufo.util.warnings import emit_server_warnings
@@ -76,6 +85,13 @@ def _manifest_settings_payload(settings: ManifestSettings) -> dict:
     if settings.all_actions_included is not None:
         payload["all_actions_included"] = settings.all_actions_included
     return payload
+
+
+def _watermark_settings_payload(settings: WatermarkSettings) -> dict:
+    """Validate and serialize local watermark execution settings."""
+    if not isinstance(settings, WatermarkSettings):
+        raise TypeError("watermark_settings must be WatermarkSettings or None.")
+    return {"profile": settings.profile.value}
 
 
 def _validate_manifest_setting_aliases(
@@ -253,6 +269,7 @@ def _sign_c2pa_direct(
     branded_gp_id: str | None = None,
     signed_input_policy: SignedInputPolicy | str | None = None,
     signed_ingredient_policy: SignedIngredientPolicy | str | None = None,
+    skip_manifest_storage: bool = False,
     trufo_api_url: str = TRUFO_API_URL,
 ) -> bytes:
     """Sign media bytes through a C2PA signing endpoint."""
@@ -279,6 +296,8 @@ def _sign_c2pa_direct(
         body["signed_ingredient_policy"] = SignedIngredientPolicy.validate(
             signed_ingredient_policy
         ).value
+    if skip_manifest_storage:
+        body["skip_manifest_storage"] = True
 
     resp = requests.post(
         trufo_api_url + endpoint,
@@ -318,8 +337,11 @@ def get_c2pa_s3_upload_url(
     Raises:
         requests.HTTPError: If the API returns a non-2xx response.
     """
-    warnings.warn("get_c2pa_s3_upload_url() is deprecated; use get_s3_upload_url().",
-                  DeprecationWarning, stacklevel=2)
+    warnings.warn(
+        "get_c2pa_s3_upload_url() is deprecated; use get_s3_upload_url().",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     return get_s3_upload_url(api_key, mime_type, duration, trufo_api_url=trufo_api_url)
 
 
@@ -335,6 +357,7 @@ def submit_c2pa_sign(
     branded_gp_id: str | None = None,
     signed_input_policy: SignedInputPolicy | str | None = None,
     signed_ingredient_policy: SignedIngredientPolicy | str | None = None,
+    skip_manifest_storage: bool = False,
     trufo_api_url: str = TRUFO_API_URL,
 ) -> TaskReceipt:
     """Submit an existing Trufo upload reference for signing without waiting.
@@ -365,6 +388,8 @@ def submit_c2pa_sign(
         body["signed_ingredient_policy"] = SignedIngredientPolicy.validate(
             signed_ingredient_policy
         ).value
+    if skip_manifest_storage:
+        body["skip_manifest_storage"] = True
 
     return _submit_task(api_key, TPS_C2PA_SIGN_PATH, body, trufo_api_url=trufo_api_url)
 
@@ -416,8 +441,11 @@ def sign_c2pa_s3(
     For TASK bytes, provide mime_type; submit_c2pa_sign() accepts an existing
     Trufo upload reference without waiting.
     """
-    warnings.warn("sign_c2pa_s3() is deprecated; use submit_c2pa_sign() and wait_for_task().",
-                  DeprecationWarning, stacklevel=2)
+    warnings.warn(
+        "sign_c2pa_s3() is deprecated; use submit_c2pa_sign() and wait_for_task().",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     if ExecutionMode.validate(execution_mode) != ExecutionMode.TASK:
         raise ValueError("S3 input requires execution_mode=ExecutionMode.TASK.")
     if wait_seconds <= 0:
@@ -434,9 +462,16 @@ def sign_c2pa_s3(
         signed_ingredient_policy=signed_ingredient_policy,
         trufo_api_url=trufo_api_url,
     )
-    task = wait_for_task(api_key, receipt.task_id, wait_seconds=wait_seconds, trufo_api_url=trufo_api_url)
-    return SignC2PAS3Result(task.result.media_output_s3, task.result.download_url,
-                             task.task_id, task.result.cid, task.result.wid)
+    task = wait_for_task(
+        api_key, receipt.task_id, wait_seconds=wait_seconds, trufo_api_url=trufo_api_url
+    )
+    return SignC2PAS3Result(
+        task.result.media_output_s3,
+        task.result.download_url,
+        task.task_id,
+        task.result.cid,
+        task.result.wid,
+    )
 
 
 def sign_c2pa_s3_test(
@@ -451,7 +486,9 @@ def sign_c2pa_s3_test(
     trufo_api_url: str = TRUFO_API_URL_TEST,
 ) -> SignC2PAS3Result:
     """Deprecated and unsupported: use sign_c2pa_test() with REQUEST bytes."""
-    raise ValueError("The test endpoint supports REQUEST execution with bytes only; use sign_c2pa_test().")
+    raise ValueError(
+        "The test endpoint supports REQUEST execution with bytes only; use sign_c2pa_test()."
+    )
 
 
 def sign_c2pa_via_s3(
@@ -508,8 +545,11 @@ def sign_c2pa_via_s3(
     For TASK bytes, provide mime_type; submit_c2pa_sign() accepts an existing
     Trufo upload reference without waiting.
     """
-    warnings.warn("sign_c2pa_via_s3() is deprecated; use sign_c2pa() with execution_mode=ExecutionMode.TASK.",
-                  DeprecationWarning, stacklevel=2)
+    warnings.warn(
+        "sign_c2pa_via_s3() is deprecated; use sign_c2pa() with execution_mode=ExecutionMode.TASK.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     if ExecutionMode.validate(execution_mode) != ExecutionMode.TASK:
         raise ValueError("S3 input requires execution_mode=ExecutionMode.TASK.")
     if wait_seconds <= 0:
@@ -543,7 +583,9 @@ def sign_c2pa_via_s3(
         trufo_api_url=trufo_api_url,
     )
     if signed_output.download_url is None:
-        raise ValueError(f"Output for task {signed_output.task_id} is no longer available to download.")
+        raise ValueError(
+            f"Output for task {signed_output.task_id} is no longer available to download."
+        )
     return _download_c2pa_s3_media(signed_output.download_url)
 
 
@@ -563,7 +605,9 @@ def sign_c2pa_via_s3_test(
     trufo_api_url: str = TRUFO_API_URL_TEST,
 ) -> bytes:
     """Deprecated and unsupported: use sign_c2pa_test() with REQUEST bytes."""
-    raise ValueError("The test endpoint supports REQUEST execution with bytes only; use sign_c2pa_test().")
+    raise ValueError(
+        "The test endpoint supports REQUEST execution with bytes only; use sign_c2pa_test()."
+    )
 
 
 def _upload_c2pa_s3_media(upload_url: str, media_bytes: bytes, mime_type: str) -> None:
@@ -596,6 +640,7 @@ def sign_c2pa(
     branded_gp_id: str | None = None,
     signed_input_policy: SignedInputPolicy | str | None = None,
     signed_ingredient_policy: SignedIngredientPolicy | str | None = None,
+    skip_manifest_storage: bool = False,
     execution_mode: ExecutionMode = ExecutionMode.REQUEST,
     mime_type: str | None = None,
     wait_seconds: float = 600,
@@ -622,6 +667,8 @@ def sign_c2pa(
         signed_input_policy: What to do when the input is already C2PA-signed; omit for ``auto``.
         signed_ingredient_policy: What to do when an ingredient's media is already
             C2PA-signed; omit for ``auto``.
+        skip_manifest_storage: Ask Trufo not to keep a copy of the signed manifest;
+            refused with a per-embed watermark.
         trufo_api_url: Freeform Trufo API base URL. Defaults to production.
 
     Returns:
@@ -648,13 +695,22 @@ def sign_c2pa(
             SignedIngredientPolicy.validate(signed_ingredient_policy)
         reference = _upload_task_input(api_key, media_bytes, mime_type, trufo_api_url=trufo_api_url)
         receipt = submit_c2pa_sign(
-            api_key, reference, actions, assertions, manifest_title, ingredient_title,
-            manifest_settings=manifest_settings, branded_gp_id=branded_gp_id,
+            api_key,
+            reference,
+            actions,
+            assertions,
+            manifest_title,
+            ingredient_title,
+            manifest_settings=manifest_settings,
+            branded_gp_id=branded_gp_id,
             signed_input_policy=signed_input_policy,
             signed_ingredient_policy=signed_ingredient_policy,
+            skip_manifest_storage=skip_manifest_storage,
             trufo_api_url=trufo_api_url,
         )
-        task = wait_for_task(api_key, receipt.task_id, wait_seconds=wait_seconds, trufo_api_url=trufo_api_url)
+        task = wait_for_task(
+            api_key, receipt.task_id, wait_seconds=wait_seconds, trufo_api_url=trufo_api_url
+        )
         return _download_task_output(task)
     return _sign_c2pa_direct(
         TPS_C2PA_SIGN_PATH,
@@ -668,6 +724,7 @@ def sign_c2pa(
         branded_gp_id=branded_gp_id,
         signed_input_policy=signed_input_policy,
         signed_ingredient_policy=signed_ingredient_policy,
+        skip_manifest_storage=skip_manifest_storage,
         trufo_api_url=trufo_api_url,
     )
 
@@ -684,6 +741,7 @@ def sign_c2pa_test(
     branded_gp_id: str | None = None,
     signed_input_policy: SignedInputPolicy | str | None = None,
     signed_ingredient_policy: SignedIngredientPolicy | str | None = None,
+    skip_manifest_storage: bool = False,
     execution_mode: ExecutionMode = ExecutionMode.REQUEST,
     trufo_api_url: str = TRUFO_API_URL_TEST,
 ) -> bytes:
@@ -706,6 +764,8 @@ def sign_c2pa_test(
         signed_input_policy: What to do when the input is already C2PA-signed; omit for ``auto``.
         signed_ingredient_policy: What to do when an ingredient's media is already
             C2PA-signed; omit for ``auto``.
+        skip_manifest_storage: Ask Trufo not to keep a copy of the signed manifest;
+            refused with a per-embed watermark.
         trufo_api_url: Trufo API base URL. Defaults to the Trufo test host (test.api.trufo.ai).
 
     Returns:
@@ -727,6 +787,7 @@ def sign_c2pa_test(
         branded_gp_id=branded_gp_id,
         signed_input_policy=signed_input_policy,
         signed_ingredient_policy=signed_ingredient_policy,
+        skip_manifest_storage=skip_manifest_storage,
         trufo_api_url=trufo_api_url,
     )
 
@@ -754,9 +815,11 @@ def sign_c2pa_distributed_test(
     manifest_title: str | None = None,
     ingredient_title: str | None = None,
     manifest_settings: ManifestSettings | None = None,
+    watermark_settings: WatermarkSettings | None = None,
     branded_gp_id: str | None = None,
     signed_input_policy: SignedInputPolicy | str | None = None,
     signed_ingredient_policy: SignedIngredientPolicy | str | None = None,
+    skip_manifest_storage: bool = False,
 ) -> bytes:
     """Sign media locally using the Trufo test remote-signing endpoint.
 
@@ -779,6 +842,8 @@ def sign_c2pa_distributed_test(
         ingredient_title: Optional ``parentOf`` ingredient title (``dc:title``);
             see the module docstring for when to set this explicitly.
         manifest_settings: Optional structured C2PA manifest settings.
+        watermark_settings: Optional local embedding profile; an explicit
+            watermark action is required. These settings stay on this machine.
         branded_gp_id: ID (``gp_...``) of one of your organization's branded
             generator products; the content is signed as that product. ``test``
             may be used in place of a product ID. Omit to sign with Trufo's own
@@ -786,6 +851,8 @@ def sign_c2pa_distributed_test(
         signed_input_policy: What to do when the input is already C2PA-signed; omit for ``auto``.
         signed_ingredient_policy: What to do when an ingredient's media is already
             C2PA-signed; omit for ``auto``.
+        skip_manifest_storage: Ask Trufo not to keep a copy of the signed manifest;
+            refused with a per-embed watermark.
 
     Returns:
         Signed media bytes.
@@ -799,6 +866,11 @@ def sign_c2pa_distributed_test(
     if signed_ingredient_policy is not None:
         SignedIngredientPolicy.validate(signed_ingredient_policy)
 
+    watermark_options = (
+        {"watermark_settings": _watermark_settings_payload(watermark_settings)}
+        if watermark_settings is not None
+        else {}
+    )
     remote_orchestrator = require_provenance_module("tfprov.c2pa_generator.remote_orchestrator")
 
     signed, _ = remote_orchestrator.generate_claim_remote(
@@ -811,6 +883,7 @@ def sign_c2pa_distributed_test(
         manifest_title=manifest_title,
         ingredient_title=ingredient_title,
         branded_gp_id=branded_gp_id,
+        **watermark_options,
         **(
             {"manifest_settings": _manifest_settings_payload(manifest_settings)}
             if manifest_settings is not None
@@ -830,6 +903,7 @@ def sign_c2pa_distributed_test(
             if signed_ingredient_policy is not None
             else {}
         ),
+        **({"skip_manifest_storage": True} if skip_manifest_storage else {}),
     )
     return signed
 
@@ -846,9 +920,11 @@ def sign_c2pa_distributed(
     manifest_title: str | None = None,
     ingredient_title: str | None = None,
     manifest_settings: ManifestSettings | None = None,
+    watermark_settings: WatermarkSettings | None = None,
     branded_gp_id: str | None = None,
     signed_input_policy: SignedInputPolicy | str | None = None,
     signed_ingredient_policy: SignedIngredientPolicy | str | None = None,
+    skip_manifest_storage: bool = False,
 ) -> bytes:
     """Sign media locally using the Trufo production remote-signing endpoint.
 
@@ -872,12 +948,16 @@ def sign_c2pa_distributed(
         ingredient_title: Optional ``parentOf`` ingredient title (``dc:title``);
             see the module docstring for when to set this explicitly.
         manifest_settings: Optional structured C2PA manifest settings.
+        watermark_settings: Optional local embedding profile; an explicit
+            watermark action is required. These settings stay on this machine.
         branded_gp_id: ID (``gp_...``) of one of your organization's branded
             generator products; the content is signed as that product. Omit to
             sign with Trufo's own C2PA signer.
         signed_input_policy: What to do when the input is already C2PA-signed; omit for ``auto``.
         signed_ingredient_policy: What to do when an ingredient's media is already
             C2PA-signed; omit for ``auto``.
+        skip_manifest_storage: Ask Trufo not to keep a copy of the signed manifest;
+            refused with a per-embed watermark.
 
     Returns:
         Signed media bytes.
@@ -891,6 +971,11 @@ def sign_c2pa_distributed(
     if signed_ingredient_policy is not None:
         SignedIngredientPolicy.validate(signed_ingredient_policy)
 
+    watermark_options = (
+        {"watermark_settings": _watermark_settings_payload(watermark_settings)}
+        if watermark_settings is not None
+        else {}
+    )
     remote_orchestrator = require_provenance_module("tfprov.c2pa_generator.remote_orchestrator")
 
     signed, _ = remote_orchestrator.generate_claim_remote(
@@ -903,6 +988,7 @@ def sign_c2pa_distributed(
         manifest_title=manifest_title,
         ingredient_title=ingredient_title,
         branded_gp_id=branded_gp_id,
+        **watermark_options,
         **(
             {"manifest_settings": _manifest_settings_payload(manifest_settings)}
             if manifest_settings is not None
@@ -922,6 +1008,7 @@ def sign_c2pa_distributed(
             if signed_ingredient_policy is not None
             else {}
         ),
+        **({"skip_manifest_storage": True} if skip_manifest_storage else {}),
     )
     return signed
 

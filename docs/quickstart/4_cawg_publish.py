@@ -8,7 +8,7 @@ Attaches a C2PA manifest with:
   - CAWG training/mining permissions
     - CAWG identity assertion  (organization interim)
 
-See docs/quickstart/3_cawg_publish.md for details.
+See docs/quickstart/4_cawg_publish.md for details.
 Requires a c2pa-sign-prod API key — set TRUFO_C2PA_SIGN_PROD_API_KEY
 or save it to ~/.trufo/credentials/c2pa_sign_prod_api_key.
 """
@@ -24,33 +24,37 @@ INPUT_FILE = Path("photo.jpg")
 OUTPUT_FILE = Path("published.jpg")
 
 api_key = load_api_key(TrufoAPIKey.C2PA_SIGN_PROD)
-assert api_key, (
-    "Set TRUFO_C2PA_SIGN_PROD_API_KEY or run: trufo set-api-key c2pa-sign-prod <KEY>"
-)
+assert api_key, "Set TRUFO_C2PA_SIGN_PROD_API_KEY or run: trufo set-api-key c2pa-sign-prod <KEY>"
 
 # --- build assertions ---
 
 assertions = [
     # creator metadata (JSON-LD, Dublin Core)
-    ["cawg_metadata", {
-        "assertion": {
-            "@context": {
-                "dc": "http://purl.org/dc/elements/1.1/",
+    [
+        "cawg_metadata",
+        {
+            "assertion": {
+                "@context": {
+                    "dc": "http://purl.org/dc/elements/1.1/",
+                },
+                "dc:creator": ["[CREATOR NAME]"],
+                "dc:rights": "© 2026 [CREATOR NAME]. All rights reserved.",
             },
-            "dc:creator": ["[CREATOR NAME]"],
-            "dc:rights": "© 2026 [CREATOR NAME]. All rights reserved.",
         },
-    }],
+    ],
     # AI training and data-mining permissions
-    ["cawg_training", {
-        "assertion": {
-            "entries": {
-                "cawg.ai_training": {"use": "notAllowed"},
-                "cawg.ai_inference": {"use": "notAllowed"},
-                "cawg.data_mining": {"use": "notAllowed"},
+    [
+        "cawg_training",
+        {
+            "assertion": {
+                "entries": {
+                    "cawg.ai_training": {"use": "notAllowed"},
+                    "cawg.ai_inference": {"use": "notAllowed"},
+                    "cawg.data_mining": {"use": "notAllowed"},
+                },
             },
         },
-    }],
+    ],
     # identity assertion binding the gathered assertions
     ["cawg_identity", {"cawg_identity_id": "org_interim"}],
 ]

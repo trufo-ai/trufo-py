@@ -51,7 +51,7 @@ Depending on what you need, set up the corresponding API key:
 - **Development / interactive access** — create a `trufo-api` key, then run `trufo login` to exchange it for an access token via a browser sign-in.
 - **Calling `/c2pa/sign` in deployment** — create a `c2pa-sign-prod` key (for the production hosts) or a `c2pa-sign-test` key (for the test host `test.api.trufo.ai`).
 - **Calling `sign_c2pa_distributed_test()` or `sign_c2pa_distributed()`** — create a `c2pa-sign-test` key for `sign_c2pa_distributed_test()`, or a `c2pa-sign-prod` key for `sign_c2pa_distributed()`.
-- **Registering AI systems (`/ai-system/*`)** — create a `c2pa-sign-test` or `c2pa-sign-prod` key; either works on the production hosts, and registrations are shared between test and production signing.
+- **Registering AI systems (`/ai-system/*`)** — create a `c2pa-sign-test`, `c2pa-sign-prod`, `watermark-test` or `watermark-prod` key; any of them works on the production hosts, and registrations are shared between test and production signing.
 - **Installing the engine for Local mode** (the Python SDK extras or the Docker image) — create an `sdk-download` key; it needs a C2PA Signing or Watermark API plan (step 3) and the Trufo Library License (step 5). To try Local mode on the test host before purchasing a plan, email support@trufo.ai with your Organization ID ([Organization Settings](https://app.trufo.ai/settings/org)) to request SDK download access.
 - **Calling `tsa.trufo.ai`** — create a `tsa` key.
 - **Calling `/content/recover` (watermark decode)** — create a `content-recover-prod` key (for the production hosts) or a `content-recover-test` key (for the test host `test.api.trufo.ai`).

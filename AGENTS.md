@@ -7,8 +7,9 @@ systems, and certificate enrollment.
 ## Key facts for AI assistants
 
 - Current version: see `pyproject.toml` (`version = "X.Y.Z"`).
-- The local-engine extras require **Linux x86_64 or arm64 (glibc 2.28+) + CPython 3.12**
-  — trufo-provenance is published as Linux wheels (manylinux_2_28, x86_64 and aarch64).
+- The local-engine extras require **Linux x86_64 or arm64 (glibc 2.28+) +
+  CPython 3.10 to 3.15** — trufo-provenance is published as Linux wheels (manylinux_2_28,
+  x86_64 and aarch64).
   The base `trufo` package is pure Python (3.10+, any platform). Two tiers:
   `local-sign-only` (C2PA Signing in Local mode, no watermark engine, no torch) and
   `local-full` (adds `trufo-pawprint` + torch for local watermark embedding);
@@ -37,9 +38,10 @@ systems, and certificate enrollment.
   `watermark_media` → `bind_commit`); prose says "Cloud mode" / "Local mode".
   Production bind needs a `watermark-prod` key, a C2PA Signing or
   Watermark API plan, and completed Organization Validation; `_test` variants use the
-  test host with `watermark-test`. Commit (per-embed only)
-  verifies the manifest declares the mark (soft-binding assertion +
-  `c2pa.watermarked.bound`).
+  test host with `watermark-test`. Commit is required for per-embed (soft-binding
+  assertion + `c2pa.watermarked.bound`) and optional for per-AI-system
+  (`c2pa.watermarked.unbound`); a manifest that does not declare its mark commits
+  with a warning.
 - In code: the `_distributed` functions; `origin` values `c2pa_hosted`,
   `c2pa_distributed`, `bind_hosted`, `bind_distributed`; tpts/lpts/tpls/lpls in
   docstrings.

@@ -21,7 +21,7 @@ See [api_trufo.md](api_trufo.md) for authentication, error conventions, and regi
 | `POST /c2pa/sign` | `c2pa-sign-prod` (test host: `c2pa-sign-test`) | C2PA Signing |
 | `POST /io/get-s3-upload-url` | `c2pa-sign-prod` or `watermark-prod` (production hosts) | Corresponding signing or watermark access |
 | `POST /c2pa/io/get-s3-url` **(deprecated alias)** | Same as `/io/get-s3-upload-url` | Same as `/io/get-s3-upload-url` |
-| `POST /ai-system/add`, `/list`, `/status` | `c2pa-sign-prod` or `c2pa-sign-test` (production hosts only) | — |
+| `POST /ai-system/add`, `/list`, `/status` | `c2pa-sign-prod`, `c2pa-sign-test`, `watermark-prod` or `watermark-test` (production hosts only) | — |
 | `POST /c2pa/ai-disclosure/add`, `/list` **(deprecated)** | `c2pa-sign-prod` or `c2pa-sign-test` (production hosts only) | — <!-- TODO(sunset-2027-01-31): this row goes; successor the /ai-system row --> |
 | `POST /c2pa/software-agent/add`, `/list` | `c2pa-sign-prod` or `c2pa-sign-test` (production hosts only) | — |
 | `POST /content/recover` | `content-recover-prod` (test host: `content-recover-test`) | C2PA Signing or Watermark API |
@@ -106,9 +106,14 @@ Beyond the platform-wide codes in [api_trufo.md](api_trufo.md):
 | 400 | `AISystemInactive: …` | An inactive AI system (see [`ai_system`](#ai_system)) |
 | 400 | `UnsupportedAssertion: …` | The deprecated `ai_disclosure` entry from 2027-01-31T23:59:00+00:00 (see [`ai_disclosure`](#ai_disclosure)) <!-- TODO(sunset-2027-01-31): this row goes; successor none --> |
 | 400 | `UnsupportedParameter: …` | The deprecated watermark `mode` from 2027-01-31T23:59:00+00:00 (see [`watermark`](#watermark)) <!-- TODO(sunset-2027-01-31): this row goes; successor none --> |
-| 400 | `InvalidCawgIdentityId` | Unknown `cawg_identity_id` |
+| 400 | `InvalidCawgIdentityId` | Unknown `cawg_identity_id`, or `"test"` on a production host |
 | 400 | `MissingC2PACustomDomain` | A `custom` assertion without a label |
 | 400 | `UnsupportedSDKVersion: …` | Local mode: the `trufo-py` or `trufo-provenance` version is below the minimum or past its support, or the engine is too old for a feature the request uses; the detail names the package and the reason (see [Local mode](#local-mode)) |
+| 400 | `ImageTooLarge: …` | An input image over 400 megapixels |
+| 400 | `InvalidWidAllocationMode: …` | A watermark `wid_allocation_mode` other than `"per_embed"`, `"per_ai_system"` or `"per_asset"` (see [`watermark`](#watermark)) |
+| 400 | `MissingInputManifest: …` | A `transcode` action on an input without a readable C2PA manifest (see [`transcode`](#transcode)) |
+| 400 | `MissingDigitalSourceType: …` | A C2PA action in an [`ingredient`](#ingredient)'s `action_history` without a `digitalSourceType`, unless [exempt](#assertions) |
+| 400 | `ManifestStorageRequired: …` | A `"per_embed"` watermark with `skip_manifest_storage` (see [`watermark`](#watermark)) |
 | 403 | `MissingOrganizationValidation` | Production signing before OV completes |
 | 403 | `InvalidC2PACustomDomain` | The label's domain is not domain-validated for your organization |
 | 403 | `NoEligiblePlan` | The organization lacks the required plan |
@@ -119,6 +124,7 @@ Beyond the platform-wide codes in [api_trufo.md](api_trufo.md):
 | 404 | `GProductNotFound` | No such generator product in your organization |
 | 410 | `Test keys are not accepted on this host. …` | Local mode with a `c2pa-sign-test` key on a production host (see [Signing Modes](#signing-modes)) |
 | 410 | `Test keys can't use upload links. …` | A test key on a production host's upload link (see [`POST /io/get-s3-upload-url`](#post-ioget-s3-upload-url)) |
+| 429 | `ReservationLimitExceeded: …` | A `"per_embed"` watermark while your organization holds its limit of live watermark ID reservations (see [`watermark`](#watermark)) |
 | 501 | *(message)* | An unsupported watermark option: `"per_asset"` allocation, or the deprecated `mode` `"compliance"` (see [`watermark`](#watermark)) <!-- TODO(sunset-2027-01-31): the row's deprecated mode "compliance" clause goes; successor none --> |
 
 **Retries and billing.** A sign is metered when it completes, so a failed request
@@ -171,6 +177,7 @@ permanent signing record.
 | `branded_gp_id` | string | No | One of your organization's branded generator products (`gp_...`, listed on the dashboard's C2PA Signing API page, **Manage** tab); the content is signed as that product. Omit to sign with Trufo's own C2PA signer. On the test host, `test` may be used in place of a product ID and is approved for every source type a product can be approved for. |
 | `signed_input_policy` | string | No | What happens when the input file already carries a C2PA manifest: `keep` or `auto`. When omitted, `auto` applies. See [Signed inputs and ingredients](#signed-inputs-and-ingredients). |
 | `signed_ingredient_policy` | string | No | What happens when an ingredient's media already carries a C2PA manifest: `keep` or `auto`. When omitted, `auto` applies. See [Signed inputs and ingredients](#signed-inputs-and-ingredients). |
+| `skip_manifest_storage` | boolean | No | Elect to tell Trufo not to store a copy of the signed manifest; this may limit the extent to which Trufo may be able to help debug any issues that arise, and may limit your ability to manage signed assets in the future. |
 
 \* Provide exactly one: bytes for REQUEST, an S3 reference for TASK. There is no
 automatic fallback. REQUEST has a 10 MB (10,000,000-byte) input cap; audio/video
@@ -274,7 +281,7 @@ not replace the subsequent `/bind/commit` step. With a per-AI-system watermark,
 | Checked | Which checks | A refusal |
 | --- | --- | --- |
 | At submission | Those a REQUEST runs before processing the media: a sign's watermark action, `branded_gp_id` and `assertions`; a bind's `mode` and watermark ID allocation | The HTTP status and `detail` a REQUEST would get; no task is created |
-| While processing | The others, among them the [signed-input](#signed-inputs-and-ingredients) refusals and every [`ingredient`](#ingredient) error except the created-placement and unbranded `parentOf` refusals | `status: "failed"` and an `error` with `code` and `http_status`, plus `message` for a refusal (4xx): the `detail` a REQUEST would get |
+| While processing | The others, among them the [signed-input](#signed-inputs-and-ingredients) refusals and every [`ingredient`](#ingredient) error except the created-placement, unbranded `parentOf` and missing `digitalSourceType` refusals | `status: "failed"` and an `error` with `code` and `http_status`, plus `message` for a refusal (4xx): the `detail` a REQUEST would get |
 
 Error `code`s, with their `http_status`: `invalid_input` (400),
 `permission_denied` (403), `input_not_found` (404), `capacity_exceeded` (429),
@@ -342,9 +349,10 @@ the host's operating system and kernel release as `operating_system`, for exampl
 `Linux 6.8.0-45-generic`.
 
 `sign_c2pa_distributed()` and `sign_c2pa_distributed_test()` accept
-`branded_gp_id`, `signed_input_policy` and `signed_ingredient_policy`, as
-`sign_c2pa()` does. Setting either policy, like sending an
-[`ai_system`](#ai_system) entry, needs trufo-provenance 2.2.0 or later.
+`branded_gp_id`, `signed_input_policy`, `signed_ingredient_policy` and
+`skip_manifest_storage`, as `sign_c2pa()` does. Setting either policy, like sending
+an [`ai_system`](#ai_system) entry, needs trufo-provenance 2.2.0 or later;
+`skip_manifest_storage` needs 2.3.0 or later.
 
 <!-- TODO(sunset-2027-01-31): the versions paragraph and its table go; successor none -->
 
@@ -403,6 +411,12 @@ keeps every frame, so its target must be `image/gif`, `image/png`, `image/webp`
 or `image/avif`; it may hold up to 10,000 frames and 400 megapixels across
 frames.
 
+**Errors:**
+
+| When | Status | `detail` |
+| ---- | ------ | -------- |
+| The input carries no readable C2PA manifest | 400 | `MissingInputManifest: The 'transcode' action requires an input that already carries a readable C2PA manifest.` |
+
 #### `watermark`
 
 Embeds an imperceptible Trufo Pawprint watermark that carries a watermark ID.
@@ -440,7 +454,10 @@ Format eligibility and restrictions are listed in
 
 | When | Status | `detail` |
 | ---- | ------ | -------- |
+| A `wid_allocation_mode` other than `"per_embed"`, `"per_ai_system"` or `"per_asset"` | 400 | `InvalidWidAllocationMode: The watermark 'wid_allocation_mode' parameter must be 'per_embed' or 'per_ai_system'.` |
 | `"per_ai_system"` without an `ai_system` entry | 400 | `The watermark's wid_allocation_mode 'per_ai_system' requires an 'ai_system' assertion.` |
+| A `"per_embed"` watermark with `skip_manifest_storage` | 400 | `ManifestStorageRequired: A watermark with wid_allocation_mode 'per_embed' (the default) requires Trufo to store the manifest, so recovery can return it. Remove 'skip_manifest_storage' or the watermark action, or set wid_allocation_mode to 'per_ai_system'.` |
+| A `"per_embed"` watermark on a production host while your organization holds 10,000 live watermark ID reservations | 429 | `ReservationLimitExceeded: Your organization has reached its limit of 10,000 live watermark ID reservations. Live reservations end when they are committed or expire; to raise the limit, contact support@trufo.ai.` |
 | `"per_asset"` | 501 | `Per-asset watermark ID allocation is not supported.` |
 
 <!-- TODO(sunset-2027-01-31): the deprecated mode paragraph and its two tables go; successor wid_allocation_mode -->
@@ -502,7 +519,8 @@ Ordered `[name, params]` pairs. Assertions are gathered unless their documented
 schema fixes or permits created placement. Created declarations require an
 authorized branded generator product (`branded_gp_id`), limited to the source
 types the product is approved for; without one, the only created declarations
-are an [`ai_system`](#ai_system) entry's source-type labels. A created C2PA action requires
+are an [`ai_system`](#ai_system) entry's source-type labels. A C2PA action in an
+[`ingredient`](#ingredient)'s `action_history`, created or gathered, requires
 a `digitalSourceType`, except `c2pa.converted`, `c2pa.edited.metadata`,
 `c2pa.enhanced`, `c2pa.opened`, `c2pa.placed`, `c2pa.published`,
 `c2pa.redacted`, `c2pa.repackaged`, `c2pa.resized.proportional`,
@@ -670,7 +688,7 @@ of the asset, not a Trufo attestation.
 | `media` | string | For `parentOf` | base64 bytes, in a format with **Yes** under C2PA validate in [Media format support](media_format_support.md); declare other formats with `format` (`componentOf` or `inputTo`). A `componentOf` entry needs `media` or `format`; an `inputTo` entry, neither |
 | `format` | string | No | The media type of a declared ingredient (one without `media`), such as `video/mp4`; not with `media` |
 | `placement` | string | No | `gathered` (default) or `created`, on a request authorized for created assertions; `parentOf` is always created. A declared ingredient is always gathered; created placement for it is refused for now and may be supported later. |
-| `action_history` | list | No | Actions between a `parentOf` source and the supplied input; entries may independently set `placement`, `digitalSourceType` and `description`. An entry's action is a C2PA action or a custom one in a domain your organization has validated (for example `com.example.upscaled`) |
+| `action_history` | list | No | Actions between a `parentOf` source and the supplied input; entries may independently set `placement`, `digitalSourceType` and `description`. An entry's action is a C2PA action or a custom one in a domain your organization has validated (for example `com.example.upscaled`). A C2PA action requires a `digitalSourceType` (such as `DigitalSourceType.HUMAN_EDITS`), unless [exempt](#assertions) |
 
 - Sent (`media`): a readable C2PA history is always kept with the ingredient,
   validation failures included;
@@ -696,6 +714,7 @@ already the parent, so it cannot take a `creation` entry or a `parentOf` you sen
 | A `parentOf` ingredient without `branded_gp_id` | 403 | `C2PACreatedUserAssertionsNotAuthorized: created user assertions are not authorized.` |
 | A `parentOf` ingredient with `branded_gp_id` but no `media` | 400 | `The parentOf relationship requires ingredient 'media'.` |
 | `digital_source_type` with `media` that carries a C2PA manifest | 400 | `The ingredient 'digital_source_type' cannot be combined with media that carries a C2PA manifest (mutually exclusive per the spec).` |
+| A C2PA action in `action_history` without a `digitalSourceType`, unless [exempt](#assertions) | 400 | `MissingDigitalSourceType: The action '<action>' in action_history requires a 'digitalSourceType', an IPTC source type URI such as humanEdits (an edit made without generative AI) or compositeWithTrainedAlgorithmicMedia (an AI edit).` |
 
 In the format refusal, `<mime>` reads `Unknown format` when the media type cannot
 be detected.
@@ -807,7 +826,7 @@ Cloud**, where `/bind/watermark` embeds the mark on Trufo's servers, and
 with the local engine.
 A per-AI-system bind (`wid_allocation_mode` `"per_ai_system"`, with `ai_system_id`
 and `ai_involvement`) embeds the AI system's watermark ID on either route. It is
-not a C2PA soft binding, and there is nothing to commit.
+not a C2PA soft binding, and its commit is optional but recommended.
 
 Production requires a `watermark-prod` key, an active C2PA Signing or Watermark
 API plan, and completed organization validation.
@@ -850,7 +869,7 @@ on the production hosts only and returns 202; see [Tasks](#tasks).
 | ----- | ---- | ----------- |
 | `media_output` | string | base64-encoded watermarked media |
 | `wid` | string | The embedded watermark id |
-| `cid` | string or null | Record id, for `/bind/commit` on a per-embed bind; null for a per-AI-system bind on the test host |
+| `cid` | string | Record id, for `/bind/commit` |
 | `warnings` | list | Deprecation warnings, empty when none. |
 
 Bind has no effort tiers: the watermark is always required, and an
@@ -869,6 +888,7 @@ generator product on a bind.
 | An unknown or another organization's `ai_system_id` | 404 | `AISystemNotFound` |
 | The AI system is inactive | 400 | `AISystemInactive: AI system '<ai_system_id>' is inactive. Use an active AI system (see /ai-system/list).` |
 | `ai_involvement` not in the system's modes | 400 | `ai_involvement '<value>' is not in the AI system's ai_involvement_modes.` |
+| A `"per_embed"` watermark on a production host while your organization holds 10,000 live watermark ID reservations | 429 | `ReservationLimitExceeded: Your organization has reached its limit of 10,000 live watermark ID reservations. Live reservations end when they are committed or expire; to raise the limit, contact support@trufo.ai.` |
 
 The `per_asset` and deprecated `mode` refusals are listed under
 [`watermark`](#watermark).
@@ -886,7 +906,7 @@ The `per_asset` and deprecated `mode` refusals are listed under
 
 | Field | Type | Description |
 | ----- | ---- | ----------- |
-| `cid` | string | Record id, for `/bind/commit` on a per-embed bind |
+| `cid` | string | Record id, for `/bind/commit` |
 | `wid_package` | object | `{ "wid", "expires_at" }` — the watermark ID to embed with the engine; a per-embed reservation is valid for 24 hours (1 hour on the test host) |
 
 A per-AI-system bind returns the AI system's watermark ID in the same
@@ -901,33 +921,28 @@ reservation bills its embed when issued and is valid for 1 hour.
 | ----- | ---- | -------- | ----------- |
 | `cid` | string | Yes | Record id from `/bind/watermark` or `/bind/reserve` |
 | `wid` | string | Yes | The watermark id issued with that record |
-| `manifest` | string | One of | base64-encoded C2PA manifest store declaring the mark |
-| `manifest_id` | string | One of | The manifest's id (its urn) when the manifest lives in your own store; requires `manifest_endpoint`, and the declaration is then your responsibility |
-| `manifest_endpoint` | string | No | Base URI (`https://…`) of your own C2PA manifest store hosting this manifest at `{manifest_endpoint}/manifests/{manifestId}`; omit to have Trufo host it |
+| `manifest` | string | Yes | base64-encoded C2PA manifest store that should declare the mark |
 
-With `manifest`, the store must declare the mark: a `c2pa.soft-binding`
-assertion with algorithm `ai.trufo.pawprint.watermark` and the record's
-watermark id as its block value, paired with a `c2pa.watermarked.bound`
-action, per the C2PA specification. The manifest is checked for this
-declaration, not for trust status — sign with whatever certificate you use —
-and its id is derived from the bytes. When `manifest_endpoint` is given, Trufo
-keeps no copy and soft-binding resolution refers validators to your store;
-otherwise Trufo stores and serves the manifest. An identical retry of a
-completed commit succeeds; a different one is refused.
+The store should declare the mark. For a per-embed bind: a `c2pa.soft-binding`
+assertion (algorithm `ai.trufo.pawprint.watermark`, the record's watermark id as
+its block value) with a `c2pa.watermarked.bound` action. For a per-AI-system
+bind: a `c2pa.watermarked.unbound` action. A store that does not declare it is
+still committed, with a warning. Trust status is not checked. An identical retry
+succeeds; a different one is refused.
 
-Commit is for per-embed binds only: committing a per-AI-system bind with the AI
-system's watermark ID is refused with 400 `InvalidWid`; on the test host, a
-per-AI-system `/bind/reserve` `cid` gets 404.
+A per-embed bind must be committed. For a per-AI-system bind, the commit is
+optional but recommended, and `wid` is the AI system's watermark ID.
 
-**Response (200):** `cid`, `wid`.
+**Response (200):** `cid`, `wid`, `warnings` (manifest declaration warnings, empty when none).
 
 **Errors:**
 
 | Status | Meaning |
 | ------ | ------- |
-| 400 | Malformed `wid`, no parseable manifest, `manifest_id` without an endpoint, or the manifest does not declare the record's mark (the record stays incomplete — fix and resubmit). `/bind/watermark` also rejects an unsupported media format |
+| 400 | Malformed `wid`, a per-AI-system `wid` other than the AI system's watermark ID, or no parseable manifest. `/bind/watermark` also rejects an unsupported media format |
 | 404 | Unknown `cid`, a record not opened by a bind call, or a `wid` that is not a live reservation of yours for the record's route |
 | 409 | The record was already completed with a different manifest |
+| 422 | A missing `manifest`, or the suspended `manifest_endpoint` parameter |
 
 ---
 
@@ -1070,9 +1085,9 @@ registration: register each new version as a new AI system. Registrations are sh
 between test and production signing. An AI system works on every regional endpoint
 ([Regions](api_trufo.md#regions)). Production hosts only.
 
-**Auth (all three):** API key with the `c2pa-sign-prod` or `c2pa-sign-test` scope,
-or an MFA-verified access token with the `c2pa_sign` permission. No plan is
-required.
+**Auth (all three):** API key with the `c2pa-sign-prod`, `c2pa-sign-test`,
+`watermark-prod` or `watermark-test` scope, or an MFA-verified access token with
+the `c2pa_sign` permission. No plan is required.
 
 ### `POST /ai-system/add`
 

@@ -23,9 +23,7 @@ INPUT_FILE = Path("signed_photo.jpg")
 OUTPUT_FILE = Path("redacted.jpg")
 
 api_key = load_api_key(TrufoAPIKey.C2PA_SIGN_PROD)
-assert api_key, (
-    "Set TRUFO_C2PA_SIGN_PROD_API_KEY or run: trufo set-api-key c2pa-sign-prod <KEY>"
-)
+assert api_key, "Set TRUFO_C2PA_SIGN_PROD_API_KEY or run: trufo set-api-key c2pa-sign-prod <KEY>"
 
 # --- redact + sign ---
 
