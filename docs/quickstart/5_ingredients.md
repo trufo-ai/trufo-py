@@ -25,7 +25,7 @@ Three relationships are available:
   at most one.
 
 ```python
-signed_bytes = sign_c2pa(
+signed_bytes = sign_c2pa_cloud(
     api_key,
     media_bytes,
     assertions=[
@@ -121,21 +121,21 @@ Redaction removes whole assertions; individual fields within an assertion cannot
 [0_setup.md](0_setup.md).
 - The input file must already have a C2PA manifest — redacting a file with no existing
 provenance history fails.
-- The `redact` action works in Cloud mode (`sign_c2pa`, `sign_c2pa_test`, and
+- The `redact` action works in Cloud mode (`sign_c2pa_cloud`, `sign_c2pa_cloud_test`, and
 `submit_c2pa_sign` for TASK submissions) and in Local mode, which redacts without
-sending media to Trufo: `sign_c2pa_distributed` and `sign_c2pa_distributed_test`
+sending media to Trufo: `sign_c2pa_local` and `sign_c2pa_local_test`
 ([Local mode with the Python SDK](../local/python.md)) or the Docker image
 ([Local mode with the Docker image](../local/docker.md)).
 
 ### Minimal Example
 
 ```python
-from trufo import sign_c2pa
+from trufo import sign_c2pa_cloud
 from trufo.util.credentials import TrufoAPIKey, load_api_key
 
 api_key = load_api_key(TrufoAPIKey.C2PA_SIGN_PROD)
 
-signed_bytes = sign_c2pa(
+signed_bytes = sign_c2pa_cloud(
     api_key,
     media_bytes,
     actions=[
@@ -214,7 +214,7 @@ Instance numbers come from the input's own manifest, so inspect it to see which 
 `redact` entries sit in the same list as any other action:
 
 ```python
-signed_bytes = sign_c2pa(
+signed_bytes = sign_c2pa_cloud(
     api_key,
     media_bytes,
     actions=[

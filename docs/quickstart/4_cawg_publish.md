@@ -25,9 +25,9 @@ All CAWG assertions are optional. When a `cawg_identity` entry is present, it bi
 ## Example
 
 ```python
-from trufo import sign_c2pa
+from trufo import sign_c2pa_cloud
 
-signed_bytes = sign_c2pa(
+signed_bytes = sign_c2pa_cloud(
     api_key,
     media_bytes,
     assertions=[
@@ -51,7 +51,7 @@ signed_bytes = sign_c2pa(
 )
 ```
 
-For development-only test signing, use `sign_c2pa_test()` with a `c2pa-sign-test` API key and `cawg_identity_id="test"`. Test-signed outputs are useful for integration development but are not intended to be accepted as production C2PA credentials by conformant validators.
+For development-only test signing, use `sign_c2pa_cloud_test()` with a `c2pa-sign-test` API key and `cawg_identity_id="test"`. Test-signed outputs are useful for integration development but are not intended to be accepted as production C2PA credentials by conformant validators.
 
 ## `cawg_metadata` Namespaces
 

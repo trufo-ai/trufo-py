@@ -1,6 +1,6 @@
 # C2PA Signing in Local Mode with the Python SDK
 
-`sign_c2pa_distributed()` runs C2PA Signing in Local mode inside your Python process:
+`sign_c2pa_local()` runs C2PA Signing in Local mode inside your Python process:
 
 - the media stays on your machine;
 - Trufo's engine, `trufo-provenance`, builds the manifest locally, including any
@@ -103,28 +103,28 @@ extra is an alias of `local-sign-only`.
 ```python
 from pathlib import Path
 
-from trufo import sign_c2pa_distributed_test
+from trufo import sign_c2pa_local_test
 from trufo.util.credentials import TrufoAPIKey, load_api_key
 
 api_key = load_api_key(TrufoAPIKey.C2PA_SIGN_TEST)
 media_bytes = Path("input.jpg").read_bytes()
 
-signed_bytes = sign_c2pa_distributed_test(api_key, media_bytes)
+signed_bytes = sign_c2pa_local_test(api_key, media_bytes)
 Path("signed.jpg").write_bytes(signed_bytes)
 ```
 
 For production, swap the helper and the key:
 
 ```python
-from trufo import sign_c2pa_distributed
+from trufo import sign_c2pa_local
 
 api_key = load_api_key(TrufoAPIKey.C2PA_SIGN_PROD)
-signed_bytes = sign_c2pa_distributed(api_key, media_bytes)
+signed_bytes = sign_c2pa_local(api_key, media_bytes)
 ```
 
 Both helpers take the same `actions`, `assertions`, `manifest_settings`,
 `branded_gp_id`, `signed_input_policy`, `signed_ingredient_policy`,
-`skip_manifest_storage` and `trufo_api_url` as `sign_c2pa()`, `transcode` included; see the
+`skip_manifest_storage` and `trufo_api_url` as `sign_c2pa_cloud()`, `transcode` included; see the
 [C2PA Signing Quickstart](../quickstart/2_c2pa_signing.md) and
 [`actions`](../api/api_c2pa.md#actions). With `trufo[local-full]`, a `watermark`
 action embeds the mark locally; see the
@@ -146,7 +146,7 @@ You can try Local mode on the test host without a plan or Organization Validatio
    ([Organization Settings](https://app.trufo.ai/settings/org)) to request SDK download
    access.
 3. Once it is granted, create an `sdk-download` key and a `c2pa-sign-test` key.
-4. Install as above and sign with `sign_c2pa_distributed_test()`. To try
+4. Install as above and sign with `sign_c2pa_local_test()`. To try
    [branded signing](../quickstart/2_c2pa_signing.md#direct-signing), pass
    `branded_gp_id="test"`.
 
@@ -160,12 +160,12 @@ action requests it; `WatermarkSettings` chooses how the local engine runs:
 ```python
 from pathlib import Path
 
-from trufo import sign_c2pa_distributed, watermark_media
+from trufo import sign_c2pa_local, watermark_media
 from trufo.c2pa import WatermarkProfile, WatermarkSettings
 
 media_bytes = Path("input.mp4").read_bytes()
 settings = WatermarkSettings(profile=WatermarkProfile.FAST)
-signed_bytes = sign_c2pa_distributed(
+signed_bytes = sign_c2pa_local(
     api_key,
     media_bytes,
     actions=[["watermark", {}]],
@@ -178,7 +178,7 @@ marked_bytes = watermark_media(
 )
 ```
 
-Both distributed signing helpers and `watermark_media()` accept these settings;
+`sign_c2pa_local()`, `sign_c2pa_local_test()` and `watermark_media()` accept these settings;
 `WatermarkSettings(profile="fast")` accepts the string directly. Omitting settings
 uses `default`: CPU FP32 and independent video frames. `fast` permits supported
 CPU BF16 for images and video anchors, with FP32 fallback. The CPU encoder attempts
@@ -221,8 +221,8 @@ download access (see [Private Package Index](#private-package-index)).
 FFmpeg so that `ffprobe` is on the PATH (Debian and Ubuntu: `ffmpeg`).
 
 **`Test keys are not accepted on this host. Please use test.api.trufo.ai.`** — a
-`c2pa-sign-test` key sent to a production host, which `sign_c2pa_distributed()` calls
-by default. Use `sign_c2pa_distributed_test()`, or a `c2pa-sign-prod` key; see
+`c2pa-sign-test` key sent to a production host, which `sign_c2pa_local()` calls
+by default. Use `sign_c2pa_local_test()`, or a `c2pa-sign-prod` key; see
 [Signing Modes](../api/api_c2pa.md#signing-modes).
 
 **`UnsupportedSDKVersion: …`** — the SDK or engine version is not supported, or the

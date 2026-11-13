@@ -43,13 +43,13 @@ The test output is not recognized by conformant C2PA validators.
 ```python
 from pathlib import Path
 
-from trufo import sign_c2pa_test
+from trufo import sign_c2pa_cloud_test
 from trufo.util.credentials import TrufoAPIKey, load_api_key
 
 api_key = load_api_key(TrufoAPIKey.C2PA_SIGN_TEST)
 
 media_bytes = Path("input.jpg").read_bytes()
-signed_bytes = sign_c2pa_test(api_key, media_bytes)
+signed_bytes = sign_c2pa_cloud_test(api_key, media_bytes)
 
 Path("signed.jpg").write_bytes(signed_bytes)
 ```
@@ -57,10 +57,10 @@ Path("signed.jpg").write_bytes(signed_bytes)
 For production, swap the helper and the key:
 
 ```python
-from trufo import sign_c2pa
+from trufo import sign_c2pa_cloud
 
 api_key = load_api_key(TrufoAPIKey.C2PA_SIGN_PROD)
-signed_bytes = sign_c2pa(api_key, media_bytes)
+signed_bytes = sign_c2pa_cloud(api_key, media_bytes)
 ```
 
 Production signing requires completed OV; without it the API returns
@@ -72,10 +72,10 @@ named setting makes it easy to reuse:
 
 ```python
 BRANDED_GP_ID = "gp_..."  # dashboard: C2PA Signing API > Manage
-signed_bytes = sign_c2pa(api_key, media_bytes, branded_gp_id=BRANDED_GP_ID)
+signed_bytes = sign_c2pa_cloud(api_key, media_bytes, branded_gp_id=BRANDED_GP_ID)
 ```
 
-To try it on the test host without a product, pass `branded_gp_id="test"` to `sign_c2pa_test()`.
+To try it on the test host without a product, pass `branded_gp_id="test"` to `sign_c2pa_cloud_test()`.
 
 ---
 
@@ -89,7 +89,7 @@ settings:
 ```python
 from trufo.c2pa import ManifestSettings
 
-signed_bytes = sign_c2pa_test(
+signed_bytes = sign_c2pa_cloud_test(
     api_key,
     media_bytes,
     manifest_settings=ManifestSettings(
@@ -112,7 +112,7 @@ detail:
 ```python
 from trufo.c2pa import ManifestSettings, ThumbnailSettings, ThumbnailSize
 
-signed_bytes = sign_c2pa_test(
+signed_bytes = sign_c2pa_cloud_test(
     api_key,
     media_bytes,
     manifest_settings=ManifestSettings(
@@ -142,7 +142,7 @@ such data instead, and changes nothing else without an
 ```python
 from trufo.c2pa import SignedInputPolicy
 
-signed_bytes = sign_c2pa_test(
+signed_bytes = sign_c2pa_cloud_test(
     api_key,
     media_bytes,
     signed_input_policy=SignedInputPolicy.KEEP,
@@ -162,10 +162,10 @@ putting bytes in the request body. Specify `ExecutionMode.TASK` to have the SDK
 upload → submit task → poll → download for you. This call blocks until completion:
 
 ```python
-from trufo import ExecutionMode, sign_c2pa
+from trufo import ExecutionMode, sign_c2pa_cloud
 
 api_key = load_api_key(TrufoAPIKey.C2PA_SIGN_PROD)
-signed_bytes = sign_c2pa(
+signed_bytes = sign_c2pa_cloud(
     api_key, media_bytes, mime_type="image/jpeg", execution_mode=ExecutionMode.TASK,
 )
 ```
@@ -182,8 +182,8 @@ The legacy S3 helpers are deprecated:
 |---|---|
 | `get_c2pa_s3_upload_url()` | `get_s3_upload_url()`; both return `GetS3UploadURLResult` |
 | `sign_c2pa_s3()` | `submit_c2pa_sign()` followed by `wait_for_task()` |
-| `sign_c2pa_via_s3()` | `sign_c2pa(..., execution_mode=ExecutionMode.TASK, mime_type=...)` |
-| `sign_c2pa_s3_test()` / `sign_c2pa_via_s3_test()` | `sign_c2pa_test()` with REQUEST bytes; test endpoints do not support tasks |
+| `sign_c2pa_via_s3()` | `sign_c2pa_cloud(..., execution_mode=ExecutionMode.TASK, mime_type=...)` |
+| `sign_c2pa_s3_test()` / `sign_c2pa_via_s3_test()` | `sign_c2pa_cloud_test()` with REQUEST bytes; test endpoints do not support tasks |
 
 The production helpers remain callable with their existing signatures and require
 explicit TASK execution for signing. Test S3 helpers reject before making a request.
@@ -258,7 +258,7 @@ The SDK defaults to the Global API endpoint. To use the Europe endpoint:
 ```python
 from trufo.api.endpoints import TRUFO_API_URL_EUROPE
 
-signed_bytes = sign_c2pa(api_key, media_bytes, trufo_api_url=TRUFO_API_URL_EUROPE)
+signed_bytes = sign_c2pa_cloud(api_key, media_bytes, trufo_api_url=TRUFO_API_URL_EUROPE)
 ```
 
 Organizations with a dedicated API can set it explicitly via `trufo_api_url`.
@@ -273,7 +273,7 @@ in order, `assertions` are statements recorded in the manifest. Each entry is a
 `[name, params]` pair.
 
 ```python
-signed_bytes = sign_c2pa(
+signed_bytes = sign_c2pa_cloud(
     api_key,
     media_bytes,
     actions=[["publish", {}]],
@@ -300,7 +300,7 @@ for production, `c2pa-sign-test` for test.
 
 **`410 Test keys can't use upload links. On test.api.trufo.ai, send the media in the request.`**
 — a test key asked a production host for an upload link. Upload with a
-`c2pa-sign-prod` key, or use `sign_c2pa_test()`.
+`c2pa-sign-prod` key, or use `sign_c2pa_cloud_test()`.
 See [`POST /io/get-s3-upload-url`](../api/api_c2pa.md#post-ioget-s3-upload-url).
 
 **Local mode errors** (`ImportError`, `ffprobe`, package index) — see

@@ -21,16 +21,16 @@ trufo set-api-key c2pa-sign-test <your-api-key>
 ```python
 from pathlib import Path
 
-from trufo import sign_c2pa_test
+from trufo import sign_c2pa_cloud_test
 from trufo.util.credentials import TrufoAPIKey, load_api_key
 
 api_key = load_api_key(TrufoAPIKey.C2PA_SIGN_TEST)
 
-signed_bytes = sign_c2pa_test(api_key, Path("input.jpg").read_bytes())
+signed_bytes = sign_c2pa_cloud_test(api_key, Path("input.jpg").read_bytes())
 Path("signed.jpg").write_bytes(signed_bytes)
 ```
 
-That is a complete C2PA signature — Trufo assembles and signs the manifest, so you need no certificate of your own. Swap in `sign_c2pa()` with a `c2pa-sign-prod` key for production-trusted output. See the [Signing Quickstart](docs/quickstart/2_c2pa_signing.md).
+That is a complete C2PA signature — Trufo assembles and signs the manifest, so you need no certificate of your own. Swap in `sign_c2pa_cloud()` with a `c2pa-sign-prod` key for production-trusted output. See the [Signing Quickstart](docs/quickstart/2_c2pa_signing.md).
 
 ## What You Can Do
 
@@ -46,7 +46,7 @@ That is a complete C2PA signature — Trufo assembles and signs the manifest, so
 
 In Local mode, your media stays on your machine: Trufo's engine builds the manifest locally, and Trufo receives the signing instructions and signs the claim. Two ways to run it:
 
-- **Python SDK:** `sign_c2pa_distributed()` with the `trufo[local-sign-only]` or `trufo[local-full]` extra; `local-full` adds local watermark embedding. See [Local mode with the Python SDK](docs/local/python.md).
+- **Python SDK:** `sign_c2pa_local()` with the `trufo[local-sign-only]` or `trufo[local-full]` extra; `local-full` adds local watermark embedding. See [Local mode with the Python SDK](docs/local/python.md).
 - **Docker image:** `ghcr.io/trufo-ai/trufo-local`, an HTTP service on your machine that signs files by path, for callers in any language; the full image (`2.3-full`) adds watermark embedding. See [Local mode with the Docker image](docs/local/docker.md).
 
 ## Workflow Examples (Quickstart)

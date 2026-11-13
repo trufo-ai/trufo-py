@@ -16,7 +16,7 @@ Requires a c2pa-sign-test API key, and a content-recover-test key for recovery.
 import warnings
 from pathlib import Path
 
-from trufo import TrufoServerWarning, recover_content, sign_c2pa_test
+from trufo import TrufoServerWarning, recover_content, sign_c2pa_cloud_test
 from trufo.api.endpoints import TRUFO_API_URL_TEST
 from trufo.c2pa import WatermarkEffort
 from trufo.util.credentials import TrufoAPIKey, load_api_key
@@ -44,7 +44,7 @@ media_bytes = INPUT_FILE.read_bytes()
 # A bare ["watermark", {}] means effort_policy "require": any failure is an
 # error.
 
-signed_bytes = sign_c2pa_test(
+signed_bytes = sign_c2pa_cloud_test(
     api_key,
     media_bytes,
     actions=[["watermark", {}]],
@@ -60,7 +60,7 @@ print(f"Watermarked {INPUT_FILE} -> {OUTPUT_FILE}")
 
 with warnings.catch_warnings(record=True) as caught:
     warnings.simplefilter("always", TrufoServerWarning)
-    signed_bytes = sign_c2pa_test(
+    signed_bytes = sign_c2pa_cloud_test(
         api_key,
         media_bytes,
         actions=[["watermark", {"effort_policy": WatermarkEffort.REQUIRE_IF_SUPPORTED.value}]],
@@ -97,7 +97,7 @@ else:
 # entry.
 
 if AI_SYSTEM_ID:
-    signed_bytes = sign_c2pa_test(
+    signed_bytes = sign_c2pa_cloud_test(
         api_key,
         AI_INPUT_FILE.read_bytes(),
         assertions=[

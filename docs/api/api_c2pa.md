@@ -43,8 +43,8 @@ Every production sign or bind creates a [content record](#content-records) whose
 
 | Route | SDK functions | `origin` |
 | ----- | ------------- | -------- |
-| C2PA Signing, Cloud (direct or via S3) | `sign_c2pa()`, `submit_c2pa_sign()` | `c2pa_hosted` |
-| C2PA Signing, Local | `sign_c2pa_distributed()`, or the [Docker image](../local/docker.md) | `c2pa_distributed` |
+| C2PA Signing, Cloud (direct or via S3) | `sign_c2pa_cloud()`, `submit_c2pa_sign()` | `c2pa_hosted` |
+| C2PA Signing, Local | `sign_c2pa_local()`, or the [Docker image](../local/docker.md) | `c2pa_distributed` |
 | Watermarking, Cloud | `bind_watermark()`, then `bind_commit()` | `bind_hosted` |
 | Watermarking, Local | `bind_reserve()`, `watermark_media()`, then `bind_commit()` | `bind_distributed` |
 
@@ -69,11 +69,11 @@ the base class of `TrufoServerWarning`, so filter on `UserWarning` to catch both
 ```python
 import warnings
 
-from trufo import TrufoServerWarning, sign_c2pa
+from trufo import TrufoServerWarning, sign_c2pa_cloud
 
 with warnings.catch_warnings(record=True) as caught:
     warnings.simplefilter("always", TrufoServerWarning)
-    signed = sign_c2pa(api_key, media_bytes, actions=actions)
+    signed = sign_c2pa_cloud(api_key, media_bytes, actions=actions)
 
 if caught:  # signed, with notices — e.g. no watermark embedded, or an untrusted input manifest
     for w in caught:
@@ -144,7 +144,7 @@ of them, except where noted.
 
 | | Cloud, direct | Cloud, via S3 | Local |
 | --- | --- | --- | --- |
-| Entry | `POST /c2pa/sign` | `/io/get-s3-upload-url` → upload → `POST /c2pa/sign` with TASK | `sign_c2pa_distributed()` in the [Python SDK](../local/python.md), or `POST /c2pa/sign` with file paths on the [Docker image](../local/docker.md) |
+| Entry | `POST /c2pa/sign` | `/io/get-s3-upload-url` → upload → `POST /c2pa/sign` with TASK | `sign_c2pa_local()` in the [Python SDK](../local/python.md), or `POST /c2pa/sign` with file paths on the [Docker image](../local/docker.md) |
 | Media reaches Trufo | Yes, in the body | Yes, via ephemeral S3 | **No** — the original media file is not sent |
 | Manifest assembled by | Trufo | Trufo | Your machine (`trufo-provenance`) |
 | Signing key | Trufo | Trufo | Trufo |
@@ -206,7 +206,7 @@ settings = ManifestSettings(
         size=ThumbnailSize.HIGH,
     ),
 )
-signed_bytes = sign_c2pa(api_key, media_bytes, manifest_settings=settings)
+signed_bytes = sign_c2pa_cloud(api_key, media_bytes, manifest_settings=settings)
 ```
 
 `AUTO` generates a claim thumbnail and thumbnails for supported ingredients
@@ -224,7 +224,7 @@ with the same request and response; use `/io/get-s3-upload-url` instead.
 
 Uploads serve [TASK](#tasks) execution, which only the production hosts run, so
 they take a `c2pa-sign-prod` or `watermark-prod` key; a test key gets the 410
-below. With a test key, use `sign_c2pa_test()` or `bind_watermark_test()`.
+below. With a test key, use `sign_c2pa_cloud_test()` or `bind_watermark_test()`.
 
 | Field | Type | Required | Description |
 | ----- | ---- | -------- | ----------- |
@@ -332,9 +332,9 @@ not a supported public interface and are not documented here — driving them di
 produces invalid manifests and unusable signing records.
 
 ```python
-from trufo import sign_c2pa_distributed
+from trufo import sign_c2pa_local
 
-signed_bytes = sign_c2pa_distributed(api_key, media_bytes, actions=actions)
+signed_bytes = sign_c2pa_local(api_key, media_bytes, actions=actions)
 ```
 
 Requirements: a `c2pa-sign-prod` key and completed OV, plus a local engine extra
@@ -348,9 +348,9 @@ through `manifest_settings` to record the file's name. The generator info record
 the host's operating system and kernel release as `operating_system`, for example
 `Linux 6.8.0-45-generic`.
 
-`sign_c2pa_distributed()` and `sign_c2pa_distributed_test()` accept
+`sign_c2pa_local()` and `sign_c2pa_local_test()` accept
 `branded_gp_id`, `signed_input_policy`, `signed_ingredient_policy` and
-`skip_manifest_storage`, as `sign_c2pa()` does. Setting either policy, like sending
+`skip_manifest_storage`, as `sign_c2pa_cloud()` does. Setting either policy, like sending
 an [`ai_system`](#ai_system) entry, needs trufo-provenance 2.2.0 or later;
 `skip_manifest_storage` needs 2.3.0 or later.
 
@@ -379,7 +379,7 @@ Call the endpoint for the region you want; there is no routing parameter. See
 ```python
 from trufo.api.endpoints import TRUFO_API_URL_EUROPE
 
-signed_bytes = sign_c2pa(api_key, media_bytes, trufo_api_url=TRUFO_API_URL_EUROPE)
+signed_bytes = sign_c2pa_cloud(api_key, media_bytes, trufo_api_url=TRUFO_API_URL_EUROPE)
 ```
 
 Organizations with a dedicated API pass its host explicitly via `trufo_api_url`.

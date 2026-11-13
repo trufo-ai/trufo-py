@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Deprecated
+
+- `sign_c2pa`, `sign_c2pa_test`, `sign_c2pa_distributed`, and
+  `sign_c2pa_distributed_test`: use `sign_c2pa_cloud`, `sign_c2pa_cloud_test`,
+  `sign_c2pa_local`, and `sign_c2pa_local_test`.
+- The old names above stay importable until the next major release. A star import
+  no longer brings them.
+
 ## [2.3.0] — 2026-11-13
 
 ### Added
