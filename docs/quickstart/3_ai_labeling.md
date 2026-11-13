@@ -35,11 +35,11 @@ AI-generated.
 
 ## Step 1 — Confirm You Are the First-Party Operator
 
-“First-party” means your organization operates the AI system and its model: on your
-own infrastructure, or on-device in your own client application whose output goes
-through your backend. Models hosted by a third party are not eligible. Otherwise,
-register the AI system without first-party: its content is then labeled as a
-declared AI ingredient ([step 3](#step-3--sign-with-the-ai-system)).
+“First-party” means a client-side generative AI model outputs the content, and your
+organization's client-side application routes it to Trufo to be signed, identifying
+the AI system you registered with Trufo. Otherwise, register the AI system without
+first-party: its content is then labeled as a declared AI ingredient
+([step 3](#step-3--sign-with-the-ai-system)).
 
 ## Step 2 — Register an AI System
 
