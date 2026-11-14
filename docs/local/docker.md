@@ -137,8 +137,9 @@ curl -s http://127.0.0.1:8080/c2pa/sign \
 
 `actions` and `assertions` take the same entries as in Cloud mode, `transcode` included
 (see [`actions`](../api/api_c2pa.md#actions)). `signed_input_policy`,
-`signed_ingredient_policy` and the `ai_system` entry need a 2.2 image, and
-`skip_manifest_storage` a 2.3 image. In the full
+`signed_ingredient_policy` and the `ai_system` entry need a 2.2 image,
+`skip_manifest_storage` a 2.3 image, and the 2.3.1 additions listed under
+[Local mode](../api/api_c2pa.md#local-mode) a 2.3.1 image. In the full
 image, a [`watermark`](../api/api_c2pa.md#watermark) action embeds the mark locally,
 with the same options as in Cloud mode (see
 [watermark billing](../api/api_c2pa.md#watermark-billing)); the signing-only image

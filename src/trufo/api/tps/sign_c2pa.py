@@ -669,7 +669,10 @@ def sign_c2pa_cloud(
         signed_ingredient_policy: What to do when an ingredient's media is already
             C2PA-signed; omit for ``auto``.
         skip_manifest_storage: Ask Trufo not to keep a copy of the signed manifest;
-            refused with a per-embed watermark.
+            refused with a per-embed watermark. Please note that if this option is
+            elected, Trufo's ability to assist with signing-related issues, issue
+            personalized deprecation reminders, and provide content management
+            features will be limited.
         trufo_api_url: Freeform Trufo API base URL. Defaults to production.
 
     Returns:
@@ -766,7 +769,10 @@ def sign_c2pa_cloud_test(
         signed_ingredient_policy: What to do when an ingredient's media is already
             C2PA-signed; omit for ``auto``.
         skip_manifest_storage: Ask Trufo not to keep a copy of the signed manifest;
-            refused with a per-embed watermark.
+            refused with a per-embed watermark. Please note that if this option is
+            elected, Trufo's ability to assist with signing-related issues, issue
+            personalized deprecation reminders, and provide content management
+            features will be limited.
         trufo_api_url: Trufo API base URL. Defaults to the Trufo test host (test.api.trufo.ai).
 
     Returns:
@@ -853,7 +859,10 @@ def sign_c2pa_local_test(
         signed_ingredient_policy: What to do when an ingredient's media is already
             C2PA-signed; omit for ``auto``.
         skip_manifest_storage: Ask Trufo not to keep a copy of the signed manifest;
-            refused with a per-embed watermark.
+            refused with a per-embed watermark. Please note that if this option is
+            elected, Trufo's ability to assist with signing-related issues, issue
+            personalized deprecation reminders, and provide content management
+            features will be limited.
 
     Returns:
         Signed media bytes.
@@ -958,7 +967,10 @@ def sign_c2pa_local(
         signed_ingredient_policy: What to do when an ingredient's media is already
             C2PA-signed; omit for ``auto``.
         skip_manifest_storage: Ask Trufo not to keep a copy of the signed manifest;
-            refused with a per-embed watermark.
+            refused with a per-embed watermark. Please note that if this option is
+            elected, Trufo's ability to assist with signing-related issues, issue
+            personalized deprecation reminders, and provide content management
+            features will be limited.
 
     Returns:
         Signed media bytes.

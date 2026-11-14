@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- The `c2pa_metadata` assertion (`UserAssertion.C2PA_METADATA`): standard asset
+  metadata, such as camera details, as a gathered `c2pa.metadata` assertion. See
+  [`c2pa_metadata`](docs/api/api_c2pa.md#c2pa_metadata).
+- An `inputTo` ingredient can embed its content, such as a prompt, as base64
+  `data` with its `format`, up to 64 KB once decoded. Anyone with the signed file
+  can read it. See [`ingredient`](docs/api/api_c2pa.md#ingredient).
+- A `creation` assertion accepts a `description`.
+- `cawg_metadata` accepts the `plus`, `schema`, `xmpDM` and `xmpRights`
+  namespaces.
+- In Local mode, each addition above needs trufo-provenance 2.3.1 or later; an
+  older engine refuses it. See [Local mode](docs/api/api_c2pa.md#local-mode).
+
+### Changed
+
+- Local-engine extras require trufo-provenance 2.3.1.
+- A `c2pa.translated` action in an ingredient's `action_history` requires
+  `parameters` with `sourceLanguage` and `targetLanguage`
+  (`400 InvalidTranslationLanguages`); it was previously accepted without them.
+  `parameters` on any other action returns `400 UnsupportedActionParameters`.
+- A second `cawg_metadata` or `cawg_training` assertion returns
+  `400 DuplicateAssertion`; previously the last one was kept. A second
+  `ai_system` or `creation` assertion returns the same code.
+- A `custom` assertion whose label ends in `.metadata` requires an `@context`;
+  without one, the API returns `400 InvalidMetadataContext`. Such assertions and
+  `cawg_metadata` are written as JSON, as the C2PA and CAWG specifications require
+  for metadata; they were previously written as CBOR. The `cawg_metadata`
+  `@context` refusals now start with `InvalidMetadataContext:`.
+
 ### Deprecated
 
 - `sign_c2pa`, `sign_c2pa_test`, `sign_c2pa_distributed`, and

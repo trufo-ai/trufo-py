@@ -18,7 +18,7 @@ unknown.
 
 Three relationships are available:
 
-- **`inputTo`** — an input to a computational process: a prompt, model, or dataset. Use `data_types` to say which (`c2pa.types.prompt`, `c2pa.types.model`, `c2pa.types.dataset`, ...).
+- **`inputTo`** — an input to a computational process: a prompt, model, or dataset. Use `data_types` to say which (`c2pa.types.generator.prompt`, `c2pa.types.model`, `c2pa.types.dataset`, ...).
 - **`componentOf`** — a placed component of a composition; send it as `media`, or declare it with `format`.
 - **`parentOf`** — the source asset before the edits represented by the active
   input. It requires `media`, is always a created declaration, and there may be
@@ -30,7 +30,7 @@ signed_bytes = sign_c2pa_cloud(
     media_bytes,
     assertions=[
         ["ingredient", {"relationship": "inputTo", "title": "prompt.txt",
-                        "data_types": [{"type": "c2pa.types.prompt"}]}],
+                        "data_types": [{"type": "c2pa.types.generator.prompt"}]}],
         ["ingredient", {"relationship": "componentOf", "format": "video/webm",
                         "title": "intro.webm"}],
     ],
@@ -38,6 +38,20 @@ signed_bytes = sign_c2pa_cloud(
 ```
 
 WebM has no C2PA support, so `intro.webm` can only be declared.
+
+To embed an input's content, such as a prompt, send it as base64 `data` on an
+`inputTo` entry with its `format` (such as `text/plain`). Anyone with the signed
+file can read it; see [`ingredient`](../api/api_c2pa.md#ingredient) for the limits.
+
+```python
+import base64
+
+prompt = "A lighthouse at dusk, oil painting"
+["ingredient", {"relationship": "inputTo", "title": "prompt.txt",
+                "data_types": [{"type": "c2pa.types.generator.prompt"}],
+                "format": "text/plain",
+                "data": base64.b64encode(prompt.encode("utf-8")).decode()}]
+```
 
 ## Branded provenance declarations
 

@@ -55,10 +55,11 @@ For development-only test signing, use `sign_c2pa_cloud_test()` with a `c2pa-sig
 
 ## `cawg_metadata` Namespaces
 
-The `assertion` dict must include an `@context` mapping. Trufo accepts the standard
-CAWG namespaces — `dc`, `exif`, `exifEX`, `tiff`, `photoshop`, `xmp`, `pdf`, `pdfx`,
-`Iptc4xmpCore`, and `Iptc4xmpExt` — each with its exact canonical URI; see the
-[full table](../api/api_c2pa.md#cawg_metadata). A richer example:
+The `assertion` dict must include an `@context` mapping. Trufo accepts these
+namespaces — `dc`, `exif`, `exifEX`, `tiff`, `photoshop`, `plus`, `schema`, `xmp`,
+`xmpDM`, `xmpRights`, `pdf`, `pdfx`, `Iptc4xmpCore`, and `Iptc4xmpExt` — each with
+its exact URI; see the [full table](../api/api_c2pa.md#cawg_metadata). A richer
+example:
 
 ```python
 ["cawg_metadata", {
