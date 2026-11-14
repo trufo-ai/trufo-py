@@ -95,9 +95,9 @@ to list your AI systems or switch one off.
 In the API, add one `ai_system` assertion to `assertions`:
 
 ```python
-from trufo import sign_c2pa
+from trufo import sign_c2pa_cloud
 
-signed_bytes = sign_c2pa(
+signed_bytes = sign_c2pa_cloud(
     api_key,
     media_bytes,
     assertions=[
@@ -137,7 +137,7 @@ Under `auto`, a `redact` or `transcode` action also keeps such an input;
 [Signed inputs and ingredients](../api/api_c2pa.md#signed-inputs-and-ingredients)
 lists every case.
 
-Test signing (`sign_c2pa_test()` with a `c2pa-sign-test` key) gives the same labels,
+Test signing (`sign_c2pa_cloud_test()` with a `c2pa-sign-test` key) gives the same labels,
 with the test certificate. Check the result at [verify.trufo.ai](https://verify.trufo.ai).
 
 ## Step 4 — Optionally, Watermark per AI System
@@ -165,7 +165,7 @@ The `ai_system` entry says what made the content; a CAWG identity assertion says
 who published it. They are complementary and commonly used together:
 
 ```python
-signed_bytes = sign_c2pa(
+signed_bytes = sign_c2pa_cloud(
     api_key,
     media_bytes,
     assertions=[
@@ -175,7 +175,7 @@ signed_bytes = sign_c2pa(
 )
 ```
 
-See [4_cawg_publish.md](4_cawg_publish.md). For test signing use `sign_c2pa_test()`
+See [4_cawg_publish.md](4_cawg_publish.md). For test signing use `sign_c2pa_cloud_test()`
 with a `c2pa-sign-test` key and `cawg_identity_id="test"`.
 
 ---

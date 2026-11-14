@@ -15,7 +15,7 @@ or save it to ~/.trufo/credentials/c2pa_sign_prod_api_key.
 
 from pathlib import Path
 
-from trufo import sign_c2pa
+from trufo import sign_c2pa_cloud
 from trufo.util.credentials import TrufoAPIKey, load_api_key
 
 # --- configuration ---
@@ -61,7 +61,7 @@ assertions = [
 
 # --- sign ---
 
-signed_bytes = sign_c2pa(
+signed_bytes = sign_c2pa_cloud(
     api_key,
     INPUT_FILE.read_bytes(),
     assertions=assertions,

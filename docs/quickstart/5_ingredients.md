@@ -18,19 +18,19 @@ unknown.
 
 Three relationships are available:
 
-- **`inputTo`** — an input to a computational process: a prompt, model, or dataset. Use `data_types` to say which (`c2pa.types.prompt`, `c2pa.types.model`, `c2pa.types.dataset`, ...).
+- **`inputTo`** — an input to a computational process: a prompt, model, or dataset. Use `data_types` to say which (`c2pa.types.generator.prompt`, `c2pa.types.model`, `c2pa.types.dataset`, ...).
 - **`componentOf`** — a placed component of a composition; send it as `media`, or declare it with `format`.
 - **`parentOf`** — the source asset before the edits represented by the active
   input. It requires `media`, is always a created declaration, and there may be
   at most one.
 
 ```python
-signed_bytes = sign_c2pa(
+signed_bytes = sign_c2pa_cloud(
     api_key,
     media_bytes,
     assertions=[
         ["ingredient", {"relationship": "inputTo", "title": "prompt.txt",
-                        "data_types": [{"type": "c2pa.types.prompt"}]}],
+                        "data_types": [{"type": "c2pa.types.generator.prompt"}]}],
         ["ingredient", {"relationship": "componentOf", "format": "video/webm",
                         "title": "intro.webm"}],
     ],
@@ -38,6 +38,20 @@ signed_bytes = sign_c2pa(
 ```
 
 WebM has no C2PA support, so `intro.webm` can only be declared.
+
+To embed an input's content, such as a prompt, send it as base64 `data` on an
+`inputTo` entry with its `format` (such as `text/plain`). Anyone with the signed
+file can read it; see [`ingredient`](../api/api_c2pa.md#ingredient) for the limits.
+
+```python
+import base64
+
+prompt = "A lighthouse at dusk, oil painting"
+["ingredient", {"relationship": "inputTo", "title": "prompt.txt",
+                "data_types": [{"type": "c2pa.types.generator.prompt"}],
+                "format": "text/plain",
+                "data": base64.b64encode(prompt.encode("utf-8")).decode()}]
+```
 
 ## Branded provenance declarations
 
@@ -121,21 +135,21 @@ Redaction removes whole assertions; individual fields within an assertion cannot
 [0_setup.md](0_setup.md).
 - The input file must already have a C2PA manifest — redacting a file with no existing
 provenance history fails.
-- The `redact` action works in Cloud mode (`sign_c2pa`, `sign_c2pa_test`, and
+- The `redact` action works in Cloud mode (`sign_c2pa_cloud`, `sign_c2pa_cloud_test`, and
 `submit_c2pa_sign` for TASK submissions) and in Local mode, which redacts without
-sending media to Trufo: `sign_c2pa_distributed` and `sign_c2pa_distributed_test`
+sending media to Trufo: `sign_c2pa_local` and `sign_c2pa_local_test`
 ([Local mode with the Python SDK](../local/python.md)) or the Docker image
 ([Local mode with the Docker image](../local/docker.md)).
 
 ### Minimal Example
 
 ```python
-from trufo import sign_c2pa
+from trufo import sign_c2pa_cloud
 from trufo.util.credentials import TrufoAPIKey, load_api_key
 
 api_key = load_api_key(TrufoAPIKey.C2PA_SIGN_PROD)
 
-signed_bytes = sign_c2pa(
+signed_bytes = sign_c2pa_cloud(
     api_key,
     media_bytes,
     actions=[
@@ -214,7 +228,7 @@ Instance numbers come from the input's own manifest, so inspect it to see which 
 `redact` entries sit in the same list as any other action:
 
 ```python
-signed_bytes = sign_c2pa(
+signed_bytes = sign_c2pa_cloud(
     api_key,
     media_bytes,
     actions=[

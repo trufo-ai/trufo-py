@@ -43,8 +43,8 @@ Every production sign or bind creates a [content record](#content-records) whose
 
 | Route | SDK functions | `origin` |
 | ----- | ------------- | -------- |
-| C2PA Signing, Cloud (direct or via S3) | `sign_c2pa()`, `submit_c2pa_sign()` | `c2pa_hosted` |
-| C2PA Signing, Local | `sign_c2pa_distributed()`, or the [Docker image](../local/docker.md) | `c2pa_distributed` |
+| C2PA Signing, Cloud (direct or via S3) | `sign_c2pa_cloud()`, `submit_c2pa_sign()` | `c2pa_hosted` |
+| C2PA Signing, Local | `sign_c2pa_local()`, or the [Docker image](../local/docker.md) | `c2pa_distributed` |
 | Watermarking, Cloud | `bind_watermark()`, then `bind_commit()` | `bind_hosted` |
 | Watermarking, Local | `bind_reserve()`, `watermark_media()`, then `bind_commit()` | `bind_distributed` |
 
@@ -69,11 +69,11 @@ the base class of `TrufoServerWarning`, so filter on `UserWarning` to catch both
 ```python
 import warnings
 
-from trufo import TrufoServerWarning, sign_c2pa
+from trufo import TrufoServerWarning, sign_c2pa_cloud
 
 with warnings.catch_warnings(record=True) as caught:
     warnings.simplefilter("always", TrufoServerWarning)
-    signed = sign_c2pa(api_key, media_bytes, actions=actions)
+    signed = sign_c2pa_cloud(api_key, media_bytes, actions=actions)
 
 if caught:  # signed, with notices — e.g. no watermark embedded, or an untrusted input manifest
     for w in caught:
@@ -92,6 +92,8 @@ Messages you may see:
   best-effort watermark failure (`Watermarking failed: …`).
 - What Trufo found in the C2PA data of the input or an ingredient: see
   [Signed inputs and ingredients](#signed-inputs-and-ingredients).
+- An ingredient's [`data`](#ingredient) over 8 KB
+  (`The 'data' of ingredient '<title>' is over 8 KB…`).
 - Deprecations: the watermark [`mode`](#watermark), the
   [`ai_disclosure`](#ai_disclosure) entry and, in Local mode, the
   [engine version](#local-mode).
@@ -114,6 +116,14 @@ Beyond the platform-wide codes in [api_trufo.md](api_trufo.md):
 | 400 | `MissingInputManifest: …` | A `transcode` action on an input without a readable C2PA manifest (see [`transcode`](#transcode)) |
 | 400 | `MissingDigitalSourceType: …` | A C2PA action in an [`ingredient`](#ingredient)'s `action_history` without a `digitalSourceType`, unless [exempt](#assertions) |
 | 400 | `ManifestStorageRequired: …` | A `"per_embed"` watermark with `skip_manifest_storage` (see [`watermark`](#watermark)) |
+| 400 | `DuplicateAssertion: …` | A second entry of an assertion allowed once (see [`assertions`](#assertions)) |
+| 400 | `InvalidMetadataContext: …` | A missing or invalid `@context` in [`c2pa_metadata`](#c2pa_metadata), [`cawg_metadata`](#cawg_metadata), or a [`custom`](#custom) assertion whose label ends in `.metadata` |
+| 400 | `UnsupportedC2PAMetadataField: …` | A [`c2pa_metadata`](#c2pa_metadata) field Trufo does not support |
+| 400 | `InvalidTranslationLanguages: …` | A `c2pa.translated` action in an [`ingredient`](#ingredient)'s `action_history` without `sourceLanguage` and `targetLanguage` |
+| 400 | `UnsupportedActionParameters: …` | `parameters` on an `action_history` action other than `c2pa.translated` (see [`ingredient`](#ingredient)) |
+| 400 | `IngredientDataTooLarge: …` | Ingredient `data` over 64 KB once decoded (see [`ingredient`](#ingredient)) |
+| 400 | `InvalidIngredientData: …` | Ingredient `data` that is not a non-empty base64 string, or not on an `inputTo` ingredient with `format` and without `media` (see [`ingredient`](#ingredient)) |
+| 400 | `InvalidAssertionParameter: …` | A missing or invalid parameter of an assertion entry, such as a [`creation`](#creation) `description` that is not a non-empty string |
 | 403 | `MissingOrganizationValidation` | Production signing before OV completes |
 | 403 | `InvalidC2PACustomDomain` | The label's domain is not domain-validated for your organization |
 | 403 | `NoEligiblePlan` | The organization lacks the required plan |
@@ -144,7 +154,7 @@ of them, except where noted.
 
 | | Cloud, direct | Cloud, via S3 | Local |
 | --- | --- | --- | --- |
-| Entry | `POST /c2pa/sign` | `/io/get-s3-upload-url` → upload → `POST /c2pa/sign` with TASK | `sign_c2pa_distributed()` in the [Python SDK](../local/python.md), or `POST /c2pa/sign` with file paths on the [Docker image](../local/docker.md) |
+| Entry | `POST /c2pa/sign` | `/io/get-s3-upload-url` → upload → `POST /c2pa/sign` with TASK | `sign_c2pa_local()` in the [Python SDK](../local/python.md), or `POST /c2pa/sign` with file paths on the [Docker image](../local/docker.md) |
 | Media reaches Trufo | Yes, in the body | Yes, via ephemeral S3 | **No** — the original media file is not sent |
 | Manifest assembled by | Trufo | Trufo | Your machine (`trufo-provenance`) |
 | Signing key | Trufo | Trufo | Trufo |
@@ -177,7 +187,7 @@ permanent signing record.
 | `branded_gp_id` | string | No | One of your organization's branded generator products (`gp_...`, listed on the dashboard's C2PA Signing API page, **Manage** tab); the content is signed as that product. Omit to sign with Trufo's own C2PA signer. On the test host, `test` may be used in place of a product ID and is approved for every source type a product can be approved for. |
 | `signed_input_policy` | string | No | What happens when the input file already carries a C2PA manifest: `keep` or `auto`. When omitted, `auto` applies. See [Signed inputs and ingredients](#signed-inputs-and-ingredients). |
 | `signed_ingredient_policy` | string | No | What happens when an ingredient's media already carries a C2PA manifest: `keep` or `auto`. When omitted, `auto` applies. See [Signed inputs and ingredients](#signed-inputs-and-ingredients). |
-| `skip_manifest_storage` | boolean | No | Elect to tell Trufo not to store a copy of the signed manifest; this may limit the extent to which Trufo may be able to help debug any issues that arise, and may limit your ability to manage signed assets in the future. |
+| `skip_manifest_storage` | boolean | No | Elect to tell Trufo not to store a copy of the signed manifest. Please note that if this option is elected, Trufo's ability to assist with signing-related issues, issue personalized deprecation reminders, and provide content management features will be limited. |
 
 \* Provide exactly one: bytes for REQUEST, an S3 reference for TASK. There is no
 automatic fallback. REQUEST has a 10 MB (10,000,000-byte) input cap; audio/video
@@ -206,7 +216,7 @@ settings = ManifestSettings(
         size=ThumbnailSize.HIGH,
     ),
 )
-signed_bytes = sign_c2pa(api_key, media_bytes, manifest_settings=settings)
+signed_bytes = sign_c2pa_cloud(api_key, media_bytes, manifest_settings=settings)
 ```
 
 `AUTO` generates a claim thumbnail and thumbnails for supported ingredients
@@ -224,7 +234,7 @@ with the same request and response; use `/io/get-s3-upload-url` instead.
 
 Uploads serve [TASK](#tasks) execution, which only the production hosts run, so
 they take a `c2pa-sign-prod` or `watermark-prod` key; a test key gets the 410
-below. With a test key, use `sign_c2pa_test()` or `bind_watermark_test()`.
+below. With a test key, use `sign_c2pa_cloud_test()` or `bind_watermark_test()`.
 
 | Field | Type | Required | Description |
 | ----- | ---- | -------- | ----------- |
@@ -332,9 +342,9 @@ not a supported public interface and are not documented here — driving them di
 produces invalid manifests and unusable signing records.
 
 ```python
-from trufo import sign_c2pa_distributed
+from trufo import sign_c2pa_local
 
-signed_bytes = sign_c2pa_distributed(api_key, media_bytes, actions=actions)
+signed_bytes = sign_c2pa_local(api_key, media_bytes, actions=actions)
 ```
 
 Requirements: a `c2pa-sign-prod` key and completed OV, plus a local engine extra
@@ -348,11 +358,15 @@ through `manifest_settings` to record the file's name. The generator info record
 the host's operating system and kernel release as `operating_system`, for example
 `Linux 6.8.0-45-generic`.
 
-`sign_c2pa_distributed()` and `sign_c2pa_distributed_test()` accept
+`sign_c2pa_local()` and `sign_c2pa_local_test()` accept
 `branded_gp_id`, `signed_input_policy`, `signed_ingredient_policy` and
-`skip_manifest_storage`, as `sign_c2pa()` does. Setting either policy, like sending
-an [`ai_system`](#ai_system) entry, needs trufo-provenance 2.2.0 or later;
-`skip_manifest_storage` needs 2.3.0 or later.
+`skip_manifest_storage`, as `sign_c2pa_cloud()` does. Setting either policy, like sending
+an [`ai_system`](#ai_system) entry, needs trufo-provenance 2.2.0 or later, and
+`skip_manifest_storage` 2.3.0 or later. These need 2.3.1 or later: a
+[`c2pa_metadata`](#c2pa_metadata) entry, ingredient [`data`](#ingredient), a
+[`creation`](#creation) `description`, `parameters` on a `c2pa.translated` action,
+and the `plus`, `schema`, `xmpDM` and `xmpRights` prefixes in
+[`cawg_metadata`](#cawg_metadata).
 
 <!-- TODO(sunset-2027-01-31): the versions paragraph and its table go; successor none -->
 
@@ -379,7 +393,7 @@ Call the endpoint for the region you want; there is no routing parameter. See
 ```python
 from trufo.api.endpoints import TRUFO_API_URL_EUROPE
 
-signed_bytes = sign_c2pa(api_key, media_bytes, trufo_api_url=TRUFO_API_URL_EUROPE)
+signed_bytes = sign_c2pa_cloud(api_key, media_bytes, trufo_api_url=TRUFO_API_URL_EUROPE)
 ```
 
 Organizations with a dedicated API pass its host explicitly via `trufo_api_url`.
@@ -515,7 +529,9 @@ existing history, never the output of a transform in the same call.
 
 ### `assertions`
 
-Ordered `[name, params]` pairs. Assertions are gathered unless their documented
+Ordered `[name, params]` pairs. Each of `creation`, `ai_system`, `c2pa_metadata`,
+`cawg_metadata` and `cawg_training` may appear once; a second returns
+`400 DuplicateAssertion`. Assertions are gathered unless their documented
 schema fixes or permits created placement. Created declarations require an
 authorized branded generator product (`branded_gp_id`), limited to the source
 types the product is approved for; without one, the only created declarations
@@ -531,6 +547,7 @@ a `digitalSourceType`, except `c2pa.converted`, `c2pa.edited.metadata`,
 | --------- | ------ | ---------- |
 | `"ai_system"` | `{"ai_system_id": "<id>", "ai_involvement": "ai_generated"}` | `c2pa.actions` (`c2pa.created`, or `c2pa.opened` with a `c2pa.ingredient.v3` parent); `c2pa.ai-disclosure` when the AI system has one |
 | `"ai_disclosure"` **(deprecated)** | `{"ai_disclosure_id": "<id>", "set_source_type": false}` | `c2pa.ai-disclosure` <!-- TODO(sunset-2027-01-31): this row goes; successor the ai_system row --> |
+| `"c2pa_metadata"` | `{"assertion": {…}}` | `c2pa.metadata` |
 | `"cawg_metadata"` | `{"assertion": {…}}` | `cawg.metadata` |
 | `"cawg_training"` | `{"assertion": {…}}` | `cawg.training-mining` |
 | `"cawg_identity"` | `{"cawg_identity_id": "<id>"}` | `cawg.identity` |
@@ -588,7 +605,7 @@ The test host writes the same labels, with the test certificate.
 | When | Status | `detail` |
 | ---- | ------ | -------- |
 | Local mode, an engine too old for the entry | 400 | `UnsupportedSDKVersion: the 'ai_system' assertion requires trufo-provenance 2.2.0 or later. Please upgrade.` |
-| Two `ai_system` entries | 400 | `At most one 'ai_system' assertion is allowed per request.` |
+| Two `ai_system` entries | 400 | `DuplicateAssertion: At most one 'ai_system' assertion is allowed per request.` |
 | With the deprecated `ai_disclosure` entry | 400 | `The 'ai_system' assertion cannot be combined with the deprecated 'ai_disclosure' assertion; remove 'ai_disclosure'.` <!-- TODO(sunset-2027-01-31): this row goes; successor none --> |
 | With a `creation` entry | 400 | `The 'ai_system' assertion cannot be combined with a 'creation' assertion; remove 'creation'.` |
 | `ai_system_id` or `ai_involvement` missing | 400 | `The 'ai_system' assertion requires 'ai_system_id' and 'ai_involvement'.` |
@@ -634,6 +651,65 @@ the entry is refused.
 | ---- | ------ | -------- |
 | The entry, from 2027-01-31T23:59:00+00:00 | 400 | `UnsupportedAssertion: the 'ai_disclosure' assertion is no longer supported (expired 2027-01-31T23:59:00+00:00). Please use the 'ai_system' assertion.` |
 
+#### `c2pa_metadata`
+
+JSON-LD asset metadata, such as camera and capture details (C2PA 2.4 § 18.17.3).
+`assertion` must include an `@context` that declares each prefix its fields use,
+with the URI below:
+
+| Prefix | URI | Fields |
+| ------ | --- | ------ |
+| `Iptc4xmpExt` | `http://iptc.org/std/Iptc4xmpExt/2008-02-29/` | `DigImageGUID`, `DigitalSourceType`, `EventId`, `Genre`, `ImageRating`, `ImageRegion`, `LocationCreated`, `LocationShown`, `MaxAvailHeight`, `MaxAvailWidth`, `RegistryId` |
+| `crs` | `http://ns.adobe.com/camera-raw-settings/1.0/` | `AutoBrightness`, `AutoContrast`, `AutoExposure`, `AutoShadows`, `BlueHue`, `BlueSaturation`, `Brightness`, `CameraProfile`, `ChromaticAberrationB`, `ChromaticAberrationR`, `ColorNoiseReduction`, `Contrast`, `CropAngle`, `CropBottom`, `CropHeight`, `CropLeft`, `CropRight`, `CropTop`, `CropUnits`, `CropWidth`, `Exposure`, `GreenHue`, `GreenSaturation`, `HasCrop`, `HasSettings`, `LuminanceSmoothing`, `RawFileName`, `RedHue`, `RedSaturation`, `Saturation`, `ShadowTint`, `Shadows`, `Sharpness`, `Temperature`, `Tint`, `ToneCurve`, `ToneCurveName`, `Version`, `VignetteAmount`, `VignetteMidpoint`, `WhiteBalance` |
+| `dc` | `http://purl.org/dc/elements/1.1/` | `coverage`, `date`, `format`, `identifier`, `language`, `relation`, `type` |
+| `exif` | `http://ns.adobe.com/exif/1.0/` | `ApertureValue`, `BrightnessValue`, `CFAPattern`, `ColorSpace`, `CompressedBitsPerPixel`, `Contrast`, `CustomRendered`, `DateTimeDigitized`, `DateTimeOriginal`, `DeviceSettingDescription`, `DigitalZoomRatio`, `ExifVersion`, `ExposureBiasValue`, `ExposureIndex`, `ExposureMode`, `ExposureProgram`, `ExposureTime`, `FNumber`, `FileSource`, `Flash`, `FlashEnergy`, `FlashpixVersion`, `FocalLength`, `FocalLengthIn35mmFilm`, `FocalPlaneResolutionUnit`, `FocalPlaneXResolution`, `FocalPlaneYResolution`, `GPSAltitude`, `GPSAltitudeRef`, `GPSDOP`, `GPSDateStamp`, `GPSDestBearing`, `GPSDestBearingRef`, `GPSDestDistance`, `GPSDestDistanceRef`, `GPSDestLatitude`, `GPSDestLongitude`, `GPSDifferential`, `GPSHPositioningError`, `GPSImgDirection`, `GPSImgDirectionRef`, `GPSLatitude`, `GPSLongitude`, `GPSMapDatum`, `GPSMeasureMode`, `GPSProcessingMethod`, `GPSSatellites`, `GPSSpeed`, `GPSSpeedRef`, `GPSStatus`, `GPSTimeStamp`, `GPSTrack`, `GPSTrackRef`, `GPSVersionID`, `GainControl`, `ISOSpeedRatings`, `ImageUniqueID`, `LightSource`, `MaxApertureValue`, `MeteringMode`, `OECF`, `OffsetTimeOriginal`, `PixelXDimension`, `PixelYDimension`, `RelatedSoundFile`, `Saturation`, `SceneCaptureType`, `SceneType`, `SensingMethod`, `Sharpness`, `ShutterSpeedValue`, `SpatialFrequencyResponse`, `SpectralSensitivity`, `SubjectArea`, `SubjectDistance`, `SubjectDistanceRange`, `SubjectLocation`, `WhiteBalance` |
+| `exifEX` | `http://cipa.jp/exif/1.0/` | `BodySerialNumber`, `Gamma`, `ISOSpeed`, `ISOSpeedLatitudeyyy`, `ISOSpeedLatitudezzz`, `InteroperabilityIndex`, `LensMake`, `LensModel`, `LensSerialNumber`, `LensSpecification`, `PhotographicSensitivity`, `RecommendedExposureIndex`, `SensitivityType`, `StandardOutput-Sensitivity` |
+| `pdf` | `http://ns.adobe.com/pdf/1.3/` | `Keywords`, `PDFVersion`, `Producer`, `Trapped` |
+| `photoshop` | `http://ns.adobe.com/photoshop/1.0/` | `Category`, `City`, `ColorMode`, `Country`, `DateCreated`, `DocumentAncestors`, `History`, `ICCProfile`, `State`, `SupplementalCategories`, `TextLayers`, `TransmissionReference`, `Urgency` |
+| `plus` | `http://ns.useplus.org/ldf/xmp/1.0/` | `FileNameAsDelivered`, `FirstPublicationDate`, `ImageFileFormatAsDelivered`, `ImageFileSizeAsDelivered`, `ImageType`, `Version` |
+| `tiff` | `http://ns.adobe.com/tiff/1.0/` | `BitsPerSample`, `Compression`, `ImageLength`, `ImageWidth`, `Make`, `Model`, `Orientation`, `PhotometricInterpretation`, `PlanarConfiguration`, `PrimaryChromaticities`, `ReferenceBlackWhite`, `ResolutionUnit`, `SamplesPerPixel`, `TransferFunction`, `WhitePoint`, `XResolution`, `YCbCrCoefficients`, `YCbCrPositioning`, `YCbCrSubSampling`, `YResolution` |
+| `xmp` | `http://ns.adobe.com/xap/1.0/` | `BaseURL`, `CreateDate`, `CreatorTool`, `Identifier`, `Label`, `MetadataDate`, `ModifyDate`, `Nickname`, `Rating`, `Thumbnails` |
+| `xmpDM` | `http://ns.adobe.com/xmp/1.0/DynamicMedia/` | `Tracks`, `absPeakAudioFilePath`, `album`, `altTapeName`, `altTimecode`, `audioChannelType`, `audioCompressor`, `audioSampleRate`, `audioSampleType`, `beatSpliceParams`, `cameraAngle`, `cameraLabel`, `cameraModel`, `cameraMove`, `comment`, `contributedMedia`, `discNumber`, `duration`, `fileDataRate`, `genre`, `good`, `instrument`, `introTime`, `key`, `logComment`, `loop`, `lyrics`, `markers`, `numberOfBeats`, `outCue`, `partOfCompilation`, `projectName`, `projectRef`, `pullDown`, `relativePeakAudioFilePath`, `relativeTimestamp`, `releaseDate`, `resampleParams`, `scaleType`, `scene`, `shotDate`, `shotDay`, `shotLocation`, `shotName`, `shotNumber`, `shotSize`, `speakerPlacement`, `startTimecode`, `stretchMode`, `takeNumber`, `tapeName`, `tempo`, `timeScaleParams`, `timeSignature`, `trackNumber`, `videoAlphaMode`, `videoAlphaPremultipleColor`, `videoAlphaUnityIsTransparent`, `videoColorSpace`, `videoCompressor`, `videoFieldOrder`, `videoFrameRate`, `videoFrameSize`, `videoPixelAspectRatio`, `videoPixelDepth` |
+| `xmpMM` | `http://ns.adobe.com/xap/1.0/mm/` | `DerivedFrom`, `DocumentID`, `History`, `Ingredients`, `InstanceID`, `ManageTo`, `ManageUI`, `ManagedFrom`, `Manager`, `ManagerVariant`, `OriginalDocumentID`, `Pantry`, `RenditionClass`, `RenditionParams`, `VersionID`, `Versions` |
+| `xmpTPg` | `http://ns.adobe.com/xap/1.0/t/pg/` | `Colorants`, `Fonts`, `MaxPageSize`, `NPages`, `PlateNames` |
+
+```python
+["c2pa_metadata", {"assertion": {
+    "@context": {
+        "exif": "http://ns.adobe.com/exif/1.0/",
+        "exifEX": "http://cipa.jp/exif/1.0/",
+        "tiff": "http://ns.adobe.com/tiff/1.0/",
+    },
+    "tiff:Make": "ExampleCam",
+    "tiff:Model": "X100",
+    "exif:DateTimeOriginal": "2026-08-31T09:30:00",
+    "exifEX:LensModel": "35mm f/2",
+}}]
+```
+
+The fields are a subset of C2PA 2.4 Appendix B, chosen for compatibility with
+older validators. Fields that C2PA 2.3 dropped, such as `tiff:Software`, and
+fields that C2PA 2.3 or 2.4 added, such as `dc:title` and
+`exifEX:ImageEditingSoftware`, are not supported. Put other metadata in a
+[`custom`](#custom) assertion whose label ends in `.metadata`.
+
+Use `c2pa_metadata` for capture details, such as date and time, location and
+device, and [`cawg_metadata`](#cawg_metadata) for creator, credit and rights.
+Their `exifEX` URIs differ: `http://cipa.jp/exif/1.0/` here, `2.32/` there.
+Created placement is refused, so omit `placement`.
+
+**Errors:**
+
+| When | Status | `detail` |
+| ---- | ------ | -------- |
+| Local mode, an engine too old for the entry | 400 | `UnsupportedSDKVersion: the 'c2pa_metadata' assertion requires trufo-provenance 2.3.1 or later. Please upgrade.` |
+| Two `c2pa_metadata` entries | 400 | `DuplicateAssertion: At most one 'c2pa_metadata' assertion is allowed per request.` |
+| `placement` `created`, without `branded_gp_id` | 403 | `C2PACreatedUserAssertionsNotAuthorized: created user assertions are not authorized.` |
+| `placement` `created`, with `branded_gp_id` | 400 | `Assertion placement is not supported for 'c2pa_metadata'.` |
+| No `assertion` dictionary | 400 | `InvalidAssertionParameter: The c2pa_metadata assertion requires an 'assertion' parameter containing a JSON-LD dictionary.` |
+| `@context` missing or empty, with a prefix not in the table or a different URI, or without a prefix a field uses | 400 | `InvalidMetadataContext: …` |
+| A field not in the table | 400 | `UnsupportedC2PAMetadataField: The c2pa_metadata field '<field>' is not supported; …` |
+
 #### `cawg_metadata`
 
 JSON-LD creator metadata. `assertion` must include an `@context` whose prefixes are
@@ -649,8 +725,14 @@ allowlisted and whose URIs match exactly:
 | `pdf` | `http://ns.adobe.com/pdf/1.3/` |
 | `pdfx` | `http://ns.adobe.com/pdfx/1.3/` |
 | `photoshop` | `http://ns.adobe.com/photoshop/1.0/` |
+| `plus` | `http://ns.useplus.org/ldf/xmp/1.0/` |
+| `schema` | `http://schema.org/` |
 | `tiff` | `http://ns.adobe.com/tiff/1.0/` |
 | `xmp` | `http://ns.adobe.com/xap/1.0/` |
+| `xmpDM` | `http://ns.adobe.com/xmp/1.0/DynamicMedia/` |
+| `xmpRights` | `http://ns.adobe.com/xap/1.0/rights/` |
+
+Trufo writes the assertion as JSON.
 
 #### `cawg_training`
 
@@ -672,7 +754,10 @@ one key, `entries`, mapping entry names to `{"use": …, "constraint_info"?: …
 Embeds an assertion under your own reverse-DNS label (C2PA §6.2). The label must be
 dot-separated reverse-DNS, may not use the `c2pa` namespace, and may not contain
 `__`. Your organization must hold an active domain validation for the corresponding
-domain — `com.example.metadata` requires `example.com`.
+domain — `com.example.metadata` requires `example.com`. A label ending in
+`.metadata` is a metadata assertion: Trufo writes it as JSON, and its `assertion`
+must contain a non-empty `@context` dictionary (otherwise
+`400 InvalidMetadataContext`); any prefixes and URIs are accepted.
 
 #### `ingredient`
 
@@ -687,8 +772,9 @@ of the asset, not a Trufo attestation.
 | `digital_source_type` | string | No | The IPTC `trainedAlgorithmicMedia` or `compositeWithTrainedAlgorithmicMedia` URI; not with `media` that carries a C2PA manifest |
 | `media` | string | For `parentOf` | base64 bytes, in a format with **Yes** under C2PA validate in [Media format support](media_format_support.md); declare other formats with `format` (`componentOf` or `inputTo`). A `componentOf` entry needs `media` or `format`; an `inputTo` entry, neither |
 | `format` | string | No | The media type of a declared ingredient (one without `media`), such as `video/mp4`; not with `media` |
+| `data` | string | No | The ingredient's own content, such as a prompt, as base64 bytes; `inputTo` only, with `format` (such as `text/plain`) and no `media`. Up to 64 KB once decoded; over 8 KB signs with a notice in `warnings`. Trufo embeds it in the signed file (C2PA 2.4 § 18.16.8), where anyone with the file can read it. In either mode, Trufo receives it in the signed manifest, which it may keep unless you set `skip_manifest_storage`. |
 | `placement` | string | No | `gathered` (default) or `created`, on a request authorized for created assertions; `parentOf` is always created. A declared ingredient is always gathered; created placement for it is refused for now and may be supported later. |
-| `action_history` | list | No | Actions between a `parentOf` source and the supplied input; entries may independently set `placement`, `digitalSourceType` and `description`. An entry's action is a C2PA action or a custom one in a domain your organization has validated (for example `com.example.upscaled`). A C2PA action requires a `digitalSourceType` (such as `DigitalSourceType.HUMAN_EDITS`), unless [exempt](#assertions) |
+| `action_history` | list | No | Actions between a `parentOf` source and the supplied input; entries may independently set `placement`, `digitalSourceType`, `description`, `softwareAgent` (`{"software_agent_id": "swagent_..."}`, a [registered software agent](#post-c2pasoftware-agentadd)) and `when` (RFC 3339, UTC). An entry's action is a C2PA action or a custom one in a domain your organization has validated (for example `com.example.upscaled`). A C2PA action requires a `digitalSourceType` (such as `DigitalSourceType.HUMAN_EDITS`), unless [exempt](#assertions). A `c2pa.translated` action requires `parameters` with `sourceLanguage` and `targetLanguage`, each a BCP 47 language tag such as `en` or `zh-CN`; no other action takes `parameters`. |
 
 - Sent (`media`): a readable C2PA history is always kept with the ingredient,
   validation failures included;
@@ -697,6 +783,21 @@ of the asset, not a Trufo attestation.
   it is an image.
 - Declared (no `media`): no history is looked for; validators report its
   provenance as unknown.
+
+To embed a prompt, send it as `data` on an `inputTo` ingredient:
+
+```python
+import base64
+
+prompt = "A lighthouse at dusk, oil painting"
+["ingredient", {
+    "relationship": "inputTo",
+    "title": "prompt.txt",
+    "data_types": [{"type": "c2pa.types.generator.prompt"}],
+    "format": "text/plain",
+    "data": base64.b64encode(prompt.encode("utf-8")).decode(),
+}]
+```
 
 At most one `parentOf` ingredient is allowed, it requires media, and it cannot be
 combined with `creation`. A kept [signed input](#signed-inputs-and-ingredients) is
@@ -711,10 +812,15 @@ already the parent, so it cannot take a `creation` entry or a `parentOf` you sen
 | An ingredient's `format` is not a media type | 400 | `The ingredient 'format' must be a media type such as 'video/mp4'.` |
 | A `componentOf` ingredient has neither `media` nor `format` | 400 | `The componentOf relationship requires ingredient 'media' or 'format'.` |
 | An ingredient has both `media` and `format` | 400 | `Provide the ingredient 'media' or 'format', not both.` |
+| `data` that is not a non-empty base64 string, or not on an `inputTo` ingredient with `format` and without `media` | 400 | `InvalidIngredientData: The ingredient 'data' must be a non-empty base64 string and is only valid on an inputTo ingredient with 'format' (the data's media type, such as 'text/plain') and no 'media'.` |
+| `data` over 64 KB once decoded | 400 | `IngredientDataTooLarge: The 'data' of ingredient '<title>' exceeds the 64 KB (64,000-byte) limit once decoded.` |
 | A `parentOf` ingredient without `branded_gp_id` | 403 | `C2PACreatedUserAssertionsNotAuthorized: created user assertions are not authorized.` |
 | A `parentOf` ingredient with `branded_gp_id` but no `media` | 400 | `The parentOf relationship requires ingredient 'media'.` |
 | `digital_source_type` with `media` that carries a C2PA manifest | 400 | `The ingredient 'digital_source_type' cannot be combined with media that carries a C2PA manifest (mutually exclusive per the spec).` |
 | A C2PA action in `action_history` without a `digitalSourceType`, unless [exempt](#assertions) | 400 | `MissingDigitalSourceType: The action '<action>' in action_history requires a 'digitalSourceType', an IPTC source type URI such as humanEdits (an edit made without generative AI) or compositeWithTrainedAlgorithmicMedia (an AI edit).` |
+| A `c2pa.translated` action in `action_history` without `sourceLanguage` and `targetLanguage` | 400 | `InvalidTranslationLanguages: The action 'c2pa.translated' in action_history requires 'parameters' with exactly 'sourceLanguage' and 'targetLanguage', each a BCP 47 language tag such as 'en' or 'zh-CN'.` |
+| `parameters` on another `action_history` action | 400 | `UnsupportedActionParameters: The action '<action>' in action_history does not accept 'parameters'; only 'c2pa.translated' does.` |
+| An inline `softwareAgent` body in `action_history` | 400 | ``Invalid `softwareAgent` value, in order to set a software agent for C2PA signing please register it at /c2pa/software-agent/add first and pass the returned `software_agent_id`.`` |
 
 In the format refusal, `<mime>` reads `Unknown format` when the media type cannot
 be detected.
@@ -729,10 +835,12 @@ agent. It emits exactly one leading `c2pa.created` action and is always created:
     "digitalSourceType": "http://cv.iptc.org/newscodes/digitalsourcetype/trainedAlgorithmicMedia",
     "softwareAgent": {"software_agent_id": "swagent_..."},
     "when": "2026-08-22T12:00:00Z",
+    "description": "Generated from a text prompt",
 }]
 ```
 
-`when` is optional. The server resolves the software-agent id to the registered
+`when` and `description` (a non-empty string, written on the `c2pa.created`
+action) are optional. The server resolves the software-agent id to the registered
 agent record. Creation, external parents, action histories, and any created
 placement default `allActionsIncluded` to false; explicitly asserting true is a
 separately authorized completeness claim.

@@ -14,7 +14,7 @@ registered with POST /ai-system/add.
 
 from pathlib import Path
 
-from trufo import sign_c2pa_test
+from trufo import sign_c2pa_cloud_test
 from trufo.util.credentials import TrufoAPIKey, load_api_key
 
 # --- configuration ---
@@ -34,7 +34,7 @@ assert api_key, "Set TRUFO_C2PA_SIGN_TEST_API_KEY or run: trufo set-api-key c2pa
 
 # --- sign ---
 
-signed_bytes = sign_c2pa_test(
+signed_bytes = sign_c2pa_cloud_test(
     api_key,
     INPUT_FILE.read_bytes(),
     assertions=[
