@@ -15,8 +15,8 @@ from trufo import (
     TrufoServerWarning,
     bind_watermark,
     bind_watermark_test,
-    sign_c2pa,
-    sign_c2pa_test,
+    sign_c2pa_cloud,
+    sign_c2pa_cloud_test,
     wait_for_task,
 )
 
@@ -51,7 +51,7 @@ def task(status="succeeded", task_type="c2pa_sign"):
 
 
 @pytest.mark.parametrize(
-    "operation,task_type", [(sign_c2pa, "c2pa_sign"), (bind_watermark, "watermark")]
+    "operation,task_type", [(sign_c2pa_cloud, "c2pa_sign"), (bind_watermark, "watermark")]
 )
 def test_bytes_task_uploads_submits_polls_downloads_without_leaking_api_key(operation, task_type):
     accepted = task("queued", task_type)
@@ -177,12 +177,12 @@ def test_polling_slows_down_and_stops_at_wait_budget(wait_seconds):
 
 def test_explicit_modes_reject_before_upload():
     with patch("requests.post") as post, patch("requests.put") as put:
-        for operation in (sign_c2pa_test, bind_watermark_test):
+        for operation in (sign_c2pa_cloud_test, bind_watermark_test):
             with pytest.raises(ValueError, match="REQUEST execution only"):
                 operation("key", b"input", execution_mode=ExecutionMode.TASK)
         with pytest.raises(NotImplementedError, match="Stream"):
-            sign_c2pa("key", b"input", execution_mode=ExecutionMode.STREAM)
+            sign_c2pa_cloud("key", b"input", execution_mode=ExecutionMode.STREAM)
         with pytest.raises(ValueError, match="mime_type"):
-            sign_c2pa("key", b"input", execution_mode=ExecutionMode.TASK)
+            sign_c2pa_cloud("key", b"input", execution_mode=ExecutionMode.TASK)
     post.assert_not_called()
     put.assert_not_called()

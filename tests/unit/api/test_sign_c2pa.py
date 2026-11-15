@@ -23,12 +23,12 @@ from trufo.api.tps.sign_c2pa import (
     _validate_assertions,
     _validate_redact_action,
     get_c2pa_s3_upload_url,
-    sign_c2pa,
-    sign_c2pa_distributed,
-    sign_c2pa_distributed_test,
+    sign_c2pa_cloud,
+    sign_c2pa_cloud_test,
+    sign_c2pa_local,
+    sign_c2pa_local_test,
     sign_c2pa_s3,
     sign_c2pa_s3_test,
-    sign_c2pa_test,
     sign_c2pa_via_s3,
     sign_c2pa_via_s3_test,
     submit_c2pa_sign,
@@ -124,7 +124,7 @@ class TestServerWarnings:
 
         with _warnings.catch_warnings(record=True) as caught:
             _warnings.simplefilter("always", TrufoServerWarning)
-            result = sign_c2pa("prod-key", b"input-media")
+            result = sign_c2pa_cloud("prod-key", b"input-media")
 
         assert result == b"signed"
         assert len(caught) == 1
@@ -141,7 +141,7 @@ class TestServerWarnings:
 
         with _warnings.catch_warnings(record=True) as caught:
             _warnings.simplefilter("always")
-            sign_c2pa("prod-key", b"input-media")
+            sign_c2pa_cloud("prod-key", b"input-media")
 
         assert caught == []
 
@@ -150,13 +150,13 @@ class TestDirectC2PASigning:
     """Direct media-byte C2PA signing helpers."""
 
     @patch("trufo.api.tps.sign_c2pa.requests.post")
-    def test_sign_c2pa_posts_to_prod_endpoint(self, mock_post):
+    def test_sign_c2pa_cloud_posts_to_prod_endpoint(self, mock_post):
         signed = b"signed-prod"
         mock_post.return_value = _mock_response(
             {"media_output": base64.b64encode(signed).decode("utf-8")}
         )
 
-        result = sign_c2pa(
+        result = sign_c2pa_cloud(
             "prod-key",
             b"input-media",
             actions=[
@@ -209,7 +209,7 @@ class TestDirectC2PASigning:
 
     def test_duplicate_manifest_setting_rejected_before_request(self):
         with pytest.raises(ValueError, match="duplicates direct field.*manifest_title"):
-            sign_c2pa(
+            sign_c2pa_cloud(
                 "prod-key",
                 b"input-media",
                 manifest_title="legacy.jpg",
@@ -217,13 +217,13 @@ class TestDirectC2PASigning:
             )
 
     @patch("trufo.api.tps.sign_c2pa.requests.post")
-    def test_sign_c2pa_test_posts_to_test_endpoint(self, mock_post):
+    def test_sign_c2pa_cloud_test_posts_to_test_endpoint(self, mock_post):
         signed = b"signed-test"
         mock_post.return_value = _mock_response(
             {"media_output": base64.b64encode(signed).decode("utf-8")}
         )
 
-        result = sign_c2pa_test("test-key", b"input-media")
+        result = sign_c2pa_cloud_test("test-key", b"input-media")
 
         assert result == signed
         mock_post.assert_called_once_with(
@@ -237,7 +237,7 @@ class TestDirectC2PASigning:
             timeout=60,
         )
 
-    @pytest.mark.parametrize("signer", [sign_c2pa, sign_c2pa_test])
+    @pytest.mark.parametrize("signer", [sign_c2pa_cloud, sign_c2pa_cloud_test])
     @patch("trufo.api.tps.sign_c2pa.requests.post")
     def test_assertions_without_cawg_identity_pass_silently(self, mock_post, signer, caplog):
         """CAWG identity is optional: no warning is emitted when absent."""
@@ -257,15 +257,15 @@ class TestDirectC2PASigning:
         assert caplog.records == []
 
 
-class TestRemoteC2PASigning:
-    """Remote C2PA signing wrappers delegate to the tfprov orchestrator."""
+class TestLocalC2PASigning:
+    """Local C2PA signing wrappers delegate to the tfprov remote orchestrator."""
 
-    _REMOTE_SIGNERS = [sign_c2pa_distributed, sign_c2pa_distributed_test]
+    _LOCAL_SIGNERS = [sign_c2pa_local, sign_c2pa_local_test]
 
     def test_test_signing_delegates_with_test_flag(self, monkeypatch):
         calls = _install_fake_remote_stack(monkeypatch, signed=b"signed-test")
 
-        result = sign_c2pa_distributed_test(
+        result = sign_c2pa_local_test(
             "remote-sign-key",
             b"input-media",
             actions=[["publish", {}]],
@@ -303,7 +303,7 @@ class TestRemoteC2PASigning:
     def test_prod_signing_delegates_with_endpoint_overrides(self, monkeypatch):
         calls = _install_fake_remote_stack(monkeypatch, signed=b"signed-prod")
 
-        result = sign_c2pa_distributed(
+        result = sign_c2pa_local(
             "remote-sign-key",
             b"input-media",
             actions=[["publish", {}]],
@@ -325,7 +325,7 @@ class TestRemoteC2PASigning:
     def test_prod_signing_uses_default_api_url(self, monkeypatch):
         calls = _install_fake_remote_stack(monkeypatch)
 
-        sign_c2pa_distributed("remote-sign-key", b"input-media")
+        sign_c2pa_local("remote-sign-key", b"input-media")
 
         kwargs = calls["generate_claim_remote"]["kwargs"]
         assert kwargs["test"] is False
@@ -335,7 +335,7 @@ class TestRemoteC2PASigning:
         assert "skip_manifest_storage" not in kwargs
         assert "watermark_settings" not in kwargs
 
-    @pytest.mark.parametrize("signer", _REMOTE_SIGNERS)
+    @pytest.mark.parametrize("signer", _LOCAL_SIGNERS)
     def test_returns_signed_bytes_discarding_orchestrator_warnings(self, monkeypatch, signer):
         _install_fake_remote_stack(
             monkeypatch, signed=b"signed", warning_messages=["preprocess warning"]
@@ -346,7 +346,7 @@ class TestRemoteC2PASigning:
         # the orchestrator returns (bytes, warnings); only the bytes are surfaced
         assert result == b"signed"
 
-    @pytest.mark.parametrize("signer", _REMOTE_SIGNERS)
+    @pytest.mark.parametrize("signer", _LOCAL_SIGNERS)
     @pytest.mark.parametrize(
         "kwargs, error, match",
         [
@@ -370,7 +370,7 @@ class TestRemoteC2PASigning:
 
         require_provenance_module.assert_not_called()
 
-    @pytest.mark.parametrize("signer", _REMOTE_SIGNERS)
+    @pytest.mark.parametrize("signer", _LOCAL_SIGNERS)
     @pytest.mark.parametrize("argument", ["tsa_api_key", "trufo_tsa_url"])
     def test_tsa_arguments_warn_deprecated(self, monkeypatch, signer, argument):
         _install_fake_remote_stack(monkeypatch, signed=b"signed")
@@ -383,7 +383,7 @@ class TestRemoteC2PASigning:
         assert result == b"signed"
         assert record[0].filename == __file__
 
-    @pytest.mark.parametrize("signer", _REMOTE_SIGNERS)
+    @pytest.mark.parametrize("signer", _LOCAL_SIGNERS)
     def test_no_warning_without_tsa_arguments(self, monkeypatch, recwarn, signer):
         _install_fake_remote_stack(monkeypatch)
 
@@ -391,7 +391,7 @@ class TestRemoteC2PASigning:
 
         assert recwarn.list == []
 
-    @pytest.mark.parametrize("signer", _REMOTE_SIGNERS)
+    @pytest.mark.parametrize("signer", _LOCAL_SIGNERS)
     def test_assertions_without_cawg_identity_pass_silently(self, monkeypatch, signer, caplog):
         """CAWG identity is optional: no warning is emitted when absent."""
         _install_fake_remote_stack(monkeypatch, signed=b"signed")
@@ -466,13 +466,13 @@ class TestS3C2PASigning:
     @patch("trufo.api.tps.sign_c2pa.wait_for_task")
     @patch("trufo.api.tps.sign_c2pa._upload_task_input")
     @patch("trufo.api.tps.sign_c2pa.requests.post")
-    def test_sign_c2pa_task_submits_branded_gp_id(
+    def test_sign_c2pa_cloud_task_submits_branded_gp_id(
         self, mock_post, mock_upload, mock_wait, mock_download
     ):
         mock_post.return_value = _accepted_task()
         mock_upload.return_value = "signed-input-reference"
 
-        sign_c2pa(
+        sign_c2pa_cloud(
             "prod-key",
             b"input-media",
             execution_mode=ExecutionMode.TASK,
@@ -573,7 +573,7 @@ class TestS3C2PASigning:
     @patch("trufo.api.tps.sign_c2pa.requests.get")
     @patch("trufo.api.tps.sign_c2pa.requests.put")
     @patch("trufo.api.tps.sign_c2pa.requests.post")
-    def test_hosted_signers_use_selected_api_url(
+    def test_cloud_signers_use_selected_api_url(
         self,
         mock_post,
         _mock_put,
@@ -605,7 +605,8 @@ class TestS3C2PASigning:
         mock_get.return_value.content = b"s3-signed"
 
         assert (
-            sign_c2pa("prod-key", b"input-media", trufo_api_url=trufo_api_url) == b"direct-signed"
+            sign_c2pa_cloud("prod-key", b"input-media", trufo_api_url=trufo_api_url)
+            == b"direct-signed"
         )
         assert (
             sign_c2pa_via_s3(
@@ -714,12 +715,14 @@ class TestRequestValidation:
     @pytest.mark.parametrize(
         "signer",
         [
-            sign_c2pa,
-            functools.partial(sign_c2pa, execution_mode=ExecutionMode.TASK, mime_type="image/jpeg"),
-            sign_c2pa_distributed,
-            sign_c2pa_distributed_test,
+            sign_c2pa_cloud,
+            functools.partial(
+                sign_c2pa_cloud, execution_mode=ExecutionMode.TASK, mime_type="image/jpeg"
+            ),
+            sign_c2pa_local,
+            sign_c2pa_local_test,
         ],
-        ids=["request", "task", "distributed", "distributed_test"],
+        ids=["request", "task", "local", "local_test"],
     )
     @pytest.mark.parametrize(
         "argument, match",

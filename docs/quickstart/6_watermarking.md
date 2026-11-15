@@ -13,7 +13,7 @@ For companies seeking minimal compliance with the EU AI Act Article 50(2), per-A
 
 There are two ways to get either watermark:
 
-- **As part of C2PA signing** — a `["watermark", {...}]` action in a `sign_c2pa*` call; Trufo embeds the mark and signs the manifest in one step. **Off by default** — the action requests it.
+- **As part of C2PA signing** — a `["watermark", {...}]` action in a `sign_c2pa_cloud*` call; Trufo embeds the mark and signs the manifest in one step. **Off by default** — the action requests it.
 - **Standalone binding** — `bind_watermark()` embeds the mark and *you* sign the media with your own certificate; see [Binding Without Trufo Signing](#binding-without-trufo-signing).
 
 Either way, the signed manifest declares a per-embed mark per the C2PA specification: a `c2pa.watermarked.bound` action plus a `c2pa.soft-binding` assertion with algorithm `ai.trufo.pawprint.watermark`, Trufo's entry in the official C2PA soft-binding algorithm registry. Trufo writes these when it signs; on a bind, your manifest should carry them. A per-AI-system mark is not a soft binding.
@@ -27,7 +27,7 @@ recovery eligibility, image restrictions, audio/video codecs, and track layouts.
 
 In Cloud mode, REQUEST execution is limited to images up to 10 MB (10,000,000 bytes).
 For larger images, audio, or video, explicitly select `ExecutionMode.TASK` and
-pass `mime_type` to `sign_c2pa()` or `bind_watermark()`. The SDK uploads, submits,
+pass `mime_type` to `sign_c2pa_cloud()` or `bind_watermark()`. The SDK uploads, submits,
 polls, and downloads synchronously. `submit_bind_watermark()` accepts an existing
 Trufo upload reference and returns immediately with a task ID. A completed
 per-embed watermark task still requires signing and `bind_commit()`; it does not
@@ -57,12 +57,12 @@ The `mode` parameter (`WatermarkMode`) is deprecated: until 2027-01-31T23:59:00+
 Watermark, failing the sign if it cannot be embedded:
 
 ```python
-from trufo import sign_c2pa
+from trufo import sign_c2pa_cloud
 from trufo.util.credentials import TrufoAPIKey, load_api_key
 
 api_key = load_api_key(TrufoAPIKey.C2PA_SIGN_PROD)
 
-signed_bytes = sign_c2pa(
+signed_bytes = sign_c2pa_cloud(
     api_key,
     media_bytes,
     actions=[
@@ -74,7 +74,7 @@ signed_bytes = sign_c2pa(
 Watermark whenever the format supports it, treating unsupported formats as fine — useful when one pipeline handles mixed media:
 
 ```python
-signed_bytes = sign_c2pa(
+signed_bytes = sign_c2pa_cloud(
     api_key,
     media_bytes,
     actions=[
@@ -86,7 +86,7 @@ signed_bytes = sign_c2pa(
 Try to watermark, but never fail the sign over it:
 
 ```python
-signed_bytes = sign_c2pa(
+signed_bytes = sign_c2pa_cloud(
     api_key,
     media_bytes,
     actions=[
@@ -98,7 +98,7 @@ signed_bytes = sign_c2pa(
 Watermark per AI system, in a request that names the AI system ([AI labeling](3_ai_labeling.md)):
 
 ```python
-signed_bytes = sign_c2pa(
+signed_bytes = sign_c2pa_cloud(
     api_key,
     media_bytes,
     assertions=[
@@ -118,8 +118,8 @@ Four routes produce a signed, watermarked asset. They differ in where the mark i
 
 | Route | Step 1 | Step 2 | Step 3 | Step 4 | trufo-py |
 | ----- | ------ | ------ | ------ | ------ | -------- |
-| **C2PA Signing, Cloud** | `POST /c2pa/sign`: Trufo embeds the mark (when the `watermark` action is present) and signs; the record is complete | | | | `sign_c2pa` |
-| **C2PA Signing, Local** | Trufo reserves the watermark ID and opens the record | you embed locally (Trufo engine) and build the manifest | Trufo signs the claim | Trufo stamps the ID and stores the manifest | `sign_c2pa_distributed` runs all four |
+| **C2PA Signing, Cloud** | `POST /c2pa/sign`: Trufo embeds the mark (when the `watermark` action is present) and signs; the record is complete | | | | `sign_c2pa_cloud` |
+| **C2PA Signing, Local** | Trufo reserves the watermark ID and opens the record | you embed locally (Trufo engine) and build the manifest | Trufo signs the claim | Trufo stamps the ID and stores the manifest | `sign_c2pa_local` runs all four |
 | **Watermarking, Cloud** | `POST /bind/watermark`: Trufo embeds the mark, reserves the ID, opens the record, returns the marked media | you sign with your own certificate | | `POST /bind/commit`: Trufo checks the manifest declares the ID, stamps and stores | `bind_watermark`, then `bind_commit` |
 | **Watermarking, Local** | `POST /bind/reserve`: Trufo reserves the ID and opens the record for a MIME type | you embed locally (Trufo engine) | you sign with your own certificate | `POST /bind/commit`, as above | `bind_reserve`, `watermark_media`, then `bind_commit` |
 

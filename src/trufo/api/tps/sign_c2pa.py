@@ -485,9 +485,9 @@ def sign_c2pa_s3_test(
     manifest_settings: ManifestSettings | None = None,
     trufo_api_url: str = TRUFO_API_URL_TEST,
 ) -> SignC2PAS3Result:
-    """Deprecated and unsupported: use sign_c2pa_test() with REQUEST bytes."""
+    """Deprecated and unsupported: use sign_c2pa_cloud_test() with REQUEST bytes."""
     raise ValueError(
-        "The test endpoint supports REQUEST execution with bytes only; use sign_c2pa_test()."
+        "The test endpoint supports REQUEST execution with bytes only; use sign_c2pa_cloud_test()."
     )
 
 
@@ -508,7 +508,7 @@ def sign_c2pa_via_s3(
     wait_seconds: float = 600,
     trufo_api_url: str = TRUFO_API_URL,
 ) -> bytes:
-    """Deprecated: use sign_c2pa() with execution_mode=ExecutionMode.TASK.
+    """Deprecated: use sign_c2pa_cloud() with execution_mode=ExecutionMode.TASK.
 
     Requires completed Organization Validation for the caller's org; the API
     returns 403 otherwise.
@@ -546,7 +546,8 @@ def sign_c2pa_via_s3(
     Trufo upload reference without waiting.
     """
     warnings.warn(
-        "sign_c2pa_via_s3() is deprecated; use sign_c2pa() with execution_mode=ExecutionMode.TASK.",
+        "sign_c2pa_via_s3() is deprecated; use sign_c2pa_cloud() with "
+        "execution_mode=ExecutionMode.TASK.",
         DeprecationWarning,
         stacklevel=2,
     )
@@ -604,9 +605,9 @@ def sign_c2pa_via_s3_test(
     signed_ingredient_policy: SignedIngredientPolicy | str | None = None,
     trufo_api_url: str = TRUFO_API_URL_TEST,
 ) -> bytes:
-    """Deprecated and unsupported: use sign_c2pa_test() with REQUEST bytes."""
+    """Deprecated and unsupported: use sign_c2pa_cloud_test() with REQUEST bytes."""
     raise ValueError(
-        "The test endpoint supports REQUEST execution with bytes only; use sign_c2pa_test()."
+        "The test endpoint supports REQUEST execution with bytes only; use sign_c2pa_cloud_test()."
     )
 
 
@@ -628,7 +629,7 @@ def _download_c2pa_s3_media(download_url: str) -> bytes:
     return resp.content
 
 
-def sign_c2pa(
+def sign_c2pa_cloud(
     api_key: str,
     media_bytes: bytes,
     actions: list | None = None,
@@ -668,7 +669,10 @@ def sign_c2pa(
         signed_ingredient_policy: What to do when an ingredient's media is already
             C2PA-signed; omit for ``auto``.
         skip_manifest_storage: Ask Trufo not to keep a copy of the signed manifest;
-            refused with a per-embed watermark.
+            refused with a per-embed watermark. Please note that if this option is
+            elected, Trufo's ability to assist with signing-related issues, issue
+            personalized deprecation reminders, and provide content management
+            features will be limited.
         trufo_api_url: Freeform Trufo API base URL. Defaults to production.
 
     Returns:
@@ -729,7 +733,7 @@ def sign_c2pa(
     )
 
 
-def sign_c2pa_test(
+def sign_c2pa_cloud_test(
     api_key: str,
     media_bytes: bytes,
     actions: list | None = None,
@@ -765,7 +769,10 @@ def sign_c2pa_test(
         signed_ingredient_policy: What to do when an ingredient's media is already
             C2PA-signed; omit for ``auto``.
         skip_manifest_storage: Ask Trufo not to keep a copy of the signed manifest;
-            refused with a per-embed watermark.
+            refused with a per-embed watermark. Please note that if this option is
+            elected, Trufo's ability to assist with signing-related issues, issue
+            personalized deprecation reminders, and provide content management
+            features will be limited.
         trufo_api_url: Trufo API base URL. Defaults to the Trufo test host (test.api.trufo.ai).
 
     Returns:
@@ -793,17 +800,17 @@ def sign_c2pa_test(
 
 
 def _warn_deprecated_tsa_args(tsa_api_key: str | None, trufo_tsa_url: str | None) -> None:
-    """Warn for each deprecated TSA argument passed to a distributed signer."""
+    """Warn for each deprecated TSA argument passed to a Local-mode helper."""
     for name, value in (("tsa_api_key", tsa_api_key), ("trufo_tsa_url", trufo_tsa_url)):
         if value is not None:
             warnings.warn(
-                f"{name} is deprecated and ignored; Trufo timestamps distributed signatures.",
+                f"{name} is deprecated and ignored; Trufo adds the timestamp when it signs.",
                 DeprecationWarning,
                 stacklevel=3,
             )
 
 
-def sign_c2pa_distributed_test(
+def sign_c2pa_local_test(
     api_key: str,
     media_bytes: bytes,
     *,
@@ -821,7 +828,7 @@ def sign_c2pa_distributed_test(
     signed_ingredient_policy: SignedIngredientPolicy | str | None = None,
     skip_manifest_storage: bool = False,
 ) -> bytes:
-    """Sign media locally using the Trufo test remote-signing endpoint.
+    """Sign media in Local mode, through the Trufo test remote-signing endpoint.
 
     The media claim is built on the client while the C2PA claim-signing key
     stays server-side. This helper requires the optional ``trufo[local-sign-only]``
@@ -832,8 +839,8 @@ def sign_c2pa_distributed_test(
         media_bytes: Raw bytes of the media file to sign.
         actions: Ordered list of ``[action_name, params]`` pairs (default ``[]``).
         assertions: List of ``[assertion_name, params]`` pairs (default ``[]``).
-        tsa_api_key: Deprecated and ignored; Trufo timestamps distributed signatures.
-        trufo_tsa_url: Deprecated and ignored; Trufo timestamps distributed signatures.
+        tsa_api_key: Deprecated and ignored; Trufo adds the timestamp when it signs.
+        trufo_tsa_url: Deprecated and ignored; Trufo adds the timestamp when it signs.
         trufo_api_url: Base URL for the Trufo API. Controls the preprocess,
             claim-sign, and CAWG identity-sign endpoints. Defaults to the Trufo
             test host (``test.api.trufo.ai``).
@@ -852,7 +859,10 @@ def sign_c2pa_distributed_test(
         signed_ingredient_policy: What to do when an ingredient's media is already
             C2PA-signed; omit for ``auto``.
         skip_manifest_storage: Ask Trufo not to keep a copy of the signed manifest;
-            refused with a per-embed watermark.
+            refused with a per-embed watermark. Please note that if this option is
+            elected, Trufo's ability to assist with signing-related issues, issue
+            personalized deprecation reminders, and provide content management
+            features will be limited.
 
     Returns:
         Signed media bytes.
@@ -908,7 +918,7 @@ def sign_c2pa_distributed_test(
     return signed
 
 
-def sign_c2pa_distributed(
+def sign_c2pa_local(
     api_key: str,
     media_bytes: bytes,
     *,
@@ -926,7 +936,7 @@ def sign_c2pa_distributed(
     signed_ingredient_policy: SignedIngredientPolicy | str | None = None,
     skip_manifest_storage: bool = False,
 ) -> bytes:
-    """Sign media locally using the Trufo production remote-signing endpoint.
+    """Sign media in Local mode, through the Trufo production remote-signing endpoint.
 
     The media claim is built on the client while the C2PA claim-signing key
     stays server-side. This helper requires the optional ``trufo[local-sign-only]``
@@ -939,8 +949,8 @@ def sign_c2pa_distributed(
         media_bytes: Raw bytes of the media file to sign.
         actions: Ordered list of ``[action_name, params]`` pairs (default ``[]``).
         assertions: List of ``[assertion_name, params]`` pairs (default ``[]``).
-        tsa_api_key: Deprecated and ignored; Trufo timestamps distributed signatures.
-        trufo_tsa_url: Deprecated and ignored; Trufo timestamps distributed signatures.
+        tsa_api_key: Deprecated and ignored; Trufo adds the timestamp when it signs.
+        trufo_tsa_url: Deprecated and ignored; Trufo adds the timestamp when it signs.
         trufo_api_url: Base URL for the Trufo API. Controls the preprocess,
             claim-sign, and CAWG identity-sign endpoints.
         manifest_title: Optional active-manifest title (``dc:title``); see the
@@ -957,7 +967,10 @@ def sign_c2pa_distributed(
         signed_ingredient_policy: What to do when an ingredient's media is already
             C2PA-signed; omit for ``auto``.
         skip_manifest_storage: Ask Trufo not to keep a copy of the signed manifest;
-            refused with a per-embed watermark.
+            refused with a per-embed watermark. Please note that if this option is
+            elected, Trufo's ability to assist with signing-related issues, issue
+            personalized deprecation reminders, and provide content management
+            features will be limited.
 
     Returns:
         Signed media bytes.
@@ -1014,5 +1027,13 @@ def sign_c2pa_distributed(
 
 
 __getattr__ = deprecated_aliases(
-    globals(), {"C2PAS3SignedOutput": "SignC2PAS3Result", "C2PAS3Upload": "GetS3UploadURLResult"}
+    globals(),
+    {
+        "C2PAS3SignedOutput": "SignC2PAS3Result",
+        "C2PAS3Upload": "GetS3UploadURLResult",
+        "sign_c2pa": "sign_c2pa_cloud",
+        "sign_c2pa_test": "sign_c2pa_cloud_test",
+        "sign_c2pa_distributed": "sign_c2pa_local",
+        "sign_c2pa_distributed_test": "sign_c2pa_local_test",
+    },
 )

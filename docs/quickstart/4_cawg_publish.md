@@ -25,9 +25,9 @@ All CAWG assertions are optional. When a `cawg_identity` entry is present, it bi
 ## Example
 
 ```python
-from trufo import sign_c2pa
+from trufo import sign_c2pa_cloud
 
-signed_bytes = sign_c2pa(
+signed_bytes = sign_c2pa_cloud(
     api_key,
     media_bytes,
     assertions=[
@@ -51,14 +51,15 @@ signed_bytes = sign_c2pa(
 )
 ```
 
-For development-only test signing, use `sign_c2pa_test()` with a `c2pa-sign-test` API key and `cawg_identity_id="test"`. Test-signed outputs are useful for integration development but are not intended to be accepted as production C2PA credentials by conformant validators.
+For development-only test signing, use `sign_c2pa_cloud_test()` with a `c2pa-sign-test` API key and `cawg_identity_id="test"`. Test-signed outputs are useful for integration development but are not intended to be accepted as production C2PA credentials by conformant validators.
 
 ## `cawg_metadata` Namespaces
 
-The `assertion` dict must include an `@context` mapping. Trufo accepts the standard
-CAWG namespaces — `dc`, `exif`, `exifEX`, `tiff`, `photoshop`, `xmp`, `pdf`, `pdfx`,
-`Iptc4xmpCore`, and `Iptc4xmpExt` — each with its exact canonical URI; see the
-[full table](../api/api_c2pa.md#cawg_metadata). A richer example:
+The `assertion` dict must include an `@context` mapping. Trufo accepts these
+namespaces — `dc`, `exif`, `exifEX`, `tiff`, `photoshop`, `plus`, `schema`, `xmp`,
+`xmpDM`, `xmpRights`, `pdf`, `pdfx`, `Iptc4xmpCore`, and `Iptc4xmpExt` — each with
+its exact URI; see the [full table](../api/api_c2pa.md#cawg_metadata). A richer
+example:
 
 ```python
 ["cawg_metadata", {

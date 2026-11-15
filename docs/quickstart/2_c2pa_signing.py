@@ -18,7 +18,7 @@ from pathlib import Path
 
 from trufo import (
     TrufoServerWarning,
-    sign_c2pa_test,
+    sign_c2pa_cloud_test,
 )
 from trufo.util.credentials import TrufoAPIKey, load_api_key
 
@@ -38,7 +38,7 @@ media_bytes = INPUT_FILE.read_bytes()
 
 with warnings.catch_warnings(record=True) as caught:
     warnings.simplefilter("always", TrufoServerWarning)
-    signed_bytes = sign_c2pa_test(
+    signed_bytes = sign_c2pa_cloud_test(
         api_key,
         media_bytes,
         actions=[["publish", {}]],
@@ -54,7 +54,7 @@ for notice in caught:
 
 
 # --- 2. Cloud mode, large media via S3 ---------------------------------------
-# TASK is not available on the test host. For production, use sign_c2pa(...,
+# TASK is not available on the test host. For production, use sign_c2pa_cloud(...,
 # execution_mode=ExecutionMode.TASK, mime_type="image/jpeg"); see the guide.
 
 
@@ -66,19 +66,19 @@ for notice in caught:
 # Platform and setup: see docs/local/python.md.
 
 try:
-    from trufo import sign_c2pa_distributed_test
+    from trufo import sign_c2pa_local_test
 
-    signed_locally = sign_c2pa_distributed_test(
+    signed_local_mode = sign_c2pa_local_test(
         api_key,
         media_bytes,
         assertions=[["cawg_identity", {"cawg_identity_id": "test"}]],
     )
-    print(f"Signed locally ({len(signed_locally)} bytes)")
+    print(f"Signed in Local mode ({len(signed_local_mode)} bytes)")
 except ImportError as exc:
     print(f"Skipping Local mode: {exc}")
 
 
 # --- going to production -----------------------------------------------------
-# Swap the helpers (sign_c2pa, sign_c2pa_distributed), use a c2pa-sign-prod
+# Swap the helpers (sign_c2pa_cloud, sign_c2pa_local), use a c2pa-sign-prod
 # key, and set cawg_identity_id to "org_interim" or drop the entry. Production
 # signing requires completed Organization Validation for your organization.

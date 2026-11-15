@@ -32,8 +32,8 @@ systems, and certificate enrollment.
   alias until 2027-01-31T23:59:00+00:00.
   <!-- TODO(sunset-2027-01-31): the mode sentence goes; successor wid_allocation_mode -->
   Format policy: see `docs/api/media_format_support.md`; do not duplicate its tables.
-- Routes: **C2PA Signing, Cloud / Local** (Trufo signs; `sign_c2pa`,
-  `sign_c2pa_distributed`) and **Watermarking, Cloud / Local** (the caller signs with
+- Routes: **C2PA Signing, Cloud / Local** (Trufo signs; `sign_c2pa_cloud`,
+  `sign_c2pa_local`) and **Watermarking, Cloud / Local** (the caller signs with
   their own certificate; `bind_watermark` → `bind_commit`, or `bind_reserve` →
   `watermark_media` → `bind_commit`); prose says "Cloud mode" / "Local mode".
   Production bind needs a `watermark-prod` key, a C2PA Signing or
@@ -42,18 +42,19 @@ systems, and certificate enrollment.
   assertion + `c2pa.watermarked.bound`) and optional for per-AI-system
   (`c2pa.watermarked.unbound`); a manifest that does not declare its mark commits
   with a warning.
-- In code: the `_distributed` functions; `origin` values `c2pa_hosted`,
-  `c2pa_distributed`, `bind_hosted`, `bind_distributed`; tpts/lpts/tpls/lpls in
-  docstrings.
+- In code: the signers name their mode (`sign_c2pa_cloud`, `sign_c2pa_local`), and
+  the watermark functions (`bind_*`, `watermark_media`) do not. The `origin` values
+  keep the older hosted/distributed spelling (`c2pa_hosted`, `c2pa_distributed`,
+  `bind_hosted`, `bind_distributed`); tpts/lpts/tpls/lpls in docstrings.
 - Every production sign or bind creates a content record. `get_content` looks one up by
   `cid`, `wid`, or `mid`; `list_content` pages them oldest first (status / origin / creation
   window filters, ≤100 per page); `set_content_status(api_key, "inactive", wid=...)`
   withdraws a mark from public soft-binding resolution and from the daily count of
   active IDs (billed per active ID per year). Production hosts only; no plan
   required.
-- `sign_c2pa_distributed()` uses the production remote signing endpoint and requires
+- `sign_c2pa_local()` uses the production remote signing endpoint and requires
   completed Organization Validation plus a `c2pa-sign-prod` API key.
-- `sign_c2pa_distributed_test()` uses the test remote signing endpoint and requires
+- `sign_c2pa_local_test()` uses the test remote signing endpoint and requires
   a `c2pa-sign-test` API key.
 - Test signing runs on its own host (`test.api.trufo.ai`, `TRUFO_API_URL_TEST`), which
   serves the content routes (signing, recovery, binding) and the certificate test flow
@@ -89,6 +90,6 @@ Two modes exist; see `docs/api/api_c2pa.md` for the full comparison.
 
 | Mode | Function | Requires local engine extra | Media sent to server |
 |---|---|---|---|
-| Cloud | `sign_c2pa`, `sign_c2pa_test` | No | Yes |
-| Local, Python SDK | `sign_c2pa_distributed`, `sign_c2pa_distributed_test` | Yes (`trufo[local-sign-only]`; `trufo[local-full]` for watermarking) | No |
+| Cloud | `sign_c2pa_cloud`, `sign_c2pa_cloud_test` | No | Yes |
+| Local, Python SDK | `sign_c2pa_local`, `sign_c2pa_local_test` | Yes (`trufo[local-sign-only]`; `trufo[local-full]` for watermarking) | No |
 | Local, Docker image | `POST /c2pa/sign` on `trufo-local` | No (the container downloads the engine; `2.3-full` for watermarking) | No |

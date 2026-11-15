@@ -7,6 +7,62 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.3.1] — 2026-11-15
+
+### Added
+
+- The `c2pa_metadata` assertion (`UserAssertion.C2PA_METADATA`): standard asset
+  metadata, such as camera details, as a gathered `c2pa.metadata` assertion. See
+  [`c2pa_metadata`](docs/api/api_c2pa.md#c2pa_metadata).
+- An `inputTo` ingredient can embed its content, such as a prompt, as base64
+  `data` with its `format`, up to 64 KB once decoded. Anyone with the signed file
+  can read it. See [`ingredient`](docs/api/api_c2pa.md#ingredient).
+- A `creation` assertion accepts a `description`.
+- `cawg_metadata` accepts the `plus`, `schema`, `xmpDM` and `xmpRights`
+  namespaces.
+- In Local mode, each addition above needs trufo-provenance 2.3.1 or later; an
+  older engine refuses it. See [Local mode](docs/api/api_c2pa.md#local-mode).
+- Watermarking supports WAV and FLAC audio with up to eight speaker channels,
+  such as 5.1 and 7.1. See
+  [Media format support](docs/api/media_format_support.md#audio-and-video-restrictions).
+
+### Changed
+
+- Local-engine extras require trufo-provenance 2.3.1; `local-full` includes
+  trufo-pawprint 0.6.2 through that dependency.
+- A `c2pa.translated` action in an ingredient's `action_history` requires
+  `parameters` with `sourceLanguage` and `targetLanguage`
+  (`400 InvalidTranslationLanguages`); it was previously accepted without them.
+  `parameters` on any other action returns `400 UnsupportedActionParameters`.
+- A second `cawg_metadata` or `cawg_training` assertion returns
+  `400 DuplicateAssertion`; previously the last one was kept. A second
+  `ai_system` or `creation` assertion returns the same code.
+- A `custom` assertion whose label ends in `.metadata` requires an `@context`;
+  without one, the API returns `400 InvalidMetadataContext`. Such assertions and
+  `cawg_metadata` are written as JSON, as the C2PA and CAWG specifications require
+  for metadata; they were previously written as CBOR. The `cawg_metadata`
+  `@context` refusals now start with `InvalidMetadataContext:`.
+- An ingredient's `action_history` accepts only the C2PA actions listed under
+  [`ingredient`](docs/api/api_c2pa.md#ingredient); others, such as the
+  deprecated `c2pa.copied` or `c2pa.watermarked.bound`, return `400`.
+- `422` field errors carry only `type`, `loc` and `msg`; they no longer echo the
+  request's `input` or `ctx`.
+
+### Deprecated
+
+- `sign_c2pa`, `sign_c2pa_test`, `sign_c2pa_distributed`, and
+  `sign_c2pa_distributed_test`: use `sign_c2pa_cloud`, `sign_c2pa_cloud_test`,
+  `sign_c2pa_local`, and `sign_c2pa_local_test`.
+- The old names above stay importable until the next major release. A star import
+  no longer brings them.
+
+### Fixed
+
+- `POST /c2pa/software-agent/add`, `POST /c2pa/ai-disclosure/add` and
+  `POST /ai-system/add` return `400` for an invalid map; they returned `500`.
+- A file upload or other non-JSON body sent to a JSON endpoint returns `422`;
+  one that was not valid UTF-8 returned `500`.
+
 ## [2.3.0] — 2026-11-13
 
 ### Added
@@ -693,7 +749,8 @@ Minor-version bump marks the general availability of the production C2PA signing
 - `trufo.intf`: credential storage and loading (env vars + file), CLI entry point.
 - PyPI trusted publishing via GitHub Actions (OIDC, no API tokens required).
 
-[Unreleased]: https://github.com/trufo-ai/trufo-py/compare/v2.3.0...HEAD
+[Unreleased]: https://github.com/trufo-ai/trufo-py/compare/v2.3.1...HEAD
+[2.3.1]: https://github.com/trufo-ai/trufo-py/compare/v2.3.0...v2.3.1
 [2.3.0]: https://github.com/trufo-ai/trufo-py/compare/v2.2.2...v2.3.0
 [2.2.2]: https://github.com/trufo-ai/trufo-py/compare/v2.2.1...v2.2.2
 [2.2.1]: https://github.com/trufo-ai/trufo-py/compare/v2.2.0...v2.2.1

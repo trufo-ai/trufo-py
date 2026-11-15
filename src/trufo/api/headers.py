@@ -10,7 +10,7 @@ directly without them works exactly the same. They let Trufo see which SDK
 generations are in use — which endpoints, which auth flows — without changing
 any API contract.
 
-The one place versions are *enforced* is the distributed signing path, which
+The one place versions are *enforced* is Local mode, which
 requires a minimum trufo-py / trufo-provenance release. That check lives
 server-side and predates this module.
 """

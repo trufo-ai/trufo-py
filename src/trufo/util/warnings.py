@@ -15,11 +15,11 @@ class TrufoServerWarning(UserWarning):
     on these precisely::
 
         import warnings
-        from trufo import TrufoServerWarning, sign_c2pa
+        from trufo import TrufoServerWarning, sign_c2pa_cloud
 
         with warnings.catch_warnings(record=True) as caught:
             warnings.simplefilter("always", TrufoServerWarning)
-            signed = sign_c2pa(api_key, media_bytes, actions=actions)
+            signed = sign_c2pa_cloud(api_key, media_bytes, actions=actions)
         if caught:
             ...  # e.g. re-queue, alert, or record the unwatermarked output
     """
@@ -28,7 +28,7 @@ class TrufoServerWarning(UserWarning):
 def emit_server_warnings(payload: dict) -> None:
     """Re-emit an API response's ``warnings`` as :class:`TrufoServerWarning`.
 
-    The distributed flow emits the same server notices through ``warnings``,
+    Local mode emits the same server notices through ``warnings``,
     so both signing modes surface them identically.
     """
     for message in payload.get("warnings") or []:

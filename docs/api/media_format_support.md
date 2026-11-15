@@ -1,8 +1,7 @@
 # Media format support
 
 This reference defines media eligibility for C2PA generation and validation, and
-Trufo watermark embedding and recovery. It covers Cloud mode and Local mode as of
-Trufo SDK 2.3.0 with Provenance 2.3.0 and Pawprint 0.6.1.
+Trufo watermark embedding and recovery in Cloud mode and Local mode.
 
 A file is supported when its MIME type is eligible for the operation and the file
 passes that operation's checks; a supported container does not make every file in
@@ -95,14 +94,27 @@ first frame.
 
 ## Audio and video restrictions
 
-Watermark encoding takes mono or stereo audio with finite samples and keeps the
-sample rate, channel layout, timing, and metadata, except as listed. Recovery
-reads any channel count, downmixed to mono.
+Watermark encoding requires finite audio samples and keeps the sample rate,
+channel layout, timing, and metadata, except as listed. WAV and FLAC support
+speaker layouts through eight channels, including quad, 5.0, 5.1 back/side,
+6.1, and 7.1. Each full-range channel carries the same ID; an explicitly
+identified LFE channel remains unchanged. Multichannel WAV requires an explicit
+WAVEFORMATEXTENSIBLE speaker mask; FLAC uses its standard assignment unless a
+channel-mask tag overrides it. Unknown or ambisonic layouts are rejected.
+MP3, AAC, and audio embedded in video containers remain limited to mono/stereo.
+
+Lossless audio retains native sample rates, including qualified 44.1, 48, 88.2,
+96, 176.4, and 192 kHz cases. Integer PCM is rounded to its original valid-bit
+precision; only out-of-range output samples are saturated, with their count
+reported in a warning. The complete track is not normalized. Float32 WAV
+retains finite headroom beyond ±1.0. Recovery reads the channel mix, then individual
+channels if the mix has no recoverable ID. A downmix that exactly cancels the
+marked signal has no recoverable ID.
 
 | Format | Encode | Dropped or changed on encode | Recovery only |
 | --- | --- | --- | --- |
-| WAV | Signed PCM 16/24/32-bit or 32-bit float; keeps `LIST/INFO`, `bext`, and `iXML` chunks; rejects other chunks, including a C2PA manifest | 32-bit float samples beyond ±1.0 are clipped to ±1.0 | Unsigned 8-bit PCM, ADPCM, µ-law, A-law, 64-bit float |
-| FLAC | 16/24-bit; keeps other metadata blocks (tags, pictures) byte for byte | Seek table; compression level reset (still lossless) | Other bit depths |
+| WAV | Signed PCM 16/24/32-bit or 32-bit float; preserves native precision, channel order, speaker mask, and valid bits; legacy mono/stereo may omit the mask; keeps `LIST/INFO`, `bext`, and `iXML` chunks; rejects nonzero PCM padding bits and other chunks, including a C2PA manifest | Integer samples outside the representable range are saturated individually | Unsigned 8-bit PCM, ADPCM, µ-law, A-law, 64-bit float |
+| FLAC | 16/24-bit, one to eight speaker channels; keeps channel order and supported speaker assignments, including explicit channel-mask tags, and other metadata blocks (tags, pictures) byte for byte | Seek table; compression level reset (still lossless); integer samples outside the representable range are saturated individually | Other bit depths |
 | MP3 | CBR, ABR, or VBR; keeps ID3v2, APEv2, Lyrics3, and ID3v1 tags byte for byte | Bitrate approximated | Free-format streams |
 | M4A | AAC-LC, exactly one audio stream, no timecode tracks or encryption; keeps container and stream tags, cover art, data tracks, gaps, and start offset | Bitrate approximated; Apple timed-metadata tracks | HE-AAC and other AAC profiles; fragmented files |
 | Raw AAC (ADTS) | AAC-LC; keeps ID3v2, APEv2, Lyrics3, and ID3v1 tags byte for byte | Bitrate approximated; the first 1,024 samples are replaced by encoder priming | HE-AAC and other AAC profiles |

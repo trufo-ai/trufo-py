@@ -25,6 +25,14 @@ import pytest
         ("trufo.api.tca.certs_test", "request_cawg_test_cert", "request_cawg_dummy_cert"),
         ("trufo.crypt.tca_certs", "TEST_HMAC_SECRET", "DUMMY_HMAC_SECRET"),
         ("trufo.api.tca.certs_test", "TEST_HMAC_SECRET", "DUMMY_HMAC_SECRET"),
+        ("trufo", "sign_c2pa", "sign_c2pa_cloud"),
+        ("trufo", "sign_c2pa_test", "sign_c2pa_cloud_test"),
+        ("trufo", "sign_c2pa_distributed", "sign_c2pa_local"),
+        ("trufo", "sign_c2pa_distributed_test", "sign_c2pa_local_test"),
+        ("trufo.api.tps.sign_c2pa", "sign_c2pa", "sign_c2pa_cloud"),
+        ("trufo.api.tps.sign_c2pa", "sign_c2pa_test", "sign_c2pa_cloud_test"),
+        ("trufo.api.tps.sign_c2pa", "sign_c2pa_distributed", "sign_c2pa_local"),
+        ("trufo.api.tps.sign_c2pa", "sign_c2pa_distributed_test", "sign_c2pa_local_test"),
     ],
 )
 def test_old_name_warns_and_resolves_to_new(module_path, old, new):

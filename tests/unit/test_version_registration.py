@@ -18,7 +18,7 @@ sys.meta_path.insert(0, BlockEngine())
 import trufo
 from trufo.c2pa import ManifestSettings, DigitalSourceType, WatermarkSettings
 assert trufo.__version__
-assert callable(trufo.sign_c2pa)
+assert callable(trufo.sign_c2pa_cloud)
 assert ManifestSettings().thumbnail_settings is None
 assert WatermarkSettings('fast').profile.value == 'fast'
 """
