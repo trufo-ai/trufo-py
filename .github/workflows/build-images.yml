@@ -106,7 +106,7 @@ jobs:
       matrix:
         include:
           - arch: amd64
-            runner: ubuntu-latest
+            runner: ubuntu-24.04
           - arch: arm64
             runner: ubuntu-24.04-arm
     runs-on: ${{ matrix.runner }}
@@ -401,7 +401,7 @@ jobs:
 
   publish:
     needs: [release, build]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     environment: trufo-local
     permissions:
       contents: read
