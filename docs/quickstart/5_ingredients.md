@@ -114,8 +114,10 @@ created placement, and the `ai_system` entry takes no `placement`.
 
 Normal signing defaults `allActionsIncluded` to true. Elevated requests
 (creation, `parentOf`, action history, or a created placement) default it to
-false. Set `ManifestSettings(all_actions_included=True)` only when your product
-is authorized and the declaration really is complete.
+false. You will usually want to set `ManifestSettings(all_actions_included=True)`.
+By setting this flag to true, you are attesting that the manifest describes
+every action performed on the asset, and are responsible for the accuracy and
+completeness of the manifest.
 
 See [api_c2pa.md](../api/api_c2pa.md) for the full parameter reference and conflict rules.
 

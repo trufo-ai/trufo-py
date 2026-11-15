@@ -538,9 +538,7 @@ types the product is approved for; without one, the only created declarations
 are an [`ai_system`](#ai_system) entry's source-type labels. A C2PA action in an
 [`ingredient`](#ingredient)'s `action_history`, created or gathered, requires
 a `digitalSourceType`, except `c2pa.converted`, `c2pa.edited.metadata`,
-`c2pa.enhanced`, `c2pa.opened`, `c2pa.placed`, `c2pa.published`,
-`c2pa.redacted`, `c2pa.repackaged`, `c2pa.resized.proportional`,
-`c2pa.transcoded`, `c2pa.watermarked`, `c2pa.watermarked.bound`, and
+`c2pa.enhanced`, `c2pa.published`, `c2pa.resized.proportional`, and
 `c2pa.watermarked.unbound`.
 
 | Assertion | Params | C2PA label |
@@ -774,7 +772,7 @@ of the asset, not a Trufo attestation.
 | `format` | string | No | The media type of a declared ingredient (one without `media`), such as `video/mp4`; not with `media` |
 | `data` | string | No | The ingredient's own content, such as a prompt, as base64 bytes; `inputTo` only, with `format` (such as `text/plain`) and no `media`. Up to 64 KB once decoded; over 8 KB signs with a notice in `warnings`. Trufo embeds it in the signed file (C2PA 2.4 § 18.16.8), where anyone with the file can read it. In either mode, Trufo receives it in the signed manifest, which it may keep unless you set `skip_manifest_storage`. |
 | `placement` | string | No | `gathered` (default) or `created`, on a request authorized for created assertions; `parentOf` is always created. A declared ingredient is always gathered; created placement for it is refused for now and may be supported later. |
-| `action_history` | list | No | Actions between a `parentOf` source and the supplied input; entries may independently set `placement`, `digitalSourceType`, `description`, `softwareAgent` (`{"software_agent_id": "swagent_..."}`, a [registered software agent](#post-c2pasoftware-agentadd)) and `when` (RFC 3339, UTC). An entry's action is a C2PA action or a custom one in a domain your organization has validated (for example `com.example.upscaled`). A C2PA action requires a `digitalSourceType` (such as `DigitalSourceType.HUMAN_EDITS`), unless [exempt](#assertions). A `c2pa.translated` action requires `parameters` with `sourceLanguage` and `targetLanguage`, each a BCP 47 language tag such as `en` or `zh-CN`; no other action takes `parameters`. |
+| `action_history` | list | No | Actions between a `parentOf` source and the supplied input; entries may independently set `placement`, `digitalSourceType`, `description`, `softwareAgent` (`{"software_agent_id": "swagent_..."}`, a [registered software agent](#post-c2pasoftware-agentadd)) and `when` (RFC 3339, UTC). An entry's action is a custom one in a domain your organization has validated (for example `com.example.upscaled`) or one of these C2PA actions: `c2pa.addedText`, `c2pa.adjustedColor`, `c2pa.changedSpeed`, `c2pa.converted`, `c2pa.cropped`, `c2pa.deleted`, `c2pa.drawing`, `c2pa.dubbed`, `c2pa.edited`, `c2pa.edited.metadata`, `c2pa.enhanced`, `c2pa.filtered`, `c2pa.mastered`, `c2pa.mixed`, `c2pa.orientation`, `c2pa.published`, `c2pa.remixed`, `c2pa.resized`, `c2pa.resized.proportional`, `c2pa.translated`, `c2pa.trimmed`, `c2pa.unknown`, `c2pa.watermarked.unbound`. A C2PA action requires a `digitalSourceType` (such as `DigitalSourceType.HUMAN_EDITS`), unless [exempt](#assertions). A `c2pa.translated` action requires `parameters` with `sourceLanguage` and `targetLanguage`, each a BCP 47 language tag such as `en` or `zh-CN`; no other action takes `parameters`. |
 
 - Sent (`media`): a readable C2PA history is always kept with the ingredient,
   validation failures included;
@@ -842,8 +840,10 @@ agent. It emits exactly one leading `c2pa.created` action and is always created:
 `when` and `description` (a non-empty string, written on the `c2pa.created`
 action) are optional. The server resolves the software-agent id to the registered
 agent record. Creation, external parents, action histories, and any created
-placement default `allActionsIncluded` to false; explicitly asserting true is a
-separately authorized completeness claim.
+placement default `allActionsIncluded` to false. You will usually want to set
+`manifest_settings.all_actions_included` to true. By setting this flag to true,
+you are attesting that the manifest describes every action performed on the
+asset, and are responsible for the accuracy and completeness of the manifest.
 
 ### Signed inputs and ingredients
 
@@ -1294,6 +1294,7 @@ test and production. Acceptance is checked at registration, not again at signing
 
 | Code | Meaning |
 | ---- | ------- |
+| 400 | An invalid `assertion` body; the detail explains why. |
 | 403 | First-party operation requested before the organization accepted the Created Assertion Acknowledgement. |
 | 404 | The linked software agent does not exist, was deleted, or belongs to another organization. |
 | 410 | From 2027-01-31T23:59:00+00:00: `POST /c2pa/ai-disclosure/add is no longer supported (expired 2027-01-31T23:59:00+00:00). Please use POST /ai-system/add.` |
@@ -1331,6 +1332,12 @@ referenced by id rather than repeated inline.
 | `nickname` | string | No | Display label; never signed |
 
 **Response (201):** `software_agent_id`, shaped `swagent_<uuid>`.
+
+**Errors:**
+
+| Code | Meaning |
+| ---- | ------- |
+| 400 | An invalid `agent` map; the detail explains why. |
 
 ### `POST /c2pa/software-agent/list`
 
