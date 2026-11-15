@@ -56,9 +56,9 @@ missing:
 { "detail": "InsufficientPermissionForAction", "action": "create_apikey" }
 ```
 
-Two deliberate exceptions to the string form: request-shape failures return
-FastAPI's `422` validation structure (`detail` is a list of field errors), and the
-device-authorization endpoints return the lowercase codes required by RFC 8628
+Two deliberate exceptions to the string form: request-shape failures return `422`
+with `detail` as a list of field errors, each with `type`, `loc` and `msg`, and
+the device-authorization endpoints return the lowercase codes required by RFC 8628
 (`authorization_pending`, `access_denied`, `expired_token`).
 
 Errors common to most endpoints:

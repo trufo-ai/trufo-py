@@ -36,6 +36,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `cawg_metadata` are written as JSON, as the C2PA and CAWG specifications require
   for metadata; they were previously written as CBOR. The `cawg_metadata`
   `@context` refusals now start with `InvalidMetadataContext:`.
+- An ingredient's `action_history` accepts only the C2PA actions listed under
+  [`ingredient`](docs/api/api_c2pa.md#ingredient); others, such as the
+  deprecated `c2pa.copied` or `c2pa.watermarked.bound`, return `400`.
+- `422` field errors carry only `type`, `loc` and `msg`; they no longer echo the
+  request's `input` or `ctx`.
 
 ### Deprecated
 
@@ -44,6 +49,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `sign_c2pa_local`, and `sign_c2pa_local_test`.
 - The old names above stay importable until the next major release. A star import
   no longer brings them.
+
+### Fixed
+
+- `POST /c2pa/software-agent/add` and `POST /c2pa/ai-disclosure/add` return
+  `400` for an invalid map; they returned `500`.
+- A file upload or other non-JSON body sent to a JSON endpoint returns `422`;
+  one that was not valid UTF-8 returned `500`.
 
 ## [2.3.0] — 2026-11-13
 
