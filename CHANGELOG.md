@@ -20,10 +20,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   namespaces.
 - In Local mode, each addition above needs trufo-provenance 2.3.1 or later; an
   older engine refuses it. See [Local mode](docs/api/api_c2pa.md#local-mode).
+- Watermarking supports WAV and FLAC audio with up to eight speaker channels,
+  such as 5.1 and 7.1. See
+  [Media format support](docs/api/media_format_support.md#audio-and-video-restrictions).
 
 ### Changed
 
-- Local-engine extras require trufo-provenance 2.3.1.
+- Local-engine extras require trufo-provenance 2.3.1; `local-full` includes
+  trufo-pawprint 0.6.2 through that dependency.
 - A `c2pa.translated` action in an ingredient's `action_history` requires
   `parameters` with `sourceLanguage` and `targetLanguage`
   (`400 InvalidTranslationLanguages`); it was previously accepted without them.
@@ -52,8 +56,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- `POST /c2pa/software-agent/add` and `POST /c2pa/ai-disclosure/add` return
-  `400` for an invalid map; they returned `500`.
+- `POST /c2pa/software-agent/add`, `POST /c2pa/ai-disclosure/add` and
+  `POST /ai-system/add` return `400` for an invalid map; they returned `500`.
 - A file upload or other non-JSON body sent to a JSON endpoint returns `422`;
   one that was not valid UTF-8 returned `500`.
 
