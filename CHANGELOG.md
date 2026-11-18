@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.3.2] — 2026-11-18
+
+### Added
+
+- An ingredient's `action_history` accepts `c2pa.transcoded` and
+  `c2pa.repackaged`, for a conversion made before signing; neither needs a
+  `digitalSourceType`. See [`ingredient`](docs/api/api_c2pa.md#ingredient).
+- In Local mode, this needs trufo-provenance 2.3.2 or later; an older engine
+  refuses it.
+- `POST /cert/list` returns `trufo_managed`, `true` for a certificate whose key
+  Trufo holds. See [Certificates](docs/api/api_certs.md#certificates).
+
+### Changed
+
+- Local-engine extras require trufo-provenance 2.3.2.
+- The `transcode` action accepts an input without a C2PA manifest. On a request
+  that signs the file as newly created it returns `400 Conflict`;
+  `400 MissingInputManifest` is gone. See
+  [`transcode`](docs/api/api_c2pa.md#transcode).
+- The Trufo-managed CAWG interim certificate (`org_interim`) cannot be revoked
+  through `POST /cert/revoke`, which returns `400 NotRevocable`; its `revocable`
+  is `false`.
+
 ## [2.3.1] — 2026-11-15
 
 ### Added
@@ -749,7 +772,8 @@ Minor-version bump marks the general availability of the production C2PA signing
 - `trufo.intf`: credential storage and loading (env vars + file), CLI entry point.
 - PyPI trusted publishing via GitHub Actions (OIDC, no API tokens required).
 
-[Unreleased]: https://github.com/trufo-ai/trufo-py/compare/v2.3.1...HEAD
+[Unreleased]: https://github.com/trufo-ai/trufo-py/compare/v2.3.2...HEAD
+[2.3.2]: https://github.com/trufo-ai/trufo-py/compare/v2.3.1...v2.3.2
 [2.3.1]: https://github.com/trufo-ai/trufo-py/compare/v2.3.0...v2.3.1
 [2.3.0]: https://github.com/trufo-ai/trufo-py/compare/v2.2.2...v2.3.0
 [2.2.2]: https://github.com/trufo-ai/trufo-py/compare/v2.2.1...v2.2.2

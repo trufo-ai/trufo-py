@@ -113,7 +113,7 @@ Beyond the platform-wide codes in [api_trufo.md](api_trufo.md):
 | 400 | `UnsupportedSDKVersion: …` | Local mode: the `trufo-py` or `trufo-provenance` version is below the minimum or past its support, or the engine is too old for a feature the request uses; the detail names the package and the reason (see [Local mode](#local-mode)) |
 | 400 | `ImageTooLarge: …` | An input image over 400 megapixels |
 | 400 | `InvalidWidAllocationMode: …` | A watermark `wid_allocation_mode` other than `"per_embed"`, `"per_ai_system"` or `"per_asset"` (see [`watermark`](#watermark)) |
-| 400 | `MissingInputManifest: …` | A `transcode` action on an input without a readable C2PA manifest (see [`transcode`](#transcode)) |
+| 400 | `Conflict: …` | Parts of the request that cannot be combined, such as a `transcode` action on a request that signs the file as newly created (see [`transcode`](#transcode)) |
 | 400 | `MissingDigitalSourceType: …` | A C2PA action in an [`ingredient`](#ingredient)'s `action_history` without a `digitalSourceType`, unless [exempt](#assertions) |
 | 400 | `ManifestStorageRequired: …` | A `"per_embed"` watermark with `skip_manifest_storage` (see [`watermark`](#watermark)) |
 | 400 | `DuplicateAssertion: …` | A second entry of an assertion allowed once (see [`assertions`](#assertions)) |
@@ -366,7 +366,8 @@ an [`ai_system`](#ai_system) entry, needs trufo-provenance 2.2.0 or later, and
 [`c2pa_metadata`](#c2pa_metadata) entry, ingredient [`data`](#ingredient), a
 [`creation`](#creation) `description`, `parameters` on a `c2pa.translated` action,
 and the `plus`, `schema`, `xmpDM` and `xmpRights` prefixes in
-[`cawg_metadata`](#cawg_metadata).
+[`cawg_metadata`](#cawg_metadata). `c2pa.transcoded` and `c2pa.repackaged` in an
+ingredient's `action_history` need 2.3.2 or later.
 
 <!-- TODO(sunset-2027-01-31): the versions paragraph and its table go; successor none -->
 
@@ -417,10 +418,12 @@ Ordered `[name, params]` pairs. Each media-transforming action feeds the next.
 
 #### `transcode`
 
-Converts within a media class; cross-class conversion is rejected. The input must
-already carry a C2PA manifest. Targets: `image/jpeg`, `image/png`, `image/webp`,
-`image/avif`, `image/tiff`, `image/gif`, `audio/flac`, `audio/wav`, `audio/mp4`,
-`audio/mpeg`, `video/mp4`, `video/quicktime`. An animated GIF, PNG, WebP or AVIF
+Converts within a media class; cross-class conversion is rejected. It cannot be
+combined with a request that signs the file as newly created (`c2pa.created`);
+sign the file first, then transcode the signed file. Targets: `image/jpeg`,
+`image/png`, `image/webp`, `image/avif`, `image/tiff`, `image/gif`,
+`audio/flac`, `audio/wav`, `audio/mp4`, `audio/mpeg`, `video/mp4`,
+`video/quicktime`. An animated GIF, PNG, WebP or AVIF
 keeps every frame, so its target must be `image/gif`, `image/png`, `image/webp`
 or `image/avif`; it may hold up to 10,000 frames and 400 megapixels across
 frames.
@@ -429,7 +432,7 @@ frames.
 
 | When | Status | `detail` |
 | ---- | ------ | -------- |
-| The input carries no readable C2PA manifest | 400 | `MissingInputManifest: The 'transcode' action requires an input that already carries a readable C2PA manifest.` |
+| The request signs the file as newly created | 400 | `Conflict: The 'transcode' action cannot be combined with a request that signs the file as newly created ('c2pa.created'). Sign the file first without 'transcode', then transcode the signed file.` |
 
 #### `watermark`
 
@@ -538,8 +541,8 @@ types the product is approved for; without one, the only created declarations
 are an [`ai_system`](#ai_system) entry's source-type labels. A C2PA action in an
 [`ingredient`](#ingredient)'s `action_history`, created or gathered, requires
 a `digitalSourceType`, except `c2pa.converted`, `c2pa.edited.metadata`,
-`c2pa.enhanced`, `c2pa.published`, `c2pa.resized.proportional`, and
-`c2pa.watermarked.unbound`.
+`c2pa.enhanced`, `c2pa.published`, `c2pa.repackaged`,
+`c2pa.resized.proportional`, `c2pa.transcoded`, and `c2pa.watermarked.unbound`.
 
 | Assertion | Params | C2PA label |
 | --------- | ------ | ---------- |
@@ -772,7 +775,7 @@ of the asset, not a Trufo attestation.
 | `format` | string | No | The media type of a declared ingredient (one without `media`), such as `video/mp4`; not with `media` |
 | `data` | string | No | The ingredient's own content, such as a prompt, as base64 bytes; `inputTo` only, with `format` (such as `text/plain`) and no `media`. Up to 64 KB once decoded; over 8 KB signs with a notice in `warnings`. Trufo embeds it in the signed file (C2PA 2.4 § 18.16.8), where anyone with the file can read it. In either mode, Trufo receives it in the signed manifest, which it may keep unless you set `skip_manifest_storage`. |
 | `placement` | string | No | `gathered` (default) or `created`, on a request authorized for created assertions; `parentOf` is always created. A declared ingredient is always gathered; created placement for it is refused for now and may be supported later. |
-| `action_history` | list | No | Actions between a `parentOf` source and the supplied input; entries may independently set `placement`, `digitalSourceType`, `description`, `softwareAgent` (`{"software_agent_id": "swagent_..."}`, a [registered software agent](#post-c2pasoftware-agentadd)) and `when` (RFC 3339, UTC). An entry's action is a custom one in a domain your organization has validated (for example `com.example.upscaled`) or one of these C2PA actions: `c2pa.addedText`, `c2pa.adjustedColor`, `c2pa.changedSpeed`, `c2pa.converted`, `c2pa.cropped`, `c2pa.deleted`, `c2pa.drawing`, `c2pa.dubbed`, `c2pa.edited`, `c2pa.edited.metadata`, `c2pa.enhanced`, `c2pa.filtered`, `c2pa.mastered`, `c2pa.mixed`, `c2pa.orientation`, `c2pa.published`, `c2pa.remixed`, `c2pa.resized`, `c2pa.resized.proportional`, `c2pa.translated`, `c2pa.trimmed`, `c2pa.unknown`, `c2pa.watermarked.unbound`. A C2PA action requires a `digitalSourceType` (such as `DigitalSourceType.HUMAN_EDITS`), unless [exempt](#assertions). A `c2pa.translated` action requires `parameters` with `sourceLanguage` and `targetLanguage`, each a BCP 47 language tag such as `en` or `zh-CN`; no other action takes `parameters`. |
+| `action_history` | list | No | Actions between a `parentOf` source and the supplied input; entries may independently set `placement`, `digitalSourceType`, `description`, `softwareAgent` (`{"software_agent_id": "swagent_..."}`, a [registered software agent](#post-c2pasoftware-agentadd)) and `when` (RFC 3339, UTC). An entry's action is a custom one in a domain your organization has validated (for example `com.example.upscaled`) or one of these C2PA actions: `c2pa.addedText`, `c2pa.adjustedColor`, `c2pa.changedSpeed`, `c2pa.converted`, `c2pa.cropped`, `c2pa.deleted`, `c2pa.drawing`, `c2pa.dubbed`, `c2pa.edited`, `c2pa.edited.metadata`, `c2pa.enhanced`, `c2pa.filtered`, `c2pa.mastered`, `c2pa.mixed`, `c2pa.orientation`, `c2pa.published`, `c2pa.remixed`, `c2pa.repackaged`, `c2pa.resized`, `c2pa.resized.proportional`, `c2pa.transcoded`, `c2pa.translated`, `c2pa.trimmed`, `c2pa.unknown`, `c2pa.watermarked.unbound`. A C2PA action requires a `digitalSourceType` (such as `DigitalSourceType.HUMAN_EDITS`), unless [exempt](#assertions). A `c2pa.translated` action requires `parameters` with `sourceLanguage` and `targetLanguage`, each a BCP 47 language tag such as `en` or `zh-CN`; no other action takes `parameters`. |
 
 - Sent (`media`): a readable C2PA history is always kept with the ingredient,
   validation failures included;
