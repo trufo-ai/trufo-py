@@ -366,7 +366,8 @@ an [`ai_system`](#ai_system) entry, needs trufo-provenance 2.2.0 or later, and
 [`c2pa_metadata`](#c2pa_metadata) entry, ingredient [`data`](#ingredient), a
 [`creation`](#creation) `description`, `parameters` on a `c2pa.translated` action,
 and the `plus`, `schema`, `xmpDM` and `xmpRights` prefixes in
-[`cawg_metadata`](#cawg_metadata).
+[`cawg_metadata`](#cawg_metadata). `c2pa.transcoded` and `c2pa.repackaged` in an
+ingredient's `action_history` need 2.3.2 or later.
 
 <!-- TODO(sunset-2027-01-31): the versions paragraph and its table go; successor none -->
 
