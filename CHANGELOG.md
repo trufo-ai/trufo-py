@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- An ingredient's `action_history` accepts `c2pa.transcoded` and
+  `c2pa.repackaged`, for a conversion made before signing; neither needs a
+  `digitalSourceType`. See [`ingredient`](docs/api/api_c2pa.md#ingredient).
+- In Local mode, this needs trufo-provenance 2.3.2 or later; an older engine
+  refuses it.
+
+### Changed
+
+- Local-engine extras require trufo-provenance 2.3.2.
+- The `transcode` action accepts an input without a C2PA manifest. On a request
+  that signs the file as newly created it returns `400 Conflict`;
+  `400 MissingInputManifest` is gone. See
+  [`transcode`](docs/api/api_c2pa.md#transcode).
+
 ## [2.3.1] — 2026-11-15
 
 ### Added
