@@ -454,7 +454,7 @@ without it they return `403 InvalidC2PACustomDomain`. See
 
 | Endpoint | Auth | Request | Response |
 | -------- | ---- | ------- | -------- |
-| `POST /cert/list` | MFA, member+ | `{}` | `certs[]` with `serial_number`, `leaf_type`, `issue_time`, `expiry_time`, `revocation_status`, `revocation_reason`, `revocation_time`, `revocable`, and the issuing `gpi_id` / `gpi_name` / `gp_id` / `gp_name` where applicable |
+| `POST /cert/list` | MFA, member+ | `{}` | `certs[]` with `serial_number`, `leaf_type`, `issue_time`, `expiry_time`, `revocation_status`, `revocation_reason`, `revocation_time`, `revocable`, `trufo_managed`, and the issuing `gpi_id` / `gpi_name` / `gp_id` / `gp_name` where applicable |
 | `POST /cert/revoke` | MFA, owner/admin | `serial_number`, `revocation_reason`, optional `revocation_time` | `status` |
 
 `POST /cert/revoke` requires an MFA-verified user access token from an organization
@@ -481,6 +481,13 @@ or later than the current value, but must not be in the future. The original
 revocation reason and actor are preserved; `revocation_reason` remains required.
 Omitting the time returns `400 AlreadyRevoked`. A concurrent change returns
 `409 RevocationConflict`; re-list the certificate before retrying.
+
+`trufo_managed` is `true` for a certificate whose key Trufo holds, such as your
+organization's Trufo-managed CAWG interim certificate (`org_interim`) or a
+branded generator product's certificate. The Trufo-managed CAWG interim
+certificate cannot be revoked through this endpoint: its `revocable` is `false`
+and `/cert/revoke` returns `400 NotRevocable`. Certificates you enrolled with
+your own keys remain revocable.
 
 **Revocation reasons:** `unspecified`, `key_compromise`, `affiliation_changed`,
 `superseded`, `cessation_of_operation`.

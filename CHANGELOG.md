@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `digitalSourceType`. See [`ingredient`](docs/api/api_c2pa.md#ingredient).
 - In Local mode, this needs trufo-provenance 2.3.2 or later; an older engine
   refuses it.
+- `POST /cert/list` returns `trufo_managed`, `true` for a certificate whose key
+  Trufo holds. See [Certificates](docs/api/api_certs.md#certificates).
 
 ### Changed
 
@@ -22,6 +24,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   that signs the file as newly created it returns `400 Conflict`;
   `400 MissingInputManifest` is gone. See
   [`transcode`](docs/api/api_c2pa.md#transcode).
+- The Trufo-managed CAWG interim certificate (`org_interim`) cannot be revoked
+  through `POST /cert/revoke`, which returns `400 NotRevocable`; its `revocable`
+  is `false`.
 
 ## [2.3.1] — 2026-11-15
 
