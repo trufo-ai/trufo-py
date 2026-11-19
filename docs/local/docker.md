@@ -105,8 +105,8 @@ appears, and create them before the first start. Set `user:` to their owner. Kee
 docker compose up -d
 docker compose ps    # wait for "(healthy)"
 curl -s http://127.0.0.1:8080/health
-# {"status":"healthy","version":"2.3.1","engine_version":"2.3.1"}
-# full image: {"status":"healthy","version":"2.3.1-full","engine_version":"2.3.1","watermark_engine_version":"0.6.2"}
+# {"status":"healthy","version":"2.3.2","engine_version":"2.3.2"}
+# full image: {"status":"healthy","version":"2.3.2-full","engine_version":"2.3.2","watermark_engine_version":"0.6.2"}
 ```
 
 A new container first downloads and installs its packages, and is healthy after
@@ -389,6 +389,8 @@ versions of its engines.
 
 | Image | Engine (trufo-provenance) | Watermark engine (trufo-pawprint) | Source image |
 | ----- | ------------------------- | --------------------------------- | ------------ |
+| `2.3.2-full` | 2.3.2 | 0.6.2 | `2.3.2-full-source` |
+| `2.3.2` | 2.3.2 | — | `2.3.2-source` |
 | `2.3.1-full` | 2.3.1 | 0.6.2 | `2.3.1-full-source` |
 | `2.3.1` | 2.3.1 | — | `2.3.1-source` |
 | `2.3.0-full` | 2.3.0 | 0.6.1 | `2.3.0-full-source` |
@@ -401,8 +403,8 @@ versions of its engines.
 | `2.1.1` | 2.1.1 | — | `2.1.1-source` |
 
 To move to the newest 2.3.x, run `docker compose pull && docker compose up -d`. To
-stay on one version, set `image: ghcr.io/trufo-ai/trufo-local:2.3.1` (or
-`2.3.1-full`).
+stay on one version, set `image: ghcr.io/trufo-ai/trufo-local:2.3.2` (or
+`2.3.2-full`).
 
 <!-- TODO(sunset-2027-01-31): the next paragraph goes; successor none -->
 
@@ -492,14 +494,14 @@ and points to each Debian package's license in `/usr/share/doc/`. In
 Python packages omit for the libraries they bundle.
 
 Each image version has a source image in the same repository, tagged with its
-version plus `-source` (`2.3.1-source`, `2.3.1-full-source`), holding the complete
+version plus `-source` (`2.3.2-source`, `2.3.2-full-source`), holding the complete
 corresponding source code of its GPL-, LGPL- and MPL-licensed software. The full
 image's source image also holds the signing-only image's sources. The signing-only
 source image is about 1.3 GB, and the full one about 1.4 GB. To extract one:
 
 ```bash
-docker create --platform linux/amd64 --name trufo-local-source ghcr.io/trufo-ai/trufo-local:2.3.1-source none
-docker cp trufo-local-source:/sources ./trufo-local-2.3.1-source
+docker create --platform linux/amd64 --name trufo-local-source ghcr.io/trufo-ai/trufo-local:2.3.2-source none
+docker cp trufo-local-source:/sources ./trufo-local-2.3.2-source
 docker rm trufo-local-source
 ```
 
