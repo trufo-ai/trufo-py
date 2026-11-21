@@ -63,6 +63,7 @@ There are a number of documents to get you started quickly with specific use cas
 | 4 | Organization stamping (CAWG)    | [4_cawg_publish.md](docs/quickstart/4_cawg_publish.md)               |
 | 5 | Ingredients & redaction         | [5_ingredients.md](docs/quickstart/5_ingredients.md)                 |
 | 6 | Watermarking & recovery         | [6_watermarking.md](docs/quickstart/6_watermarking.md)               |
+| 7 | Organizations, people & roles  | [7_organizations.md](docs/quickstart/7_organizations.md)             |
 
 Most integrations need only 0 and 2; quickstart 1 is for teams that operate their own C2PA generator product and sign with their own certificates.
 

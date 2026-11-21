@@ -134,7 +134,9 @@ def poll_for_tokens(
             raise TimeoutError("Device code expired. Please try again.")
 
         if detail == "access_denied":
-            raise RuntimeError("Authorization was denied by the user.")
+            raise RuntimeError(
+                "Authorization was denied, or this account cannot use the organization of this API key."
+            )
 
         raise RuntimeError(f"Unexpected error polling device token ({resp.status_code}): {detail}")
 
