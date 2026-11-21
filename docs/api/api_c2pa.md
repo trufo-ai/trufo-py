@@ -781,7 +781,7 @@ of the asset, not a Trufo attestation.
   validation failures included;
   [`signed_ingredient_policy`](#signed-inputs-and-ingredients) sets what happens to
   C2PA data Trufo cannot read. Media without a C2PA manifest gets a thumbnail when
-  it is an image.
+  it is an image, except JPEG XL, DNG, SVG and ANI.
 - Declared (no `media`): no history is looked for; validators report its
   provenance as unknown.
 
