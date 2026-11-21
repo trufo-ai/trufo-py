@@ -76,6 +76,7 @@ systems, and certificate enrollment.
 | CAWG publish | `docs/quickstart/4_cawg_publish.md` |
 | Ingredients & redaction | `docs/quickstart/5_ingredients.md` |
 | Watermarking | `docs/quickstart/6_watermarking.md` |
+| Organizations, people and roles | `docs/quickstart/7_organizations.md` |
 | Platform API reference | `docs/api/api_trufo.md` |
 | C2PA API reference | `docs/api/api_c2pa.md` |
 | Media format support | `docs/api/media_format_support.md` |

@@ -264,5 +264,8 @@ def exchange_loopback_code(
 
     detail = extract_detail(resp)
     if detail == "invalid_grant":
-        raise RuntimeError("Sign-in code was rejected or expired. Please try again.")
+        raise RuntimeError(
+            "Sign-in code was rejected or expired, or this account cannot use the organization of this "
+            "API key. Please try again."
+        )
     raise RuntimeError(f"Loopback token exchange failed ({resp.status_code}): {detail}")
