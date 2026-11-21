@@ -29,7 +29,7 @@ does not guarantee that an ID is detected or recovered.
 | PDF | `application/pdf` | Yes | Yes | No | No |
 | Raw AAC (ADTS) | `audio/aac` | No | No | Yes | Yes |
 | BMP, OGG (Vorbis, Opus), AIFF | `image/bmp`, `audio/ogg`, `audio/aiff` | No | No | No | Yes |
-| SVG, AVI | `image/svg+xml`, `video/avi`, `video/x-msvideo` | Yes | Yes | No | No |
+| SVG, AVI, ANI | `image/svg+xml`, `video/avi`, `video/x-msvideo`, `application/x-navi-animation` | Yes | Yes | No | No |
 | WebM | `video/webm` | No | No | No | No |
 
 Types not listed as eligible are unsupported. C2PA signing accepts images of at
