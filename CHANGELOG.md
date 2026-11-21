@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- C2PA signing and validation of ANI animated cursors
+  (`application/x-navi-animation`).
+- In Local mode, this needs trufo-provenance 2.4.0 or later; an older engine
+  refuses it.
+
 ## [2.3.2] — 2026-11-18
 
 ### Added
