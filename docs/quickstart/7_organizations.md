@@ -57,8 +57,9 @@ Owners and admins manage people under **Manage Users** at
 - **Remove.** Removed people lose access at once. API keys they created keep working,
   because keys belong to the organization.
 - **Transfer ownership.** The owner picks **Owner** for another member and confirms. That
-  member becomes the owner and you become an admin; only the new owner can undo it. The
-  owner cannot be removed, so transfer ownership first.
+  member becomes the owner and you become an admin; only the new owner, or a sub-org's
+  management organization, can undo it. The owner cannot be removed, so transfer
+  ownership first.
 
 ### Sign-In Security
 
@@ -105,9 +106,8 @@ it, and every request made with it acts in that organization. Owners and admins 
 keys at [app.trufo.ai/settings/org#api-access](https://app.trufo.ai/settings/org#api-access)
 ([API Key Scopes](0_setup.md#api-key-scopes)).
 
-`trufo login` signs you in with a `trufo-api` key, and the CLI session works in that
-key's organization. If you do not belong to that organization, the sign-in is refused
-([CLI](../cli.md)).
+`trufo login` signs you in with a `trufo-api` key, and the CLI session works in your
+organization ([CLI](../cli.md)).
 
 ---
 
@@ -125,47 +125,49 @@ Management organization   members, billing
 ```
 
 A management organization and its sub-organizations (sub-orgs) form an **organization
-group**. The management organization has members and billing only: it does not sign and
-holds no API keys, Organization Validation, products or certificates. Each sub-org works
-as in [Every Organization](#every-organization), except that the management organization
-pays for it and the management organization's owner acts as owner in it.
+group**. The management organization does not sign or watermark and holds no API keys,
+Organization Validation, products or certificates; Trufo refuses such work there with
+`403 WorkingOrgRequired`. Each sub-org works as in
+[Every Organization](#every-organization), except that the management organization pays
+for it and can also manage its people.
 
 An organization in no organization group is a **standalone organization**. With one
 organization, you need none of this.
 
 ### Create a Management Organization and Sub-Orgs
 
-**Management organization.** The owner of a standalone organization creates one and names
-it. You become its owner, your organization becomes its first sub-org, and from then on
-the management organization pays for it. You stay in your organization until you switch.
+**Management organization.** Trufo creates it and adds its first owner, whose account
+must not belong to any organization yet.
+
+<!-- TBD: owner decision: how a customer asks Trufo for a management organization -->
+
+**Sub-orgs.** From the management organization, its owner or an admin creates a sub-org
+with a name and a default processing region. It starts with no members, and the
+management organization pays for it from its creation. To work in it, add people to it,
+yourself included ([Add People Across Sub-Orgs](#add-people-across-sub-orgs)).
 
 <!-- TBD: dashboard location -->
-<!-- TBD: owner decision: what happens to the founding organization's existing card, plans and contract -->
 
-**Sub-orgs.** From the management organization, its owner creates a sub-org with a name
-and a default processing region. It starts with no members, and the management
-organization pays for it from its creation.
-
-<!-- TBD: dashboard location -->
-
-Both need MFA. Each sub-org submits its own Organization Validation and accepts its own
-agreements.
+Creating a sub-org needs MFA. Each sub-org submits its own Organization Validation and
+accepts its own agreements.
 
 ### Roles Across an Organization Group
 
 Roles are per organization: a person can be an admin in one sub-org and a member in
-another. Your role in the management organization decides what you can do across the
-organization group:
+another. In the management organization, roles work as in [Roles](#roles) for its
+members and billing, and also decide what you can do for its sub-orgs:
 
-| Role in the management organization | In the management organization | In each sub-org |
-| ----------------------------------- | ------------------------------ | --------------- |
-| Owner | Manage people and billing; create sub-orgs; attach organizations; add people to sub-orgs as admin or member; remove people | Acts as owner |
-| Admin | Manage billing; invite members; add people to sub-orgs as members; remove members | Only the role they hold there, if any |
-| Member | See sub-orgs, members, plans and usage | Only the role they hold there, if any |
+| What you can do from the management organization | Owner | Admin | Member |
+| ------------------------------------------------ | ----- | ----- | ------ |
+| See its sub-orgs and their usage | Yes | Yes | Yes |
+| Create sub-orgs | Yes | Yes | No |
+| Add people to a sub-org with any role, change their roles, remove them | Yes | Yes | No |
 
-The management organization's owner does not appear in a sub-org's member list, but what
-they do there is recorded in its activity under their own name. A sub-org can also have
-an owner of its own.
+From any other organization, Trufo refuses these with `403 ManagementOrgRequired`.
+
+A role in the management organization, owner included, gives no role in its sub-orgs. To
+work in a sub-org you need a role there, so its member list shows everyone who can work
+in it.
 
 ### Add People Across Sub-Orgs
 
@@ -175,53 +177,32 @@ invitation, to the management organization or to any sub-org.
 <!-- TBD: owner decision: restricting which email domains can be invited into an organization group -->
 
 **People already in the organization group.** From the management organization, its
-owner or an admin adds them to a sub-org: the owner as admin or member, an admin as
-member. No invitation email is sent, and the person can switch to the sub-org at once.
-The owner or an admin removes people from a sub-org the same way, with the limits in
-[People and Ownership](#people-and-ownership).
+owner or an admin adds them to a sub-org with any role. No invitation email is sent, and
+the person can switch to the sub-org at once. Someone in no organization yet is refused
+with `400 AccountNotInOrgGroup`; invite them instead.
 
 <!-- TBD: dashboard location -->
+
+The same people change roles in a sub-org and remove people from it, themselves
+included. Making someone owner makes the sub-org's previous owner an admin; the owner
+cannot be removed or given another role until someone else is made owner.
 
 A sub-org's own owner and admins can also invite by email. Someone in an organization
 outside the organization group cannot be invited or added.
 
-### Attach an Existing Organization
-
-A standalone organization joins an organization group by request:
-
-1. The management organization's owner sends a request with the organization's
-   Organization ID. They can withdraw it until it is accepted.
-
-   <!-- TBD: dashboard location -->
-
-2. Trufo emails each owner of that organization a link to review it, valid for 7 days.
-3. An owner opens the link, signed in to that organization with MFA, and accepts.
-
-   <!-- TBD: dashboard location -->
-
-By accepting, the owner agrees that the management organization's owner acts as owner in
-the organization, that the management organization pays for it from the next 00:00 UTC,
-and that its own plans end on the 1st of next month (the current month is already paid).
-Acceptance is refused while the management organization lacks a plan for a product the
-organization has.
-
-The organization keeps its own members, API keys, certificates, Organization Validation,
-agreements and activity.
-
 ### Working Across Organizations
 
 **Switching.** In the dashboard you work in one organization at a time and switch between
-those you can enter: the organizations you belong to, and every sub-org for the
-management organization's owner. Switching needs MFA. Your next sign-in opens the
-organization you last switched to.
+the organizations you belong to. Switching needs MFA. Your next sign-in opens the
+organization you last switched to, while you still belong to it.
 
 <!-- TBD: dashboard location -->
 
-**Open tabs.** After you switch, a tab still showing the previous organization is refused
-with `409 SessionOrgChanged`. Reload the tab.
+**Losing access.** If you are removed from the organization a session works in, the
+session ends with `401 OrgMembershipRevoked`; sign in again.
 
-**Keys and the CLI.** Create API keys in each sub-org that needs them. To use the CLI in
-another sub-org, store that sub-org's `trufo-api` key and run `trufo login` again.
+**Keys and the CLI.** Create API keys in each sub-org that needs them. A `trufo login`
+session cannot switch, and opens in one of the organizations your account belongs to.
 
 ### Billing in an Organization Group
 
@@ -231,62 +212,28 @@ sub-org, and its owner and admins manage them.
 
 <!-- TBD: owner decision: pricing in an organization group (whether base fees and included amounts count once for the organization group) -->
 
-| When | Who pays |
-| ---- | -------- |
-| A sub-org is created | The management organization, from its creation |
-| An organization is attached | The management organization, from the next 00:00 UTC |
-| A sub-org is detached | The management organization until the next 00:00 UTC, then the organization itself |
+A sub-org has no billing of its own: it cannot add a card, start, change or resume a
+plan, or see plans, invoices or payments, and Trufo refuses these with
+`403 BillingOrgRequired`. Its usage page shows the products the management organization
+pays for and the sub-org's own usage, without amounts.
 
-A sub-org cannot add a card, start a plan or resume a cancelled one: Trufo refuses with
-`403 OrgBilledByManagementOrg`. For charges from before it joined, its owners and admins
-can still see its invoices and payments and update its payment method. Its usage and plan
-pages show which of the management organization's plans cover it, and its own usage,
-without amounts.
-
-The management organization's usage page also shows each organization's usage.
+The management organization's usage page shows the organization group's usage, in total
+and for each sub-org.
 
 <!-- TBD: dashboard location -->
 
 When a plan of the management organization ends, it ends for every organization in the
 organization group.
 
-### Detach, Remove and Close
-
-**Detach a sub-org.** The sub-org's owner, or the management organization's owner,
-detaches it from within the sub-org. This is refused unless the sub-org has an owner who
-belongs to no other organization of the organization group; to give it one, invite that
-person as an admin, then [transfer ownership](#people-and-ownership).
-
-<!-- TBD: dashboard location -->
-
-When a sub-org detaches:
-
-- people who also belong to another organization of the organization group are removed
-  from it
-- the management organization's owner no longer acts as owner in it
-- it keeps its other members, API keys, certificates, OV, agreements and activity
-- from the next 00:00 UTC it pays for itself; services that need a plan stop until it
-  has one, and nothing is deleted
-
-**Remove a person from the organization group.** The management organization's owner or
-an admin removes someone from all its organizations at once. An admin can remove only
-someone who is a member, not an admin, in each of those organizations; anyone who is an
-owner must transfer ownership first. Their API keys keep working; Trufo lists the keys
-they created so you can revoke them.
-
-<!-- TBD: dashboard location -->
-
-**Close the management organization.** Its owner can delete it only when it has no
-sub-orgs left: detach or delete each one first.
-
-<!-- TBD: dashboard location -->
-
 ### Limits
 
-- One level: a sub-org cannot have sub-orgs, and a management organization cannot be
-  attached to another.
+- One level: a sub-org cannot have sub-orgs.
+- A standalone organization cannot join an organization group, and a sub-org cannot
+  leave one.
 - An organization is in at most one organization group.
 - An account belongs to one organization group, or to one standalone organization.
+- A sub-org cannot be deleted, and a management organization cannot be deleted while it
+  has sub-orgs.
 
 ---
 
