@@ -28,7 +28,11 @@ when uploading the media is fine.
   The base `trufo` package is pure Python and runs on any platform with Python 3.10+.
 - **System packages:** `libmagic` for file-type detection (Debian and Ubuntu:
   `libmagic1`), and `ffprobe` on the PATH to sign any audio or video (Debian and
-  Ubuntu: `ffmpeg`).
+  Ubuntu: `ffmpeg`). Watermarking HEIC, HEIF or AVIF with `trufo[local-full]` also
+  needs `heif-enc` 1.20.0 or newer on the PATH, with its HEVC and AV1 encoder plugins
+  (Debian and Ubuntu: `libheif-examples`, `libheif-plugin-x265` and
+  `libheif-plugin-aomenc`). Ubuntu 24.04 packages an older `heif-enc`; the
+  [full Docker image](docker.md#choose-an-image) includes a suitable one.
 - **API keys**, set up as in [0_setup.md](../quickstart/0_setup.md): an `sdk-download`
   key to install the engine, and a `c2pa-sign-test` key for the test host or a
   `c2pa-sign-prod` key, with completed Organization Validation, for production.
@@ -218,6 +222,12 @@ download access (see [Private Package Index](#private-package-index)).
 
 **`RuntimeError: ffprobe is required for audio/video media probing.`** — install
 FFmpeg so that `ffprobe` is on the PATH (Debian and Ubuntu: `ffmpeg`).
+
+**`Watermarking failed: Could not process the media file.` for HEIC, HEIF or AVIF** —
+`sign_c2pa_local()` logs the cause as a warning; `watermark_media()` raises it instead.
+If it is `HEIF encoding requires 'heif-enc'. …`, `heif-enc failed: Can't open 512` or
+`heif-enc failed: Can not load JPEG input_image: Cannot open JPEG file`, install
+`heif-enc` 1.20.0 or newer with its encoder plugins; see [Requirements](#requirements).
 
 **`Test keys are not accepted on this host. Please use test.api.trufo.ai.`** — a
 `c2pa-sign-test` key sent to a production host, which `sign_c2pa_local()` calls

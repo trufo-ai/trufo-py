@@ -14,6 +14,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - In Local mode, this needs trufo-provenance 2.4.0 or later; an older engine
   refuses it.
 
+### Fixed
+
+- [Local mode with the Python SDK](docs/local/python.md#requirements) did not list
+  `heif-enc` 1.20.0 or newer, with its HEVC and AV1 encoder plugins, which watermarking
+  HEIC, HEIF or AVIF with `trufo[local-full]` needs.
+
 ## [2.3.2] — 2026-11-18
 
 ### Added
