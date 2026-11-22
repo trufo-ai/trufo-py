@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- A quickstart for organizations, people and roles, including organization groups. See
+  [Organizations, People and Roles](docs/quickstart/7_organizations.md).
 - C2PA signing and validation of ANI animated cursors
   (`application/x-navi-animation`).
 - In Local mode, this needs trufo-provenance 2.4.0 or later; an older engine
