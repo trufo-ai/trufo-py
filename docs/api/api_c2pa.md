@@ -98,8 +98,8 @@ Messages you may see:
   (`The '<action>' action did not keep: <items>.`); see
   [Media actions](media_format_support.md#media-actions).
 - A media action that changed the file after the watermark was embedded
-  (`A non-editorial media processing action was applied after embedding the
-  watermark; …`); place the `watermark` action last.
+  (`A media processing action was applied after embedding the watermark; …`);
+  place the `watermark` action last.
 - Deprecations: the watermark [`mode`](#watermark), the
   [`ai_disclosure`](#ai_disclosure) entry and, in Local mode, the
   [engine version](#local-mode).
