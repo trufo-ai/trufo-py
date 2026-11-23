@@ -577,7 +577,7 @@ transcode the signed file. An animated GIF, PNG, WebP or AVIF keeps its
 
 | Parameter | Applies to | Values | Default |
 | --------- | ---------- | ------ | ------- |
-| `target_mime_type` | Every input | `image/jpeg`, `image/png`, `image/webp`, `image/avif`, `image/tiff`, `image/gif`; `audio/flac`, `audio/wav`, `audio/mp4`, `audio/mpeg`; `video/mp4`, `video/quicktime`; in the input's media class | The input's type |
+| `target_mime_type` | Every input | `image/jpeg`, `image/png`, `image/webp`, `image/avif`, `image/tiff`, `image/gif`; `audio/flac`, `audio/wav`, `audio/mp4`, `audio/mpeg`; `video/mp4`, `video/quicktime`; in the input's media class | The input's type; required for AVI |
 | `quality` | `image/jpeg`, `image/webp`, `image/avif` | Integer, 0 to 100; higher is better | 90 |
 | `video_codec` | `video/mp4`, `video/quicktime` | `"h264"` or `"h265"` | The source's codec if it is H.264 or H.265, else `"h264"` |
 | `crf` | `video/mp4`, `video/quicktime` | Integer, 0 to 51; lower is better | 23 for H.264, 28 for H.265 |
