@@ -27,9 +27,10 @@ when uploading the media is fine.
   JPEG XL signing 3.12 or earlier.
   The base `trufo` package is pure Python and runs on any platform with Python 3.10+.
 - **System packages:** `libmagic` for file-type detection (Debian and Ubuntu:
-  `libmagic1`), and `ffprobe` on the PATH to sign any audio or video (Debian and
-  Ubuntu: `ffmpeg`). Watermarking HEIC, HEIF or AVIF with `trufo[local-full]` also
-  needs `heif-enc` 1.20.0 or newer on the PATH, with its HEVC and AV1 encoder plugins
+  `libmagic1`), `ffprobe` on the PATH to sign any audio or video, and `ffmpeg` too
+  for a media action on it (Debian and Ubuntu: `ffmpeg`). Watermarking HEIC, HEIF or
+  AVIF with `trufo[local-full]` also needs `heif-enc` 1.20.0 or newer on the PATH,
+  with its HEVC and AV1 encoder plugins
   (Debian and Ubuntu: `libheif-examples`, `libheif-plugin-x265` and
   `libheif-plugin-aomenc`). Ubuntu 24.04 packages an older `heif-enc`; the
   [full Docker image](docker.md#choose-an-image) includes a suitable one.
@@ -41,9 +42,9 @@ when uploading the media is fine.
 
 ### Private Package Index
 
-The engine packages, `trufo-provenance` and `trufo-pawprint`, come from Trufo's private
-package index at `packages.trufo.ai`; the `trufo` package itself comes from public
-PyPI. The index also serves Trufo's build of `pillow-heif` (1.8.1+trufo.1), which
+The engine packages, `trufo-provenance`, `trufo-avio` and `trufo-pawprint`, come from
+Trufo's private package index at `packages.trufo.ai`; the `trufo` package itself comes
+from public PyPI. The index also serves Trufo's build of `pillow-heif` (1.8.1+trufo.1), which
 the engine requires in both extras; a package mirror or allowlist needs it too. Set
 up the index before installing an extra. It needs an `sdk-download` API key, created
 at [app.trufo.ai/settings/org](https://app.trufo.ai/settings/org#api-access) under
@@ -128,7 +129,8 @@ signed_bytes = sign_c2pa_local(api_key, media_bytes)
 
 Both helpers take the same `actions`, `assertions`, `manifest_settings`,
 `branded_gp_id`, `signed_input_policy`, `signed_ingredient_policy`,
-`skip_manifest_storage` and `trufo_api_url` as `sign_c2pa_cloud()`, `transcode` included; see the
+`skip_manifest_storage` and `trufo_api_url` as `sign_c2pa_cloud()`, the media actions
+included; see the
 [C2PA Signing Quickstart](../quickstart/2_c2pa_signing.md) and
 [`actions`](../api/api_c2pa.md#actions). With `trufo[local-full]`, a `watermark`
 action embeds the mark locally; see the

@@ -9,7 +9,11 @@ from enum import Enum
 class TrufoAction(str, Enum):
     """User-facing C2PA action type."""
 
+    RESIZE = "resize"
+    CROP = "crop"
+    TRIM = "trim"
     TRANSCODE = "transcode"
+    REPACKAGE = "repackage"
     WATERMARK = "watermark"
     PUBLISH = "publish"
     REDACT = "redact"

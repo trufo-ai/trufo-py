@@ -1,7 +1,8 @@
 # Media format support
 
-This reference defines media eligibility for C2PA generation and validation, and
-Trufo watermark embedding and recovery in Cloud mode and Local mode.
+This reference defines media eligibility for C2PA generation and validation, Trufo
+watermark embedding and recovery, and the media actions, in Cloud mode and Local
+mode.
 
 A file is supported when its MIME type is eligible for the operation and the file
 passes that operation's checks; a supported container does not make every file in
@@ -34,8 +35,9 @@ does not guarantee that an ID is detected or recovered.
 
 Types not listed as eligible are unsupported. C2PA signing accepts images of at
 most 400 million pixels. Local mode with the Python SDK does not sign JPEG XL on
-Python 3.13 or later. The restrictions sections below apply to watermark
-operations only; they do not define C2PA codec or pixel-depth limits.
+Python 3.13 or later. The image and the audio and video restrictions below apply to
+watermark operations only; they do not define C2PA codec or pixel-depth limits.
+[Media actions](#media-actions) has the actions' own.
 
 An ingredient sent as `media` must be in a format with **Yes** under C2PA
 validate; other formats can be declared with `format` instead (see
@@ -151,6 +153,162 @@ audio track. Subtitles and timecode do not carry the watermark. Recovery reads
 at least 20 evenly spaced video frames (every frame when there are fewer), or one
 frame per second of video when that is more, and every audio track. When tracks
 disagree, recovery returns the ID found in the most tracks.
+
+## Media actions
+
+The [`resize`](api_c2pa.md#resize), [`crop`](api_c2pa.md#crop),
+[`trim`](api_c2pa.md#trim), [`transcode`](api_c2pa.md#transcode) and
+[`repackage`](api_c2pa.md#repackage) actions follow one rule: an action keeps the
+metadata its output can hold, updates what the edit makes stale, names everything
+else it did not keep in a [warning](api_c2pa.md#response-warnings), and refuses only
+when picture or sound content would be lost or shown differently. A refusal does not
+depend on whether the request would change the file: a request that changes nothing
+passes the same checks, and only the work is skipped.
+
+A re-encode in the source's format reuses the source's settings where they can be
+read, such as a JPEG's quantization tables; when the format changes and no setting is
+given, the [`transcode`](api_c2pa.md#transcode) defaults apply, such as quality 90.
+A video's `crf` and a lossy audio bitrate cannot be read from the file, so their
+defaults apply in either case.
+
+Cloud mode and Local mode apply the same rules; in Local mode, audio and video
+actions need `ffmpeg` and `ffprobe` on the PATH. The actions run on CPython 3.10 to
+3.15.
+
+| Input | `resize`, `crop` | `trim` | `transcode` targets | `repackage` targets |
+| --- | --- | --- | --- | --- |
+| Images | Yes | No | Any image type | No |
+| MP4, MOV | Yes | Yes | MP4, MOV | MP4, MOV |
+| FLAC, WAV, M4A, MP3 | No | Yes | Any audio type | No |
+| AVI | No | No | MP4, MOV | MP4, MOV |
+
+The image types are JPEG, PNG, WebP, AVIF, TIFF and GIF, and the audio types FLAC,
+WAV, M4A and MP3. Other types, including HEIC/HEIF, JPEG XL, DNG and SVG, are
+refused. Images may be animated.
+
+Limits, on input and output: images of at most 400 million pixels, counting all of an
+animation's frames, and at most 10,000 frames; JPEG at most 65,500 pixels on a side,
+WebP 16,383 and GIF 65,535; video frames with a longer side of at most 8,192 and an
+area of at most 35,389,440 pixels.
+
+### What each target holds
+
+What each target holds of a file in another format; a file kept in its own format
+keeps everything its format holds, except as the lists below say. Everything else is
+named in the warning.
+
+| Target | Holds |
+| --- | --- |
+| `image/jpeg` | Pixel density, comments, ICC color profile, EXIF metadata up to 65,527 bytes and XMP metadata up to 65,504 bytes |
+| `image/png` | Pixel density, comments, ICC color profile, EXIF and XMP metadata |
+| `image/webp`, `image/avif` | ICC color profile, EXIF and XMP metadata |
+| `image/tiff` | Pixel density, ICC color profile, XMP metadata |
+| `image/gif` | Comments, XMP metadata without a NUL byte |
+| `audio/flac` | Cover picture, metadata tags |
+| `audio/wav` | Metadata tags |
+| `audio/mp4`, `audio/mpeg` | Cover picture, chapters, metadata tags |
+| `video/mp4` | A JPEG or PNG cover picture, chapters, `mov_text` subtitles, one timecode, metadata tags |
+| `video/quicktime` | Chapters, `mov_text` subtitles, one timecode, metadata tags |
+
+- **Held only by their own format**, so named when converting away: PNG text, other
+  than comments; PNG background, significant bits and time; JPEG coding segments;
+  WebP animation background color; IPTC metadata; TIFF descriptive tags.
+- **Named whatever the action:** unrecognized metadata, such as other JPEG segments,
+  PNG chunks that are not safe to copy, other WebP chunks, GIF extensions, AVIF items
+  and TIFF tags; a TIFF's EXIF and GPS directories, as EXIF metadata; data tracks,
+  such as Apple timed metadata and camera telemetry; and metadata tags the target did
+  not write.
+- **Named by an action:** a PNG written in another layout, such as a palette image
+  written as RGB, loses its background and significant bits; a crop drops the EXIF
+  thumbnail and a JPEG's Photoshop thumbnail, which show the whole picture, or the
+  whole EXIF metadata when its thumbnail cannot be dropped safely; a trim
+  drops subtitles, and a timecode when the span starts after the beginning.
+- **Updated:** the stored dimensions in EXIF and XMP after a resize or crop; the EXIF
+  subject area, moved with a crop; the timecode, written anew. An embedded C2PA
+  manifest is never carried over: the new manifest keeps the input as its parent.
+
+A JPEG re-encoded as JPEG writes its own coding segments in place of the source's
+Adobe and Ducky segments, without a warning.
+
+### Refused
+
+- **Inputs:** a CMYK JPEG; a JPEG or AVIF with a gain map or other secondary images; a
+  JPEG or WebP with data after the end of the image; a JPEG with extended XMP; an
+  interlaced or HDR PNG, or one whose `cICP` is not full-range RGB; AVIF above 8 bits,
+  with premultiplied alpha, HDR or BT.2020, or with color signaling other than sRGB
+  and no ICC profile; a TIFF with more than one page, Photoshop layers, a pyramid,
+  reduced-resolution pages, CMYK, samples other than 8 or 16 bits, compression other
+  than none, LZW, Deflate or PackBits, or extra channels or premultiplied alpha; GIF
+  plain text, or frames outside the logical screen; more than one video or audio
+  stream, more than one timecode track, encrypted media, and, for a `resize` or
+  `crop`, video rotated by other than quarter turns. Malformed EXIF makes an image
+  unreadable (`Could not process the media file.`).
+- **Picture:** transparency into JPEG, unless every pixel is opaque; partial
+  transparency into GIF; 16-bit samples into JPEG, WebP, AVIF or GIF; a gray image with
+  a gray ICC profile into WebP; PNG color signaling other than sRGB into another
+  format.
+- **Animations:** into JPEG or TIFF; into AVIF, one with transparency or one that does
+  not loop forever; into WebP, one longer than 24 days; and, as inputs, more than 8
+  bits a channel, a rotated or mirrored animation, an animated PNG whose default image
+  is not a frame, and an animated AVIF with transparency or other extra tracks, or that
+  does not loop forever.
+- **Sound and video:** audio an encoder cannot code at its sample rate, channels or
+  depth (AAC: up to 96 kHz and 8 channels; MP3: up to 48 kHz and 2 channels; FLAC: up
+  to 24-bit integer samples and 8 channels); video to re-encode that is HDR,
+  interlaced, or in a pixel format the codec cannot hold (planar YUV without alpha, at
+  8 or 10 bits, or 12 bits for H.265).
+- **After writing:** Trufo reads an audio or video output back and refuses it if a
+  stream, the rotation, a chapter or the timecode went missing.
+
+### Known limits
+
+These are not detected, so no warning names them:
+
+- after a crop, XMP image regions and the EXIF subject location still describe the
+  uncropped picture, and previews in a camera's maker note, which Trufo cannot read,
+  are kept; after a resize, the EXIF subject area and location keep the
+  source's pixel coordinates;
+- animation timing and loop counts beyond a target's [limits](#animations) are
+  rounded or capped;
+- WAV chunks that hold neither audio nor tags, such as cue points; FLAC application
+  and cue sheet blocks; ID3 frames that do not map to tags; an M4A source's XMP; and
+  an M4A's start offset, in a `transcode` to WAV, FLAC or MP3, are not carried over.
+
+### Animations
+
+An animated GIF, PNG, WebP or AVIF keeps its playback: the pictures shown, in order,
+as composited on the full canvas; each picture's timing, within the target's limits
+below; and the loop count, within its limit. The number of frames and their
+numbering may change: identical consecutive pictures may share one frame. A `resize`
+or `crop` applies to every frame.
+
+| Target | Timing | Loop count |
+| --- | --- | --- |
+| `image/gif` | In steps of 10 ms, up to 655.35 s a frame | Up to 65,536 plays |
+| `image/webp` | In steps of 1 ms, up to 16,777,215 ms a frame; refused over 24 days in all | Up to 65,535 plays |
+| `image/png` | As the source's; over 65.535 s, rounded to whole seconds | Kept |
+| `image/avif` | In milliseconds | Loops forever only |
+
+### Audio and video
+
+A `transcode`, `repackage`, `resize`, `crop` or `trim` keeps the file's streams: each
+is copied when the target holds it and nothing asks to re-encode it, else re-encoded
+(a `repackage` refuses instead). Into its own container, a file keeps every stream in
+its own codec. Re-encoding video keeps its pixel format, color tags, pixel aspect
+ratio, timestamps and rotation; re-encoding audio keeps its sample rate and channels.
+
+A `trim` re-encodes every audio and video stream, copies cover pictures, and keeps
+the chapters within the span, cut to it; one that only touches the span is dropped.
+Its video begins with the first frame at or after `start`, up to one frame after the
+audio. Its audio keeps its codec where Trufo writes that codec, else becomes AAC:
+
+| Source audio | In | Written as |
+| --- | --- | --- |
+| PCM | WAV, MP4, MOV | PCM at its depth, sample for sample |
+| FLAC | FLAC, MP4 | FLAC, sample for sample |
+| AAC | M4A, MP4, MOV | AAC at 192 kbit/s |
+| MP3 | MP3, MP4, MOV | MP3 at 192 kbit/s |
+| Other, such as ALAC, Opus or AC-3 | M4A, MP4, MOV | AAC at 192 kbit/s |
 
 ## Unsupported inputs
 
