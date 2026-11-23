@@ -42,7 +42,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `transcode` writes JPEG, WebP and AVIF at quality 90 by default (previously 75,
   80 and 75), AAC and MP3 at 192 kbit/s, also audio re-encoded inside a video, and
-  WAV at the source's bit depth (previously 16-bit).
+  WAV at the source's bit depth in 16, 24 or 32 bits, 8-bit as 16-bit (previously
+  16-bit).
 - `transcode` copies each stream that already is what was asked, and records
   `c2pa.repackaged` when it re-encoded nothing, such as MOV with H.264 and AAC into
   MP4. A file that already is what was asked is left as it is, and nothing is
