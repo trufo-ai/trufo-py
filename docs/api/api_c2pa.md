@@ -486,8 +486,9 @@ be even. A rectangle covering the whole picture leaves the file as it is.
 An image is re-encoded in its own format with its coding settings and metadata; the
 stored dimensions in its EXIF and XMP are updated, the EXIF subject area moves with
 the picture, and the EXIF and Photoshop thumbnails, which show the whole picture, are
-dropped. XMP image regions and the EXIF subject location still describe the
-uncropped picture. An animation has every frame cropped, and keeps their timing and
+dropped, or the whole EXIF when its thumbnail cannot be dropped safely. XMP image
+regions and the EXIF subject location still describe the uncropped picture, and
+previews in a camera's maker note are kept. An animation has every frame cropped, and keeps their timing and
 its loop count. A video's picture is re-encoded as a `resize`
 re-encodes it, and its other streams are copied. Trufo records `c2pa.cropped`. `crop`
 can be combined with a request that signs the file as newly created.

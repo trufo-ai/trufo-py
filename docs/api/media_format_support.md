@@ -220,7 +220,8 @@ named in the warning.
   not write.
 - **Named by an action:** a PNG written in another layout, such as a palette image
   written as RGB, loses its background and significant bits; a crop drops the EXIF
-  thumbnail and a JPEG's Photoshop thumbnail, which show the whole picture; a trim
+  thumbnail and a JPEG's Photoshop thumbnail, which show the whole picture, or the
+  whole EXIF metadata when its thumbnail cannot be dropped safely; a trim
   drops subtitles, and a timecode when the span starts after the beginning.
 - **Updated:** the stored dimensions in EXIF and XMP after a resize or crop; the EXIF
   subject area, moved with a crop; the timecode, written anew. An embedded C2PA
@@ -264,7 +265,8 @@ Adobe and Ducky segments, without a warning.
 These are not detected, so no warning names them:
 
 - after a crop, XMP image regions and the EXIF subject location still describe the
-  uncropped picture; after a resize, the EXIF subject area and location keep the
+  uncropped picture, and previews in a camera's maker note, which Trufo cannot read,
+  are kept; after a resize, the EXIF subject area and location keep the
   source's pixel coordinates;
 - GIF frame delays are rounded to hundredths of a second, up to 655.35 s; animated PNG
   delays over 65.535 s are rounded to whole seconds; loop counts are capped at 65,536
