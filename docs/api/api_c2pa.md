@@ -524,9 +524,9 @@ without `end` it runs to the end. Each must lie within the media's duration, and
 
 The cut is exact: every audio and video stream is re-encoded, video as a `resize`
 re-encodes it, and audio as [Media actions](media_format_support.md#audio-and-video) lists:
-PCM and FLAC sample for sample, AAC and MP3 at 192 kbit/s. The output begins at
-`start`, with the video's first frame at or after it, so the video can begin up to one
-frame after the audio. Cover pictures are copied; subtitles are dropped. Chapters
+PCM and FLAC sample for sample, AAC and MP3 at 192 kbit/s. The source at `start`
+becomes the output's time 0, and the video begins with the first frame at or after
+`start`, so it can begin up to one frame after the audio. Cover pictures are copied; subtitles are dropped. Chapters
 within the span are kept, cut to it. A timecode is kept when the span begins at the
 beginning; otherwise it is dropped. A [warning](#response-warnings) names what was
 dropped. Trufo records `c2pa.trimmed`. `trim` can be
