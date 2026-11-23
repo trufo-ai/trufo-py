@@ -142,9 +142,10 @@ must not belong to any organization yet.
 <!-- TBD: owner decision: how a customer asks Trufo for a management organization -->
 
 **Sub-orgs.** From the management organization, its owner or an admin creates a sub-org
-with a name and a default processing region. It starts with no members, and the
-management organization pays for it from its creation. To work in it, add people to it,
-yourself included ([Add People Across Sub-Orgs](#add-people-across-sub-orgs)).
+with a name, a default processing region and an owner chosen from the organization
+group, who can be you. The management organization pays for it from its creation. To
+work in it, add people to it, yourself included if you are not its owner
+([Add People Across Sub-Orgs](#add-people-across-sub-orgs)).
 
 <!-- TBD: dashboard location -->
 
