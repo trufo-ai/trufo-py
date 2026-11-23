@@ -451,7 +451,7 @@ side you give must be at least 2 and is taken down to an even number, so 641 bec
 
 An image is re-encoded in its own format with its coding settings and metadata, and
 the stored dimensions in its EXIF and XMP are updated; an animation keeps its
-frames, their timing and its loop count. A video's picture is re-encoded at the
+[playback](media_format_support.md#animations). A video's picture is re-encoded at the
 codec's default `crf` with its codec, H.264 or H.265 (any other becomes H.264), and
 its other streams are copied. Trufo records `c2pa.resized.proportional`; a file
 already at that size is left as it is. Unlike `transcode`, `resize` can be combined
@@ -488,8 +488,8 @@ stored dimensions in its EXIF and XMP are updated, the EXIF subject area moves w
 the picture, and the EXIF and Photoshop thumbnails, which show the whole picture, are
 dropped, or the whole EXIF when its thumbnail cannot be dropped safely. XMP image
 regions and the EXIF subject location still describe the uncropped picture, and
-previews in a camera's maker note are kept. An animation has every frame cropped, and keeps their timing and
-its loop count. A video's picture is re-encoded as a `resize`
+previews in a camera's maker note are kept. An animation has every frame cropped, and keeps its
+[playback](media_format_support.md#animations). A video's picture is re-encoded as a `resize`
 re-encodes it, and its other streams are copied. Trufo records `c2pa.cropped`. `crop`
 can be combined with a request that signs the file as newly created.
 
@@ -571,8 +571,8 @@ file that already is what was asked is left as it is, and nothing is recorded.
 
 `transcode` stays within a media class. It cannot be combined with a request that
 signs the file as newly created (`c2pa.created`); sign the file first, then
-transcode the signed file. An animated GIF, PNG, WebP or AVIF keeps its frames, their
-timing and its loop count, so its target must be `image/gif`, `image/png`,
+transcode the signed file. An animated GIF, PNG, WebP or AVIF keeps its
+[playback](media_format_support.md#animations), so its target must be `image/gif`, `image/png`,
 `image/webp` or `image/avif`.
 
 | Parameter | Applies to | Values | Default |

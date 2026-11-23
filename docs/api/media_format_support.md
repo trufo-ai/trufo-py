@@ -268,12 +268,26 @@ These are not detected, so no warning names them:
   uncropped picture, and previews in a camera's maker note, which Trufo cannot read,
   are kept; after a resize, the EXIF subject area and location keep the
   source's pixel coordinates;
-- GIF frame delays are rounded to hundredths of a second, up to 655.35 s; animated PNG
-  delays over 65.535 s are rounded to whole seconds; loop counts are capped at 65,536
-  plays for GIF and 65,535 for WebP;
+- animation timing and loop counts beyond a target's [limits](#animations) are
+  rounded or capped;
 - WAV chunks that hold neither audio nor tags, such as cue points; FLAC application
   and cue sheet blocks; ID3 frames that do not map to tags; an M4A source's XMP; and
   an M4A's start offset, in a `transcode` to WAV, FLAC or MP3, are not carried over.
+
+### Animations
+
+An animated GIF, PNG, WebP or AVIF keeps its playback: the pictures shown, in order,
+as composited on the full canvas; each picture's timing, within the target's limits
+below; and the loop count, within its limit. The number of frames and their
+numbering may change: identical consecutive pictures may share one frame. A `resize`
+or `crop` applies to every frame.
+
+| Target | Timing | Loop count |
+| --- | --- | --- |
+| `image/gif` | In steps of 10 ms, up to 655.35 s a frame | Up to 65,536 plays |
+| `image/webp` | In steps of 1 ms, up to 16,777,215 ms a frame; refused over 24 days in all | Up to 65,535 plays |
+| `image/png` | As the source's; over 65.535 s, rounded to whole seconds | Kept |
+| `image/avif` | In milliseconds | Loops forever only |
 
 ### Audio and video
 
