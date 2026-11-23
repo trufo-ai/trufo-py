@@ -802,7 +802,8 @@ rejected. This is the default
 [`signed_input_policy`](#signed-inputs-and-ingredients), `auto`; with `keep`,
 that input is kept too, and no AI source type is declared for it.
 
-Under `auto`, a `redact` or [media action](#actions) also keeps such an input;
+The request's actions do not change this; to process such an input, leave out the
+`ai_system` entry or set `signed_input_policy` to `keep`.
 [Signed inputs and ingredients](#signed-inputs-and-ingredients) lists every case.
 
 The test host writes the same labels, with the test certificate.
@@ -823,7 +824,7 @@ The test host writes the same labels, with the test certificate.
 | `ai_involvement` not in the system's modes | 400 | `ai_involvement '<value>' is not in the AI system's ai_involvement_modes.` |
 | `ai_modified` without `branded_gp_id` | 400 | `ai_involvement 'ai_modified' requires a branded generator product (branded_gp_id).` |
 | With `branded_gp_id`, the product is not approved for the entry's source type | 403 | `C2PACreatedUserAssertionsNotAuthorized: the digitalSourceType <uri> is not approved for this branded generator product.` |
-| A signed input whose source class is `camera_captured` or `human_created`, under the default [`signed_input_policy`](#signed-inputs-and-ingredients) (`auto`), without a `redact` or [media action](#actions) | 400 | `The input carries a C2PA manifest whose source class is '<class>', which conflicts with ai_involvement '<ai_involvement>'.` |
+| A signed input whose source class is `camera_captured` or `human_created`, under the default [`signed_input_policy`](#signed-inputs-and-ingredients) (`auto`), whatever the request's actions | 400 | `The input carries a C2PA manifest whose source class is '<class>', which conflicts with ai_involvement '<ai_involvement>'.` |
 | A `parentOf` ingredient, with `branded_gp_id`, on an input without a C2PA manifest (the entry's `c2pa.created` takes no parent) | 400 | `The creation assertion cannot be combined with a parentOf ingredient.` |
 
 In Local mode with the Python SDK, the last two are raised by the call.
@@ -1077,11 +1078,10 @@ value only when you set one, as `SignedInputPolicy` or `SignedIngredientPolicy` 
 A kept input becomes the `parentOf` ingredient, opened with `c2pa.opened`, and gets
 no new `digitalSourceType`; [`redact`](#redact) removes assertions from its history.
 
-**Source class.** Under `auto`, with an `ai_system` entry and no `redact` or
-[media action](#actions), Trufo refuses an input whose source class is
-`camera_captured` or `human_created` (the 400 is listed under
-[`ai_system`](#ai_system)), and keeps any other with a notice naming its class.
-`keep` skips this check. To find the class, Trufo walks back from the active
+**Source class.** Under `auto`, with an `ai_system` entry, Trufo refuses an input
+whose source class is `camera_captured` or `human_created`, whatever the request's
+actions (the 400 is listed under [`ai_system`](#ai_system)), and keeps any other
+with a notice naming its class. `keep` skips this check. To find the class, Trufo walks back from the active
 manifest through `parentOf` ingredients, by each manifest's first action:
 
 - `c2pa.created`: its `digitalSourceType` is the origin.
@@ -1111,9 +1111,8 @@ replaces the not-validated or untrusted one.
 | ---- | ---- |
 | A kept input's manifest did not validate | `The input's C2PA manifest did not validate; Trufo kept it, and its validation failures are recorded in the new manifest.` |
 | A kept input's manifest is valid but untrusted | `The input's C2PA manifest is valid but untrusted: its signer is not on the trust lists Trufo checks. Trufo kept it.` |
-| `auto`, an `ai_system` entry and no `redact` or media action: the input's manifest did not validate | `The input already contains a C2PA manifest that did not validate, so (per auto mode) it is kept and a c2pa.opened action was added in lieu of a new c2pa.created with digitalSourceType set to trainedAlgorithmicMedia (or equivalent). Its validation failures are recorded in the new manifest. Please note that the existing C2PA manifest will resolve to a source classification of '<class>'.` |
-| `auto`, an `ai_system` entry and no `redact` or media action: the input's manifest is valid | `The input already contains a valid <and trusted / but untrusted> C2PA manifest, so (per auto mode) it is kept and a c2pa.opened action was added in lieu of a new c2pa.created with digitalSourceType set to trainedAlgorithmicMedia (or equivalent). Please note that the existing C2PA manifest will resolve to a source classification of '<class>'.` |
-| `auto`, an `ai_system` entry and a `redact` or media action, even one that leaves the file as it is | `The input already carries a C2PA manifest and the request includes a <action> action, so Trufo kept the manifest; no new source type was declared.` |
+| `auto` and an `ai_system` entry: the input's manifest did not validate | `The input already contains a C2PA manifest that did not validate, so (per auto mode) it is kept and a c2pa.opened action was added in lieu of a new c2pa.created with digitalSourceType set to trainedAlgorithmicMedia (or equivalent). Its validation failures are recorded in the new manifest. Please note that the existing C2PA manifest will resolve to a source classification of '<class>'.` |
+| `auto` and an `ai_system` entry: the input's manifest is valid | `The input already contains a valid <and trusted / but untrusted> C2PA manifest, so (per auto mode) it is kept and a c2pa.opened action was added in lieu of a new c2pa.created with digitalSourceType set to trainedAlgorithmicMedia (or equivalent). Please note that the existing C2PA manifest will resolve to a source classification of '<class>'.` |
 | `keep` and an `ai_system` entry | `signed_input_policy is 'keep', so Trufo kept the input's C2PA manifest; no new source type was declared.` |
 | `auto`: the input's C2PA data cannot be read and is removed | `The input carries C2PA data that Trufo cannot read, so (per auto mode) Trufo removed that data and signed the input as if it carried no C2PA data.` |
 | An ingredient's manifest did not validate | `The C2PA manifest of ingredient '<title>' did not validate; Trufo kept it with the ingredient, and its validation failures are recorded in the new manifest.` |

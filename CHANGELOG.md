@@ -32,8 +32,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   re-encodes in the input's format. See [`transcode`](docs/api/api_c2pa.md#transcode).
 - In Local mode, the four new actions and these parameters need trufo-provenance
   2.4.0 or later; an older engine is refused with `400 UnsupportedSDKVersion`.
-- Under `signed_input_policy` `auto`, every media action keeps a signed input, as
-  `transcode` does.
 - What each action accepts and keeps of a file, per format. See
   [Media actions](docs/api/media_format_support.md#media-actions).
 - A response warning when a media action changes the file after a watermark was
@@ -66,10 +64,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A `watermark` action is judged on the file it embeds into: after a `transcode` or
   `repackage`, on the target's type, where previously it was judged on the upload's.
   An AVI transcoded or repackaged into MP4 can now be watermarked.
-- The notice for a signed input kept because of a `redact` or media action reads
-  `The input already carries a C2PA manifest and the request includes a <action>
-  action, so Trufo kept the manifest; no new source type was declared.`; previously
-  `…so Trufo kept it for the requested <action> action; …`.
+- Under `signed_input_policy` `auto`, a request with an `ai_system` entry whose
+  input's C2PA manifest is camera-captured or human-created returns `400` (`The
+  input carries a C2PA manifest whose source class is …`) whatever its actions;
+  previously a `redact` or `transcode` action kept the input, with the notice
+  `…so Trufo kept it for the requested <action> action; …`, which is gone. To
+  process such a file, leave out `ai_system` or set `signed_input_policy` to
+  `keep`. See [Signed inputs and ingredients](docs/api/api_c2pa.md#signed-inputs-and-ingredients).
 
 ### Removed
 
