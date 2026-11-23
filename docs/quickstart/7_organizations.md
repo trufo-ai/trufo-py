@@ -185,8 +185,9 @@ refused with `400 AccountNotInOrgGroup`; invite them instead.
 <!-- TBD: dashboard location -->
 
 The same people change roles in a sub-org and remove people from it, themselves
-included. Making someone owner makes the sub-org's previous owner an admin; the owner
-cannot be removed or given another role until someone else is made owner.
+included. Ownership moves by changing the role of a current member of the sub-org to
+owner, which makes the previous owner an admin; the owner cannot be removed or given
+another role until someone else is made owner.
 
 A sub-org's own owner and admins can also invite by email. Someone in an organization
 outside the organization group cannot be invited or added.
