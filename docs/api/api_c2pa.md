@@ -472,6 +472,7 @@ Inputs: JPEG, PNG, WebP, AVIF, TIFF and GIF images, and MP4 and MOV video; see
 | An odd side for a video | 400 | `InvalidActionParameter: The 'resize' action's 'width' and 'height' must be even for a video.` |
 | A parameter other than `width` and `height` | 400 | `InvalidActionParameter: The 'resize' action does not take '<name>'.` |
 | Audio, or another input `resize` does not support | 400 | `Unsupported Format Error: <mime> is not supported for resizing. …` |
+| A video rotated by other than quarter turns | 400 | `Unsupported Format Error: Video rotated by <degrees> degrees is not supported for resizing. …` |
 | Local mode, an engine older than trufo-provenance 2.4.0 | 400 | `UnsupportedSDKVersion: the 'resize' action requires trufo-provenance 2.4.0 or later. Please upgrade.` |
 
 #### `crop`
@@ -482,9 +483,11 @@ rotation. The rectangle must lie within the picture, and for a video each value 
 be even. A rectangle covering the whole picture leaves the file as it is.
 
 An image is re-encoded in its own format with its coding settings and metadata; the
-stored dimensions in its EXIF and XMP are updated, and its EXIF thumbnail, which
-shows the whole picture, is dropped. An animation has every frame cropped, and keeps
-their timing and its loop count. A video's picture is re-encoded as a `resize`
+stored dimensions in its EXIF and XMP are updated, the EXIF subject area moves with
+the picture, and the EXIF and Photoshop thumbnails, which show the whole picture, are
+dropped. XMP image regions and the EXIF subject location still describe the
+uncropped picture. An animation has every frame cropped, and keeps their timing and
+its loop count. A video's picture is re-encoded as a `resize`
 re-encodes it, and its other streams are copied. Trufo records `c2pa.cropped`. `crop`
 can be combined with a request that signs the file as newly created.
 
@@ -518,11 +521,13 @@ without `end` it runs to the end. Each must lie within the media's duration, and
 `end` must come after `start`; the whole duration leaves the file as it is.
 
 The cut is exact: every audio and video stream is re-encoded, video as a `resize`
-re-encodes it, and audio in its own codec, lossless audio sample for sample and
-lossy audio at 192 kbit/s. Cover pictures and subtitles are copied. The output
-begins at `start`. Chapters within the span are kept, cut to it. A timecode is kept
-when the span begins at the beginning; otherwise it is dropped, and a
-[warning](#response-warnings) says so. Trufo records `c2pa.trimmed`. `trim` can be
+re-encodes it, and audio as [Media actions](media_format_support.md#audio) lists:
+PCM and FLAC sample for sample, AAC and MP3 at 192 kbit/s. The output begins at
+`start`, with the video's first frame at or after it, so the video can begin up to one
+frame after the audio. Cover pictures are copied; subtitles are dropped. Chapters
+within the span are kept, cut to it. A timecode is kept when the span begins at the
+beginning; otherwise it is dropped. A [warning](#response-warnings) names what was
+dropped. Trufo records `c2pa.trimmed`. `trim` can be
 combined with a request that signs the file as newly created.
 
 Inputs: FLAC, WAV, M4A and MP3 audio, and MP4 and MOV video; see
@@ -540,6 +545,7 @@ Inputs: FLAC, WAV, M4A and MP3 audio, and MP4 and MOV video; see
 | Neither time, or a time that is not a number of seconds from 0 | 400 | `InvalidActionParameter: The 'trim' action requires a 'start', an 'end' or both, each a number of seconds from 0.` |
 | `end` not after `start` | 400 | `InvalidActionParameter: The 'trim' action's 'end' must be after its 'start'.` |
 | A time after the end of the media | 400 | `InvalidActionParameter: The 'trim' action's '<start / end>' of <time> s is after the end of the media, at <duration> s.` |
+| A span shorter than one video frame, or one audio sample | 400 | `InvalidActionParameter: The 'trim' action's span of <seconds> s is shorter than one <video frame / audio sample>, of <seconds> s.` |
 | A parameter other than `start` and `end` | 400 | `InvalidActionParameter: The 'trim' action does not take '<name>'.` |
 | An image, or another input `trim` does not support | 400 | `Unsupported Format Error: <mime> is not supported for trimming. …` |
 | Local mode, an engine older than trufo-provenance 2.4.0 | 400 | `UnsupportedSDKVersion: the 'trim' action requires trufo-provenance 2.4.0 or later. Please upgrade.` |
@@ -604,7 +610,7 @@ Inputs, and what each target keeps of a file:
 | No parameter | 400 | `InvalidActionParameter: The 'transcode' action requires at least one parameter.` |
 | A parameter `transcode` does not take | 400 | `InvalidActionParameter: The 'transcode' action does not take '<name>'.` |
 | A target not in the list | 400 | `InvalidActionParameter: The 'transcode' action's 'target_mime_type' must be one of image/jpeg, image/png, image/webp, image/avif, image/tiff, image/gif, audio/flac, audio/wav, audio/mp4, audio/mpeg, video/mp4 or video/quicktime.` |
-| A target in another media class | 400 | `InvalidActionParameter: <Images / Audio / Videos> cannot be transcoded to <target>; use <targets>.` |
+| A target in another media class | 400 | `InvalidActionParameter: The 'transcode' action's 'target_mime_type' must be <targets> for <input type>.` |
 | A parameter the target does not take | 400 | `InvalidActionParameter: The 'transcode' action's '<name>' does not apply to <target>; it applies to <targets>.` |
 | A value the parameter does not take | 400 | `InvalidActionParameter: The 'transcode' action's '<name>' must be <values>.` |
 | A file the target cannot keep, such as a transparent image into JPEG | 400 | `Unsupported Format Error: Transparent images cannot be transcoded to image/jpeg; use image/png or image/webp. …` (each refusal is listed in [Media actions](media_format_support.md#media-actions)) |
