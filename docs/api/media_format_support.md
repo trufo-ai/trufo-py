@@ -295,8 +295,9 @@ or `crop` applies to every frame.
 
 A `transcode`, `repackage`, `resize`, `crop` or `trim` keeps the file's streams: each
 is copied when the target holds it and nothing asks to re-encode it, else re-encoded
-(a `repackage` refuses instead). Into its own container, a file keeps every stream in
-its own codec. Re-encoding video keeps its pixel format, color tags, pixel aspect
+(a `repackage` refuses instead). Into its own container, each copied stream keeps its
+own codec; a re-encoded stream takes the codec its [action](api_c2pa.md#actions)
+names. Re-encoding video keeps its pixel format, color tags, pixel aspect
 ratio, timestamps and rotation; re-encoding audio keeps its sample rate and channels.
 
 A `trim` re-encodes every audio and video stream, copies cover pictures, and keeps
