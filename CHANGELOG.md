@@ -18,16 +18,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The `resize` action (`TrufoAction.RESIZE`): resizes an image or a video
   proportionally to a width, a height or both, as displayed, and records
   `c2pa.resized.proportional`. See [`resize`](docs/api/api_c2pa.md#resize).
+- The `crop` action (`TrufoAction.CROP`): keeps a rectangle of an image or a
+  video's picture, as displayed, and records `c2pa.cropped`. See
+  [`crop`](docs/api/api_c2pa.md#crop).
+- The `trim` action (`TrufoAction.TRIM`): keeps a span of audio or video, cut
+  exactly, and records `c2pa.trimmed`. See [`trim`](docs/api/api_c2pa.md#trim).
 - The `repackage` action (`TrufoAction.REPACKAGE`): moves a video's streams into
-  MP4 or MOV without re-encoding them, and records `c2pa.repackaged`. See
-  [`repackage`](docs/api/api_c2pa.md#repackage).
+  MP4 or MOV without re-encoding them, and records `c2pa.repackaged`. Like
+  `transcode`, it cannot be combined with a request that signs the file as newly
+  created. See [`repackage`](docs/api/api_c2pa.md#repackage).
 - `transcode` takes `quality`, `video_codec`, `audio_codec`, `crf` and
   `audio_bitrate`, each with a documented default; without `target_mime_type`, it
   re-encodes in the input's format. See [`transcode`](docs/api/api_c2pa.md#transcode).
-- In Local mode, the two actions and these parameters need trufo-provenance
+- In Local mode, the four new actions and these parameters need trufo-provenance
   2.4.0 or later; an older engine is refused with `400 UnsupportedSDKVersion`.
+- Under `signed_input_policy` `auto`, every media action keeps a signed input, as
+  `transcode` does.
 - What each action accepts and keeps of a file, per format. See
   [Media actions](docs/api/media_format_support.md#media-actions).
+- A response warning when a media action changes the file after a watermark was
+  embedded; place the `watermark` action last. See
+  [Response warnings](docs/api/api_c2pa.md#response-warnings).
 
 ### Changed
 
@@ -40,10 +51,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   recorded; previously every file was re-encoded and recorded as
   `c2pa.transcoded`.
 - `transcode` keeps the color profile, EXIF, XMP, resolution, comments and every
-  stream where the target holds them. Metadata the target has no place
-  for is dropped, and a response warning names it unless the documentation lists
-  it; previously most of it was dropped without notice, and a video kept one video
-  and one audio stream.
+  stream where the target holds them. Metadata the output does not keep is dropped,
+  and the response warning `The '<action>' action did not keep: <items>.` names it
+  unless the documentation lists it; previously most of it was dropped without
+  notice, and a video kept one video and one audio stream.
 - A parameter an action does not take, or a value it does not accept for the file
   or its target, returns `400 InvalidActionParameter`; previously an unknown
   parameter was ignored, and `transcode` without `target_mime_type` failed with
@@ -52,9 +63,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   a transparent image into JPEG (previously the transparency was dropped), and
   inputs outside the documented ones, such as HEIC, HEIF, JPEG XL, DNG and
   multipage TIFF (previously converted), with `400 Unsupported Format Error`.
-- `repackage` on a request that signs the file as newly created returns
-  `400 Conflict`, as `transcode` does. Under `signed_input_policy` `auto`, `resize`
-  and `repackage` keep a signed input, as `transcode` does.
+- A `watermark` action is judged on the file it embeds into: after a `transcode` or
+  `repackage`, on the target's type, where previously it was judged on the upload's.
+  An AVI transcoded or repackaged into MP4 can now be watermarked.
+- The notice for a signed input kept because of a `redact` or media action reads
+  `The input already carries a C2PA manifest and the request includes a <action>
+  action, so Trufo kept the manifest; no new source type was declared.`; previously
+  `…so Trufo kept it for the requested <action> action; …`.
 
 ### Removed
 

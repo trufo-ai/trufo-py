@@ -156,21 +156,22 @@ disagree, recovery returns the ID found in the most tracks.
 
 ## Media actions
 
-The [`resize`](api_c2pa.md#resize), [`transcode`](api_c2pa.md#transcode) and
+The [`resize`](api_c2pa.md#resize), [`crop`](api_c2pa.md#crop),
+[`trim`](api_c2pa.md#trim), [`transcode`](api_c2pa.md#transcode) and
 [`repackage`](api_c2pa.md#repackage) actions change only what the request names.
 Everything else about the file is kept, or the file is refused; the exception is
-metadata the output format has no place for, which is dropped as the tables below
-say. Cloud mode and Local mode apply the same rules; in Local mode, audio and video
-actions need `ffmpeg` and `ffprobe` on the PATH. The actions run on CPython 3.10 to
-3.15 and do not accept HEIC, HEIF or JPEG XL input.
+metadata the output has no place for, which is dropped as the tables below say. Cloud
+mode and Local mode apply the same rules; in Local mode, audio and video actions need
+`ffmpeg` and `ffprobe` on the PATH. The actions run on CPython 3.10 to 3.15 and do
+not accept HEIC, HEIF or JPEG XL input.
 
-| Input | `resize` | `transcode` targets | `repackage` targets |
-| --- | --- | --- | --- |
-| JPEG, PNG, WebP, AVIF, TIFF, GIF | Yes | `image/jpeg`, `image/png`, `image/webp`, `image/avif`, `image/tiff`, `image/gif` | No |
-| FLAC, WAV, M4A, MP3 | No | `audio/flac`, `audio/wav`, `audio/mp4`, `audio/mpeg` | No |
-| MP4, MOV | Yes | `video/mp4`, `video/quicktime` | `video/mp4`, `video/quicktime` |
-| AVI | No | `video/mp4`, `video/quicktime` | `video/mp4`, `video/quicktime` |
-| Other types, including HEIC/HEIF, JPEG XL, DNG and SVG | No | No | No |
+| Input | `resize`, `crop` | `trim` | `transcode` targets | `repackage` targets |
+| --- | --- | --- | --- | --- |
+| JPEG, PNG, WebP, AVIF, TIFF, GIF | Yes | No | `image/jpeg`, `image/png`, `image/webp`, `image/avif`, `image/tiff`, `image/gif` | No |
+| FLAC, WAV, M4A, MP3 | No | Yes | `audio/flac`, `audio/wav`, `audio/mp4`, `audio/mpeg` | No |
+| MP4, MOV | Yes | Yes | `video/mp4`, `video/quicktime` | `video/mp4`, `video/quicktime` |
+| AVI | No | No | `video/mp4`, `video/quicktime` | `video/mp4`, `video/quicktime` |
+| Other types, including HEIC/HEIF, JPEG XL, DNG and SVG | No | No | No | No |
 
 Images may be animated. Outputs are limited to 400 million pixels (an animation's
 frames counted together), JPEG to 65,500 pixels on a side, WebP to 16,383 and GIF to
@@ -188,8 +189,8 @@ Besides the sizes above, the actions refuse:
 | JPEG | CMYK; a gain map or other secondary images (multi-picture, Ultra HDR, a JFIF thumbnail); extended XMP; data after the end of the image |
 | PNG | Interlaced; HDR (`mDCv`, `cLLi`, or `cICP` with PQ or HLG); `cICP` that is not full-range RGB |
 | WebP | Data after the end of the image |
-| AVIF | More than 8 bits; depth maps, gain maps or other secondary images; HDR or BT.2020; color signaling other than sRGB without an ICC profile |
-| TIFF | More than one page; pyramids, reduced-resolution pages and stacks; CMYK; JPEG compression; extra channels or premultiplied alpha; Photoshop layers |
+| AVIF | More than 8 bits; depth maps, gain maps or other secondary images; HDR or BT.2020; premultiplied alpha; color signaling other than sRGB without an ICC profile |
+| TIFF | More than one page; pyramids, reduced-resolution pages and stacks; samples other than 8 or 16 bits; CMYK; compression other than none, LZW, Deflate or PackBits; extra channels or premultiplied alpha; Photoshop layers |
 | GIF | Plain text extensions; frames outside the logical screen |
 | Animations | More than 10,000 frames; rotated or mirrored; 16-bit animated PNG; an animated PNG whose default image is not a frame; animated AVIF with transparency or other extra tracks, or that does not loop forever |
 
@@ -199,31 +200,30 @@ An image transcoded into another format keeps its picture, or is refused:
 
 | Target | Refused |
 | --- | --- |
-| `image/jpeg` | Transparency, unless every pixel is opaque; 16-bit samples; EXIF over 65,527 bytes |
+| `image/jpeg` | Transparency, unless every pixel is opaque; 16-bit samples; EXIF or XMP larger than a JPEG segment holds (about 64 KB) |
 | `image/webp` | 16-bit samples; grayscale with a gray ICC profile |
 | `image/avif` | 16-bit samples |
 | `image/gif` | 16-bit samples; partial transparency |
 | `image/png`, `image/tiff` | — |
 
 GIF keeps up to 256 colors and reduces more by median cut, without dithering; a
-transparent pixel stays transparent. An animation can be transcoded only to
-`image/gif`, `image/png`, `image/webp` or `image/avif`; it keeps its frames, drawn
-onto the full canvas, their timing and its loop count, rounded to what the target
-holds (GIF counts hundredths of a second). `image/avif` refuses an animation with
-transparency or one that does not loop forever, and `image/webp` one longer than 24
-days.
+transparent pixel stays transparent. An animation keeps each frame, drawn onto the
+full canvas, its timing and its loop count, rounded to what the target holds (GIF
+counts hundredths of a second); `image/avif` refuses an animation with transparency
+or one that does not loop forever, and `image/webp` one longer than 24 days. A crop
+crops every frame.
 
 Metadata in an image from another format, by target. **Kept**; **Documented**:
 dropped, as this table says; **Reported**: dropped and named in a response
-[warning](api_c2pa.md#response-warnings); **Refused**: the file is refused. Within
-the same format, as in a resize, the metadata below is kept, except as the **Same
-format** column of the second table says.
+[warning](api_c2pa.md#response-warnings); **Refused**: the file is refused. A resize
+or a crop, or a transcode within one format, keeps all of this metadata except where
+the **Same format** column says otherwise.
 
 | Metadata | JPEG | PNG | WebP | AVIF | TIFF | GIF |
 | --- | --- | --- | --- | --- | --- | --- |
 | ICC profile | Kept | Kept | Kept | Kept | Kept | Reported |
 | EXIF | Kept | Kept | Kept | Kept | Reported | Reported |
-| XMP | Kept | Kept | Kept | Kept | Kept | Kept, unless it holds a NUL byte: Reported |
+| XMP | Kept | Kept | Kept | Kept | Kept | Kept; Reported when it holds a NUL byte |
 | Resolution | Kept | Kept | Documented | Documented | Kept | Documented |
 | Comment | Kept | Kept | Documented | Documented | Documented | Kept |
 
@@ -231,46 +231,62 @@ format** column of the second table says.
 | --- | --- | --- |
 | IPTC (JPEG, TIFF) | Kept | Reported |
 | PNG text other than a comment | Kept | Documented |
-| PNG background, significant bits and time | Kept; background and significant bits only when the samples keep their layout, else Documented | Documented |
+| PNG background, significant bits and time | Kept (see below) | Documented |
 | PNG color signaling other than sRGB (`gAMA`, `cHRM`, `cICP`) | Kept | Refused |
 | TIFF descriptive tags, such as description, make, model, software, date, artist and copyright | Kept | Reported |
 | WebP animation background color | Kept | Documented |
-| JPEG Adobe and Ducky segments, which describe the source's coding | Documented | Documented |
 | PNG chunks that are safe to copy | Kept | Reported |
-| Other metadata Trufo does not know, such as other JPEG segments, PNG chunks, WebP chunks, GIF extensions, AVIF items and TIFF tags, and TIFF EXIF and GPS directories | Reported | Reported |
+| JPEG Adobe and Ducky segments, which describe the source's coding | Documented | Documented |
+| TIFF EXIF and GPS directories | Reported | Reported |
+| Other metadata Trufo does not recognize | Reported | Reported |
+
+A PNG written in another layout, such as a palette image written as RGB, drops its
+background and significant bits (Documented). A crop also drops the EXIF thumbnail,
+which shows the whole picture (Documented). Metadata Trufo does not recognize
+includes other JPEG segments, PNG chunks that are not safe to copy, other WebP chunks,
+GIF extensions, AVIF items and TIFF tags.
 
 ### Audio
 
-A `transcode` re-encodes the audio stream at its sample rate and with its channels, or
-refuses it; a file with more than one audio stream, besides a cover picture, is
-refused.
+A `transcode` or `trim` re-encodes the audio stream at its sample rate and with its
+channels, or refuses it; a file with more than one audio stream, besides a cover
+picture, is refused.
 
 | | `audio/flac` | `audio/wav` | `audio/mp4` (AAC) | `audio/mpeg` (MP3) |
 | --- | --- | --- | --- | --- |
-| Samples | 16 or 24 bits; 32-bit and floating-point refused | PCM at the source's depth, 16, 24 or 32 bits or floating-point; 16 bits from a lossy source | AAC at `audio_bitrate` | MP3 at `audio_bitrate` |
+| Samples | The source's depth, up to 24 bits; 32-bit and floating-point refused; 16 bits from a lossy source | PCM at the source's depth, 16, 24 or 32 bits or floating-point; 16 bits from a lossy source | AAC at `audio_bitrate` | MP3 at `audio_bitrate` |
 | Sample rate | Kept | Kept | Kept, at a rate AAC codes, up to 96 kHz | Kept, at a rate MP3 codes, up to 48 kHz |
 | Channels | Up to 8 | Kept | Up to 8 | Up to 2 |
 | Cover picture | Kept | Reported | Kept | Kept |
 | Chapters | Reported | Reported | Kept | Kept |
-| Tags | Kept as the format holds them, else Reported | Same | Same | Same |
+
+Tags are kept as far as the target holds them; the rest are Reported. Documented:
+WAV chunks that hold neither audio nor tags, such as cue points; FLAC application and
+cue sheet blocks; ID3 frames that do not map to tags; an M4A source's XMP; and an
+audio file's start offset. A trim
+re-encodes even a lossless file, sample for sample, and lossy audio at 192 kbit/s;
+chapters within the span are kept, cut to it.
 
 ### Video
 
-A `transcode`, `repackage` or `resize` keeps the file's streams: each is copied
-when the target holds it and nothing asks to re-encode it, else re-encoded (a
-`repackage` refuses instead). A file with more than one video stream, more than one
-timecode track or encrypted media is refused.
+A `transcode`, `repackage`, `resize`, `crop` or `trim` keeps the file's streams: each
+is copied when the target holds it and nothing asks to re-encode it, else re-encoded
+(a `repackage` refuses instead; a `trim` re-encodes every audio and video stream). A
+file with more than one video stream, more than one timecode track or encrypted media
+is refused. Re-encoding video keeps its pixel format, color tags, pixel aspect ratio,
+timestamps and rotation, and refuses HDR, interlaced video and pixel formats other
+than planar YUV without alpha, at 8 or 10 bits, or 12 bits for H.265.
 
 | Stream or property | Kept as |
 | --- | --- |
-| Video | Copied, or re-encoded as H.264 or H.265 at `crf`, keeping its pixel format, color tags, pixel aspect ratio, timestamps and rotation. Re-encoding refuses HDR, interlaced video and pixel formats other than planar YUV without alpha, at 8 or 10 bits, or 12 bits for H.265 |
+| Video | Copied, or re-encoded as H.264 or H.265 at `crf` |
 | Audio | Copied, or re-encoded as AAC at `audio_bitrate`, at a rate AAC codes, up to 96 kHz, and up to 8 channels |
 | `mov_text` subtitles | Copied |
 | Other subtitles | Copied within the same container, else Reported |
 | Data tracks, such as Apple timed metadata and camera telemetry | Reported |
 | Cover picture | `video/mp4`: Kept, from another container only as JPEG or PNG, else Reported; `video/quicktime`: Reported |
-| Chapters | Kept |
-| Timecode | Regenerated |
+| Chapters | Kept; after a trim, those within the span, cut to it |
+| Timecode | Regenerated; after a trim that starts after the beginning, Reported |
 | Container tags | Kept as the target writes them, else Reported |
 
 Trufo reads the output back and refuses it if a stream, the rotation, a chapter or

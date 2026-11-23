@@ -94,10 +94,12 @@ Messages you may see:
   [Signed inputs and ingredients](#signed-inputs-and-ingredients).
 - An ingredient's [`data`](#ingredient) over 8 KB
   (`The 'data' of ingredient '<title>' is over 8 KB…`).
-- Metadata a [`resize`](#resize), [`transcode`](#transcode) or
-  [`repackage`](#repackage) action dropped because the output format has no place
-  for it (`The '<action>' action dropped <items>: <target> cannot hold them.`); see
+- Metadata a [media action](#actions) did not keep
+  (`The '<action>' action did not keep: <items>.`); see
   [Media actions](media_format_support.md#media-actions).
+- A media action that changed the file after the watermark was embedded
+  (`A non-editorial media processing action was applied after embedding the
+  watermark; …`); place the `watermark` action last.
 - Deprecations: the watermark [`mode`](#watermark), the
   [`ai_disclosure`](#ai_disclosure) entry and, in Local mode, the
   [engine version](#local-mode).
@@ -117,7 +119,7 @@ Beyond the platform-wide codes in [api_trufo.md](api_trufo.md):
 | 400 | `UnsupportedSDKVersion: …` | Local mode: the `trufo-py` or `trufo-provenance` version is below the minimum or past its support, or the engine is too old for a feature the request uses; the detail names the package and the reason (see [Local mode](#local-mode)) |
 | 400 | `ImageTooLarge: …` | An input image over 400 megapixels |
 | 400 | `InvalidWidAllocationMode: …` | A watermark `wid_allocation_mode` other than `"per_embed"`, `"per_ai_system"` or `"per_asset"` (see [`watermark`](#watermark)) |
-| 400 | `Conflict: …` | Parts of the request that cannot be combined, such as a `transcode` or `repackage` action on a request that signs the file as newly created (see [`transcode`](#transcode)) |
+| 400 | `Conflict: …` | Parts of the request that cannot be combined, such as a `transcode` or `repackage` action on a request that signs the file as newly created (see [`transcode`](#transcode) and [`repackage`](#repackage)) |
 | 400 | `InvalidActionParameter: …` | A parameter an [action](#actions) does not take, or a value it does not accept for the file or its target, such as `quality` for a PNG (see [`transcode`](#transcode)) |
 | 400 | `MissingDigitalSourceType: …` | A C2PA action in an [`ingredient`](#ingredient)'s `action_history` without a `digitalSourceType`, unless [exempt](#assertions) |
 | 400 | `ManifestStorageRequired: …` | A `"per_embed"` watermark with `skip_manifest_storage` (see [`watermark`](#watermark)) |
@@ -372,9 +374,10 @@ an [`ai_system`](#ai_system) entry, needs trufo-provenance 2.2.0 or later, and
 [`creation`](#creation) `description`, `parameters` on a `c2pa.translated` action,
 and the `plus`, `schema`, `xmpDM` and `xmpRights` prefixes in
 [`cawg_metadata`](#cawg_metadata). `c2pa.transcoded` and `c2pa.repackaged` in an
-ingredient's `action_history` need 2.3.2 or later. The [`resize`](#resize) and
-[`repackage`](#repackage) actions, and [`transcode`](#transcode) parameters other
-than `target_mime_type`, need 2.4.0 or later.
+ingredient's `action_history` need 2.3.2 or later. The [`resize`](#resize),
+[`crop`](#crop), [`trim`](#trim) and [`repackage`](#repackage) actions, and
+[`transcode`](#transcode) parameters other than `target_mime_type`, need 2.4.0 or
+later.
 
 <!-- TODO(sunset-2027-01-31): the versions paragraph and its table go; successor none -->
 
@@ -419,18 +422,22 @@ Ordered `[name, params]` pairs. Each media-transforming action feeds the next.
 | Action | Params | Description |
 | ------ | ------ | ----------- |
 | `"resize"` | `{"width": <pixels>, "height": <pixels>}` | Resize proportionally to fit a width, a height or both |
+| `"crop"` | `{"x": <pixels>, "y": <pixels>, "width": <pixels>, "height": <pixels>}` | Keep a rectangle of the picture |
+| `"trim"` | `{"start": <seconds>, "end": <seconds>}` | Keep a span of time |
 | `"transcode"` | `{"target_mime_type": "<mime>", "quality": <quality>, …}` | Re-encode into another format in the same media class, or with other settings |
 | `"repackage"` | `{"target_mime_type": "<mime>"}` | Move a video's streams into another container without re-encoding them |
 | `"watermark"` | `{"wid_allocation_mode": "<wid_allocation_mode>", "effort_policy": "<effort_policy>"}` | Embed a Trufo watermark (off by default) |
 | `"publish"` | `{}` | Mark for final distribution |
 | `"redact"` | `{"label": "<label>", "reason": "<reason>"}` | Remove an assertion from the input's history |
 
-Trufo performs `resize`, `transcode` and `repackage` and records the C2PA action for
-what each did. A file that already is what an action asks for is left as it is, and
-nothing is recorded for that action. Metadata the output format has no place for is
-dropped, as [Media actions](media_format_support.md#media-actions) lists; a
-[warning](#response-warnings) names what was dropped, except routine items such as
-resolution and comments.
+`resize`, `crop`, `trim`, `transcode` and `repackage` are the media actions: Trufo
+performs each and records the C2PA action for what it did. A file that already is
+what an action asks for is left as it is, and nothing is recorded for that action.
+Actions run in the order given, each on the file the one before left, so a later
+action's refusal ends the request without output. Metadata the output does not keep
+is dropped, as [Media actions](media_format_support.md#media-actions) lists; a
+[warning](#response-warnings) names it, except routine items such as resolution and
+comments.
 
 #### `resize`
 
@@ -467,6 +474,76 @@ Inputs: JPEG, PNG, WebP, AVIF, TIFF and GIF images, and MP4 and MOV video; see
 | Audio, or another input `resize` does not support | 400 | `Unsupported Format Error: <mime> is not supported for resizing. …` |
 | Local mode, an engine older than trufo-provenance 2.4.0 | 400 | `UnsupportedSDKVersion: the 'resize' action requires trufo-provenance 2.4.0 or later. Please upgrade.` |
 
+#### `crop`
+
+Keeps the `width` × `height` rectangle whose top-left corner is at `x`, `y`, in
+pixels of the picture as displayed, after its EXIF orientation or the video's
+rotation. The rectangle must lie within the picture, and for a video each value must
+be even. A rectangle covering the whole picture leaves the file as it is.
+
+An image is re-encoded in its own format with its coding settings and metadata; the
+stored dimensions in its EXIF and XMP are updated, and its EXIF thumbnail, which
+shows the whole picture, is dropped. An animation has every frame cropped, and keeps
+their timing and its loop count. A video's picture is re-encoded as a `resize`
+re-encodes it, and its other streams are copied. Trufo records `c2pa.cropped`. `crop`
+can be combined with a request that signs the file as newly created.
+
+Inputs: JPEG, PNG, WebP, AVIF, TIFF and GIF images, and MP4 and MOV video; see
+[Media actions](media_format_support.md#media-actions).
+
+| Parameter | Values |
+| --------- | ------ |
+| `x`, `y` | Integers from 0: the rectangle's top-left corner, in displayed pixels |
+| `width`, `height` | Integers, at least 1: the rectangle's size, in displayed pixels |
+
+All four are required.
+
+**Errors:**
+
+| When | Status | `detail` |
+| ---- | ------ | -------- |
+| A value missing, or out of range | 400 | `InvalidActionParameter: The 'crop' action requires 'x' and 'y', integers from 0, and 'width' and 'height', positive integers, in pixels.` |
+| An odd value for a video | 400 | `InvalidActionParameter: The 'crop' action's 'x', 'y', 'width' and 'height' must be even for a video.` |
+| A rectangle outside the picture | 400 | `InvalidActionParameter: The 'crop' action's rectangle of <width>x<height> at (<x>, <y>) is not within the picture of <width>x<height>.` |
+| A parameter other than `x`, `y`, `width` and `height` | 400 | `InvalidActionParameter: The 'crop' action does not take '<name>'.` |
+| Audio, or another input `crop` does not support | 400 | `Unsupported Format Error: <mime> is not supported for cropping. …` |
+| A video rotated by other than quarter turns | 400 | `Unsupported Format Error: Video rotated by <degrees> degrees is not supported for cropping. …` |
+| Local mode, an engine older than trufo-provenance 2.4.0 | 400 | `UnsupportedSDKVersion: the 'crop' action requires trufo-provenance 2.4.0 or later. Please upgrade.` |
+
+#### `trim`
+
+Keeps the span from `start` to `end` of audio or a video, in seconds from its
+beginning. Give one or both: without `start` the span begins at the beginning, and
+without `end` it runs to the end. Each must lie within the media's duration, and
+`end` must come after `start`; the whole duration leaves the file as it is.
+
+The cut is exact: every audio and video stream is re-encoded, video as a `resize`
+re-encodes it, and audio in its own codec, lossless audio sample for sample and
+lossy audio at 192 kbit/s. Cover pictures and subtitles are copied. The output
+begins at `start`. Chapters within the span are kept, cut to it. A timecode is kept
+when the span begins at the beginning; otherwise it is dropped, and a
+[warning](#response-warnings) says so. Trufo records `c2pa.trimmed`. `trim` can be
+combined with a request that signs the file as newly created.
+
+Inputs: FLAC, WAV, M4A and MP3 audio, and MP4 and MOV video; see
+[Media actions](media_format_support.md#media-actions).
+
+| Parameter | Values |
+| --------- | ------ |
+| `start` | Number of seconds from 0; the beginning when left out |
+| `end` | Number of seconds from 0, after `start`; the end when left out |
+
+**Errors:**
+
+| When | Status | `detail` |
+| ---- | ------ | -------- |
+| Neither time, or a time that is not a number of seconds from 0 | 400 | `InvalidActionParameter: The 'trim' action requires a 'start', an 'end' or both, each a number of seconds from 0.` |
+| `end` not after `start` | 400 | `InvalidActionParameter: The 'trim' action's 'end' must be after its 'start'.` |
+| A time after the end of the media | 400 | `InvalidActionParameter: The 'trim' action's '<start / end>' of <time> s is after the end of the media, at <duration> s.` |
+| A parameter other than `start` and `end` | 400 | `InvalidActionParameter: The 'trim' action does not take '<name>'.` |
+| An image, or another input `trim` does not support | 400 | `Unsupported Format Error: <mime> is not supported for trimming. …` |
+| Local mode, an engine older than trufo-provenance 2.4.0 | 400 | `UnsupportedSDKVersion: the 'trim' action requires trufo-provenance 2.4.0 or later. Please upgrade.` |
+
 #### `transcode`
 
 Re-encodes a file into another format of its media class, named by
@@ -478,10 +555,10 @@ Trufo takes the least destructive route. An image is re-encoded. In audio and vi
 each stream that already is what was asked, and that the target container holds, is
 copied, and the others are re-encoded; a `crf` re-encodes the video, and an
 `audio_bitrate` the audio. Trufo records `c2pa.transcoded`, with
-`ai.trufo.targetMimeType` when you name `target_mime_type`. Transcoding may record a
-`c2pa.repackaged` action instead when repackaging is all that was done: every stream
-was copied into another container. A file that already is what was asked is left as
-it is, and nothing is recorded.
+`ai.trufo.targetMimeType` when you name `target_mime_type`, also when you name the
+input's own type. Transcoding may record a `c2pa.repackaged` action instead when
+repackaging is all that was done: every stream was copied into another container. A
+file that already is what was asked is left as it is, and nothing is recorded.
 
 `transcode` stays within a media class. It cannot be combined with a request that
 signs the file as newly created (`c2pa.created`); sign the file first, then
@@ -503,17 +580,19 @@ is written with Deflate from another format, and GIF keeps up to 256 colors, red
 more without dithering. A lossless WebP stays lossless unless `quality` is given.
 FLAC is lossless, and WAV is PCM at the source's depth, 16-bit from a lossy source.
 
-What each container holds; a stream it does not hold is re-encoded as its first
-codec:
+The codecs each container holds from another container are below. A stream it does
+not hold is re-encoded: video as the `video_codec` named, else as its own codec if
+H.264 or H.265, else as H.264, and audio as the container's audio codec. Video with
+B-frames from an AVI is always re-encoded.
 
-| Container | Video | Audio | Also kept |
-| --------- | ----- | ----- | --------- |
-| `video/mp4` | H.264, H.265 | AAC | `mov_text` subtitles, chapters, a cover picture |
-| `video/quicktime` | H.264, H.265; ProRes copied, never written | AAC; PCM copied, never written | `mov_text` subtitles, chapters |
-| `audio/mp4` | — | AAC | Chapters, a cover picture |
-| `audio/mpeg` | — | MP3 | Chapters, a cover picture |
-| `audio/flac` | — | FLAC | A cover picture |
-| `audio/wav` | — | PCM | — |
+| Container | Video | Audio |
+| --------- | ----- | ----- |
+| `video/mp4` | H.264, H.265 | AAC |
+| `video/quicktime` | H.264, H.265; ProRes copied, never written | AAC; PCM copied, never written |
+| `audio/mp4` | — | AAC |
+| `audio/mpeg` | — | MP3 |
+| `audio/flac` | — | FLAC |
+| `audio/wav` | — | PCM |
 
 Inputs, and what each target keeps of a file:
 [Media actions](media_format_support.md#media-actions).
@@ -556,7 +635,7 @@ as newly created.
 | Another target | 400 | `InvalidActionParameter: The 'repackage' action's 'target_mime_type' must be one of video/mp4 or video/quicktime.` |
 | A parameter other than `target_mime_type` | 400 | `InvalidActionParameter: The 'repackage' action does not take '<name>'.` |
 | An image, audio or another input `repackage` does not support | 400 | `Unsupported Format Error: <mime> is not supported for repackaging. …` |
-| A stream that would have to be re-encoded | 400 | `Unsupported Format Error: The <audio / video> stream (<codec>) cannot be repackaged into <target> without re-encoding; use 'transcode'. …` |
+| A stream that would have to be re-encoded | 400 | `Unsupported Format Error: <Audio / Video> in <codec> cannot be repackaged into <target> without re-encoding; use 'transcode'. …` |
 | The request signs the file as newly created | 400 | `Conflict: The 'repackage' action cannot be combined with a request that signs the file as newly created ('c2pa.created'). Sign the file first without 'repackage', then repackage the signed file.` |
 | Local mode, an engine older than trufo-provenance 2.4.0 | 400 | `UnsupportedSDKVersion: the 'repackage' action requires trufo-provenance 2.4.0 or later. Please upgrade.` |
 
@@ -590,8 +669,9 @@ see [Standalone Binding](#standalone-binding).
 | `"best_effort"` | Signs unwatermarked, with a warning | Signs unwatermarked, with a warning |
 
 Format eligibility and restrictions are listed in
-[Media format support](media_format_support.md). For examples, see the
-[watermarking quickstart](../quickstart/6_watermarking.md).
+[Media format support](media_format_support.md). The format is that of the file at
+the `watermark` action: after a `transcode` or `repackage`, the target's. For
+examples, see the [watermarking quickstart](../quickstart/6_watermarking.md).
 
 **Errors:**
 
@@ -722,9 +802,8 @@ rejected. This is the default
 [`signed_input_policy`](#signed-inputs-and-ingredients), `auto`; with `keep`,
 that input is kept too, and no AI source type is declared for it.
 
-Under `auto`, a `redact`, `resize`, `transcode` or `repackage` action also keeps such
-an input; [Signed inputs and ingredients](#signed-inputs-and-ingredients) lists every
-case.
+Under `auto`, a `redact` or [media action](#actions) also keeps such an input;
+[Signed inputs and ingredients](#signed-inputs-and-ingredients) lists every case.
 
 The test host writes the same labels, with the test certificate.
 
@@ -744,7 +823,7 @@ The test host writes the same labels, with the test certificate.
 | `ai_involvement` not in the system's modes | 400 | `ai_involvement '<value>' is not in the AI system's ai_involvement_modes.` |
 | `ai_modified` without `branded_gp_id` | 400 | `ai_involvement 'ai_modified' requires a branded generator product (branded_gp_id).` |
 | With `branded_gp_id`, the product is not approved for the entry's source type | 403 | `C2PACreatedUserAssertionsNotAuthorized: the digitalSourceType <uri> is not approved for this branded generator product.` |
-| A signed input whose source class is `camera_captured` or `human_created`, under the default [`signed_input_policy`](#signed-inputs-and-ingredients) (`auto`), without a `redact`, `resize`, `transcode` or `repackage` action | 400 | `The input carries a C2PA manifest whose source class is '<class>', which conflicts with ai_involvement '<ai_involvement>'.` |
+| A signed input whose source class is `camera_captured` or `human_created`, under the default [`signed_input_policy`](#signed-inputs-and-ingredients) (`auto`), without a `redact` or [media action](#actions) | 400 | `The input carries a C2PA manifest whose source class is '<class>', which conflicts with ai_involvement '<ai_involvement>'.` |
 | A `parentOf` ingredient, with `branded_gp_id`, on an input without a C2PA manifest (the entry's `c2pa.created` takes no parent) | 400 | `The creation assertion cannot be combined with a parentOf ingredient.` |
 
 In Local mode with the Python SDK, the last two are raised by the call.
@@ -998,12 +1077,12 @@ value only when you set one, as `SignedInputPolicy` or `SignedIngredientPolicy` 
 A kept input becomes the `parentOf` ingredient, opened with `c2pa.opened`, and gets
 no new `digitalSourceType`; [`redact`](#redact) removes assertions from its history.
 
-**Source class.** Under `auto`, with an `ai_system` entry and no `redact`, `resize`,
-`transcode` or `repackage` action, Trufo refuses an input whose source class is `camera_captured`
-or `human_created` (the 400 is listed under [`ai_system`](#ai_system)), and keeps
-any other with a notice naming its class. `keep` skips this check. To find the
-class, Trufo walks back from the active manifest through `parentOf` ingredients, by
-each manifest's first action:
+**Source class.** Under `auto`, with an `ai_system` entry and no `redact` or
+[media action](#actions), Trufo refuses an input whose source class is
+`camera_captured` or `human_created` (the 400 is listed under
+[`ai_system`](#ai_system)), and keeps any other with a notice naming its class.
+`keep` skips this check. To find the class, Trufo walks back from the active
+manifest through `parentOf` ingredients, by each manifest's first action:
 
 - `c2pa.created`: its `digitalSourceType` is the origin.
 - `c2pa.opened`: go on to the parent's manifest or, for a parent without one, take
@@ -1032,9 +1111,9 @@ replaces the not-validated or untrusted one.
 | ---- | ---- |
 | A kept input's manifest did not validate | `The input's C2PA manifest did not validate; Trufo kept it, and its validation failures are recorded in the new manifest.` |
 | A kept input's manifest is valid but untrusted | `The input's C2PA manifest is valid but untrusted: its signer is not on the trust lists Trufo checks. Trufo kept it.` |
-| `auto`, an `ai_system` entry and no `redact`, `resize`, `transcode` or `repackage` action: the input's manifest did not validate | `The input already contains a C2PA manifest that did not validate, so (per auto mode) it is kept and a c2pa.opened action was added in lieu of a new c2pa.created with digitalSourceType set to trainedAlgorithmicMedia (or equivalent). Its validation failures are recorded in the new manifest. Please note that the existing C2PA manifest will resolve to a source classification of '<class>'.` |
-| `auto`, an `ai_system` entry and no `redact`, `resize`, `transcode` or `repackage` action: the input's manifest is valid | `The input already contains a valid <and trusted / but untrusted> C2PA manifest, so (per auto mode) it is kept and a c2pa.opened action was added in lieu of a new c2pa.created with digitalSourceType set to trainedAlgorithmicMedia (or equivalent). Please note that the existing C2PA manifest will resolve to a source classification of '<class>'.` |
-| `auto`, an `ai_system` entry and a `redact`, `resize`, `transcode` or `repackage` action | `The input already carries a C2PA manifest, so Trufo kept it for the requested <action> action; no new source type was declared.` |
+| `auto`, an `ai_system` entry and no `redact` or media action: the input's manifest did not validate | `The input already contains a C2PA manifest that did not validate, so (per auto mode) it is kept and a c2pa.opened action was added in lieu of a new c2pa.created with digitalSourceType set to trainedAlgorithmicMedia (or equivalent). Its validation failures are recorded in the new manifest. Please note that the existing C2PA manifest will resolve to a source classification of '<class>'.` |
+| `auto`, an `ai_system` entry and no `redact` or media action: the input's manifest is valid | `The input already contains a valid <and trusted / but untrusted> C2PA manifest, so (per auto mode) it is kept and a c2pa.opened action was added in lieu of a new c2pa.created with digitalSourceType set to trainedAlgorithmicMedia (or equivalent). Please note that the existing C2PA manifest will resolve to a source classification of '<class>'.` |
+| `auto`, an `ai_system` entry and a `redact` or media action, even one that leaves the file as it is | `The input already carries a C2PA manifest and the request includes a <action> action, so Trufo kept the manifest; no new source type was declared.` |
 | `keep` and an `ai_system` entry | `signed_input_policy is 'keep', so Trufo kept the input's C2PA manifest; no new source type was declared.` |
 | `auto`: the input's C2PA data cannot be read and is removed | `The input carries C2PA data that Trufo cannot read, so (per auto mode) Trufo removed that data and signed the input as if it carried no C2PA data.` |
 | An ingredient's manifest did not validate | `The C2PA manifest of ingredient '<title>' did not validate; Trufo kept it with the ingredient, and its validation failures are recorded in the new manifest.` |
