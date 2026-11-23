@@ -524,9 +524,9 @@ without `end` it runs to the end. Each must lie within the media's duration, and
 
 The cut is exact: every audio and video stream is re-encoded, video as a `resize`
 re-encodes it, and audio as [Media actions](media_format_support.md#audio-and-video) lists:
-PCM and FLAC sample for sample, AAC and MP3 at 192 kbit/s. The output begins at
-`start`, with the video's first frame at or after it, so the video can begin up to one
-frame after the audio. Cover pictures are copied; subtitles are dropped. Chapters
+PCM and FLAC sample for sample, AAC and MP3 at 192 kbit/s. The source at `start`
+becomes the output's time 0, every stream keeps its offset from the cut, and the video
+begins with its first frame at or after `start`. Cover pictures are copied; subtitles are dropped. Chapters
 within the span are kept, cut to it. A timecode is kept when the span begins at the
 beginning; otherwise it is dropped. A [warning](#response-warnings) names what was
 dropped. Trufo records `c2pa.trimmed`. `trim` can be
@@ -577,7 +577,7 @@ transcode the signed file. An animated GIF, PNG, WebP or AVIF keeps its
 
 | Parameter | Applies to | Values | Default |
 | --------- | ---------- | ------ | ------- |
-| `target_mime_type` | Every input | `image/jpeg`, `image/png`, `image/webp`, `image/avif`, `image/tiff`, `image/gif`; `audio/flac`, `audio/wav`, `audio/mp4`, `audio/mpeg`; `video/mp4`, `video/quicktime`; in the input's media class | The input's type |
+| `target_mime_type` | Every input | `image/jpeg`, `image/png`, `image/webp`, `image/avif`, `image/tiff`, `image/gif`; `audio/flac`, `audio/wav`, `audio/mp4`, `audio/mpeg`; `video/mp4`, `video/quicktime`; in the input's media class | The input's type; required for AVI |
 | `quality` | `image/jpeg`, `image/webp`, `image/avif` | Integer, 0 to 100; higher is better | 90 |
 | `video_codec` | `video/mp4`, `video/quicktime` | `"h264"` or `"h265"` | The source's codec if it is H.264 or H.265, else `"h264"` |
 | `crf` | `video/mp4`, `video/quicktime` | Integer, 0 to 51; lower is better | 23 for H.264, 28 for H.265 |
@@ -587,7 +587,8 @@ transcode the signed file. An animated GIF, PNG, WebP or AVIF keeps its
 PNG, TIFF and GIF take no setting: PNG is lossless, TIFF keeps its own compression or
 is written with Deflate from another format, and GIF keeps up to 256 colors, reducing
 more without dithering. A lossless WebP stays lossless unless `quality` is given.
-FLAC is lossless, and WAV is PCM at the source's depth, 16-bit from a lossy source.
+FLAC is lossless, and WAV is PCM at the source's depth in 16, 24 or 32 bits (8-bit as
+16-bit), 16-bit from a lossy source.
 
 The codecs each container holds from another container are below. A stream it does
 not hold is re-encoded: video as the `video_codec` named, else as its own codec if

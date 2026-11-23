@@ -173,18 +173,21 @@ defaults apply in either case.
 
 Cloud mode and Local mode apply the same rules; in Local mode, audio and video
 actions need `ffmpeg` and `ffprobe` on the PATH. The actions run on CPython 3.10 to
-3.15.
+3.15. In Local mode with the Python SDK, a JPEG XL input converts on Python 3.12 only:
+before it, `transcode` refuses it (`Unsupported Format Error: JPEG XL requires Python
+3.12 or newer; found <version>. …`), and later versions do not sign JPEG XL.
 
 | Input | `resize`, `crop` | `trim` | `transcode` targets | `repackage` targets |
 | --- | --- | --- | --- | --- |
 | Images | Yes | No | Any image type | No |
+| HEIC, HEIF, JPEG XL | No | No | Any image type | No |
 | MP4, MOV | Yes | Yes | MP4, MOV | MP4, MOV |
 | FLAC, WAV, M4A, MP3 | No | Yes | Any audio type | No |
 | AVI | No | No | MP4, MOV | MP4, MOV |
 
 The image types are JPEG, PNG, WebP, AVIF, TIFF and GIF, and the audio types FLAC,
-WAV, M4A and MP3. Other types, including HEIC/HEIF, JPEG XL, DNG and SVG, are
-refused. Images may be animated.
+WAV, M4A and MP3. Other types, including DNG and SVG, are refused. Images may be
+animated.
 
 Limits, on input and output: images of at most 400 million pixels, counting all of an
 animation's frames, and at most 10,000 frames; JPEG at most 65,500 pixels on a side,
@@ -222,26 +225,38 @@ named in the warning.
   written as RGB, loses its background and significant bits; a crop drops the EXIF
   thumbnail and a JPEG's Photoshop thumbnail, which show the whole picture, or the
   whole EXIF metadata when its thumbnail cannot be dropped safely; a trim
-  drops subtitles, and a timecode when the span starts after the beginning.
+  drops subtitles, and a timecode when the span starts after the beginning; a
+  `transcode` drops a HEIC or HEIF's depth maps, gain maps and thumbnails, and a JPEG
+  XL's gain map and preview, named as secondary images, and a HEIC or HEIF's XMP that
+  declares those images.
 - **Updated:** the stored dimensions in EXIF and XMP after a resize or crop; the EXIF
   subject area, moved with a crop; the timecode, written anew. An embedded C2PA
   manifest is never carried over: the new manifest keeps the input as its parent.
 
 A JPEG re-encoded as JPEG writes its own coding segments in place of the source's
-Adobe and Ducky segments, without a warning.
+Adobe and Ducky segments, without a warning. A 10- or 12-bit HEIC or HEIF converts at
+8 bits, also without a warning.
 
 ### Refused
 
-- **Inputs:** a CMYK JPEG; a JPEG or AVIF with a gain map or other secondary images; a
-  JPEG or WebP with data after the end of the image; a JPEG with extended XMP; an
+- **Inputs:** a HEIC or HEIF with more than one picture, such as a burst or a stereo
+  pair, an image sequence, HDR or BT.2020, a color matrix other than BT.709 or BT.601,
+  premultiplied partial transparency, or color signaling other than sRGB and no ICC
+  profile; a JPEG XL, other than a recompressed JPEG, that is animated, in color other
+  than sRGB, with an ICC profile, samples other than 8, 10, 12 or 16-bit integers, or
+  extra channels other than alpha; a CMYK JPEG; a JPEG or AVIF with a gain map or
+  other secondary images;
+  a JPEG or WebP with data after the end of the image; a JPEG with extended XMP; an
   interlaced or HDR PNG, or one whose `cICP` is not full-range RGB; AVIF above 8 bits,
   with premultiplied alpha, HDR or BT.2020, or with color signaling other than sRGB
   and no ICC profile; a TIFF with more than one page, Photoshop layers, a pyramid,
   reduced-resolution pages, CMYK, samples other than 8 or 16 bits, compression other
   than none, LZW, Deflate or PackBits, or extra channels or premultiplied alpha; GIF
-  plain text, or frames outside the logical screen; more than one video or audio
-  stream, more than one timecode track, encrypted media, and, for a `resize` or
-  `crop`, video rotated by other than quarter turns. Malformed EXIF makes an image
+  plain text, or frames outside the logical screen; a video without exactly one video
+  stream besides cover pictures, or an audio file without exactly one audio stream;
+  more than one timecode track, or one not continuous and aligned with the video,
+  unless a `trim` drops the timecode; encrypted media; and, for a `resize` or `crop`,
+  video rotated by other than quarter turns. Malformed EXIF makes an image
   unreadable (`Could not process the media file.`).
 - **Picture:** transparency into JPEG, unless every pixel is opaque; partial
   transparency into GIF; 16-bit samples into JPEG, WebP, AVIF or GIF; a gray image with
@@ -293,18 +308,19 @@ or `crop` applies to every frame.
 
 A `transcode`, `repackage`, `resize`, `crop` or `trim` keeps the file's streams: each
 is copied when the target holds it and nothing asks to re-encode it, else re-encoded
-(a `repackage` refuses instead). Into its own container, a file keeps every stream in
-its own codec. Re-encoding video keeps its pixel format, color tags, pixel aspect
+(a `repackage` refuses instead). Into its own container, each copied stream keeps its
+own codec; a re-encoded stream takes the codec its [action](api_c2pa.md#actions)
+names. Re-encoding video keeps its pixel format, color tags, pixel aspect
 ratio, timestamps and rotation; re-encoding audio keeps its sample rate and channels.
 
 A `trim` re-encodes every audio and video stream, copies cover pictures, and keeps
 the chapters within the span, cut to it; one that only touches the span is dropped.
-Its video begins with the first frame at or after `start`, up to one frame after the
-audio. Its audio keeps its codec where Trufo writes that codec, else becomes AAC:
+Every stream keeps its offset from the cut, and the video begins with its first frame
+at or after `start`. Its audio keeps its codec where Trufo writes that codec, else becomes AAC:
 
 | Source audio | In | Written as |
 | --- | --- | --- |
-| PCM | WAV, MP4, MOV | PCM at its depth, sample for sample |
+| PCM | WAV, MP4, MOV | PCM at its depth in 16, 24 or 32 bits (8-bit as 16-bit), sample for sample |
 | FLAC | FLAC, MP4 | FLAC, sample for sample |
 | AAC | M4A, MP4, MOV | AAC at 192 kbit/s |
 | MP3 | MP3, MP4, MOV | MP3 at 192 kbit/s |
