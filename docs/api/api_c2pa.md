@@ -446,7 +446,8 @@ Resizes an image or a video proportionally; it never stretches or crops. Give
 orientation or the video's rotation. One side sets the other in proportion, rounded
 half up; both fit the picture inside them. Enlarging is allowed within the
 [size limits](media_format_support.md#media-actions). A video's sides are even: a
-side you give must be even, and the other is rounded to an even number.
+side you give must be at least 2 and is taken down to an even number, so 641 becomes
+640, and the other is rounded to an even number.
 
 An image is re-encoded in its own format with its coding settings and metadata, and
 the stored dimensions in its EXIF and XMP are updated; an animation keeps its
@@ -461,15 +462,15 @@ Inputs: JPEG, PNG, WebP, AVIF, TIFF and GIF images, and MP4 and MOV video; see
 
 | Parameter | Values |
 | --------- | ------ |
-| `width` | Integer, at least 1: the displayed width in pixels |
-| `height` | Integer, at least 1: the displayed height in pixels |
+| `width` | Integer, at least 1, or 2 for a video: the displayed width in pixels |
+| `height` | Integer, at least 1, or 2 for a video: the displayed height in pixels |
 
 **Errors:**
 
 | When | Status | `detail` |
 | ---- | ------ | -------- |
 | No side, or a side that is not a positive integer | 400 | `InvalidActionParameter: The 'resize' action requires a 'width', a 'height' or both, each a positive integer in pixels.` |
-| An odd side for a video | 400 | `InvalidActionParameter: The 'resize' action's 'width' and 'height' must be even for a video.` |
+| A side below 2 for a video | 400 | `InvalidActionParameter: The 'resize' action's 'width' and 'height' must be at least 2 for a video.` |
 | A parameter other than `width` and `height` | 400 | `InvalidActionParameter: The 'resize' action does not take '<name>'.` |
 | Audio, or another input `resize` does not support | 400 | `Unsupported Format Error: <mime> is not supported for resizing. …` |
 | A video rotated by other than quarter turns | 400 | `Unsupported Format Error: Video rotated by <degrees> degrees is not supported for resizing. …` |
