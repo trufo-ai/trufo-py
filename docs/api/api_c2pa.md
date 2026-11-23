@@ -587,7 +587,8 @@ transcode the signed file. An animated GIF, PNG, WebP or AVIF keeps its
 PNG, TIFF and GIF take no setting: PNG is lossless, TIFF keeps its own compression or
 is written with Deflate from another format, and GIF keeps up to 256 colors, reducing
 more without dithering. A lossless WebP stays lossless unless `quality` is given.
-FLAC is lossless, and WAV is PCM at the source's depth, 16-bit from a lossy source.
+FLAC is lossless, and WAV is PCM at the source's depth in 16, 24 or 32 bits (8-bit as
+16-bit), 16-bit from a lossy source.
 
 The codecs each container holds from another container are below. A stream it does
 not hold is re-encoded: video as the `video_codec` named, else as its own codec if
