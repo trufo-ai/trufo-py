@@ -307,7 +307,7 @@ audio. Its audio keeps its codec where Trufo writes that codec, else becomes AAC
 
 | Source audio | In | Written as |
 | --- | --- | --- |
-| PCM | WAV, MP4, MOV | PCM at its depth, sample for sample |
+| PCM | WAV, MP4, MOV | PCM at its depth, 8-bit as 16-bit, sample for sample |
 | FLAC | FLAC, MP4 | FLAC, sample for sample |
 | AAC | M4A, MP4, MOV | AAC at 192 kbit/s |
 | MP3 | MP3, MP4, MOV | MP3 at 192 kbit/s |
