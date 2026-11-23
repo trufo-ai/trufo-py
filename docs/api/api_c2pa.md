@@ -119,7 +119,7 @@ Beyond the platform-wide codes in [api_trufo.md](api_trufo.md):
 | 400 | `UnsupportedSDKVersion: …` | Local mode: the `trufo-py` or `trufo-provenance` version is below the minimum or past its support, or the engine is too old for a feature the request uses; the detail names the package and the reason (see [Local mode](#local-mode)) |
 | 400 | `ImageTooLarge: …` | An input image over 400 megapixels |
 | 400 | `InvalidWidAllocationMode: …` | A watermark `wid_allocation_mode` other than `"per_embed"`, `"per_ai_system"` or `"per_asset"` (see [`watermark`](#watermark)) |
-| 400 | `Conflict: …` | Parts of the request that cannot be combined, such as a `transcode` or `repackage` action on a request that signs the file as newly created (see [`transcode`](#transcode) and [`repackage`](#repackage)) |
+| 400 | `Conflict: …` | Parts of the request that cannot be combined, such as a `transcode` or `repackage` action on a request that signs the file as newly created (see [`transcode`](#transcode) and [`repackage`](#repackage)), or `all_actions_included` set to true with a `parentOf` ingredient that has no `action_history` (see [`ingredient`](#ingredient)) |
 | 400 | `InvalidActionParameter: …` | A parameter an [action](#actions) does not take, or a value it does not accept for the file or its target, such as `quality` for a PNG (see [`transcode`](#transcode)) |
 | 400 | `MissingDigitalSourceType: …` | A C2PA action in an [`ingredient`](#ingredient)'s `action_history` without a `digitalSourceType`, unless [exempt](#assertions) |
 | 400 | `ManifestStorageRequired: …` | A `"per_embed"` watermark with `skip_manifest_storage` (see [`watermark`](#watermark)) |
@@ -377,7 +377,9 @@ and the `plus`, `schema`, `xmpDM` and `xmpRights` prefixes in
 ingredient's `action_history` need 2.3.2 or later. The [`resize`](#resize),
 [`crop`](#crop), [`trim`](#trim) and [`repackage`](#repackage) actions, and
 [`transcode`](#transcode) parameters other than `target_mime_type`, need 2.4.0 or
-later.
+later. `all_actions_included` set to true with a `parentOf` [`ingredient`](#ingredient)
+that has no `action_history` is refused from 2.4.0; an older engine signs such a
+request.
 
 <!-- TODO(sunset-2027-01-31): the versions paragraph and its table go; successor none -->
 
@@ -992,7 +994,7 @@ of the asset, not a Trufo attestation.
 | `format` | string | No | The media type of a declared ingredient (one without `media`), such as `video/mp4`; not with `media` |
 | `data` | string | No | The ingredient's own content, such as a prompt, as base64 bytes; `inputTo` only, with `format` (such as `text/plain`) and no `media`. Up to 64 KB once decoded; over 8 KB signs with a notice in `warnings`. Trufo embeds it in the signed file (C2PA 2.4 § 18.16.8), where anyone with the file can read it. In either mode, Trufo receives it in the signed manifest, which it may keep unless you set `skip_manifest_storage`. |
 | `placement` | string | No | `gathered` (default) or `created`, on a request authorized for created assertions; `parentOf` is always created. A declared ingredient is always gathered; created placement for it is refused for now and may be supported later. |
-| `action_history` | list | No | Actions between a `parentOf` source and the supplied input; entries may independently set `placement`, `digitalSourceType`, `description`, `softwareAgent` (`{"software_agent_id": "swagent_..."}`, a [registered software agent](#post-c2pasoftware-agentadd)) and `when` (RFC 3339, UTC). An entry's action is a custom one in a domain your organization has validated (for example `com.example.upscaled`) or one of these C2PA actions: `c2pa.addedText`, `c2pa.adjustedColor`, `c2pa.changedSpeed`, `c2pa.converted`, `c2pa.cropped`, `c2pa.deleted`, `c2pa.drawing`, `c2pa.dubbed`, `c2pa.edited`, `c2pa.edited.metadata`, `c2pa.enhanced`, `c2pa.filtered`, `c2pa.mastered`, `c2pa.mixed`, `c2pa.orientation`, `c2pa.published`, `c2pa.remixed`, `c2pa.repackaged`, `c2pa.resized`, `c2pa.resized.proportional`, `c2pa.transcoded`, `c2pa.translated`, `c2pa.trimmed`, `c2pa.unknown`, `c2pa.watermarked.unbound`. A C2PA action requires a `digitalSourceType` (such as `DigitalSourceType.HUMAN_EDITS`), unless [exempt](#assertions). A `c2pa.translated` action requires `parameters` with `sourceLanguage` and `targetLanguage`, each a BCP 47 language tag such as `en` or `zh-CN`; no other action takes `parameters`. |
+| `action_history` | list | No | Actions between a `parentOf` source and the supplied input; entries may independently set `placement`, `digitalSourceType`, `description`, `softwareAgent` (`{"software_agent_id": "swagent_..."}`, a [registered software agent](#post-c2pasoftware-agentadd)) and `when` (RFC 3339, UTC). An entry's action is a custom one in a domain your organization has validated (for example `com.example.upscaled`) or one of these C2PA actions: `c2pa.addedText`, `c2pa.adjustedColor`, `c2pa.changedSpeed`, `c2pa.converted`, `c2pa.cropped`, `c2pa.deleted`, `c2pa.drawing`, `c2pa.dubbed`, `c2pa.edited`, `c2pa.edited.metadata`, `c2pa.enhanced`, `c2pa.filtered`, `c2pa.mastered`, `c2pa.mixed`, `c2pa.orientation`, `c2pa.published`, `c2pa.remixed`, `c2pa.repackaged`, `c2pa.resized`, `c2pa.resized.proportional`, `c2pa.transcoded`, `c2pa.translated`, `c2pa.trimmed`, `c2pa.unknown`, `c2pa.watermarked.unbound`. A C2PA action requires a `digitalSourceType` (such as `DigitalSourceType.HUMAN_EDITS`), unless [exempt](#assertions). A `c2pa.translated` action requires `parameters` with `sourceLanguage` and `targetLanguage`, each a BCP 47 language tag such as `en` or `zh-CN`; no other action takes `parameters`. You are responsible for truthfully declaring, in `action_history`, every action performed between a `parentOf` source and the input you supply. Trufo records only the actions it performs on that input. |
 
 - Sent (`media`): a readable C2PA history is always kept with the ingredient,
   validation failures included;
@@ -1034,6 +1036,7 @@ already the parent, so it cannot take a `creation` entry or a `parentOf` you sen
 | `data` over 64 KB once decoded | 400 | `IngredientDataTooLarge: The 'data' of ingredient '<title>' exceeds the 64 KB (64,000-byte) limit once decoded.` |
 | A `parentOf` ingredient without `branded_gp_id` | 403 | `C2PACreatedUserAssertionsNotAuthorized: created user assertions are not authorized.` |
 | A `parentOf` ingredient with `branded_gp_id` but no `media` | 400 | `The parentOf relationship requires ingredient 'media'.` |
+| `manifest_settings.all_actions_included` set to true with a `parentOf` ingredient that has no `action_history` | 400 | `Conflict: 'all_actions_included' cannot be true when a 'parentOf' ingredient has no 'action_history'. Declare the actions between the parent and the input, or leave 'all_actions_included' unset.` |
 | `digital_source_type` with `media` that carries a C2PA manifest | 400 | `The ingredient 'digital_source_type' cannot be combined with media that carries a C2PA manifest (mutually exclusive per the spec).` |
 | A C2PA action in `action_history` without a `digitalSourceType`, unless [exempt](#assertions) | 400 | `MissingDigitalSourceType: The action '<action>' in action_history requires a 'digitalSourceType', an IPTC source type URI such as humanEdits (an edit made without generative AI) or compositeWithTrainedAlgorithmicMedia (an AI edit).` |
 | A `c2pa.translated` action in `action_history` without `sourceLanguage` and `targetLanguage` | 400 | `InvalidTranslationLanguages: The action 'c2pa.translated' in action_history requires 'parameters' with exactly 'sourceLanguage' and 'targetLanguage', each a BCP 47 language tag such as 'en' or 'zh-CN'.` |
@@ -1061,7 +1064,8 @@ agent. It emits exactly one leading `c2pa.created` action and is always created:
 action) are optional. The server resolves the software-agent id to the registered
 agent record. Creation, external parents, action histories, and any created
 placement default `allActionsIncluded` to false. You will usually want to set
-`manifest_settings.all_actions_included` to true. By setting this flag to true,
+`manifest_settings.all_actions_included` to true; true is refused for a `parentOf`
+ingredient with no `action_history`. By setting this flag to true,
 you are attesting that the manifest describes every action performed on the
 asset, and are responsible for the accuracy and completeness of the manifest.
 
