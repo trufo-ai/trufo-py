@@ -434,10 +434,10 @@ Ordered `[name, params]` pairs. Each media-transforming action feeds the next.
 performs each and records the C2PA action for what it did. A file that already is
 what an action asks for is left as it is, and nothing is recorded for that action.
 Actions run in the order given, each on the file the one before left, so a later
-action's refusal ends the request without output. Metadata the output does not keep
-is dropped, as [Media actions](media_format_support.md#media-actions) lists; a
-[warning](#response-warnings) names it, except routine items such as resolution and
-comments.
+action's refusal ends the request without output. An action keeps the metadata its
+output can hold and names everything else it did not keep in a
+[warning](#response-warnings); [Media actions](media_format_support.md#media-actions)
+gives the rule, what each target holds and what is refused.
 
 #### `resize`
 
@@ -521,7 +521,7 @@ without `end` it runs to the end. Each must lie within the media's duration, and
 `end` must come after `start`; the whole duration leaves the file as it is.
 
 The cut is exact: every audio and video stream is re-encoded, video as a `resize`
-re-encodes it, and audio as [Media actions](media_format_support.md#audio) lists:
+re-encodes it, and audio as [Media actions](media_format_support.md#audio-and-video) lists:
 PCM and FLAC sample for sample, AAC and MP3 at 192 kbit/s. The output begins at
 `start`, with the video's first frame at or after it, so the video can begin up to one
 frame after the audio. Cover pictures are copied; subtitles are dropped. Chapters

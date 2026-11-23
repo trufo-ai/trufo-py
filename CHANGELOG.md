@@ -50,9 +50,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `c2pa.transcoded`.
 - `transcode` keeps the color profile, EXIF, XMP, resolution, comments and every
   stream where the target holds them. Metadata the output does not keep is dropped,
-  and the response warning `The '<action>' action did not keep: <items>.` names it
-  unless the documentation lists it; previously most of it was dropped without
-  notice, and a video kept one video and one audio stream.
+  and the response warning `The '<action>' action did not keep: <items>.` names all
+  of it; previously most of it was dropped without notice, and a video kept one
+  video and one audio stream.
 - A parameter an action does not take, or a value it does not accept for the file
   or its target, returns `400 InvalidActionParameter`; previously an unknown
   parameter was ignored, and `transcode` without `target_mime_type` failed with
