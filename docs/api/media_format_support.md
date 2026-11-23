@@ -271,7 +271,7 @@ These are not detected, so no warning names them:
   plays for GIF and 65,535 for WebP;
 - WAV chunks that hold neither audio nor tags, such as cue points; FLAC application
   and cue sheet blocks; ID3 frames that do not map to tags; an M4A source's XMP; and
-  an audio file's start offset are not carried over;
+  an M4A's start offset, in a `transcode` to WAV, FLAC or MP3, are not carried over;
 - a re-encoded AVI video with B-frames starts two frames after its audio.
 
 ### Audio and video

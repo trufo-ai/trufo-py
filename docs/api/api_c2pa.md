@@ -549,6 +549,7 @@ Inputs: FLAC, WAV, M4A and MP3 audio, and MP4 and MOV video; see
 | A span shorter than one video frame, or one audio sample | 400 | `InvalidActionParameter: The 'trim' action's span of <seconds> s is shorter than one <video frame / audio sample>, of <seconds> s.` |
 | A parameter other than `start` and `end` | 400 | `InvalidActionParameter: The 'trim' action does not take '<name>'.` |
 | An image, or another input `trim` does not support | 400 | `Unsupported Format Error: <mime> is not supported for trimming. …` |
+| An M4A whose audio starts after the beginning of the file | 400 | `Unsupported Format Error: Audio with a start offset is not supported for trimming. …` |
 | Local mode, an engine older than trufo-provenance 2.4.0 | 400 | `UnsupportedSDKVersion: the media actions in this request require trufo-provenance 2.4.0 or later. Please upgrade.` |
 
 #### `transcode`
