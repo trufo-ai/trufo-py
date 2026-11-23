@@ -302,8 +302,8 @@ ratio, timestamps and rotation; re-encoding audio keeps its sample rate and chan
 
 A `trim` re-encodes every audio and video stream, copies cover pictures, and keeps
 the chapters within the span, cut to it; one that only touches the span is dropped.
-Its video begins with the first frame at or after `start`, up to one frame after the
-audio. Its audio keeps its codec where Trufo writes that codec, else becomes AAC:
+Every stream keeps its offset from the cut, and the video begins with its first frame
+at or after `start`. Its audio keeps its codec where Trufo writes that codec, else becomes AAC:
 
 | Source audio | In | Written as |
 | --- | --- | --- |
