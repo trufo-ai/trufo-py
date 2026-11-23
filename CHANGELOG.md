@@ -74,6 +74,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `…so Trufo kept it for the requested <action> action; …`, which is gone. To
   process such a file, leave out `ai_system` or set `signed_input_policy` to
   `keep`. See [Signed inputs and ingredients](docs/api/api_c2pa.md#signed-inputs-and-ingredients).
+- A `parentOf` ingredient without `action_history`, with
+  `manifest_settings.all_actions_included` set to true, returns `400` (`Conflict:
+  'all_actions_included' cannot be true when a 'parentOf' ingredient has no
+  'action_history'. …`); previously it was signed with `allActionsIncluded` true.
+  Declare the actions between the parent and the input, or leave
+  `all_actions_included` unset. See [`ingredient`](docs/api/api_c2pa.md#ingredient).
 
 ### Removed
 
