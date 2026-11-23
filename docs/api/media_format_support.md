@@ -239,8 +239,8 @@ Adobe and Ducky segments, without a warning.
   and no ICC profile; a TIFF with more than one page, Photoshop layers, a pyramid,
   reduced-resolution pages, CMYK, samples other than 8 or 16 bits, compression other
   than none, LZW, Deflate or PackBits, or extra channels or premultiplied alpha; GIF
-  plain text, or frames outside the logical screen; a video with more than one video
-  stream besides cover pictures, or an audio file with more than one audio stream;
+  plain text, or frames outside the logical screen; a video without exactly one video
+  stream besides cover pictures, or an audio file without exactly one audio stream;
   more than one timecode track, or one not continuous and aligned with the video,
   unless a `trim` drops the timecode; encrypted media; and, for a `resize` or `crop`,
   video rotated by other than quarter turns. Malformed EXIF makes an image
