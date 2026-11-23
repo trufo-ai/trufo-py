@@ -32,6 +32,12 @@ systems, and certificate enrollment.
   alias until 2027-01-31T23:59:00+00:00.
   <!-- TODO(sunset-2027-01-31): the mode sentence goes; successor wid_allocation_mode -->
   Format policy: see `docs/api/media_format_support.md`; do not duplicate its tables.
+- The `resize`, `transcode` and `repackage` actions are performed by Trufo, which
+  records the C2PA action for what each did (`c2pa.resized.proportional`,
+  `c2pa.transcoded`, `c2pa.repackaged`), or nothing when the file already is as asked.
+  Parameters: `docs/api/api_c2pa.md#actions`; inputs and what each target keeps:
+  `docs/api/media_format_support.md#media-actions`. In Local mode they need
+  trufo-provenance 2.4.0, and FFmpeg for audio and video.
 - Routes: **C2PA Signing, Cloud / Local** (Trufo signs; `sign_c2pa_cloud`,
   `sign_c2pa_local`) and **Watermarking, Cloud / Local** (the caller signs with
   their own certificate; `bind_watermark` → `bind_commit`, or `bind_reserve` →

@@ -15,6 +15,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`application/x-navi-animation`).
 - In Local mode, this needs trufo-provenance 2.4.0 or later; an older engine
   refuses it.
+- The `resize` action (`TrufoAction.RESIZE`): resizes an image or a video
+  proportionally to a width, a height or both, as displayed, and records
+  `c2pa.resized.proportional`. See [`resize`](docs/api/api_c2pa.md#resize).
+- The `repackage` action (`TrufoAction.REPACKAGE`): moves a video's streams into
+  MP4 or MOV without re-encoding them, and records `c2pa.repackaged`. See
+  [`repackage`](docs/api/api_c2pa.md#repackage).
+- `transcode` takes `quality`, `video_codec`, `audio_codec`, `crf` and
+  `audio_bitrate`, each with a documented default; without `target_mime_type`, it
+  re-encodes in the input's format. See [`transcode`](docs/api/api_c2pa.md#transcode).
+- In Local mode, the two actions and these parameters need trufo-provenance
+  2.4.0 or later; an older engine is refused with `400 UnsupportedSDKVersion`.
+- What each action accepts and keeps of a file, per format. See
+  [Media actions](docs/api/media_format_support.md#media-actions).
+
+### Changed
+
+- `transcode` writes JPEG, WebP and AVIF at quality 90 by default (previously 75,
+  80 and 75), AAC and MP3 at 192 kbit/s, also audio re-encoded inside a video, and
+  WAV at the source's bit depth (previously 16-bit).
+- `transcode` copies each stream that already is what was asked, and records
+  `c2pa.repackaged` when it re-encoded nothing, such as MOV with H.264 and AAC into
+  MP4. A file that already is what was asked is left as it is, and nothing is
+  recorded; previously every file was re-encoded and recorded as
+  `c2pa.transcoded`.
+- `transcode` keeps the color profile, EXIF, XMP, resolution, comments and every
+  stream where the target holds them. Metadata the target has no place
+  for is dropped, and a response warning names it unless the documentation lists
+  it; previously most of it was dropped without notice, and a video kept one video
+  and one audio stream.
+- A parameter an action does not take, or a value it does not accept for the file
+  or its target, returns `400 InvalidActionParameter`; previously an unknown
+  parameter was ignored, and `transcode` without `target_mime_type` failed with
+  500. A target in another media class returns the same code.
+- `transcode` refuses what the target cannot hold without a visible loss, such as
+  a transparent image into JPEG (previously the transparency was dropped), and
+  inputs outside the documented ones, such as HEIC, HEIF, JPEG XL, DNG and
+  multipage TIFF (previously converted), with `400 Unsupported Format Error`.
+- `repackage` on a request that signs the file as newly created returns
+  `400 Conflict`, as `transcode` does. Under `signed_input_policy` `auto`, `resize`
+  and `repackage` keep a signed input, as `transcode` does.
+
+### Removed
+
+- The undocumented `image/jxl` and `image/x-adobe-dng` `transcode` targets.
 
 ### Fixed
 

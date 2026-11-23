@@ -135,11 +135,13 @@ curl -s http://127.0.0.1:8080/c2pa/sign \
 | `assertions`, `manifest_title`, `ingredient_title`, `manifest_settings`, `branded_gp_id`, `signed_input_policy`, `signed_ingredient_policy`, `skip_manifest_storage` | No | As in [`POST /c2pa/sign`](../api/api_c2pa.md#post-c2pasign) |
 | `watermark_settings` | No | The local watermark profile, `{"profile": "default"}` or `{"profile": "fast"}`; see [Local watermark settings](python.md#local-watermark-settings). Full image, 2.3 or later. |
 
-`actions` and `assertions` take the same entries as in Cloud mode, `transcode` included
-(see [`actions`](../api/api_c2pa.md#actions)). `signed_input_policy`,
+`actions` and `assertions` take the same entries as in Cloud mode, the `resize`,
+`transcode` and `repackage` actions included (see
+[`actions`](../api/api_c2pa.md#actions)). `signed_input_policy`,
 `signed_ingredient_policy` and the `ai_system` entry need a 2.2 image,
-`skip_manifest_storage` a 2.3 image, and the 2.3.1 additions listed under
-[Local mode](../api/api_c2pa.md#local-mode) a 2.3.1 image. In the full
+`skip_manifest_storage` a 2.3 image, the 2.3.1 additions listed under
+[Local mode](../api/api_c2pa.md#local-mode) a 2.3.1 image, and `resize`, `repackage`
+and `transcode` parameters other than `target_mime_type` a 2.4 image. In the full
 image, a [`watermark`](../api/api_c2pa.md#watermark) action embeds the mark locally,
 with the same options as in Cloud mode (see
 [watermark billing](../api/api_c2pa.md#watermark-billing)); the signing-only image
@@ -150,8 +152,8 @@ The response gives the path written and any [`warnings`](../api/api_c2pa.md#resp
 
 - **The path written** has symlinks resolved and the signed format's extension: asking
   for `photo.png` with a JPEG input writes `photo.jpg`. `photo.jpeg` and `photo.JPG`
-  also become `photo.jpg`, and `.tif` becomes `.tiff`; after a `transcode`, the
-  extension follows the new format.
+  also become `photo.jpg`, and `.tif` becomes `.tiff`; after a `transcode` or
+  `repackage`, the extension follows the new format.
 - **The output path** is overwritten: the signed file replaces any file there, so use
   output paths whose existing files you don't need.
 - **Titles.** To record the input file's name, set it in `manifest_settings`:
