@@ -80,6 +80,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   'action_history'. …`); previously it was signed with `allActionsIncluded` true.
   Declare the actions between the parent and the input, or leave
   `all_actions_included` unset. See [`ingredient`](docs/api/api_c2pa.md#ingredient).
+  In Local mode, this applies from trufo-provenance 2.4.0; an older engine signs
+  such a request.
 
 ### Removed
 

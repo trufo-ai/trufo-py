@@ -377,7 +377,9 @@ and the `plus`, `schema`, `xmpDM` and `xmpRights` prefixes in
 ingredient's `action_history` need 2.3.2 or later. The [`resize`](#resize),
 [`crop`](#crop), [`trim`](#trim) and [`repackage`](#repackage) actions, and
 [`transcode`](#transcode) parameters other than `target_mime_type`, need 2.4.0 or
-later.
+later. `all_actions_included` set to true with a `parentOf` [`ingredient`](#ingredient)
+that has no `action_history` is refused from 2.4.0; an older engine signs such a
+request.
 
 <!-- TODO(sunset-2027-01-31): the versions paragraph and its table go; successor none -->
 
