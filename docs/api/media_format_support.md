@@ -241,7 +241,8 @@ Adobe and Ducky segments, without a warning.
   than none, LZW, Deflate or PackBits, or extra channels or premultiplied alpha; GIF
   plain text, or frames outside the logical screen; a video with more than one video
   stream besides cover pictures, or an audio file with more than one audio stream;
-  more than one timecode track; encrypted media; and, for a `resize` or `crop`,
+  more than one timecode track, or one not continuous and aligned with the video,
+  unless a `trim` drops the timecode; encrypted media; and, for a `resize` or `crop`,
   video rotated by other than quarter turns. Malformed EXIF makes an image
   unreadable (`Could not process the media file.`).
 - **Picture:** transparency into JPEG, unless every pixel is opaque; partial
