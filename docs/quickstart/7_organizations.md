@@ -162,7 +162,7 @@ members and billing, and also decide what you can do for its sub-orgs:
 | ------------------------------------------------ | ----- | ----- | ------ |
 | See its sub-orgs and their usage | Yes | Yes | Yes |
 | Create sub-orgs | Yes | Yes | No |
-| Add people to a sub-org with any role, change their roles, remove them | Yes | Yes | No |
+| Add people to a sub-org as admin or member, change their roles, remove them | Yes | Yes | No |
 
 From any other organization, Trufo refuses these with `403 ManagementOrgRequired`.
 
@@ -178,9 +178,9 @@ invitation, to the management organization or to any sub-org.
 <!-- TBD: owner decision: restricting which email domains can be invited into an organization group -->
 
 **People already in the organization group.** From the management organization, its
-owner or an admin adds them to a sub-org with any role. No invitation email is sent, and
-the person can switch to the sub-org at once. Someone in no organization yet is refused
-with `400 AccountNotInOrgGroup`; invite them instead.
+owner or an admin adds them to a sub-org as an admin or a member. No invitation email is
+sent, and the person can switch to the sub-org at once. Someone in no organization yet is
+refused with `400 AccountNotInOrgGroup`; invite them instead.
 
 <!-- TBD: dashboard location -->
 
