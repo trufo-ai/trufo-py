@@ -173,18 +173,21 @@ defaults apply in either case.
 
 Cloud mode and Local mode apply the same rules; in Local mode, audio and video
 actions need `ffmpeg` and `ffprobe` on the PATH. The actions run on CPython 3.10 to
-3.15.
+3.15. In Local mode with the Python SDK, a JPEG XL input converts on Python 3.12 only:
+before it, `transcode` refuses it (`Unsupported Format Error: JPEG XL requires Python
+3.12 or newer; found <version>. …`), and later versions do not sign JPEG XL.
 
 | Input | `resize`, `crop` | `trim` | `transcode` targets | `repackage` targets |
 | --- | --- | --- | --- | --- |
 | Images | Yes | No | Any image type | No |
+| HEIC, HEIF, JPEG XL | No | No | Any image type | No |
 | MP4, MOV | Yes | Yes | MP4, MOV | MP4, MOV |
 | FLAC, WAV, M4A, MP3 | No | Yes | Any audio type | No |
 | AVI | No | No | MP4, MOV | MP4, MOV |
 
 The image types are JPEG, PNG, WebP, AVIF, TIFF and GIF, and the audio types FLAC,
-WAV, M4A and MP3. Other types, including HEIC/HEIF, JPEG XL, DNG and SVG, are
-refused. Images may be animated.
+WAV, M4A and MP3. Other types, including DNG and SVG, are refused. Images may be
+animated.
 
 Limits, on input and output: images of at most 400 million pixels, counting all of an
 animation's frames, and at most 10,000 frames; JPEG at most 65,500 pixels on a side,
@@ -222,18 +225,28 @@ named in the warning.
   written as RGB, loses its background and significant bits; a crop drops the EXIF
   thumbnail and a JPEG's Photoshop thumbnail, which show the whole picture, or the
   whole EXIF metadata when its thumbnail cannot be dropped safely; a trim
-  drops subtitles, and a timecode when the span starts after the beginning.
+  drops subtitles, and a timecode when the span starts after the beginning; a
+  `transcode` drops a HEIC or HEIF's depth maps, gain maps and thumbnails, and a JPEG
+  XL's gain map and preview, named as secondary images, and a HEIC or HEIF's XMP that
+  declares those images.
 - **Updated:** the stored dimensions in EXIF and XMP after a resize or crop; the EXIF
   subject area, moved with a crop; the timecode, written anew. An embedded C2PA
   manifest is never carried over: the new manifest keeps the input as its parent.
 
 A JPEG re-encoded as JPEG writes its own coding segments in place of the source's
-Adobe and Ducky segments, without a warning.
+Adobe and Ducky segments, without a warning. A 10- or 12-bit HEIC or HEIF converts at
+8 bits, also without a warning.
 
 ### Refused
 
-- **Inputs:** a CMYK JPEG; a JPEG or AVIF with a gain map or other secondary images; a
-  JPEG or WebP with data after the end of the image; a JPEG with extended XMP; an
+- **Inputs:** a HEIC or HEIF with more than one picture, such as a burst or a stereo
+  pair, an image sequence, HDR or BT.2020, a color matrix other than BT.709 or BT.601,
+  premultiplied partial transparency, or color signaling other than sRGB and no ICC
+  profile; a JPEG XL, other than a recompressed JPEG, that is animated, in color other
+  than sRGB, with an ICC profile, samples other than 8, 10, 12 or 16-bit integers, or
+  extra channels other than alpha; a CMYK JPEG; a JPEG or AVIF with a gain map or
+  other secondary images;
+  a JPEG or WebP with data after the end of the image; a JPEG with extended XMP; an
   interlaced or HDR PNG, or one whose `cICP` is not full-range RGB; AVIF above 8 bits,
   with premultiplied alpha, HDR or BT.2020, or with color signaling other than sRGB
   and no ICC profile; a TIFF with more than one page, Photoshop layers, a pyramid,

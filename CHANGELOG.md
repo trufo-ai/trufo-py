@@ -59,9 +59,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   500. A target in another media class returns the same code.
 - `transcode` refuses what the target cannot hold without a visible loss, such as
   a transparent image into JPEG (previously the transparency was dropped), and
-  inputs outside the documented ones, such as HEIC, HEIF, JPEG XL, DNG,
-  multipage TIFF and video whose timecode track is not continuous and aligned with
-  the video (previously converted), with `400 Unsupported Format Error`.
+  inputs outside the documented ones, such as DNG, multipage TIFF, HEIC or HEIF
+  with HDR or more than one picture, and video whose timecode track is not
+  continuous and aligned with the video (previously converted), with
+  `400 Unsupported Format Error`.
 - A `watermark` action is judged on the file it embeds into: after a `transcode` or
   `repackage`, on the target's type, where previously it was judged on the upload's.
   An AVI transcoded or repackaged into MP4 can now be watermarked.
