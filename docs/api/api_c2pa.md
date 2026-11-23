@@ -473,7 +473,7 @@ Inputs: JPEG, PNG, WebP, AVIF, TIFF and GIF images, and MP4 and MOV video; see
 | A parameter other than `width` and `height` | 400 | `InvalidActionParameter: The 'resize' action does not take '<name>'.` |
 | Audio, or another input `resize` does not support | 400 | `Unsupported Format Error: <mime> is not supported for resizing. …` |
 | A video rotated by other than quarter turns | 400 | `Unsupported Format Error: Video rotated by <degrees> degrees is not supported for resizing. …` |
-| Local mode, an engine older than trufo-provenance 2.4.0 | 400 | `UnsupportedSDKVersion: the 'resize' action requires trufo-provenance 2.4.0 or later. Please upgrade.` |
+| Local mode, an engine older than trufo-provenance 2.4.0 | 400 | `UnsupportedSDKVersion: the media actions in this request require trufo-provenance 2.4.0 or later. Please upgrade.` |
 
 #### `crop`
 
@@ -511,7 +511,7 @@ All four are required.
 | A parameter other than `x`, `y`, `width` and `height` | 400 | `InvalidActionParameter: The 'crop' action does not take '<name>'.` |
 | Audio, or another input `crop` does not support | 400 | `Unsupported Format Error: <mime> is not supported for cropping. …` |
 | A video rotated by other than quarter turns | 400 | `Unsupported Format Error: Video rotated by <degrees> degrees is not supported for cropping. …` |
-| Local mode, an engine older than trufo-provenance 2.4.0 | 400 | `UnsupportedSDKVersion: the 'crop' action requires trufo-provenance 2.4.0 or later. Please upgrade.` |
+| Local mode, an engine older than trufo-provenance 2.4.0 | 400 | `UnsupportedSDKVersion: the media actions in this request require trufo-provenance 2.4.0 or later. Please upgrade.` |
 
 #### `trim`
 
@@ -548,7 +548,7 @@ Inputs: FLAC, WAV, M4A and MP3 audio, and MP4 and MOV video; see
 | A span shorter than one video frame, or one audio sample | 400 | `InvalidActionParameter: The 'trim' action's span of <seconds> s is shorter than one <video frame / audio sample>, of <seconds> s.` |
 | A parameter other than `start` and `end` | 400 | `InvalidActionParameter: The 'trim' action does not take '<name>'.` |
 | An image, or another input `trim` does not support | 400 | `Unsupported Format Error: <mime> is not supported for trimming. …` |
-| Local mode, an engine older than trufo-provenance 2.4.0 | 400 | `UnsupportedSDKVersion: the 'trim' action requires trufo-provenance 2.4.0 or later. Please upgrade.` |
+| Local mode, an engine older than trufo-provenance 2.4.0 | 400 | `UnsupportedSDKVersion: the media actions in this request require trufo-provenance 2.4.0 or later. Please upgrade.` |
 
 #### `transcode`
 
@@ -615,7 +615,7 @@ Inputs, and what each target keeps of a file:
 | A value the parameter does not take | 400 | `InvalidActionParameter: The 'transcode' action's '<name>' must be <values>.` |
 | A file the target cannot keep, such as a transparent image into JPEG | 400 | `Unsupported Format Error: Transparent images cannot be transcoded to image/jpeg; use image/png or image/webp. …` (each refusal is listed in [Media actions](media_format_support.md#media-actions)) |
 | The request signs the file as newly created | 400 | `Conflict: The 'transcode' action cannot be combined with a request that signs the file as newly created ('c2pa.created'). Sign the file first without 'transcode', then transcode the signed file.` |
-| Local mode, a parameter other than `target_mime_type`, with an engine older than trufo-provenance 2.4.0 | 400 | `UnsupportedSDKVersion: the transcode '<name>' parameter requires trufo-provenance 2.4.0 or later. Please upgrade.` |
+| Local mode, a parameter other than `target_mime_type`, with an engine older than trufo-provenance 2.4.0 | 400 | `UnsupportedSDKVersion: the media actions in this request require trufo-provenance 2.4.0 or later. Please upgrade.` |
 
 #### `repackage`
 
@@ -643,7 +643,7 @@ as newly created.
 | An image, audio or another input `repackage` does not support | 400 | `Unsupported Format Error: <mime> is not supported for repackaging. …` |
 | A stream that would have to be re-encoded | 400 | `Unsupported Format Error: <Audio / Video> in <codec> cannot be repackaged into <target> without re-encoding; use 'transcode'. …` |
 | The request signs the file as newly created | 400 | `Conflict: The 'repackage' action cannot be combined with a request that signs the file as newly created ('c2pa.created'). Sign the file first without 'repackage', then repackage the signed file.` |
-| Local mode, an engine older than trufo-provenance 2.4.0 | 400 | `UnsupportedSDKVersion: the 'repackage' action requires trufo-provenance 2.4.0 or later. Please upgrade.` |
+| Local mode, an engine older than trufo-provenance 2.4.0 | 400 | `UnsupportedSDKVersion: the media actions in this request require trufo-provenance 2.4.0 or later. Please upgrade.` |
 
 #### `watermark`
 
