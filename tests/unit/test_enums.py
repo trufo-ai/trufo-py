@@ -47,7 +47,11 @@ STR_ENUMS = {
         "AUTO": "auto",
     },
     TrufoAction: {
+        "RESIZE": "resize",
+        "CROP": "crop",
+        "TRIM": "trim",
         "TRANSCODE": "transcode",
+        "REPACKAGE": "repackage",
         "WATERMARK": "watermark",
         "PUBLISH": "publish",
         "REDACT": "redact",

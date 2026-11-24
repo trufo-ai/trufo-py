@@ -7,6 +7,98 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.4.0] — 2026-11-23
+
+### Added
+
+- Management organizations handle billing and manage people across their sub-organizations.
+  The owner of a standalone organization can create a management organization and keep
+  the existing organization as its first sub-organization, with its members, API keys
+  and signing history. See
+  [Organizations, People and Roles](docs/quickstart/7_organizations.md).
+- C2PA signing and validation of ANI animated cursors
+  (`application/x-navi-animation`).
+- In Local mode, this needs trufo-provenance 2.4.0 or later; an older engine
+  refuses it.
+- The `resize` action (`TrufoAction.RESIZE`): resizes an image or a video
+  proportionally to a width, a height or both, as displayed, and records
+  `c2pa.resized.proportional`. See [`resize`](docs/api/api_c2pa.md#resize).
+- The `crop` action (`TrufoAction.CROP`): keeps a rectangle of an image or a
+  video's picture, as displayed, and records `c2pa.cropped`. See
+  [`crop`](docs/api/api_c2pa.md#crop).
+- The `trim` action (`TrufoAction.TRIM`): keeps a span of audio or video, cut
+  exactly, and records `c2pa.trimmed`. See [`trim`](docs/api/api_c2pa.md#trim).
+- The `repackage` action (`TrufoAction.REPACKAGE`): moves a video's streams into
+  MP4 or MOV without re-encoding them, and records `c2pa.repackaged`. Like
+  `transcode`, it cannot be combined with a request that signs the file as newly
+  created. See [`repackage`](docs/api/api_c2pa.md#repackage).
+- `transcode` takes `quality`, `video_codec`, `audio_codec`, `crf` and
+  `audio_bitrate`. If the input format is a supported target, you can omit
+  `target_mime_type` to apply settings in that format. See [`transcode`](docs/api/api_c2pa.md#transcode).
+- In Local mode, the four new actions and these parameters need trufo-provenance
+  2.4.0 or later; an older engine is refused with `400 UnsupportedSDKVersion`.
+- What each action accepts and keeps of a file, per format. See
+  [Media actions](docs/api/media_format_support.md#media-actions).
+- A response warning when a media action changes the file after a watermark was
+  embedded; place the `watermark` action last. See
+  [Response warnings](docs/api/api_c2pa.md#response-warnings).
+
+### Changed
+
+- Local-engine extras require trufo-provenance 2.4.x.
+- `transcode` writes JPEG, WebP and AVIF at quality 90 by default (previously 75,
+  80 and 75), AAC and MP3 at 192 kbit/s, also audio re-encoded inside a video, and
+  WAV at the source's bit depth in 16, 24 or 32 bits, 8-bit as 16-bit (previously
+  16-bit).
+- `transcode` copies each stream that already is what was asked, and records
+  `c2pa.repackaged` when it re-encoded nothing, such as MOV with H.264 and AAC into
+  MP4. A file that already is what was asked is left as it is, and nothing is
+  recorded; previously every file was re-encoded and recorded as
+  `c2pa.transcoded`.
+- `transcode` keeps the color profile, EXIF, XMP, resolution, comments and every
+  stream where the target holds them. Metadata the output does not keep is dropped,
+  and the response warning `The '<action>' action did not keep: <items>.` names all
+  of it; previously most of it was dropped without notice, and a video kept one
+  video and one audio stream.
+- A parameter an action does not take, or a value it does not accept for the file
+  or its target, returns `400 InvalidActionParameter`; previously an unknown
+  parameter was ignored, and `transcode` without `target_mime_type` failed with
+  500. A target in another media class returns the same code.
+- `transcode` refuses what the target cannot hold without a visible loss, such as
+  a transparent image into JPEG (previously the transparency was dropped), and
+  inputs outside the documented ones, such as DNG, multipage TIFF, HEIC or HEIF
+  with HDR or more than one picture, and video whose timecode track is not
+  continuous and aligned with the video (previously converted), with
+  `400 Unsupported Format Error`.
+- A `watermark` action is judged on the file it embeds into: after a `transcode` or
+  `repackage`, on the target's type, where previously it was judged on the upload's.
+  An AVI transcoded or repackaged into MP4 can now be watermarked.
+- Under `signed_input_policy` `auto`, a request with an `ai_system` entry whose
+  input's C2PA manifest is camera-captured or human-created returns `400` (`The
+  input carries a C2PA manifest whose source class is …`) whatever its actions;
+  previously a `redact` or `transcode` action kept the input, with the notice
+  `…so Trufo kept it for the requested <action> action; …`, which is gone. To
+  process such a file, leave out `ai_system` or set `signed_input_policy` to
+  `keep`. See [Signed inputs and ingredients](docs/api/api_c2pa.md#signed-inputs-and-ingredients).
+- A `parentOf` ingredient without `action_history`, with
+  `manifest_settings.all_actions_included` set to true, returns `400` (`Conflict:
+  'all_actions_included' cannot be true when a 'parentOf' ingredient has no
+  'action_history'. …`); previously it was signed with `allActionsIncluded` true.
+  Declare the actions between the parent and the input, or leave
+  `all_actions_included` unset. See [`ingredient`](docs/api/api_c2pa.md#ingredient).
+  In Local mode, this applies from trufo-provenance 2.4.0; an older engine signs
+  such a request.
+
+### Removed
+
+- The undocumented `image/jxl` and `image/x-adobe-dng` `transcode` targets.
+
+### Fixed
+
+- [Local mode with the Python SDK](docs/local/python.md#requirements) did not list
+  `heif-enc` 1.20.0 or newer, with its HEVC and AV1 encoder plugins, which watermarking
+  HEIC, HEIF or AVIF with `trufo[local-full]` needs.
+
 ## [2.3.2] — 2026-11-18
 
 ### Added
@@ -772,7 +864,8 @@ Minor-version bump marks the general availability of the production C2PA signing
 - `trufo.intf`: credential storage and loading (env vars + file), CLI entry point.
 - PyPI trusted publishing via GitHub Actions (OIDC, no API tokens required).
 
-[Unreleased]: https://github.com/trufo-ai/trufo-py/compare/v2.3.2...HEAD
+[Unreleased]: https://github.com/trufo-ai/trufo-py/compare/v2.4.0...HEAD
+[2.4.0]: https://github.com/trufo-ai/trufo-py/compare/v2.3.2...v2.4.0
 [2.3.2]: https://github.com/trufo-ai/trufo-py/compare/v2.3.1...v2.3.2
 [2.3.1]: https://github.com/trufo-ai/trufo-py/compare/v2.3.0...v2.3.1
 [2.3.0]: https://github.com/trufo-ai/trufo-py/compare/v2.2.2...v2.3.0

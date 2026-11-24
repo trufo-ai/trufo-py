@@ -114,7 +114,8 @@ created placement, and the `ai_system` entry takes no `placement`.
 
 Normal signing defaults `allActionsIncluded` to true. Elevated requests
 (creation, `parentOf`, action history, or a created placement) default it to
-false. You will usually want to set `ManifestSettings(all_actions_included=True)`.
+false. You will usually want to set `ManifestSettings(all_actions_included=True)`;
+true is refused for a `parentOf` ingredient with no `action_history`.
 By setting this flag to true, you are attesting that the manifest describes
 every action performed on the asset, and are responsible for the accuracy and
 completeness of the manifest.
