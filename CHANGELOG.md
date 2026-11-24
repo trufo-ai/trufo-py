@@ -7,9 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.4.0] — 2026-11-23
+
 ### Added
 
-- A quickstart for organizations, people and roles, including organization groups. See
+- Management organizations handle billing and manage people across their sub-organizations.
+  The owner of a standalone organization can create a management organization and keep
+  the existing organization as its first sub-organization, with its members, API keys
+  and signing history. See
   [Organizations, People and Roles](docs/quickstart/7_organizations.md).
 - C2PA signing and validation of ANI animated cursors
   (`application/x-navi-animation`).
@@ -28,8 +33,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `transcode`, it cannot be combined with a request that signs the file as newly
   created. See [`repackage`](docs/api/api_c2pa.md#repackage).
 - `transcode` takes `quality`, `video_codec`, `audio_codec`, `crf` and
-  `audio_bitrate`, each with a documented default; without `target_mime_type`, it
-  re-encodes in the input's format. See [`transcode`](docs/api/api_c2pa.md#transcode).
+  `audio_bitrate`. If the input format is a supported target, you can omit
+  `target_mime_type` to apply settings in that format. See [`transcode`](docs/api/api_c2pa.md#transcode).
 - In Local mode, the four new actions and these parameters need trufo-provenance
   2.4.0 or later; an older engine is refused with `400 UnsupportedSDKVersion`.
 - What each action accepts and keeps of a file, per format. See
@@ -40,6 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Local-engine extras require trufo-provenance 2.4.x.
 - `transcode` writes JPEG, WebP and AVIF at quality 90 by default (previously 75,
   80 and 75), AAC and MP3 at 192 kbit/s, also audio re-encoded inside a video, and
   WAV at the source's bit depth in 16, 24 or 32 bits, 8-bit as 16-bit (previously
@@ -858,7 +864,8 @@ Minor-version bump marks the general availability of the production C2PA signing
 - `trufo.intf`: credential storage and loading (env vars + file), CLI entry point.
 - PyPI trusted publishing via GitHub Actions (OIDC, no API tokens required).
 
-[Unreleased]: https://github.com/trufo-ai/trufo-py/compare/v2.3.2...HEAD
+[Unreleased]: https://github.com/trufo-ai/trufo-py/compare/v2.4.0...HEAD
+[2.4.0]: https://github.com/trufo-ai/trufo-py/compare/v2.3.2...v2.4.0
 [2.3.2]: https://github.com/trufo-ai/trufo-py/compare/v2.3.1...v2.3.2
 [2.3.1]: https://github.com/trufo-ai/trufo-py/compare/v2.3.0...v2.3.1
 [2.3.0]: https://github.com/trufo-ai/trufo-py/compare/v2.2.2...v2.3.0

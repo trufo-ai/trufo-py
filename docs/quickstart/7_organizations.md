@@ -136,10 +136,11 @@ organization, you need none of this.
 
 ### Create a Management Organization and Sub-Orgs
 
-**Management organization.** Trufo creates it and adds its first owner, whose account
-must not belong to any organization yet.
-
-<!-- TBD: owner decision: how a customer asks Trufo for a management organization -->
+**Management organization.** As the owner of a standalone organization, sign in with
+MFA and choose **Create Organization Group** in Organization Settings. Name the new
+management organization and confirm. You own it, and it takes over billing. Your
+existing organization becomes its first sub-org and keeps its ID, members, API keys,
+products and history. This change is permanent.
 
 **Sub-orgs.** From the management organization, its owner or an admin creates a sub-org
 with a name, a default processing region and an owner chosen from the organization
@@ -230,7 +231,7 @@ organization group.
 ### Limits
 
 - One level: a sub-org cannot have sub-orgs.
-- A standalone organization cannot join an organization group, and a sub-org cannot
+- A standalone organization cannot join an existing organization group, and a sub-org cannot
   leave one.
 - An organization is in at most one organization group.
 - An account belongs to one organization group, or to one standalone organization.
