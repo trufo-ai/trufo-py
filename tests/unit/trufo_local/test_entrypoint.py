@@ -132,10 +132,17 @@ def test_installs_unless_every_pin_is_installed(
     assert run.call_count == pip_runs
 
 
-def test_both_images_pin_the_same_engine():
+def test_images_pin_their_private_packages():
     folder = entrypoint._REQUIREMENTS_FILE.parent
-    signing_only, full = (
-        re.sub(r"\[.*?\]", "", (folder / name).read_text().splitlines()[0])
-        for name in ("requirements.txt", "requirements-full.txt")
-    )
-    assert signing_only == full
+
+    def pins(filename):
+        # compare the complete version and hashes, independent of the engine extras
+        text = re.sub(r"\[.*?\]", "", (folder / filename).read_text())
+        return dict(line.split("==", 1) for line in text.splitlines())
+
+    signing_only = pins("requirements.txt")
+    full = pins("requirements-full.txt")
+    assert signing_only.keys() == {"trufo-provenance", "trufo-avio"}
+    assert full.keys() == signing_only.keys() | {"trufo-pawprint"}
+    for name, pin in signing_only.items():
+        assert full[name] == pin

@@ -125,12 +125,12 @@ jobs:
       - name: Install system dependencies
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libmagic1
 
-      - name: Install trufo-provenance
+      - name: Install the pinned signing packages
         env:
           PIP_INDEX_URL: https://__token__:${{ secrets.TRUFO_SDK_DOWNLOAD_API_KEY }}@packages.trufo.ai/simple/
         run: |
           set -euo pipefail
-          # the engine pin the image installs, from Trufo's index; the key is in this step's env only
+          # the signing image's pins, from Trufo's index; the key is in this step's env only
           pip install --no-cache-dir --no-deps --require-hashes -r trufo-local/requirements.txt
 
       - name: Install test dependencies
@@ -180,6 +180,36 @@ jobs:
           echo "config_digest=$config_digest" >> "$GITHUB_OUTPUT"
           echo "full_config_digest=$full_config_digest" >> "$GITHUB_OUTPUT"
 
+      - name: Check private packages are absent from every image layer
+        env:
+          VERSION: ${{ needs.release.outputs.version }}
+        run: |
+          set -euo pipefail
+          image_dir="$RUNNER_TEMP/image"
+          mkdir "$image_dir"
+          # save the images once, before startup; the publish job consumes this same archive
+          docker save -o "$image_dir/images.tar" "$IMAGE:$VERSION" "$IMAGE:$VERSION-full"
+          python - "$image_dir/images.tar" <<'EOF'
+          import json
+          import re
+          import sys
+          import tarfile
+
+          private = re.compile(
+              r"(?:^|/)(?:tfprov|tfavio|pawprint)(?:/|$)|"
+              r"(?:^|/)trufo[_-](?:provenance|avio|pawprint)[_-][^/]+(?:\.dist-info(?:/|$)|\.whl$)"
+          )
+          with tarfile.open(sys.argv[1]) as images:
+              manifests = json.load(images.extractfile("manifest.json"))
+              layers = {path for manifest in manifests for path in manifest["Layers"]}
+              for path in sorted(layers):
+                  with tarfile.open(fileobj=images.extractfile(path), mode="r|*") as layer:
+                      for member in layer:
+                          if private.search(member.name):
+                              sys.exit(f"Private package in image layer {path}: {member.name}")
+          print(f"Checked {len(layers)} layers.")
+          EOF
+
       - name: Check images
         env:
           TRUFO_SDK_DOWNLOAD_API_KEY: ${{ secrets.TRUFO_SDK_DOWNLOAD_API_KEY }}
@@ -195,10 +225,9 @@ jobs:
             -v "$input_dir:$input_dir:ro" -v "$output_dir:$output_dir")
           # each image ("" or -full) under its own container name and port: without a key, exit 1
           # with the start line; with the key, the engine installs and /health passes the jq
-          # filter, given with its jq arguments
+          # filter for this variant
           start() {
-            local suffix=$1 name=$2 port=$3 filter=$4 status=0 line health
-            shift 4
+            local suffix=$1 name=$2 port=$3 filter=$4 status=0 line health pins
             line=$("${run[@]}" --rm "$IMAGE:$VERSION$suffix" 2>&1) || status=$?
             if [ "$status" != 1 ] || [ "$line" != "TRUFO_SDK_DOWNLOAD_API_KEY is not set. Set it to your sdk-download key." ]; then
               echo "::error::Start of $IMAGE:$VERSION$suffix without a key: exit $status: $line"; exit 1
@@ -207,21 +236,22 @@ jobs:
             if ! health=$(curl -fsS --retry 60 --retry-delay 2 --retry-all-errors "http://127.0.0.1:$port/health"); then
               docker logs "$name"; exit 1
             fi
-            if ! jq -e "$@" "$filter" <<< "$health"; then
+            pins=$(docker exec "$name" python -c \
+              'import json; from entrypoint import read_pinned_versions; print(json.dumps(read_pinned_versions()))')
+            if ! jq -e --arg version "$VERSION$suffix" --argjson pins "$pins" "$filter" <<< "$health"; then
               echo "::error::$IMAGE:$VERSION$suffix reports $health"; exit 1
             fi
           }
-          if ! watermark_engine_version=$(grep -oP '^trufo-pawprint==\K[^ ]+' trufo-local/requirements-full.txt); then
-            echo "::error::trufo-local/requirements-full.txt has no trufo-pawprint== pin."; exit 1
-          fi
-          # /health reports each image's version, and the pinned watermark engine's in the full image only
+          # /health reports each image's own pins, and the watermark engine in the full variant only
           start "" trufo-local-check 8080 \
-            '.version == $version and (has("watermark_engine_version") | not)' --arg version "$VERSION"
+            '.status == "healthy" and .version == $version and .engine_version == $pins["trufo-provenance"] and
+             (has("watermark_engine_version") | not)'
           start -full trufo-local-full-check 8081 \
-            '.version == $version and .watermark_engine_version == $watermark_engine_version' \
-            --arg version "$VERSION-full" --arg watermark_engine_version "$watermark_engine_version"
+            '.status == "healthy" and .version == $version and .engine_version == $pins["trufo-provenance"] and
+             has("watermark_engine_version") and .watermark_engine_version == $pins["trufo-pawprint"]'
           # in-process check, on each running service
           for name in trufo-local-check trufo-local-full-check; do
+            docker exec "$name" python -m pip check
             docker exec -i "$name" python - <<'EOF'
           import importlib.metadata
           import re
@@ -229,6 +259,13 @@ jobs:
           import subprocess
           import sys
           from pathlib import Path
+
+          from entrypoint import read_pinned_versions
+
+          for package, version in read_pinned_versions().items():
+              installed = importlib.metadata.version(package)
+              if installed != version:
+                  sys.exit(f"Expected {package} {version}, found {installed}")
 
           ffmpeg_library = r"lib(?:av(?:codec|device|filter|format|util)|sw(?:scale|resample)|postproc)"
           problems = []
@@ -371,7 +408,6 @@ jobs:
           set -euo pipefail
           # what the publish job needs from the images, read here on the images' own architecture
           image_dir="$RUNNER_TEMP/image"
-          mkdir "$image_dir"
           echo "$CONFIG_DIGEST" > "$image_dir/config-digest.txt"
           echo "$FULL_CONFIG_DIGEST" > "$image_dir/config-digest-full.txt"
           # once: the full image has the signing-only image's Python and Debian release
@@ -389,8 +425,6 @@ jobs:
             docker run --rm --entrypoint pip "$IMAGE:$VERSION$suffix" list --format=freeze \
               > "$image_dir/python-packages$suffix.txt"
           done
-          # both images in one tar, so their shared layers are stored once
-          docker save -o "$image_dir/images.tar" "$IMAGE:$VERSION" "$IMAGE:$VERSION-full"
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v7

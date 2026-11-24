@@ -1,6 +1,6 @@
 # trufo-local Dockerfile
 # Build from the trufo-py root, with an sdk-download key in TRUFO_SDK_DOWNLOAD_API_KEY:
-# docker build --secret id=TRUFO_SDK_DOWNLOAD_API_KEY --build-arg VERSION=2.3.2 trufo-local
+# docker build --secret id=TRUFO_SDK_DOWNLOAD_API_KEY --build-arg VERSION=2.4.0 trufo-local
 
 FROM python:3.12-slim
 
@@ -18,19 +18,18 @@ RUN pip install --no-cache-dir pip==26.2.2
 
 WORKDIR /app
 
-# Install the engine's dependencies as the engine itself declares them, then remove the engine;
-# each container installs it at start. The sdk-download key exists only within this step;
-# extra-sources.txt lists the sources of the libraries the numpy, opencv-python-headless and
-# pillow-heif wheels bundle, and licenses/ the license texts the jxlpy wheel leaves out, so
-# change them with these pins
+# Resolve dependencies with the pinned private packages installed. Remove the private packages
+# in this layer so each container downloads them at start. Keep extra-sources.txt and licenses/
+# in sync with the libraries bundled by the pinned wheels.
 COPY requirements.txt ./
 RUN --mount=type=secret,id=TRUFO_SDK_DOWNLOAD_API_KEY,required=true \
     PIP_INDEX_URL="https://__token__:$(cat /run/secrets/TRUFO_SDK_DOWNLOAD_API_KEY)@packages.trufo.ai/simple/" \
        pip install --no-cache-dir --no-deps --require-hashes -r requirements.txt \
     && PIP_EXTRA_INDEX_URL="https://__token__:$(cat /run/secrets/TRUFO_SDK_DOWNLOAD_API_KEY)@packages.trufo.ai/simple/" \
-       pip install --no-cache-dir trufo==2.3.2 fastapi uvicorn 'trufo-provenance[c2pa]' \
+       pip install --no-cache-dir trufo==2.4.0 fastapi uvicorn 'trufo-provenance[c2pa]' \
        numpy==2.5.4 opencv-python-headless==5.0.0.93 pillow-heif==1.8.1+trufo.1 jxlpy==0.9.5 \
-    && pip uninstall -y trufo-provenance
+       imagecodecs==2026.10.10 soundfile==0.14.0 \
+    && pip uninstall -y trufo-provenance trufo-avio
 
 COPY app.py entrypoint.py ./
 COPY NOTICE /usr/share/doc/trufo-local/NOTICE
