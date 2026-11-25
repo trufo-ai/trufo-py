@@ -70,6 +70,11 @@ _BROWSER_RESPONSE = b"""<!doctype html>
 <h2>Signed in</h2><p>You can close this window and return to your terminal.</p>
 </body></html>"""
 
+_BROWSER_ERROR_RESPONSE = b"""<!doctype html>
+<html><body style="font-family: sans-serif; text-align: center; padding: 60px">
+<h2>Sign-in did not complete</h2><p>You can close this window and return to your terminal.</p>
+</body></html>"""
+
 
 @dataclass
 class PKCEChallenge:
@@ -108,15 +113,23 @@ class _CallbackHandler(BaseHTTPRequestHandler):
             return
 
         params = parse_qs(parsed.query)
-        self.server.callback_seen = True  # type: ignore[attr-defined]
-        self.server.auth_code = (params.get("code") or [None])[0]  # type: ignore[attr-defined]
-        self.server.auth_state = (params.get("state") or [None])[0]  # type: ignore[attr-defined]
+        code = (params.get("code") or [None])[0]
+        received_state = (params.get("state") or [None])[0]
+        expected_state = getattr(self.server, "expected_state", None)
+        state_ok = expected_state is None or secrets.compare_digest(
+            received_state or "", expected_state
+        )
 
-        self.send_response(200)
+        self.server.callback_seen = True  # type: ignore[attr-defined]
+        self.server.auth_code = code  # type: ignore[attr-defined]
+        self.server.auth_state = received_state  # type: ignore[attr-defined]
+
+        body = _BROWSER_RESPONSE if (code is not None and state_ok) else _BROWSER_ERROR_RESPONSE
+        self.send_response(200 if (code is not None and state_ok) else 400)
         self.send_header("Content-Type", "text/html; charset=utf-8")
-        self.send_header("Content-Length", str(len(_BROWSER_RESPONSE)))
+        self.send_header("Content-Length", str(len(body)))
         self.end_headers()
-        self.wfile.write(_BROWSER_RESPONSE)
+        self.wfile.write(body)
 
     def log_message(self, format: str, *args: object) -> None:
         """Silence the default stderr access log."""
@@ -162,6 +175,7 @@ def run_loopback_login(
     httpd.timeout = timeout
     httpd.auth_code = None  # type: ignore[attr-defined]
     httpd.auth_state = None  # type: ignore[attr-defined]
+    httpd.expected_state = state  # type: ignore[attr-defined]
     httpd.callback_seen = False  # type: ignore[attr-defined]
 
     try:
@@ -190,7 +204,7 @@ def run_loopback_login(
         # (a favicon prefetch, a port scanner) answers 404 without consuming
         # our wait
         deadline = time.monotonic() + timeout
-        while httpd.auth_code is None:  # type: ignore[attr-defined]
+        while not httpd.callback_seen and httpd.auth_code is None:  # type: ignore[attr-defined]
             remaining = deadline - time.monotonic()
             if remaining <= 0:
                 break

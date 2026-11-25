@@ -217,7 +217,49 @@ class TestRunLoopbackLogin:
         server.handle_request.side_effect = _callback_without_code
 
         with pytest.raises(RuntimeError, match="without an authorization code"):
-            run_loopback_login("key", timeout=1)
+            run_loopback_login("key", timeout=5)
+        assert server.handle_request.call_count == 1
+
+    def test_error_callback_returns_promptly_with_error_html(self):
+        """A real loopback callback carrying no code finishes immediately and shows failure HTML."""
+        import threading
+        import urllib.error
+        import urllib.request
+
+        response_holder: dict[str, object] = {}
+        threads: list[threading.Thread] = []
+
+        def _fake_open(url: str) -> bool:
+            from urllib.parse import parse_qs, urlparse
+
+            params = parse_qs(urlparse(url).query)
+            redirect_uri = params["redirect_uri"][0]
+            state = params["state"][0]
+
+            def _hit_callback() -> None:
+                try:
+                    urllib.request.urlopen(f"{redirect_uri}?error=access_denied&state={state}")
+                except urllib.error.HTTPError as exc:
+                    response_holder["status"] = exc.code
+                    response_holder["body"] = exc.read().decode("utf-8")
+
+            t = threading.Thread(target=_hit_callback, daemon=True)
+            threads.append(t)
+            t.start()
+            return True
+
+        with (
+            patch("trufo.api.loopback_auth.webbrowser.open", side_effect=_fake_open),
+            pytest.raises(RuntimeError, match="without an authorization code"),
+        ):
+            run_loopback_login("key", timeout=10)
+
+        for t in threads:
+            t.join(timeout=5)
+
+        assert response_holder["status"] == 400
+        assert "Sign-in did not complete" in str(response_holder["body"])
+        assert "Signed in" not in str(response_holder["body"])
 
 
 def _state_from(url: str) -> str:

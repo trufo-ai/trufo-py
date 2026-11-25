@@ -149,3 +149,49 @@ class TestMakeRequest:
         session = TrufoSession(access_token="at", refresh_token="rt")
         with pytest.raises(AuthError, match="Session expired"):
             session._refresh()
+
+    @patch("trufo.api.session.refresh_tokens")
+    def test_load_session_persists_file_backed_refresh_atomically(
+        self, mock_refresh, tmp_path, monkeypatch
+    ):
+        import json
+        import stat
+
+        from trufo.util import credentials
+
+        session_file = tmp_path / "session"
+        monkeypatch.setattr(credentials, "SESSION_FILE", session_file)
+        monkeypatch.delenv("TRUFO_ACCESS_TOKEN", raising=False)
+        monkeypatch.delenv("TRUFO_REFRESH_TOKEN", raising=False)
+
+        credentials.save_session(TrufoSession(access_token="old-at", refresh_token="old-rt"))
+        assert stat.S_IMODE(session_file.stat().st_mode) == 0o600
+
+        mock_refresh.return_value = TokenPair(access_token="new-at", refresh_token="new-rt")
+        loaded = credentials.load_session()
+        loaded._refresh()
+
+        assert json.loads(session_file.read_text(encoding="utf-8")) == {
+            "access_token": "new-at",
+            "refresh_token": "new-rt",
+        }
+        assert stat.S_IMODE(session_file.stat().st_mode) == 0o600
+        assert list(tmp_path.glob("*.tmp")) == []
+
+    @patch("trufo.api.session.refresh_tokens")
+    def test_load_session_from_env_does_not_write_file_on_refresh(
+        self, mock_refresh, tmp_path, monkeypatch
+    ):
+        from trufo.util import credentials
+
+        session_file = tmp_path / "session"
+        monkeypatch.setattr(credentials, "SESSION_FILE", session_file)
+        monkeypatch.setenv("TRUFO_ACCESS_TOKEN", "env-at")
+        monkeypatch.setenv("TRUFO_REFRESH_TOKEN", "env-rt")
+
+        mock_refresh.return_value = TokenPair(access_token="new-at", refresh_token="new-rt")
+        loaded = credentials.load_session()
+        loaded._refresh()
+
+        assert loaded.access_token == "new-at"
+        assert not session_file.exists()

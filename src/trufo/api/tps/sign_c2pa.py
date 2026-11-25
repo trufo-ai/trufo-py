@@ -24,6 +24,7 @@ will silently pick the wrong title.
 """
 
 import base64
+import inspect
 import warnings
 from dataclasses import dataclass
 from typing import Any
@@ -847,8 +848,12 @@ def _sign_c2pa_local(
         else {}
     )
     remote_orchestrator = require_provenance_module("tfprov.c2pa_generator.remote_orchestrator")
+    orchestrator_params = inspect.signature(remote_orchestrator.generate_claim_remote).parameters
+    supports_warning_handoff = "emit_warnings" in orchestrator_params or any(
+        p.kind is inspect.Parameter.VAR_KEYWORD for p in orchestrator_params.values()
+    )
 
-    signed, _ = remote_orchestrator.generate_claim_remote(
+    signed, result_warnings = remote_orchestrator.generate_claim_remote(
         api_key,
         media_bytes,
         actions=actions or [],
@@ -875,7 +880,10 @@ def _sign_c2pa_local(
             else {}
         ),
         **({"skip_manifest_storage": True} if skip_manifest_storage else {}),
+        **({"emit_warnings": False} if supports_warning_handoff else {}),
     )
+    if supports_warning_handoff and result_warnings:
+        emit_server_warnings({"warnings": result_warnings}, stacklevel=4)
     return signed
 
 
