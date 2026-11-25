@@ -25,11 +25,11 @@ class TrufoServerWarning(UserWarning):
     """
 
 
-def emit_server_warnings(payload: dict) -> None:
+def emit_server_warnings(payload: dict, *, stacklevel: int = 3) -> None:
     """Re-emit an API response's ``warnings`` as :class:`TrufoServerWarning`.
 
     Local mode emits the same server notices through ``warnings``,
     so both signing modes surface them identically.
     """
     for message in payload.get("warnings") or []:
-        warnings.warn(str(message), TrufoServerWarning, stacklevel=3)
+        warnings.warn(str(message), TrufoServerWarning, stacklevel=stacklevel)

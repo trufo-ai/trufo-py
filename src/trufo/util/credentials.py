@@ -41,6 +41,7 @@ Trufo dashboard.
 import json
 import os
 import stat
+import tempfile
 from enum import Enum
 from pathlib import Path
 
@@ -95,10 +96,22 @@ _API_KEY_FILES = {
 
 
 def _write_private(path: Path, content: str) -> None:
-    """Write a file with 0600 permissions."""
+    """Atomically write a file created with 0600 permissions."""
     path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
-    path.write_text(content, encoding="utf-8")
-    path.chmod(_FILE_PERMISSIONS)
+    fd, tmp_name = tempfile.mkstemp(dir=path.parent, prefix=f".{path.name}.", suffix=".tmp")
+    try:
+        os.chmod(fd, _FILE_PERMISSIONS)
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            handle.write(content)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(tmp_name, path)
+    except BaseException:
+        try:
+            os.unlink(tmp_name)
+        except OSError:
+            pass
+        raise
 
 
 def _resolve_api_key_type(key_type: str | TrufoAPIKey) -> TrufoAPIKey:
@@ -192,6 +205,7 @@ def load_session() -> TrufoSession:
             return TrufoSession(
                 access_token=data["access_token"],
                 refresh_token=data["refresh_token"],
+                on_refresh=save_session,
             )
         except KeyError as exc:
             raise RuntimeError(f"Session file ({SESSION_FILE}) missing key: {exc}") from exc

@@ -13,6 +13,7 @@ belongs in the CLI or application layer.
 """
 
 import logging
+from collections.abc import Callable
 
 import requests
 
@@ -50,10 +51,12 @@ class TrufoSession:
         access_token: str | None = None,
         refresh_token: str | None = None,
         base_api_url: str = TRUFO_API_URL,
+        on_refresh: Callable[["TrufoSession"], None] | None = None,
     ) -> None:
         self.access_token = access_token
         self.refresh_token = refresh_token
         self.base_api_url = base_api_url
+        self._on_refresh = on_refresh
 
     @property
     def _auth_api_url(self) -> str:
@@ -152,6 +155,8 @@ class TrufoSession:
             raise AuthError("Session expired. Please log in again.") from exc
         self.access_token = tokens.access_token
         self.refresh_token = tokens.refresh_token
+        if self._on_refresh is not None:
+            self._on_refresh(self)
 
     @staticmethod
     def _post(url: str, access_token: str, data: dict) -> requests.Response:
