@@ -104,14 +104,8 @@ async def sign(body: C2PASignRequest, request: Request) -> dict | Response:
     validation_warnings = []
     watermark_options = {}
     if body.watermark_settings is not None:
-        normalize_settings = getattr(cg_request, "normalize_watermark_settings", None)
-        if normalize_settings is None:
-            raise HTTPException(
-                status_code=400,
-                detail="Watermark settings require trufo-provenance 2.3 or later.",
-            )
         try:
-            normalize_settings(body.watermark_settings)
+            cg_request.normalize_watermark_settings(body.watermark_settings)
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         watermark_options["watermark_settings"] = body.watermark_settings
