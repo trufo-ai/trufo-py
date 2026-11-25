@@ -810,6 +810,75 @@ def _warn_deprecated_tsa_args(tsa_api_key: str | None, trufo_tsa_url: str | None
             )
 
 
+def _sign_c2pa_local(
+    api_key: str,
+    media_bytes: bytes,
+    *,
+    test: bool,
+    actions: list | None = None,
+    assertions: list | None = None,
+    trufo_api_url: str,
+    manifest_title: str | None = None,
+    ingredient_title: str | None = None,
+    manifest_settings: ManifestSettings | None = None,
+    watermark_settings: WatermarkSettings | None = None,
+    branded_gp_id: str | None = None,
+    signed_input_policy: SignedInputPolicy | str | None = None,
+    signed_ingredient_policy: SignedIngredientPolicy | str | None = None,
+    skip_manifest_storage: bool = False,
+) -> bytes:
+    _validate_actions(actions)
+    _validate_assertions(assertions)
+    _validate_manifest_setting_aliases(manifest_settings, manifest_title, ingredient_title)
+    validated_input_policy = (
+        SignedInputPolicy.validate(signed_input_policy).value
+        if signed_input_policy is not None
+        else None
+    )
+    validated_ingredient_policy = (
+        SignedIngredientPolicy.validate(signed_ingredient_policy).value
+        if signed_ingredient_policy is not None
+        else None
+    )
+
+    watermark_options = (
+        {"watermark_settings": _watermark_settings_payload(watermark_settings)}
+        if watermark_settings is not None
+        else {}
+    )
+    remote_orchestrator = require_provenance_module("tfprov.c2pa_generator.remote_orchestrator")
+
+    signed, _ = remote_orchestrator.generate_claim_remote(
+        api_key,
+        media_bytes,
+        actions=actions or [],
+        assertions=assertions or [],
+        trufo_api_url=trufo_api_url,
+        test=test,
+        manifest_title=manifest_title,
+        ingredient_title=ingredient_title,
+        branded_gp_id=branded_gp_id,
+        **watermark_options,
+        **(
+            {"manifest_settings": _manifest_settings_payload(manifest_settings)}
+            if manifest_settings is not None
+            else {}
+        ),
+        **(
+            {"signed_input_policy": validated_input_policy}
+            if validated_input_policy is not None
+            else {}
+        ),
+        **(
+            {"signed_ingredient_policy": validated_ingredient_policy}
+            if validated_ingredient_policy is not None
+            else {}
+        ),
+        **({"skip_manifest_storage": True} if skip_manifest_storage else {}),
+    )
+    return signed
+
+
 def sign_c2pa_local_test(
     api_key: str,
     media_bytes: bytes,
@@ -868,54 +937,22 @@ def sign_c2pa_local_test(
         Signed media bytes.
     """
     _warn_deprecated_tsa_args(tsa_api_key, trufo_tsa_url)
-    _validate_actions(actions)
-    _validate_assertions(assertions)
-    _validate_manifest_setting_aliases(manifest_settings, manifest_title, ingredient_title)
-    if signed_input_policy is not None:
-        SignedInputPolicy.validate(signed_input_policy)
-    if signed_ingredient_policy is not None:
-        SignedIngredientPolicy.validate(signed_ingredient_policy)
-
-    watermark_options = (
-        {"watermark_settings": _watermark_settings_payload(watermark_settings)}
-        if watermark_settings is not None
-        else {}
-    )
-    remote_orchestrator = require_provenance_module("tfprov.c2pa_generator.remote_orchestrator")
-
-    signed, _ = remote_orchestrator.generate_claim_remote(
+    return _sign_c2pa_local(
         api_key,
         media_bytes,
-        actions=actions or [],
-        assertions=assertions or [],
-        trufo_api_url=trufo_api_url,
         test=True,
+        actions=actions,
+        assertions=assertions,
+        trufo_api_url=trufo_api_url,
         manifest_title=manifest_title,
         ingredient_title=ingredient_title,
+        manifest_settings=manifest_settings,
+        watermark_settings=watermark_settings,
         branded_gp_id=branded_gp_id,
-        **watermark_options,
-        **(
-            {"manifest_settings": _manifest_settings_payload(manifest_settings)}
-            if manifest_settings is not None
-            else {}
-        ),
-        **(
-            {"signed_input_policy": SignedInputPolicy.validate(signed_input_policy).value}
-            if signed_input_policy is not None
-            else {}
-        ),
-        **(
-            {
-                "signed_ingredient_policy": SignedIngredientPolicy.validate(
-                    signed_ingredient_policy
-                ).value
-            }
-            if signed_ingredient_policy is not None
-            else {}
-        ),
-        **({"skip_manifest_storage": True} if skip_manifest_storage else {}),
+        signed_input_policy=signed_input_policy,
+        signed_ingredient_policy=signed_ingredient_policy,
+        skip_manifest_storage=skip_manifest_storage,
     )
-    return signed
 
 
 def sign_c2pa_local(
@@ -976,54 +1013,22 @@ def sign_c2pa_local(
         Signed media bytes.
     """
     _warn_deprecated_tsa_args(tsa_api_key, trufo_tsa_url)
-    _validate_actions(actions)
-    _validate_assertions(assertions)
-    _validate_manifest_setting_aliases(manifest_settings, manifest_title, ingredient_title)
-    if signed_input_policy is not None:
-        SignedInputPolicy.validate(signed_input_policy)
-    if signed_ingredient_policy is not None:
-        SignedIngredientPolicy.validate(signed_ingredient_policy)
-
-    watermark_options = (
-        {"watermark_settings": _watermark_settings_payload(watermark_settings)}
-        if watermark_settings is not None
-        else {}
-    )
-    remote_orchestrator = require_provenance_module("tfprov.c2pa_generator.remote_orchestrator")
-
-    signed, _ = remote_orchestrator.generate_claim_remote(
+    return _sign_c2pa_local(
         api_key,
         media_bytes,
-        actions=actions or [],
-        assertions=assertions or [],
-        trufo_api_url=trufo_api_url,
         test=False,
+        actions=actions,
+        assertions=assertions,
+        trufo_api_url=trufo_api_url,
         manifest_title=manifest_title,
         ingredient_title=ingredient_title,
+        manifest_settings=manifest_settings,
+        watermark_settings=watermark_settings,
         branded_gp_id=branded_gp_id,
-        **watermark_options,
-        **(
-            {"manifest_settings": _manifest_settings_payload(manifest_settings)}
-            if manifest_settings is not None
-            else {}
-        ),
-        **(
-            {"signed_input_policy": SignedInputPolicy.validate(signed_input_policy).value}
-            if signed_input_policy is not None
-            else {}
-        ),
-        **(
-            {
-                "signed_ingredient_policy": SignedIngredientPolicy.validate(
-                    signed_ingredient_policy
-                ).value
-            }
-            if signed_ingredient_policy is not None
-            else {}
-        ),
-        **({"skip_manifest_storage": True} if skip_manifest_storage else {}),
+        signed_input_policy=signed_input_policy,
+        signed_ingredient_policy=signed_ingredient_policy,
+        skip_manifest_storage=skip_manifest_storage,
     )
-    return signed
 
 
 __getattr__ = deprecated_aliases(
