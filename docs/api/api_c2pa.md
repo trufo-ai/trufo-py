@@ -1131,7 +1131,7 @@ A manifest is not fetched, with the `<reason>` in the notice or error, when:
 | ---- | ---------- |
 | `fetch` is false | `fetching remote manifests is turned off in your settings` |
 | The URL is not HTTPS on the default port, or names an IP address | `the manifest URL names an IP address or is not HTTPS on the default port` |
-| The host is not allowed | `'<host>' is not on the list of allowed hosts` |
+| The host is not allowed | `'<host>' is not on the list of allowed hosts (contact support@trufo.ai to request it)` |
 | The host has no public address | `'<host>' did not resolve to a public address` |
 | The host answers with a redirect or another status than 200 | `'<host>' returned HTTP <status> (only HTTP 200 without redirects is accepted)` |
 | The manifest is over 10 MB | `the manifest at '<host>' exceeds the 10 MB limit` |
