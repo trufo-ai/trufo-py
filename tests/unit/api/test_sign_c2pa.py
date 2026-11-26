@@ -298,7 +298,7 @@ class TestLocalC2PASigning:
             "signed_ingredient_policy": "keep",
             "skip_manifest_storage": True,
             "watermark_settings": {"profile": "fast"},
-            "emit_warnings": False,
+            "warning_stacklevel": 4,
         }
 
     def test_prod_signing_delegates_with_endpoint_overrides(self, monkeypatch):
@@ -337,20 +337,11 @@ class TestLocalC2PASigning:
         assert "watermark_settings" not in kwargs
 
     @pytest.mark.parametrize("signer", _LOCAL_SIGNERS)
-    def test_emits_orchestrator_warnings_as_trufo_server_warning(self, monkeypatch, signer):
-        from trufo.util.warnings import TrufoServerWarning
-
-        calls = _install_fake_remote_stack(
-            monkeypatch, signed=b"signed", warning_messages=["preprocess warning"]
-        )
-
-        with pytest.warns(TrufoServerWarning, match="preprocess warning") as record:
-            result = signer("remote-sign-key", b"input-media")
-
+    def test_passes_caller_warning_stacklevel_to_orchestrator(self, monkeypatch, signer):
+        calls = _install_fake_remote_stack(monkeypatch, signed=b"signed")
+        result = signer("remote-sign-key", b"input-media")
         assert result == b"signed"
-        assert calls["generate_claim_remote"]["kwargs"]["emit_warnings"] is False
-        assert len(record) == 1
-        assert record[0].filename == __file__
+        assert calls["generate_claim_remote"]["kwargs"]["warning_stacklevel"] == 4
 
     @pytest.mark.parametrize("signer", _LOCAL_SIGNERS)
     @pytest.mark.parametrize(
