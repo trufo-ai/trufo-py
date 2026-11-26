@@ -67,7 +67,7 @@ class BrowserUnavailableError(Exception):
 
 _BROWSER_RESPONSE = b"""<!doctype html>
 <html><body style="font-family: sans-serif; text-align: center; padding: 60px">
-<h2>Signed in</h2><p>You can close this window and return to your terminal.</p>
+<h2>Authorization received</h2><p>Return to your terminal to finish sign-in. You can close this window.</p>
 </body></html>"""
 
 _BROWSER_ERROR_RESPONSE = b"""<!doctype html>
@@ -98,6 +98,11 @@ def generate_pkce() -> PKCEChallenge:
     return PKCEChallenge(verifier=verifier, challenge=challenge)
 
 
+def _state_matches(received: str | None, expected: str) -> bool:
+    """Constant-time state check safe for non-ASCII callback inputs."""
+    return secrets.compare_digest((received or "").encode("utf-8"), expected.encode("utf-8"))
+
+
 class _CallbackHandler(BaseHTTPRequestHandler):
     """One-shot handler that captures the code and state from the redirect."""
 
@@ -116,9 +121,7 @@ class _CallbackHandler(BaseHTTPRequestHandler):
         code = (params.get("code") or [None])[0]
         received_state = (params.get("state") or [None])[0]
         expected_state = getattr(self.server, "expected_state", None)
-        state_ok = expected_state is None or secrets.compare_digest(
-            received_state or "", expected_state
-        )
+        state_ok = expected_state is None or _state_matches(received_state, expected_state)
 
         self.server.callback_seen = True  # type: ignore[attr-defined]
         self.server.auth_code = code  # type: ignore[attr-defined]
@@ -224,7 +227,7 @@ def run_loopback_login(
 
     # the state check is what stops a third party from feeding us a code that
     # belongs to a flow we did not start
-    if not secrets.compare_digest(received_state or "", state):
+    if not _state_matches(received_state, state):
         raise RuntimeError("State mismatch on loopback callback; sign-in aborted.")
 
     return exchange_loopback_code(

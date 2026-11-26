@@ -39,8 +39,8 @@ Trufo dashboard.
 """
 
 import json
+import logging
 import os
-import stat
 import tempfile
 from enum import Enum
 from pathlib import Path
@@ -48,11 +48,11 @@ from pathlib import Path
 from trufo.api.session import TrufoSession
 from trufo.util.deprecation import deprecated_aliases
 
+logger = logging.getLogger(__name__)
+
 CONFIG_DIR = Path.home() / ".trufo"
 CREDENTIALS_DIR = CONFIG_DIR / "credentials"
 SESSION_FILE = CONFIG_DIR / "session"
-
-_FILE_PERMISSIONS = stat.S_IRUSR | stat.S_IWUSR  # 0o600
 
 
 class TrufoAPIKey(str, Enum):
@@ -96,11 +96,12 @@ _API_KEY_FILES = {
 
 
 def _write_private(path: Path, content: str) -> None:
-    """Atomically write a file created with 0600 permissions."""
+    """Atomically write a file created with 0600 permissions on POSIX."""
     path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+    # mkstemp creates the file with 0600 permissions on POSIX without os.chmod(fd),
+    # which is unsupported on Windows prior to Python 3.13
     fd, tmp_name = tempfile.mkstemp(dir=path.parent, prefix=f".{path.name}.", suffix=".tmp")
     try:
-        os.chmod(fd, _FILE_PERMISSIONS)
         with os.fdopen(fd, "w", encoding="utf-8") as handle:
             handle.write(content)
             handle.flush()
@@ -202,13 +203,31 @@ def load_session() -> TrufoSession:
         except json.JSONDecodeError as exc:
             raise RuntimeError(f"Corrupt session file ({SESSION_FILE}): {exc}") from exc
         try:
-            return TrufoSession(
-                access_token=data["access_token"],
-                refresh_token=data["refresh_token"],
-                on_refresh=save_session,
-            )
+            access_token = data["access_token"]
+            refresh_token = data["refresh_token"]
         except KeyError as exc:
             raise RuntimeError(f"Session file ({SESSION_FILE}) missing key: {exc}") from exc
+
+        expected_refresh = refresh_token
+
+        def _persist_if_unchanged(session: TrufoSession) -> None:
+            nonlocal expected_refresh
+            try:
+                if not SESSION_FILE.exists():
+                    return
+                current = json.loads(SESSION_FILE.read_text(encoding="utf-8"))
+                if current.get("refresh_token") != expected_refresh:
+                    return
+                save_session(session)
+                expected_refresh = session.refresh_token
+            except (OSError, json.JSONDecodeError) as exc:
+                logger.warning("Could not persist refreshed session tokens: %s", exc)
+
+        return TrufoSession(
+            access_token=access_token,
+            refresh_token=refresh_token,
+            on_refresh=_persist_if_unchanged,
+        )
 
     raise RuntimeError(
         f"No session found. Run 'trufo login' or set {_SESSION_ACCESS_TOKEN_ENV_VAR} + {_SESSION_REFRESH_TOKEN_ENV_VAR}."

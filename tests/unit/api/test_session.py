@@ -178,6 +178,16 @@ class TestMakeRequest:
         assert stat.S_IMODE(session_file.stat().st_mode) == 0o600
         assert list(tmp_path.glob("*.tmp")) == []
 
+        # a newer login or logout on disk must not be overwritten by a stale session refresh
+        credentials.save_session(TrufoSession(access_token="other-at", refresh_token="other-rt"))
+        mock_refresh.return_value = TokenPair(access_token="stale-at", refresh_token="stale-rt")
+        loaded._refresh()
+        assert json.loads(session_file.read_text(encoding="utf-8"))["refresh_token"] == "other-rt"
+
+        credentials.clear_session()
+        loaded._refresh()
+        assert not session_file.exists()
+
     @patch("trufo.api.session.refresh_tokens")
     def test_load_session_from_env_does_not_write_file_on_refresh(
         self, mock_refresh, tmp_path, monkeypatch

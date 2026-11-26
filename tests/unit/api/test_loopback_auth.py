@@ -234,11 +234,10 @@ class TestRunLoopbackLogin:
 
             params = parse_qs(urlparse(url).query)
             redirect_uri = params["redirect_uri"][0]
-            state = params["state"][0]
 
             def _hit_callback() -> None:
                 try:
-                    urllib.request.urlopen(f"{redirect_uri}?error=access_denied&state={state}")
+                    urllib.request.urlopen(f"{redirect_uri}?error=access_denied&state=%C3%A9")
                 except urllib.error.HTTPError as exc:
                     response_holder["status"] = exc.code
                     response_holder["body"] = exc.read().decode("utf-8")
