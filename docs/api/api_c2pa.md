@@ -1087,7 +1087,7 @@ value only when you set one, as `SignedInputPolicy` or `SignedIngredientPolicy` 
 | --------------------- | ---------------- | ------ |
 | A readable manifest, valid or not | Kept, with its validation results recorded, unless the source-class check below refuses an input | Kept, with its validation results recorded |
 | A manifest only referenced by URL, which Trufo fetched | As a readable manifest | As a readable manifest |
-| A manifest only referenced by URL, which Trufo did not fetch | The file is signed, or the ingredient added, with the manifest recorded as inaccessible. Refused (400) when the request declares how the file was made | Refused (400) |
+| A manifest only referenced by URL, which Trufo did not fetch | The file is signed, or the ingredient added, with the manifest recorded as inaccessible. Refused (400) when the request declares a source type for the input | Refused (400) |
 | Other data Trufo cannot read, such as a malformed manifest store | Removed: an input is signed as if it carried none, and an ingredient is added without its history. A `redact` or `transcode` action on that input is then refused | Refused (400) |
 
 A kept input becomes the `parentOf` ingredient, opened with `c2pa.opened`, and gets
@@ -1129,20 +1129,21 @@ A manifest is not fetched, with the `<reason>` in the notice or error, when:
 
 | When | `<reason>` |
 | ---- | ---------- |
-| `fetch` is false | `fetching remote manifests is turned off` |
-| The URL is not HTTPS on the default port, or names an IP address | `its URL is not an HTTPS URL on the default port` |
-| The host is not allowed | `its host '<host>' is not on the list of allowed hosts` |
+| `fetch` is false | `fetching remote manifests is turned off in your settings` |
+| The URL is not HTTPS on the default port, or names an IP address | `the manifest URL names an IP address or is not HTTPS on the default port` |
+| The host is not allowed | `'<host>' is not on the list of allowed hosts` |
 | The host has no public address | `'<host>' did not resolve to a public address` |
-| The host answers with a redirect or another status than 200 | `'<host>' answered with HTTP status <status>` |
-| The manifest is over 10 MB | `it is larger than 10 MB` |
-| The request fails or takes over 30 seconds | `the request to '<host>' failed` |
+| The host answers with a redirect or another status than 200 | `'<host>' returned HTTP <status> (only HTTP 200 without redirects is accepted)` |
+| The manifest is over 10 MB | `the manifest at '<host>' exceeds the 10 MB limit` |
+| The request fails or takes over 30 seconds | `the request to '<host>' failed or exceeded the 30-second timeout` |
 
 Under `auto` the file is then signed with the manifest recorded as inaccessible
 (`manifest.inaccessible`) on the `parentOf` ingredient, and the reference is removed
 from the signed file. Trufo cannot check an inaccessible manifest's source class, so
-it refuses the request when it declares how the file was made: with a `creation` or
-`ai_system` entry (or the deprecated `ai_disclosure` entry with `set_source_type`), or
-an ingredient's `digital_source_type`. Under `keep` the request is refused.
+it refuses a request that declares a source type for the input: with a `creation` or
+`ai_system` entry (or the deprecated `ai_disclosure` entry with `set_source_type`).
+Under `keep` the request is refused. An ingredient's `digital_source_type` is refused
+as for any media that carries a manifest, whether or not the manifest was fetched.
 
 
 **Source class.** Under `auto`, with an `ai_system` entry, Trufo refuses an input
@@ -1185,10 +1186,10 @@ replaces the not-validated or untrusted one.
 | An ingredient's manifest did not validate | `The C2PA manifest of ingredient '<title>' did not validate; Trufo kept it with the ingredient, and its validation failures are recorded in the new manifest.` |
 | An ingredient's manifest is valid but untrusted | `The C2PA manifest of ingredient '<title>' is valid but untrusted: its signer is not on the trust lists Trufo checks. Trufo kept it with the ingredient.` |
 | `auto`: an ingredient's C2PA data cannot be read and is removed | `Ingredient '<title>' carries C2PA data that Trufo cannot read, so (per auto mode) Trufo added the ingredient without its C2PA history; validators will report its provenance as unknown.` |
-| The input's manifest was fetched | `The input's C2PA manifest is kept at '<host>', outside the file; Trufo fetched it, embedded it in the signed file, and removed the file's reference to it.` |
-| An ingredient's manifest was fetched | `The C2PA manifest of ingredient '<title>' is kept at '<host>', outside the media; Trufo fetched it and kept it with the ingredient.` |
-| `auto`: the input's manifest was not fetched | `The input's C2PA manifest is only referenced by URL and Trufo could not fetch it: <reason>. So (per auto mode) Trufo signed the input, recorded that manifest as inaccessible, and removed the file's reference to it.` |
-| `auto`: an ingredient's manifest was not fetched | `The C2PA manifest of ingredient '<title>' is only referenced by URL and Trufo could not fetch it: <reason>. So (per auto mode) Trufo added the ingredient and recorded that manifest as inaccessible.` |
+| The input's manifest was fetched | `The input's C2PA manifest is referenced by URL at '<host>'; Trufo fetched it, embedded it in the signed file, and removed the URL reference.` |
+| An ingredient's manifest was fetched | `The C2PA manifest of ingredient '<title>' is referenced by URL at '<host>'; Trufo fetched it and embedded it with the ingredient in the signed file.` |
+| `auto`: the input's manifest was not fetched | `The input's C2PA manifest is only referenced by URL, and Trufo could not fetch it because <reason>. Trufo signed the input (per auto mode), recorded the manifest as inaccessible, and removed the URL reference from the signed file.` |
+| `auto`: an ingredient's manifest was not fetched | `The C2PA manifest of ingredient '<title>' is only referenced by URL, and Trufo could not fetch it because <reason>. Trufo added the ingredient (per auto mode) and recorded the manifest as inaccessible.` |
 
 **Errors:**
 
@@ -1196,10 +1197,9 @@ replaces the not-validated or untrusted one.
 | ---- | ------ | -------- |
 | The input's C2PA data cannot be read: under `keep`, or under either value for a fetched manifest that cannot be read | 400 | `The input carries C2PA data that Trufo cannot read, so Trufo cannot keep or validate it. Please send a copy with intact C2PA data, or contact support@trufo.ai.` |
 | The same, for an ingredient sent as `media` | 400 | `Ingredient '<title>' carries C2PA data that Trufo cannot read, so Trufo cannot validate it. Please send a copy with intact C2PA data, or contact support@trufo.ai.` |
-| `keep`: the input's manifest was not fetched | 400 | `RemoteManifestUnavailable: The input's C2PA manifest is only referenced by URL and Trufo could not fetch it: <reason>. Trufo cannot keep or validate it. Please send a copy with the manifest embedded, or contact support@trufo.ai.` |
-| `auto`, with a `creation` or `ai_system` entry: the input's manifest was not fetched | 400 | `RemoteManifestUnavailable: The input's C2PA manifest is only referenced by URL and Trufo could not fetch it: <reason>. Trufo cannot check that manifest's source class, so it cannot declare how the input was made. Please send a copy with the manifest embedded, or contact support@trufo.ai.` |
-| `keep`: an ingredient's manifest was not fetched | 400 | `RemoteManifestUnavailable: The C2PA manifest of ingredient '<title>' is only referenced by URL and Trufo could not fetch it: <reason>. Trufo cannot validate it. Please send a copy with the manifest embedded, or contact support@trufo.ai.` |
-| `auto`, with the ingredient's `digital_source_type`: its manifest was not fetched | 400 | `RemoteManifestUnavailable: The C2PA manifest of ingredient '<title>' is only referenced by URL and Trufo could not fetch it: <reason>. Trufo cannot check that manifest's source class, so the ingredient cannot be given a 'digital_source_type'. Please send a copy with the manifest embedded, or contact support@trufo.ai.` |
+| `keep`: the input's manifest was not fetched | 400 | `RemoteManifestUnavailable: The input's C2PA manifest is only referenced by URL, and Trufo could not fetch it because <reason>. With 'signed_input_policy' set to 'keep', the manifest is required. Use a copy with the manifest embedded, or set 'signed_input_policy' to 'auto' to sign the input with the manifest recorded as inaccessible.` |
+| `auto`, with a `creation` or `ai_system` entry: the input's manifest was not fetched | 400 | `RemoteManifestUnavailable: The input's C2PA manifest is only referenced by URL, and Trufo could not fetch it because <reason>. Trufo cannot check the manifest's source class, so it cannot declare a source type for the input. Use a copy with the manifest embedded, or remove the source-type declaration (such as 'creation' or 'ai_system').` |
+| `keep`: an ingredient's manifest was not fetched | 400 | `RemoteManifestUnavailable: The C2PA manifest of ingredient '<title>' is only referenced by URL, and Trufo could not fetch it because <reason>. With 'signed_ingredient_policy' set to 'keep', the manifest is required. Use a copy with the manifest embedded, or set 'signed_ingredient_policy' to 'auto' to add the ingredient with its manifest recorded as inaccessible.` |
 | Local mode: the request sets `signed_input_policy` and the engine is older than trufo-provenance 2.2.0 | 400 | `UnsupportedSDKVersion: signed_input_policy requires trufo-provenance 2.2.0 or later. Please upgrade.` |
 | Local mode: the request sets `signed_ingredient_policy` and the engine is older than trufo-provenance 2.2.0 | 400 | `UnsupportedSDKVersion: signed_ingredient_policy requires trufo-provenance 2.2.0 or later. Please upgrade.` |
 | Local mode: the request sets `remote_manifest_settings` and the engine is older than trufo-provenance 2.4.1 | 400 | `UnsupportedSDKVersion: remote_manifest_settings requires trufo-provenance 2.4.1 or later. Please upgrade.` |
