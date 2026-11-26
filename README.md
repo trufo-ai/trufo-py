@@ -6,20 +6,6 @@ Need help choosing an architecture or onboarding? Email [support@trufo.ai](mailt
 
 ---
 
-## Start Here: Which Guide Fits You?
-
-Pick the guide that matches what you are shipping:
-
-| If you are… | Start with |
-| --- | --- |
-| Deciding between managed signing, branded signing, or running your own C2PA signer (and what to build now vs. later) | [Choosing Your C2PA Path](docs/guides/choosing-your-c2pa-path.md) |
-| Labeling AI-generated or AI-edited media for EU AI Act / California SB 942 compliance | [AI Labeling for Compliance](docs/guides/ai-labeling-for-compliance.md) |
-| Stamping brand identity or preserving provenance across DAM, CMS, and creative editing tools | [Brands and Creative Workflows](docs/guides/brands-and-creative-workflows.md) |
-| Operating your own C2PA Generator Product (enrolling certificates, timestamping, OCSP stapling) | [Build Your Own Generator Product](docs/guides/build-your-own-generator-product.md) |
-| Setting up teams, roles, Organization Validation, or multi-brand organization groups | [Account Management](docs/guides/account-management.md) |
-
----
-
 ## Account Setup
 
 Every integration begins at [app.trufo.ai](https://app.trufo.ai):
@@ -39,22 +25,33 @@ For full setup (all API key scopes, environment variables, regions, and Local mo
 
 ---
 
-## Using Trufo With a Coding Agent
+## Quickstart
 
-If you are integrating Trufo with a coding agent (Claude Code, Codex, Cursor, etc.), point your agent at this repository and direct it to the layout below:
+Pick the guide that best suits your use case to get started with Trufo and C2PA.
 
-- **`docs/guides/`** — Use-case guides and best practices (human-first architecture & trade-offs).
-- **`docs/topics/`** — Focused, runnable technical walkthroughs (`.md` + `.py` scripts).
-- **`docs/reference/`** — Complete, normative wire specifications (endpoints, JSON payloads, enums, error codes, limits, format restrictions).
+| If you are... | Guide |
+| --- | --- |
+| Deciding how you want to approach C2PA, picking products & vendors. | [Choosing Your C2PA Path](docs/guides/choosing-your-c2pa-path.md) |
+| Labeling AI-generated or AI-modified media for compliance (EU AI Act). | [AI Labeling for Compliance](docs/guides/ai-labeling-for-compliance.md) |
+| Adding brand identity or preserving provenance in creative workflows. | [Brands and Creative Workflows](docs/guides/brands-and-creative-workflows.md) |
+| Setting up an in-house C2PA Generator Product (certificates, timestamps). | [Build Your Own Generator Product](docs/guides/build-your-own-generator-product.md) |
+| Managing accounts and organizations on Trufo; roles, billing, validation. | [Account Management](docs/guides/account-management.md) |
 
-**Quick map for agents:**
-- Auth, hosts, regions, API key scopes, error envelope → [docs/reference/platform-api.md](docs/reference/platform-api.md)
-- `/c2pa/sign`, S3 tasks, Local mode, `manifest_settings` JSON → [docs/reference/signing-api.md](docs/reference/signing-api.md)
-- Actions (`resize`, `crop`, `trim`, `transcode`, `repackage`, `watermark`, `publish`, `redact`), assertions, `/ai-system/*`, `signed_input_policy` → [docs/reference/actions-and-assertions.md](docs/reference/actions-and-assertions.md)
-- Standalone `/bind/*`, `/content/recover`, `/content/*` records, watermark billing → [docs/reference/watermarking-api.md](docs/reference/watermarking-api.md)
-- EST enrollment, RA endpoints, TSA (`tsa.trufo.ai`), OCSP (`ocsp.trufo.ai`) → [docs/reference/certificates-api.md](docs/reference/certificates-api.md)
-- Supported MIME types, codecs, media action rules, size/pixel limits → [docs/reference/media-formats.md](docs/reference/media-formats.md)
-- Deprecated parameters & sunset dates (do not emit in new integrations) → [docs/reference/deprecations.md](docs/reference/deprecations.md)
+---
+
+## Using a Coding Agent With Trufo
+
+Point your coding agent (Claude Code, Codex, Cursor, etc.) at `https://github.com/trufo-ai/trufo-py` — it can read the SDK and `docs/` directly.
+
+Before an agent can call Trufo on your behalf, complete the human-only steps in [app.trufo.ai](https://app.trufo.ai):
+
+1. **Enable MFA and handle legal/validation steps yourself.** Automated agents cannot complete MFA, submit Organization Validation (OV) or Product Validation, or accept legal agreements (*Trufo Library License* for Local mode, *Created Assertion Acknowledgement* for first-party AI systems).
+2. **Give the agent a scoped API key via environment variables** (start with `c2pa-sign-test` against `https://test.api.trufo.ai` so the agent can build and test without touching production or billing):
+   ```bash
+   export TRUFO_C2PA_SIGN_TEST_API_KEY=<your-c2pa-sign-test-key>
+   ```
+   Only grant production keys (`c2pa-sign-prod`, `sdk-download`, `tsa`, `watermark-prod`) once you are ready to run against production, and keep keys out of source control.
+3. **For certificate/instance management only:** If the agent needs to call Registration Authority endpoints (which require an MFA-verified session rather than an API key), create a `trufo-api` key and approve one interactive sign-in (`TrufoSession.init_session()` or `trufo login`) so the session is saved locally.
 
 ---
 
