@@ -137,7 +137,9 @@ ingredient of the new manifest, with the old manifest's validation results recor
 Under the default `signed_input_policy`, `auto`, C2PA data Trufo cannot read is
 removed, with a notice, and the file signed as if it carried none. `keep` refuses
 such data instead, and changes nothing else without an
-[`ai_system`](3_ai_labeling.md) entry. Both refuse a manifest only referenced by URL.
+[`ai_system`](3_ai_labeling.md) entry. A manifest the file only references by URL is
+fetched from an allowed host and kept in the same way; see
+[Remote manifests](../api/api_c2pa.md#remote-manifests).
 
 ```python
 from trufo.c2pa import SignedInputPolicy

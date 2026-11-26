@@ -36,6 +36,7 @@ from trufo.api.tps.sign_c2pa import (
 from trufo.api.tps.tasks import ExecutionMode
 from trufo.c2pa import (
     ManifestSettings,
+    RemoteManifestSettings,
     SignedIngredientPolicy,
     SignedInputPolicy,
     ThumbnailPolicy,
@@ -335,6 +336,43 @@ class TestLocalC2PASigning:
         assert "signed_ingredient_policy" not in kwargs
         assert "skip_manifest_storage" not in kwargs
         assert "watermark_settings" not in kwargs
+        assert "remote_manifest_settings" not in kwargs
+
+    @pytest.mark.parametrize("signer", _LOCAL_SIGNERS)
+    def test_passes_remote_manifest_settings_to_orchestrator(self, monkeypatch, signer):
+        calls = _install_fake_remote_stack(monkeypatch)
+        settings = RemoteManifestSettings(fetch=False, allowed_hosts=["manifests.example.com"])
+
+        signer("remote-sign-key", b"input-media", remote_manifest_settings=settings)
+
+        assert calls["generate_claim_remote"]["kwargs"]["remote_manifest_settings"] == {
+            "fetch": False,
+            "allowed_hosts": ["manifests.example.com"],
+        }
+
+    @pytest.mark.parametrize("signer", _LOCAL_SIGNERS)
+    def test_refuses_remote_manifest_settings_on_an_older_engine(self, monkeypatch, signer):
+        def generate_claim_remote(api_key, media_bytes, *, actions, assertions):
+            raise AssertionError("the older engine was called")
+
+        monkeypatch.setattr(
+            "trufo.api.tps.sign_c2pa.require_provenance_module",
+            lambda name: types.SimpleNamespace(generate_claim_remote=generate_claim_remote),
+        )
+        with pytest.raises(ValueError) as exc_info:
+            signer(
+                "remote-sign-key", b"input-media", remote_manifest_settings=RemoteManifestSettings()
+            )
+        assert str(exc_info.value) == (
+            "UnsupportedSDKVersion: remote_manifest_settings requires trufo-provenance 2.4.1 or "
+            "later. Please upgrade."
+        )
+
+    @pytest.mark.parametrize("signer", _LOCAL_SIGNERS)
+    def test_refuses_remote_manifest_settings_of_another_type(self, monkeypatch, signer):
+        _install_fake_remote_stack(monkeypatch)
+        with pytest.raises(TypeError, match="remote_manifest_settings"):
+            signer("remote-sign-key", b"input-media", remote_manifest_settings={"fetch": False})
 
     @pytest.mark.parametrize("signer", _LOCAL_SIGNERS)
     def test_passes_caller_warning_stacklevel_to_orchestrator(self, monkeypatch, signer):

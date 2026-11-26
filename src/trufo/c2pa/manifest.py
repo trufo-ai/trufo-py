@@ -3,6 +3,7 @@
 
 """Public settings for C2PA manifest construction."""
 
+import re
 from dataclasses import dataclass
 from enum import Enum
 
@@ -31,6 +32,44 @@ class ManifestSettings:
             self.all_actions_included, bool
         ):
             raise TypeError("all_actions_included must be bool or None.")
+
+
+# the hosts Trufo fetches a remote C2PA manifest from unless the caller names others
+DEFAULT_REMOTE_MANIFEST_HOSTS: tuple[str, ...] = ("cai-manifests.adobe.com",)
+
+# an exact DNS host name: lowercase ASCII labels, at least two, the last starting with a letter
+_HOST_NAME = re.compile(
+    r"(?=.{1,253}\Z)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z](?:[a-z0-9-]{0,61}[a-z0-9])?\Z"
+)
+
+
+@dataclass(frozen=True)
+class RemoteManifestSettings:
+    """Whether, and from which hosts, Trufo fetches a C2PA manifest that a file references by URL.
+
+    A file can carry its manifest's URL, in its XMP ``dcterms:provenance``, in place of the
+    manifest. Signing in Local mode fetches that manifest over HTTPS when its host is one of
+    ``allowed_hosts``, which tells that host that the file is being signed and from which
+    address. Each entry is an exact host name, with no scheme, port, path or wildcard.
+    """
+
+    fetch: bool = True
+    allowed_hosts: tuple[str, ...] = DEFAULT_REMOTE_MANIFEST_HOSTS
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.fetch, bool):
+            raise TypeError("fetch must be bool.")
+        hosts = self.allowed_hosts
+        if not isinstance(hosts, (list, tuple)) or not all(isinstance(h, str) for h in hosts):
+            raise TypeError("allowed_hosts must be a list of host names.")
+        hosts = tuple(host.lower() for host in hosts)
+        for host in hosts:
+            if _HOST_NAME.match(host) is None:
+                raise ValueError(
+                    f"allowed_hosts entry {host!r} is not an exact host name such as "
+                    "'manifests.example.com'."
+                )
+        object.__setattr__(self, "allowed_hosts", hosts)
 
 
 class SignedInputPolicy(str, Enum):

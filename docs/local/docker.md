@@ -135,6 +135,7 @@ curl -s http://127.0.0.1:8080/c2pa/sign \
 | `media_output_path` | Yes | Absolute path for the signed file, inside an output folder |
 | `actions` | Yes | As in [`POST /c2pa/sign`](../api/api_c2pa.md#post-c2pasign) |
 | `assertions`, `manifest_title`, `ingredient_title`, `manifest_settings`, `branded_gp_id`, `signed_input_policy`, `signed_ingredient_policy`, `skip_manifest_storage` | No | As in [`POST /c2pa/sign`](../api/api_c2pa.md#post-c2pasign) |
+| `remote_manifest_settings` | No | Whether and from which hosts a remote manifest is fetched, `{"fetch": false}` or `{"allowed_hosts": ["manifests.example.com"]}`; see [Remote manifests](../api/api_c2pa.md#remote-manifests). 2.4.1 image or later |
 | `watermark_settings` | No | The local watermark profile, `{"profile": "default"}` or `{"profile": "fast"}`; see [Local watermark settings](python.md#local-watermark-settings). Full image, 2.3 or later. |
 
 `actions` and `assertions` take the same entries as in Cloud mode, the media actions
