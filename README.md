@@ -2,26 +2,11 @@
 
 Open-source Python SDK and developer documentation for the Trufo Provenance Platform — C2PA Content Credentials, watermarking, and C2PA Certificate Authority services (certificates, timestamping, and OCSP).
 
+To get started, create an account at [app.trufo.ai/register](https://app.trufo.ai/register) with your organization (which you can update later). Make sure to enable MFA. There, you can see detailed product pricing and run some test API calls to get a sense of how things work.
+
+You may also want to get started on Organization Validation (OV) early at [app.trufo.ai/settings/org/ov](https://app.trufo.ai/settings/org/ov) since it typically takes 2–5 business days to complete.
+
 Need help choosing an architecture or onboarding? Email [support@trufo.ai](mailto:support@trufo.ai).
-
----
-
-## Account Setup
-
-Every integration begins at [app.trufo.ai](https://app.trufo.ai):
-
-1. **Create an account and organization** at [app.trufo.ai/register](https://app.trufo.ai/register).
-2. **Enable MFA** (passkey or authenticator app) in [User Settings](https://app.trufo.ai/settings/user).
-3. **Create a test API key** (e.g., `c2pa-sign-test`) in [Organization Settings → API Access](https://app.trufo.ai/settings/org#api-access) so you can develop immediately against `https://test.api.trufo.ai` — no plan or validation needed for test signing.
-4. **Start Organization Validation (OV) early** at [app.trufo.ai/settings/org/ov](https://app.trufo.ai/settings/org/ov) — it gates production signing and certificates and typically takes a few business days.
-
-Install the Python SDK (Python 3.10+):
-
-```bash
-pip install trufo
-```
-
-For full setup (all API key scopes, environment variables, regions, and Local mode), see [Setup and Credentials](docs/topics/setup.md).
 
 ---
 
@@ -39,19 +24,21 @@ Pick the guide that best suits your use case to get started with Trufo and C2PA.
 
 ---
 
-## Using a Coding Agent With Trufo
+## Agentic Connection
 
-Point your coding agent (Claude Code, Codex, Cursor, etc.) at `https://github.com/trufo-ai/trufo-py` — it can read the SDK and `docs/` directly.
+Point your agent at `https://github.com/trufo-ai/trufo-py` so it can read the SDK and documentation directly. You will also want to install the Python SDK:
 
-Before an agent can call Trufo on your behalf, complete the human-only steps in [app.trufo.ai](https://app.trufo.ai):
+```bash
+pip install trufo
+```
 
-1. **Enable MFA and handle legal/validation steps yourself.** Automated agents cannot complete MFA, submit Organization Validation (OV) or Product Validation, or accept legal agreements (*Trufo Library License* for Local mode, *Created Assertion Acknowledgement* for first-party AI systems).
-2. **Give the agent a scoped API key via environment variables** (start with `c2pa-sign-test` against `https://test.api.trufo.ai` so the agent can build and test without touching production or billing):
-   ```bash
-   export TRUFO_C2PA_SIGN_TEST_API_KEY=<your-c2pa-sign-test-key>
-   ```
-   Only grant production keys (`c2pa-sign-prod`, `sdk-download`, `tsa`, `watermark-prod`) once you are ready to run against production, and keep keys out of source control.
-3. **For certificate/instance management only:** If the agent needs to call Registration Authority endpoints (which require an MFA-verified session rather than an API key), create a `trufo-api` key and approve one interactive sign-in (`TrufoSession.init_session()` or `trufo login`) so the session is saved locally.
+Before an agent can call Trufo on your behalf, you will need to complete a few steps:
+
+1. Create an account and enable MFA.
+2. Complete any legal / validation steps.
+3. Create scoped API keys as needed in [Organization Settings → API Access](https://app.trufo.ai/settings/org#api-access).
+
+In particular, you will want to create a `trufo-api` key so the agent can establish an MFA-verified session via `trufo login` (giving it access to your org's read/management endpoints, test flows, and certificate/instance management). For the actual C2PA operations, there are two main methods based on where media processing takes place: local and cloud. If you plan for local, you will also want to accept the Trufo Library License at [Organization Settings → Agreements](https://app.trufo.ai/settings/org#agreements) and create an `sdk-download` key. For all API key scopes, regions, and environment variables, see [Setup and Credentials](docs/topics/setup.md).
 
 ---
 
