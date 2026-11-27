@@ -1,12 +1,12 @@
 # Copyright 2025-2026 Trufo, Inc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-"""Quickstart: label AI-generated media by naming a registered AI system.
+"""Companion script: label AI-generated media by naming a registered AI system.
 
 Signs on the test host with one ai_system assertion. An input without a C2PA
 manifest is labeled as AI-generated.
 
-See docs/quickstart/3_ai_labeling.md for details.
+See docs/topics/ai-labeling.md for details.
 Requires a c2pa-sign-test API key — set TRUFO_C2PA_SIGN_TEST_API_KEY
 or save it to ~/.trufo/credentials/c2pa_sign_test_api_key — and an AI system
 registered with POST /ai-system/add.

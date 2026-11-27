@@ -42,7 +42,7 @@ Trufo's own code is not under the GPL or LGPL. Debian's FFmpeg and `heif-enc` wi
 As distributor, Trufo provides:
 
 - **License texts and notices** in each image: its NOTICE, each Debian package's copyright and license in `/usr/share/doc/`, and this folder.
-- **A source image** for each image version, in the image's repository (`ghcr.io/trufo-ai/trufo-local`), tagged with the image's exact version plus `-source`: `2.2.0-source` for `2.2.0`, `2.2.0-full-source` for `2.2.0-full`. It holds the complete corresponding source code of the image's GPL-, LGPL- and MPL-licensed software. The image's `ai.trufo.trufo-local.source` label names it, and [Licenses and Source](https://github.com/trufo-ai/trufo-py/blob/main/docs/local/docker.md#licenses-and-source) shows how to extract it.
+- **A source image** for each image version, in the image's repository (`ghcr.io/trufo-ai/trufo-local`), tagged with the image's exact version plus `-source`: `2.2.0-source` for `2.2.0`, `2.2.0-full-source` for `2.2.0-full`. It holds the complete corresponding source code of the image's GPL-, LGPL- and MPL-licensed software. The image's `ai.trufo.trufo-local.source` label names it, and [Licenses and Source](https://github.com/trufo-ai/trufo-py/blob/main/docs/topics/signing-local-docker.md#licenses-and-source) shows how to extract it.
 - **A written offer** in each NOTICE, to provide the same source on request for at least three years after Trufo last distributes that image version.
 
 ## Running and Redistributing an Image

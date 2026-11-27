@@ -1,12 +1,13 @@
 # Copyright 2025-2026 Trufo, Inc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-"""Quickstart: procure a C2PA certificate from Trufo.
+"""Companion script: procure a C2PA certificate from Trufo.
 
 Part 1 — Dummy certificate (no account required).
 Part 2 — Production certificate (requires account, OV, PV, subscription).
 
-See docs/quickstart/1_certs.md for prerequisites and explanations.
+See docs/topics/certificates.md and docs/reference/certificates-api.md
+for prerequisites and explanations.
 """
 
 from pathlib import Path

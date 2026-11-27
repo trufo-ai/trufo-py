@@ -1,83 +1,84 @@
 # Trufo
 
-Open-source library to simplify interactions with the Trufo Provenance Service (TPS).
+Open-source Python SDK and developer documentation for the Trufo Provenance Platform — C2PA Content Credentials, watermarking, and C2PA Certificate Authority services (certificates, timestamping, and OCSP).
 
-The Trufo Provenance Platform is under active development, with new provenance features and product workflows being added regularly. If you are building against the platform and have questions about the right integration path, please contact [support@trufo.ai](mailto:support@trufo.ai). We are happy to help.
+To get started, create an account at [app.trufo.ai/register](https://app.trufo.ai/register) with your organization (which you can update later). Make sure to enable MFA. There, you can see detailed product pricing and run some test API calls to get a sense of how things work.
 
-## Install
+You may also want to get started on Organization Validation (OV) early at [app.trufo.ai/settings/org/ov](https://app.trufo.ai/settings/org/ov) since it typically takes 2–5 business days to complete.
+
+Need help choosing an architecture or onboarding? Email [support@trufo.ai](mailto:support@trufo.ai).
+
+---
+
+## Quickstart
+
+Pick the guide that best suits your use case to get started with Trufo and C2PA.
+
+| If you are... | Guide |
+| --- | --- |
+| Deciding how you want to approach C2PA, picking products & vendors. | [1. Choosing Your C2PA Path](docs/guides/1_choosing-your-c2pa-path.md) |
+| Managing accounts and organizations on Trufo; roles, billing, validation. | [2. Account Management](docs/guides/2_account-management.md) |
+| Labeling AI-generated or AI-modified media for compliance (EU AI Act). | [3. AI Labeling for Compliance](docs/guides/3_ai-labeling-for-compliance.md) |
+| Adding brand identity or preserving provenance in creative workflows. | [4. Brands and Creative Workflows](docs/guides/4_brands-and-creative-workflows.md) |
+| Setting up an in-house C2PA Generator Product (certificates, timestamps). | [5. Build Your Own Generator Product](docs/guides/5_build-your-own-generator-product.md) |
+
+---
+
+## Agentic Connection
+
+Point your agent at `https://github.com/trufo-ai/trufo-py` so it can read the SDK and documentation directly. You will also want to install the Python SDK:
 
 ```bash
 pip install trufo
 ```
 
-## Sign a File
+Before an agent can call Trufo on your behalf, you will need to complete a few steps:
 
-With a `c2pa-sign-test` API key from [app.trufo.ai](https://app.trufo.ai) (see the [Auth Quickstart](docs/quickstart/0_setup.md)), stored first:
+1. Create an account and enable MFA.
+2. Complete any legal / validation steps.
+3. Create scoped API keys as needed in [Organization Settings → API Access](https://app.trufo.ai/settings/org#api-access).
 
-```bash
-trufo set-api-key c2pa-sign-test <your-api-key>
-```
+In particular, you will want to create a `trufo-api` key so the agent can establish an MFA-verified session via `trufo login` (giving it access to your org's read/management endpoints, test flows, and certificate/instance management). Agents running headless, over SSH, or in a container should use `trufo login --device` (device code flow) so a person can approve the sign-in from any browser. For the actual C2PA operations, there are two main methods based on where media processing takes place: local and cloud. If you plan for local, you will also need an `sdk-download` key, which requires an eligible plan (C2PA Signing or Watermark API, or test SDK access from [support@trufo.ai](mailto:support@trufo.ai)) and accepting the Trufo Library License at [Organization Settings → Agreements](https://app.trufo.ai/settings/org#agreements). For all API key scopes, regions, and environment variables, see [Setup and Credentials](docs/topics/setup.md).
 
-```python
-from pathlib import Path
+---
 
-from trufo import sign_c2pa_cloud_test
-from trufo.util.credentials import TrufoAPIKey, load_api_key
+## Documentation Map
 
-api_key = load_api_key(TrufoAPIKey.C2PA_SIGN_TEST)
+### Guides (by use case)
 
-signed_bytes = sign_c2pa_cloud_test(api_key, Path("input.jpg").read_bytes())
-Path("signed.jpg").write_bytes(signed_bytes)
-```
+1. [Choosing Your C2PA Path](docs/guides/1_choosing-your-c2pa-path.md)
+2. [Account Management](docs/guides/2_account-management.md)
+3. [AI Labeling for Compliance](docs/guides/3_ai-labeling-for-compliance.md)
+4. [Brands and Creative Workflows](docs/guides/4_brands-and-creative-workflows.md)
+5. [Build Your Own Generator Product](docs/guides/5_build-your-own-generator-product.md)
 
-That is a complete C2PA signature — Trufo assembles and signs the manifest, so you need no certificate of your own. Swap in `sign_c2pa_cloud()` with a `c2pa-sign-prod` key for production-trusted output. See the [Signing Quickstart](docs/quickstart/2_c2pa_signing.md).
+### Topics (by technical capability)
 
-## What You Can Do
+| Topic | Covers |
+| --- | --- |
+| [Setup and Credentials](docs/topics/setup.md) | Installing `trufo`, hosts, API key scopes, regions |
+| [Cloud Signing](docs/topics/signing-cloud.md) | Direct signing, S3 async tasks, signed inputs, warnings |
+| [Local Signing (Python SDK)](docs/topics/signing-local-python.md) | Keeping media on your machine with `trufo[local-sign-only]` / `trufo[local-full]` |
+| [Local Signing (Docker)](docs/topics/signing-local-docker.md) | Self-hosted HTTP sidecar (`ghcr.io/trufo-ai/trufo-local`) for any language |
+| [Storage Options and Privacy](docs/topics/storage-options.md) | `skip_manifest_storage`, thumbnails, EU residency, soft-binding storage, remote manifests |
+| [C2PA Manifests, Actions, and Assertions](docs/topics/c2pa-manifests.md) | Manifest settings, created vs. gathered, actions, digital source types, software agents, C2PA/CAWG & custom assertions |
+| [AI Labeling](docs/topics/ai-labeling.md) | Registering AI systems, `ai_system` assertions, `signed_input_policy` |
+| [CAWG Identity and Metadata](docs/topics/cawg-identity.md) | `cawg_identity`, `cawg_metadata`, `cawg_training` |
+| [Ingredients and Redaction](docs/topics/ingredients-and-redaction.md) | Declaring source assets, action histories, redacting assertions |
+| [Watermarking and Recovery](docs/topics/watermarking.md) | Integrated watermarking, standalone `/bind/*`, recovery, content records |
+| [Certificates](docs/topics/certificates.md) | Dummy certs, test flow, production EST enrollment (`c2pa-l1` / `c2pa-l2`), KMS, rotation, revocation |
+| [Timestamping and OCSP](docs/topics/timestamping.md) | RFC 3161 timestamping (`tsa.trufo.ai`), OCSP stapling (`ocsp.trufo.ai`), `c2pa-rs` & OpenSSL wiring |
+| [Verification](docs/topics/verification.md) | Verifying signed assets and recovered manifests in local & CI pipelines |
+| [Error Handling, Warnings, and Retries](docs/topics/error-handling.md) | Exceptions, `TrufoServerWarning`, retry/idempotency rules, async task recovery |
 
-- **Sign C2PA manifests** — in [Cloud mode](docs/quickstart/2_c2pa_signing.md), or in [Local mode](#c2pa-signing-local) so media never leaves your machine
-- **Label AI-generated content** by naming the [registered AI system](docs/quickstart/3_ai_labeling.md) that generates or modifies it
-- **Stamp organization identity and metadata** via [CAWG](docs/quickstart/4_cawg_publish.md)
-- **Embed and recover watermarks** that [survive manifest stripping](docs/quickstart/6_watermarking.md), with Trufo signing or your own
-- **Manage your content records** — look up, list, and switch off the marks you keep resolvable ([content records](docs/api/api_c2pa.md#content-records))
-- **Declare source assets, or redact** from provenance history ([ingredients](docs/quickstart/5_ingredients.md))
-- **Enrol your own C2PA certificates** for a generator product ([CSRs](docs/quickstart/1_certs.md))
+### Reference (normative specifications)
 
-## C2PA Signing, Local
-
-In Local mode, your media stays on your machine: Trufo's engine builds the manifest locally, and Trufo receives the signing instructions and signs the claim. Two ways to run it:
-
-- **Python SDK:** `sign_c2pa_local()` with the `trufo[local-sign-only]` or `trufo[local-full]` extra; `local-full` adds local watermark embedding. See [Local mode with the Python SDK](docs/local/python.md).
-- **Docker image:** `ghcr.io/trufo-ai/trufo-local`, an HTTP service on your machine that signs files by path, for callers in any language; the full image (`2.4-full`) adds watermark embedding. See [Local mode with the Docker image](docs/local/docker.md).
-
-## Workflow Examples (Quickstart)
-
-There are a number of documents to get you started quickly with specific use cases:
-
-
-| # | Use case                        | Quickstart                                                           |
-| - | ------------------------------- | -------------------------------------------------------------------- |
-| 0 | Setup — install and credentials | [0_setup.md](docs/quickstart/0_setup.md)                             |
-| 1 | Certificates (your own signer)  | [1_certs.md](docs/quickstart/1_certs.md)                             |
-| 2 | C2PA signing                    | [2_c2pa_signing.md](docs/quickstart/2_c2pa_signing.md)               |
-| 3 | AI labeling                     | [3_ai_labeling.md](docs/quickstart/3_ai_labeling.md)                 |
-| 4 | Organization stamping (CAWG)    | [4_cawg_publish.md](docs/quickstart/4_cawg_publish.md)               |
-| 5 | Ingredients & redaction         | [5_ingredients.md](docs/quickstart/5_ingredients.md)                 |
-| 6 | Watermarking & recovery         | [6_watermarking.md](docs/quickstart/6_watermarking.md)               |
-| 7 | Organizations, people & roles   | [7_organizations.md](docs/quickstart/7_organizations.md)             |
-
-Most integrations need only 0 and 2; quickstart 1 is for teams that operate their own C2PA generator product and sign with their own certificates.
-
-
-## Reference Documentation
-
-The full reference documentation is spread across the following files:
-
-| Document                                       | Covers                                                                    |
-| ---------------------------------------------- | ------------------------------------------------------------------------- |
-| [docs/api/api_trufo.md](docs/api/api_trufo.md) | Accounts, organizations, MFA, API keys and scopes, Organization Validation, errors, regions |
-| [docs/api/api_c2pa.md](docs/api/api_c2pa.md)   | C2PA signing in Cloud and Local modes, actions and assertions, standalone binding, watermark recovery, content records, assertion records |
-| [docs/local/python.md](docs/local/python.md)   | C2PA Signing in Local mode with the Python SDK: extras, private package index, system packages |
-| [docs/local/docker.md](docs/local/docker.md)   | C2PA Signing in Local mode with the Docker image: setup, settings, folders, errors, operations |
-| [docs/api/media_format_support.md](docs/api/media_format_support.md) | C2PA and watermark format support, codecs, image and track restrictions |
-| [docs/api/api_certs.md](docs/api/api_certs.md) | Certificate enrollment (EST), OCSP, timestamping, and the Registration Authority |
-| [docs/cli.md](docs/cli.md)                     | CLI credential management                                                 |
+- [Platform API](docs/reference/platform-api.md)
+- [Account, Organization, and Billing API](docs/reference/account-and-org-api.md)
+- [Signing API](docs/reference/signing-api.md)
+- [Actions and Assertions](docs/reference/actions-and-assertions.md)
+- [Watermarking and Content API](docs/reference/watermarking-api.md)
+- [Certificates, TSA, and OCSP API](docs/reference/certificates-api.md)
+- [Media Format Support](docs/reference/media-formats.md)
+- [CLI Reference](docs/reference/cli.md)
+- [Deprecations](docs/reference/deprecations.md)

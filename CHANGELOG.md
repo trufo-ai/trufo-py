@@ -14,7 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   validates it against the file and embeds it in the signed file, which no longer carries
   the reference. `RemoteManifestSettings` (`trufo.c2pa`) turns fetching off or replaces
   the hosts in Local mode. See
-  [Remote manifests](docs/api/api_c2pa.md#remote-manifests).
+  [Remote manifests](docs/reference/actions-and-assertions.md#remote-manifests).
 - In Local mode, this needs trufo-provenance 2.4.1 or later.
 
 ### Changed
