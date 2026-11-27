@@ -16,11 +16,14 @@ Pick the guide that best suits your use case to get started with Trufo and C2PA.
 
 | If you are... | Guide |
 | --- | --- |
-| Deciding how you want to approach C2PA, picking products & vendors. | [1. Choosing Your C2PA Path](docs/guides/1_choosing-your-c2pa-path.md) |
-| Managing accounts and organizations on Trufo; roles, billing, validation. | [2. Account Management](docs/guides/2_account-management.md) |
-| Labeling AI-generated or AI-modified media for compliance (EU AI Act). | [3. AI Labeling for Compliance](docs/guides/3_ai-labeling-for-compliance.md) |
-| Adding brand identity or preserving provenance in creative workflows. | [4. Brands and Creative Workflows](docs/guides/4_brands-and-creative-workflows.md) |
-| Setting up an in-house C2PA Generator Product (certificates, timestamps). | [5. Build Your Own Generator Product](docs/guides/5_build-your-own-generator-product.md) |
+| Choosing between Trufo signing, Branded GP, and your own signer. | [1. Choose Your C2PA Route](docs/guides/1-choose-your-c2pa-route.md) |
+| Setting up your account, org, OV, billing, API keys, and MFA login. | [2. Trufo Account Setup](docs/guides/2-trufo-account-setup.md) |
+| Setting up Cloud/Local signing, PV, BPV, test routes, and prod routes. | [3. Product Signing Setup](docs/guides/3-product-signing-setup.md) |
+| Labeling AI-generated or AI-modified media for compliance. | [4. AI Labeling and Compliance](docs/guides/4-ai-labeling-compliance.md) |
+| Enrolling C2PA Claim Signing certificates for your own signer. | [5. BYO C2PA Certificates](docs/guides/5-byo-c2pa-certificates.md) |
+| Enrolling CAWG identity certificates for your own signer. | [6. BYO CAWG Certificates](docs/guides/6-byo-cawg-certificates.md) |
+| Adding RFC 3161 timestamps and OCSP stapling to your own signer. | [7. BYO Timestamps and OCSP](docs/guides/7-byo-timestamps-and-ocsp.md) |
+| Embedding and recovering invisible watermarks (managed or BYO). | [8. Watermarking with Pawprint](docs/guides/8-watermarking-with-pawprint.md) |
 
 ---
 
@@ -44,13 +47,16 @@ In particular, you will want to create a `trufo-api` key so the agent can establ
 
 ## Documentation Map
 
-### Guides (by use case)
+### Guides (end-to-end setup)
 
-1. [Choosing Your C2PA Path](docs/guides/1_choosing-your-c2pa-path.md)
-2. [Account Management](docs/guides/2_account-management.md)
-3. [AI Labeling for Compliance](docs/guides/3_ai-labeling-for-compliance.md)
-4. [Brands and Creative Workflows](docs/guides/4_brands-and-creative-workflows.md)
-5. [Build Your Own Generator Product](docs/guides/5_build-your-own-generator-product.md)
+1. [Choose Your C2PA Route](docs/guides/1-choose-your-c2pa-route.md)
+2. [Trufo Account Setup](docs/guides/2-trufo-account-setup.md)
+3. [Product Signing Setup](docs/guides/3-product-signing-setup.md)
+4. [AI Labeling and Compliance](docs/guides/4-ai-labeling-compliance.md)
+5. [BYO C2PA Certificates](docs/guides/5-byo-c2pa-certificates.md)
+6. [BYO CAWG Certificates](docs/guides/6-byo-cawg-certificates.md)
+7. [BYO Timestamps and OCSP](docs/guides/7-byo-timestamps-and-ocsp.md)
+8. [Watermarking with Pawprint](docs/guides/8-watermarking-with-pawprint.md)
 
 ### Topics (by technical capability)
 

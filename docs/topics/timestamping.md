@@ -126,4 +126,4 @@ Pass the raw bytes of `ocsp_response.der` into your signer's `ocsp_val()` hook.
 
 - Full TSA and OCSP wire specification, error codes, and policy discovery (`GET /policy`): [Timestamp Authority](../reference/certificates-api.md#timestamp-authority-rfc-3161) and [OCSP Responder](../reference/certificates-api.md#ocsp-responder-rfc-6960) in the Certificates, TSA, and OCSP API reference
 - Certificate enrollment, rotation, and revocation: [Certificates](certificates.md)
-- Generator product architecture and TSA sizing: [Build Your Own Generator Product](../guides/5_build-your-own-generator-product.md)
+- End-to-end TSA and OCSP setup: [BYO Timestamps and OCSP](../guides/7-byo-timestamps-and-ocsp.md)

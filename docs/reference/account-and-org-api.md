@@ -66,7 +66,7 @@ Roles are `"owner"`, `"admin"`, and `"member"`.
 
 ## Organization Groups and Sub-Organizations
 
-These endpoints manage multi-brand organization groups (see [Account Management](../guides/2_account-management.md#5-multi-brand-setup-standalone-vs-organization-groups)). Management endpoints require an active **management organization** session (`403 ManagementOrgRequired` otherwise).
+These endpoints manage multi-brand organization groups (see [Trufo Account Setup](../guides/2-trufo-account-setup.md#standalone-organization-or-organization-group)). Management endpoints require an active **management organization** session (`403 ManagementOrgRequired` otherwise).
 
 | Endpoint | Auth | Request | Response |
 | --- | --- | --- | --- |
@@ -140,4 +140,4 @@ Product identifiers (`tp`) accepted by pricing and subscription endpoints:
 
 - Platform conventions, auth, and error codes: [platform-api.md](platform-api.md)
 - Certificates, PV/BPV drafts, domain validation, TSA, and OCSP: [certificates-api.md](certificates-api.md)
-- Account and org-group best practices: [Account Management](../guides/2_account-management.md)
+- Account and organization setup: [Trufo Account Setup](../guides/2-trufo-account-setup.md)
