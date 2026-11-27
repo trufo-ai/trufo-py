@@ -101,6 +101,7 @@ curl -s http://127.0.0.1:8080/c2pa/sign \
 | `media_output_path` | Yes | Absolute path inside `TRUFO_LOCAL_OUTPUT_DIRS` |
 | `actions` | Yes | Same schema as [Actions and Assertions](../reference/actions-and-assertions.md) |
 | `assertions`, `manifest_settings`, `manifest_title` / `ingredient_title` (top-level aliases; do not combine with the same field in `manifest_settings`), `branded_gp_id`, `signed_input_policy`, `signed_ingredient_policy`, `skip_manifest_storage` | No | Same schema as [Signing API](../reference/signing-api.md) |
+| `remote_manifest_settings` | No | `{"fetch": false}` or `{"allowed_hosts": ["manifests.example.com"]}` (`2.4.1` image or later); see [Remote Manifests](../reference/actions-and-assertions.md#remote-manifests) |
 | `watermark_settings` | No | `{"profile": "default"}` or `{"profile": "fast"}` (`2.4-full` only) |
 
 **Important path rules:**

@@ -103,7 +103,9 @@ Stored content records can be inspected or withdrawn via `/content/get`, `/conte
 
 ## Remote Manifests
 
-Trufo embeds C2PA manifests directly inside the signed media file. Hosting manifests remotely (external manifest URLs rather than embedded JUMBF) is not supported on signing; if an incoming file references an external manifest by URL, Trufo refuses it (`400`) — see [Verification](verification.md#4-incoming-signed-files-and-remote-manifests).
+Trufo always embeds C2PA manifests directly inside its signed output files (hosting new manifests remotely at an external URL is not supported on signing).
+
+When an **incoming** input file or ingredient references a remote manifest by URL (via XMP `dcterms:provenance`, such as files saved by Adobe Photoshop), Trufo fetches it from allowed HTTPS hosts (`cai-manifests.adobe.com` by default), validates it, embeds it in the signed file's history, and removes the URL reference. Note that fetching reveals to that host that the file is being signed and from which IP address. In Local mode (`trufo-provenance` 2.4.1+), pass `remote_manifest_settings=RemoteManifestSettings(fetch=False)` to disable outbound fetches entirely or `allowed_hosts=[...]` to restrict them to your own hosts — see [Remote Manifests](../reference/actions-and-assertions.md#remote-manifests).
 
 ---
 

@@ -131,6 +131,7 @@ In raw REST or `trufo-local` Docker integrations, inspect the `warnings` array o
 | `400` | `MixedCredentials` | Sent both `X-API-Key` and `Authorization: Bearer`; send exactly one |
 | `400` | `{"code": "task_required", ...}` | File > 10 MB, or media action on audio/video/PDF/SVG in `REQUEST` mode; use `execution_mode="task"` (or Local mode on test host) |
 | `400` | `ManifestStorageRequired` | Combined `per_embed` watermarking with `skip_manifest_storage=True`; drop `skip_manifest_storage` or use `per_ai_system` |
+| `400` | `RemoteManifestUnavailable: ...` | Input or ingredient referenced a remote manifest that could not be fetched (under `keep`, or under `auto` with `creation`/`ai_system`); embed the manifest or allow the host in Local mode |
 | `400` | `Conflict: ...` | Incompatible combination (e.g., `transcode`/`repackage` with `c2pa.created`, or `all_actions_included: true` with `parentOf` without `action_history`) |
 | `400` | `UnsupportedSDKVersion` | Local engine/SDK too old; upgrade `trufo-provenance` or `ghcr.io/trufo-ai/trufo-local:2.4` |
 | `401` | `TokenExpired` | Access token (~2h lifetime) expired; refresh via `/account/refresh` or `TrufoSession` |

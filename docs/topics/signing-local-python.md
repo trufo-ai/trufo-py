@@ -82,7 +82,7 @@ api_key = load_api_key(TrufoAPIKey.C2PA_SIGN_PROD)
 signed_bytes = sign_c2pa_local(api_key, media_bytes)
 ```
 
-Both helpers take `api_key` and `media_bytes` positionally; everything else is keyword-only: `actions`, `assertions`, `manifest_title` / `ingredient_title`, `manifest_settings`, `watermark_settings`, `branded_gp_id`, `signed_input_policy`, `signed_ingredient_policy`, `skip_manifest_storage`, and `trufo_api_url`. Cloud-only parameters (`execution_mode`, `mime_type`, `wait_seconds`) are not accepted. Non-fatal notices are emitted as `TrufoServerWarning`, matching Cloud mode.
+Both helpers take `api_key` and `media_bytes` positionally; everything else is keyword-only: `actions`, `assertions`, `manifest_title` / `ingredient_title`, `manifest_settings`, `watermark_settings`, `branded_gp_id`, `signed_input_policy`, `signed_ingredient_policy`, `remote_manifest_settings`, `skip_manifest_storage`, and `trufo_api_url`. `remote_manifest_settings` (`RemoteManifestSettings` from `trufo.c2pa`, requires `trufo-provenance` 2.4.1+) controls whether and from which hosts Trufo fetches manifests referenced by URL — it runs locally and is not sent to Trufo (see [Remote Manifests](../reference/actions-and-assertions.md#remote-manifests)). Cloud-only parameters (`execution_mode`, `mime_type`, `wait_seconds`) are not accepted. Non-fatal notices are emitted as `TrufoServerWarning`, matching Cloud mode.
 
 ### Minimizing data sent to Trufo
 

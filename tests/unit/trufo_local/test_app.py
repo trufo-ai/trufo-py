@@ -174,6 +174,7 @@ def test_accepted(sign, folders, engine, settings):
         "branded_gp_id": "gp_1",
         "signed_input_policy": "keep",
         "signed_ingredient_policy": "auto",
+        "remote_manifest_settings": {"fetch": True, "allowed_hosts": ["manifests.example.com"]},
         "skip_manifest_storage": True,
     }
     if settings is not None:

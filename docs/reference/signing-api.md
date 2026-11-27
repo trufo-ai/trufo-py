@@ -100,6 +100,7 @@ See [Platform API](platform-api.md) for hosts, auth headers, regions, and common
 | 400 | `ImageTooLarge: ...` | Image exceeds 400 megapixels |
 | 400 | `Conflict: ...` | Incompatible combination (e.g., `transcode`/`repackage` with `c2pa.created`, or `all_actions_included: true` with `parentOf` without `action_history`) |
 | 400 | `ManifestStorageRequired: ...` | `per_embed` watermark combined with `skip_manifest_storage: true` |
+| 400 | `RemoteManifestUnavailable: ...` | Input or ingredient referenced a remote manifest that could not be fetched (under `keep`, or under `auto` with `creation`/`ai_system`) |
 | 400 | `UnsupportedSDKVersion: ...` | Local mode engine/SDK too old for a requested feature or past support |
 | 403 | `MissingOrganizationValidation` | Production signing before OV approval |
 | 403 | `BPVNotActive: <reason>` | Branded Product Validation not active for `branded_gp_id` |
@@ -164,13 +165,14 @@ Poll an asynchronous `c2pa_sign` or `watermark` task on the **same API region** 
 Local mode runs through `trufo-provenance` (via `sign_c2pa_local()` / `sign_c2pa_local_test()` in Python or `ghcr.io/trufo-ai/trufo-local` in Docker). The underlying multi-step client/server signing protocol is internal to the engine and not a direct HTTP API.
 
 - **Generator info:** Records the local host OS and kernel release (e.g., `Linux 6.8.0-45-generic`); this value is sent to Trufo as part of the claim.
-- **Docker HTTP endpoint (`POST http://127.0.0.1:8080/c2pa/sign`):** Replaces `media_input` with `media_input_path` and `media_output_path` (absolute paths inside `TRUFO_LOCAL_INPUT_DIRS` / `TRUFO_LOCAL_OUTPUT_DIRS`) and accepts optional `watermark_settings: {"profile": "default" | "fast"}`. Returns `{"media_output_path": "...", "warnings": []}`. Ingredient `media` is still sent as base64 inside the JSON `assertions`; it stays on your host (the container only sends its hashes and lengths to Trufo during claim setup). The container serves only `/c2pa/sign` and `/health`; `GET /health` returns `status`, `version`, `engine_version`, and — on `-full` images — `watermark_engine_version`.
+- **Docker HTTP endpoint (`POST http://127.0.0.1:8080/c2pa/sign`):** Replaces `media_input` with `media_input_path` and `media_output_path` (absolute paths inside `TRUFO_LOCAL_INPUT_DIRS` / `TRUFO_LOCAL_OUTPUT_DIRS`) and accepts optional `remote_manifest_settings` (`{"fetch": bool, "allowed_hosts": [...]}`) and `watermark_settings: {"profile": "default" | "fast"}`. Returns `{"media_output_path": "...", "warnings": []}`. Ingredient `media` is still sent as base64 inside the JSON `assertions`; it stays on your host (the container only sends its hashes and lengths to Trufo during claim setup). The container serves only `/c2pa/sign` and `/health`; `GET /health` returns `status`, `version`, `engine_version`, and — on `-full` images — `watermark_engine_version`.
 - **Minimum engine versions by feature:**
   - `2.2.0+`: `ai_system`, `signed_input_policy`, `signed_ingredient_policy`
   - `2.3.0+`: `skip_manifest_storage`
   - `2.3.1+`: `c2pa_metadata`, `ingredient.data`, `creation.description`, `c2pa.translated` `parameters`, `plus`/`schema`/`xmpDM`/`xmpRights` in `cawg_metadata`
   - `2.3.2+`: `c2pa.transcoded` / `c2pa.repackaged` in `action_history`
   - `2.4.0+`: `resize`, `crop`, `trim`, `repackage`, `transcode` tuning parameters (`quality`, `crf`, `video_codec`, `audio_codec`, `audio_bitrate`), `all_actions_included: true` conflict check on `parentOf` without `action_history`
+  - `2.4.1+`: `remote_manifest_settings` (see [Remote Manifests](actions-and-assertions.md#remote-manifests))
 
 ---
 

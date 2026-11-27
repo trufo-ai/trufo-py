@@ -146,8 +146,8 @@ signed_bytes = sign_c2pa_cloud_test(api_key, media_bytes, manifest_settings=sett
 
 When the input already carries a C2PA manifest, Trufo keeps it as the `parentOf` ingredient and records its validation results in the new manifest:
 
-- **`auto` (default):** Keeps readable manifests (unless an `ai_system` assertion conflicts with a `camera_captured` or `human_created` input), and strips unreadable/corrupt C2PA data with a warning.
-- **`keep`:** Refuses unreadable C2PA data (`400`) and skips the `ai_system` source-class check.
+- **`auto` (default):** Keeps readable manifests (unless an `ai_system` assertion conflicts with a `camera_captured` or `human_created` input), fetches remote manifests from allowed hosts (recording them as inaccessible if unfetched, unless a source type is declared), and strips unreadable/corrupt C2PA data with a warning.
+- **`keep`:** Refuses unreadable C2PA data (`400`) and unfetched remote manifests (`400 RemoteManifestUnavailable`), and skips the `ai_system` source-class check. See [Remote Manifests](../reference/actions-and-assertions.md#remote-manifests).
 
 ```python
 from trufo.c2pa import SignedInputPolicy

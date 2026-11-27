@@ -218,8 +218,52 @@ Requires `branded_gp_id` and an unsigned input (cannot combine with `parentOf` o
 | Existing C2PA data | `"auto"` (default) | `"keep"` |
 | --- | --- | --- |
 | Readable manifest (valid or invalid) | Kept as `parentOf` with validation results recorded (unless `ai_system` source-class check refuses an input) | Kept with validation results recorded |
-| Manifest referenced only by URL | Refused (`400`) | Refused (`400`) |
+| Manifest referenced only by URL (fetched) | Same as a readable manifest (embedded in the signed file; URL reference removed) | Same as a readable manifest |
+| Manifest referenced only by URL (not fetched) | Signed (or ingredient added) with the manifest recorded as inaccessible (`manifest.inaccessible`) and the URL reference removed. Refused (`400 RemoteManifestUnavailable`) when the request declares a source type for the input (`creation` or `ai_system`) | Refused (`400 RemoteManifestUnavailable`) |
 | Unreadable / malformed C2PA data | Removed with a warning; signed as unsigned (a `redact` on that input then fails) | Refused (`400`) |
+
+### Remote Manifests
+
+A file can carry the URL of its manifest in its XMP `dcterms:provenance` in place of an embedded manifest (for example, files saved by Adobe Photoshop). Trufo fetches the manifest when its URL is HTTPS on the default port and its host is allowed, validates it against the file, embeds it in the signed file's history under a standard manifest, and removes the URL reference. Fetching tells that host that the file is being signed and from which address.
+
+The default allowed host is `cai-manifests.adobe.com`. In Local mode, `remote_manifest_settings` turns fetching off or replaces the host list; it is applied on your machine, is not sent to Trufo, and requires `trufo-provenance` **2.4.1** or later (`400 UnsupportedSDKVersion` on older engines).
+
+| Field | Type | Default | Description |
+| --- | --- | --- | --- |
+| `fetch` | boolean | `true` | Whether Trufo fetches a manifest referenced by URL |
+| `allowed_hosts` | string[] | `["cai-manifests.adobe.com"]` | Exact DNS host names Trufo may fetch from (no scheme, port, path, or wildcards) |
+
+```python
+from trufo.c2pa import RemoteManifestSettings
+
+# Never fetch remote manifests
+sign_c2pa_local(api_key, media, remote_manifest_settings=RemoteManifestSettings(fetch=False))
+
+# Fetch only from your own host
+sign_c2pa_local(
+    api_key,
+    media,
+    remote_manifest_settings=RemoteManifestSettings(allowed_hosts=["manifests.example.com"]),
+)
+```
+
+A remote manifest is not fetched — with the corresponding `<reason>` in the `TrufoServerWarning` or `400 RemoteManifestUnavailable` error — when:
+
+| Condition | `<reason>` |
+| --- | --- |
+| `fetch` is `false` | `fetching remote manifests is turned off in your settings` |
+| URL is malformed, not HTTPS on default port, or names an IP address | `the manifest URL is invalid, names an IP address, or is not HTTPS on the default port` |
+| Host is not allowed | `'<host>' is not on the list of allowed hosts (in Local mode, add it to 'allowed_hosts'; in Cloud mode, contact support@trufo.ai)` |
+| Host does not resolve or resolves to a non-public address | `'<host>' did not resolve, or resolved to an address that is not public` |
+| Host returns a redirect or non-200 status | `'<host>' returned HTTP <status> (only HTTP 200 without redirects is accepted)` |
+| Manifest exceeds 10 MB | `the manifest at '<host>' exceeds the 10 MB limit` |
+| Request fails or exceeds the 5-second timeout | `the request to '<host>' failed or timed out` |
+
+- Under `"auto"`, an unfetched manifest is recorded as inaccessible (`manifest.inaccessible`) on the ingredient and the URL reference is removed from the signed file. Because Trufo cannot inspect an inaccessible manifest's source class, requests that declare a source type for the input (`creation` or `ai_system`) are refused with `400 RemoteManifestUnavailable`.
+- Under `"keep"`, any unfetched remote manifest on the input or an ingredient is refused with `400 RemoteManifestUnavailable`.
+- A fetched remote manifest whose data cannot be read is refused with `400` under both policies.
+- An ingredient's `digital_source_type` and a supplied `parentOf` ingredient on an input that references a manifest are both refused whether or not the manifest was fetched (the input is its own parent).
+- Non-fatal `TrufoServerWarning` notices are emitted when a remote manifest is fetched and embedded, or when an unfetched remote manifest is recorded as inaccessible under `"auto"`.
 
 ### `ai_system` source-class check (under `"auto"`)
 

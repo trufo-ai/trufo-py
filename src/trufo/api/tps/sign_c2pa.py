@@ -47,7 +47,12 @@ from trufo.api.tps.tasks import (
 )
 from trufo.c2pa.actions import TrufoAction
 from trufo.c2pa.assertions import UserAssertion
-from trufo.c2pa.manifest import ManifestSettings, SignedIngredientPolicy, SignedInputPolicy
+from trufo.c2pa.manifest import (
+    ManifestSettings,
+    RemoteManifestSettings,
+    SignedIngredientPolicy,
+    SignedInputPolicy,
+)
 from trufo.c2pa.redactions import RedactableAssertion, RedactionReason
 from trufo.c2pa.watermark import (
     WatermarkEffort,
@@ -826,6 +831,7 @@ def _sign_c2pa_local(
     branded_gp_id: str | None = None,
     signed_input_policy: SignedInputPolicy | str | None = None,
     signed_ingredient_policy: SignedIngredientPolicy | str | None = None,
+    remote_manifest_settings: RemoteManifestSettings | None = None,
     skip_manifest_storage: bool = False,
 ) -> bytes:
     _validate_actions(actions)
@@ -849,9 +855,18 @@ def _sign_c2pa_local(
     )
     remote_orchestrator = require_provenance_module("tfprov.c2pa_generator.remote_orchestrator")
     orchestrator_params = inspect.signature(remote_orchestrator.generate_claim_remote).parameters
-    supports_stacklevel = "warning_stacklevel" in orchestrator_params or any(
+    accepts_any_keyword = any(
         p.kind is inspect.Parameter.VAR_KEYWORD for p in orchestrator_params.values()
     )
+    supports_stacklevel = "warning_stacklevel" in orchestrator_params or accepts_any_keyword
+    if remote_manifest_settings is not None:
+        if not isinstance(remote_manifest_settings, RemoteManifestSettings):
+            raise TypeError("remote_manifest_settings must be RemoteManifestSettings or None.")
+        if "remote_manifest_settings" not in orchestrator_params and not accepts_any_keyword:
+            raise ValueError(
+                "UnsupportedSDKVersion: remote_manifest_settings requires trufo-provenance "
+                "2.4.1 or later. Please upgrade."
+            )
 
     signed, _ = remote_orchestrator.generate_claim_remote(
         api_key,
@@ -879,6 +894,16 @@ def _sign_c2pa_local(
             if validated_ingredient_policy is not None
             else {}
         ),
+        **(
+            {
+                "remote_manifest_settings": {
+                    "fetch": remote_manifest_settings.fetch,
+                    "allowed_hosts": list(remote_manifest_settings.allowed_hosts),
+                }
+            }
+            if remote_manifest_settings is not None
+            else {}
+        ),
         **({"skip_manifest_storage": True} if skip_manifest_storage else {}),
         **({"warning_stacklevel": 4} if supports_stacklevel else {}),
     )
@@ -901,6 +926,7 @@ def sign_c2pa_local_test(
     branded_gp_id: str | None = None,
     signed_input_policy: SignedInputPolicy | str | None = None,
     signed_ingredient_policy: SignedIngredientPolicy | str | None = None,
+    remote_manifest_settings: RemoteManifestSettings | None = None,
     skip_manifest_storage: bool = False,
 ) -> bytes:
     """Sign media in Local mode, through the Trufo test remote-signing endpoint.
@@ -933,6 +959,10 @@ def sign_c2pa_local_test(
         signed_input_policy: What to do when the input is already C2PA-signed; omit for ``auto``.
         signed_ingredient_policy: What to do when an ingredient's media is already
             C2PA-signed; omit for ``auto``.
+        remote_manifest_settings: Whether, and from which hosts, to fetch a C2PA
+            manifest that the input or an ingredient's media references by URL;
+            omit to fetch from ``DEFAULT_REMOTE_MANIFEST_HOSTS``. Applied on this
+            machine and not sent to Trufo.
         skip_manifest_storage: Ask Trufo not to keep a copy of the signed manifest;
             refused with a per-embed watermark. Please note that if this option is
             elected, Trufo's ability to assist with signing-related issues, issue
@@ -957,6 +987,7 @@ def sign_c2pa_local_test(
         branded_gp_id=branded_gp_id,
         signed_input_policy=signed_input_policy,
         signed_ingredient_policy=signed_ingredient_policy,
+        remote_manifest_settings=remote_manifest_settings,
         skip_manifest_storage=skip_manifest_storage,
     )
 
@@ -977,6 +1008,7 @@ def sign_c2pa_local(
     branded_gp_id: str | None = None,
     signed_input_policy: SignedInputPolicy | str | None = None,
     signed_ingredient_policy: SignedIngredientPolicy | str | None = None,
+    remote_manifest_settings: RemoteManifestSettings | None = None,
     skip_manifest_storage: bool = False,
 ) -> bytes:
     """Sign media in Local mode, through the Trufo production remote-signing endpoint.
@@ -1009,6 +1041,10 @@ def sign_c2pa_local(
         signed_input_policy: What to do when the input is already C2PA-signed; omit for ``auto``.
         signed_ingredient_policy: What to do when an ingredient's media is already
             C2PA-signed; omit for ``auto``.
+        remote_manifest_settings: Whether, and from which hosts, to fetch a C2PA
+            manifest that the input or an ingredient's media references by URL;
+            omit to fetch from ``DEFAULT_REMOTE_MANIFEST_HOSTS``. Applied on this
+            machine and not sent to Trufo.
         skip_manifest_storage: Ask Trufo not to keep a copy of the signed manifest;
             refused with a per-embed watermark. Please note that if this option is
             elected, Trufo's ability to assist with signing-related issues, issue
@@ -1033,6 +1069,7 @@ def sign_c2pa_local(
         branded_gp_id=branded_gp_id,
         signed_input_policy=signed_input_policy,
         signed_ingredient_policy=signed_ingredient_policy,
+        remote_manifest_settings=remote_manifest_settings,
         skip_manifest_storage=skip_manifest_storage,
     )
 
