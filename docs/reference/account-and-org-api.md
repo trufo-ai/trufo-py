@@ -128,7 +128,7 @@ Product identifiers (`tp`) accepted by pricing and subscription endpoints:
 | Endpoint | Auth | Request | Response |
 | --- | --- | --- | --- |
 | `POST /billing/account/setup` | MFA, owner/admin | `{"oid": "...", "success_url": "...", "cancel_url": "..."}` | Hosted checkout URL to attach a payment method |
-| `POST /billing/account/update` | MFA, owner/admin | `{"oid": "...", "billing_email"?: "...", "billing_address"?: {...}}` | Updated billing contact/address |
+| `POST /billing/account/update` | MFA, owner/admin | `{"oid": "...", "billing_email"?: "...", "billing_address"?: {"line1"?: "...", "line2"?: "...", "city"?: "...", "state"?: "...", "postal_code"?: "...", "country"?: "..."}}` | Updated billing contact/address |
 | `POST /billing/portal` | MFA, owner/admin | `{"oid": "...", "return_url": "..."}` | Hosted billing portal URL |
 | `POST /billing/checkout` | Owner/admin | `{"oid": "...", "tp": "<tp>", "plan_id"?: "...", "success_url": "...", "cancel_url": "..."}` | Hosted checkout URL (card) or enrolled subscription status |
 | `POST /billing/cancel-tp` | MFA, owner/admin | `{"oid": "...", "tp": "<tp>"}` | Scheduled cancellation details for the product |

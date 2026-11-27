@@ -44,7 +44,7 @@ See [Platform API](platform-api.md) for hosts, auth headers, regions, and common
 | `manifest_settings` | object | No | Structured titles, thumbnails, and `all_actions_included` (schema below) |
 | `manifest_title` | string | No | Top-level alias for `manifest_settings.manifest_title` (do not set both) |
 | `ingredient_title` | string | No | Top-level alias for `manifest_settings.ingredient_title` (do not set both) |
-| `branded_gp_id` | string | No | Approved Branded Generator Product ID (`gp_...`), or `"test"` on `test.api.trufo.ai` |
+| `branded_gp_id` | string | No | Approved Branded Generator Product ID (`gp_...`; see [BPV endpoints](certificates-api.md#product-validation-pv-and-branded-product-validation-bpv-drafts-uploads-and-status)), or `"test"` on `test.api.trufo.ai` |
 | `signed_input_policy` | string | No | `"auto"` (default) or `"keep"` |
 | `signed_ingredient_policy` | string | No | `"auto"` (default) or `"keep"` |
 | `skip_manifest_storage` | boolean | No | Default `false`. When `true`, Trufo does not retain a copy of the signed manifest (incompatible with `per_embed` watermarking: `400 ManifestStorageRequired`) |

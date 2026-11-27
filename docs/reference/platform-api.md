@@ -56,6 +56,8 @@ Two exceptions:
 | 422 | *(field list)* | Request body failed schema validation |
 | 500 | `Internal server error.` | Unhandled server error |
 
+For SDK exception types, `TrufoServerWarning` handling, retryability/idempotency rules, and async task recovery, see [Error Handling, Warnings, and Retries](../topics/error-handling.md).
+
 ### Identifier Shapes
 
 - `oid`: `org_...` (recorded in every signed manifest under `ai.trufo.identity`)

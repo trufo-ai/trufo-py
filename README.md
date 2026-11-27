@@ -69,6 +69,7 @@ In particular, you will want to create a `trufo-api` key so the agent can establ
 | [Certificates](docs/topics/certificates.md) | Dummy certs, test flow, production EST enrollment (`c2pa-l1` / `c2pa-l2`), KMS, rotation, revocation |
 | [Timestamping and OCSP](docs/topics/timestamping.md) | RFC 3161 timestamping (`tsa.trufo.ai`), OCSP stapling (`ocsp.trufo.ai`), `c2pa-rs` & OpenSSL wiring |
 | [Verification](docs/topics/verification.md) | Verifying signed assets and recovered manifests in local & CI pipelines |
+| [Error Handling, Warnings, and Retries](docs/topics/error-handling.md) | Exceptions, `TrufoServerWarning`, retry/idempotency rules, async task recovery |
 
 ### Reference (normative specifications)
 

@@ -50,7 +50,7 @@ def recover_content(
     """Decode a Trufo watermark from media and return its provenance.
 
     Decoding is read-only. Supported inputs and restrictions are documented
-    in ``docs/api/media_format_support.md`` under WM decode.
+    in ``docs/reference/media-formats.md`` under WM decode.
 
     Args:
         api_key: API key with scope ``content-recover-test`` or

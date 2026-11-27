@@ -158,9 +158,19 @@ On startup, the service verifies read/execute on input folders and write/execute
 
 ---
 
-## Licenses and Source Images
+## Licenses and Source
 
-The `trufo-local` wrapper and `trufo` SDK are Apache-2.0; the downloaded engine packages are under the [Trufo Library License](https://trufo.ai/legal/trufo_library_license/v_1_1_0.html). Third-party notices live at `/usr/share/doc/trufo-local/NOTICE` ([signing-only](../../trufo-local/NOTICE), [full](../../trufo-local/NOTICE-full)). Corresponding GPL/LGPL/MPL sources are published alongside each tag as `<version>-source` / `<version>-full-source`.
+The `trufo-local` wrapper and `trufo` SDK are Apache-2.0; the downloaded engine packages are under the [Trufo Library License](https://trufo.ai/legal/trufo_library_license/v_1_1_0.html). Third-party notices live at `/usr/share/doc/trufo-local/NOTICE` ([signing-only](../../trufo-local/NOTICE), [full](../../trufo-local/NOTICE-full)), and bundled library license texts live at `/usr/share/doc/trufo-local/licenses/`.
+
+Corresponding GPL, LGPL, and MPL sources are published alongside each tag as `<version>-source` / `<version>-full-source` (the full source image also holds the signing-only sources). To extract a source image:
+
+```bash
+docker create --platform linux/amd64 --name trufo-local-source ghcr.io/trufo-ai/trufo-local:2.4.0-source none
+docker cp trufo-local-source:/sources ./trufo-local-2.4.0-source
+docker rm trufo-local-source
+```
+
+If you mirror or redistribute an image, include its matching `-source` image.
 
 ## Reference
 
