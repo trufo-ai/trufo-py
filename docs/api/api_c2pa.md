@@ -1130,12 +1130,12 @@ A manifest is not fetched, with the `<reason>` in the notice or error, when:
 | When | `<reason>` |
 | ---- | ---------- |
 | `fetch` is false | `fetching remote manifests is turned off in your settings` |
-| The URL is not HTTPS on the default port, or names an IP address | `the manifest URL names an IP address or is not HTTPS on the default port` |
-| The host is not allowed | `'<host>' is not on the list of allowed hosts (contact support@trufo.ai to request it)` |
-| The host has no public address | `'<host>' did not resolve to a public address` |
+| The URL is malformed, is not HTTPS on the default port, or names an IP address | `the manifest URL is invalid, names an IP address, or is not HTTPS on the default port` |
+| The host is not allowed | `'<host>' is not on the list of allowed hosts (in Local mode, add it to 'allowed_hosts'; in Cloud mode, contact support@trufo.ai)` |
+| The host does not resolve, or resolves to an address that is not public | `'<host>' did not resolve, or resolved to an address that is not public` |
 | The host answers with a redirect or another status than 200 | `'<host>' returned HTTP <status> (only HTTP 200 without redirects is accepted)` |
 | The manifest is over 10 MB | `the manifest at '<host>' exceeds the 10 MB limit` |
-| The request fails or takes over 30 seconds | `the request to '<host>' failed or exceeded the 30-second timeout` |
+| The request fails or takes over 30 seconds | `the request to '<host>' failed or timed out` |
 
 Under `auto` the file is then signed with the manifest recorded as inaccessible
 (`manifest.inaccessible`) on the `parentOf` ingredient, and the reference is removed
@@ -1197,7 +1197,7 @@ replaces the not-validated or untrusted one.
 | ---- | ------ | -------- |
 | The input's C2PA data cannot be read: under `keep`, or under either value for a fetched manifest that cannot be read | 400 | `The input carries C2PA data that Trufo cannot read, so Trufo cannot keep or validate it. Please send a copy with intact C2PA data, or contact support@trufo.ai.` |
 | The same, for an ingredient sent as `media` | 400 | `Ingredient '<title>' carries C2PA data that Trufo cannot read, so Trufo cannot validate it. Please send a copy with intact C2PA data, or contact support@trufo.ai.` |
-| `keep`: the input's manifest was not fetched | 400 | `RemoteManifestUnavailable: The input's C2PA manifest is only referenced by URL, and Trufo could not fetch it because <reason>. With 'signed_input_policy' set to 'keep', the manifest is required. Use a copy with the manifest embedded, or set 'signed_input_policy' to 'auto' to sign the input with the manifest recorded as inaccessible.` |
+| `keep`: the input's manifest was not fetched (the text ends at "embedded." when the request has a `creation` or `ai_system` entry, which `auto` would refuse) | 400 | `RemoteManifestUnavailable: The input's C2PA manifest is only referenced by URL, and Trufo could not fetch it because <reason>. With 'signed_input_policy' set to 'keep', the manifest is required. Use a copy with the manifest embedded, or set 'signed_input_policy' to 'auto' to sign the input with the manifest recorded as inaccessible.` |
 | `auto`, with a `creation` or `ai_system` entry: the input's manifest was not fetched | 400 | `RemoteManifestUnavailable: The input's C2PA manifest is only referenced by URL, and Trufo could not fetch it because <reason>. Trufo cannot check the manifest's source class, so it cannot declare a source type for the input. Use a copy with the manifest embedded, or remove the source-type declaration (such as 'creation' or 'ai_system').` |
 | `keep`: an ingredient's manifest was not fetched | 400 | `RemoteManifestUnavailable: The C2PA manifest of ingredient '<title>' is only referenced by URL, and Trufo could not fetch it because <reason>. With 'signed_ingredient_policy' set to 'keep', the manifest is required. Use a copy with the manifest embedded, or set 'signed_ingredient_policy' to 'auto' to add the ingredient with its manifest recorded as inaccessible.` |
 | Local mode: the request sets `signed_input_policy` and the engine is older than trufo-provenance 2.2.0 | 400 | `UnsupportedSDKVersion: signed_input_policy requires trufo-provenance 2.2.0 or later. Please upgrade.` |
