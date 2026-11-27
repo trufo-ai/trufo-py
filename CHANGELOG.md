@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- C2PA signing keeps a manifest that the input, or an ingredient's media, only references
+  by URL: Trufo fetches it from an allowed host, `cai-manifests.adobe.com` by default,
+  validates it against the file and embeds it in the signed file, which no longer carries
+  the reference. `RemoteManifestSettings` (`trufo.c2pa`) turns fetching off or replaces
+  the hosts in Local mode. See
+  [Remote manifests](docs/api/api_c2pa.md#remote-manifests).
+- In Local mode, this needs trufo-provenance 2.4.1 or later.
+
+### Changed
+
+- A file whose manifest is only referenced by URL is no longer refused under
+  `signed_input_policy` or `signed_ingredient_policy` `auto`. When the manifest is not
+  fetched, the file is signed with the manifest recorded as inaccessible; `keep` refuses
+  it with `RemoteManifestUnavailable`.
+
 ## [2.4.0] — 2026-11-23
 
 ### Added

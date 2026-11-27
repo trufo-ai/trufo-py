@@ -130,7 +130,8 @@ signed_bytes = sign_c2pa_local(api_key, media_bytes)
 Both helpers take the same `actions`, `assertions`, `manifest_settings`,
 `branded_gp_id`, `signed_input_policy`, `signed_ingredient_policy`,
 `skip_manifest_storage` and `trufo_api_url` as `sign_c2pa_cloud()`, the media actions
-included; see the
+included, and `remote_manifest_settings`, which sets whether and from which hosts a
+[remote manifest](../api/api_c2pa.md#remote-manifests) is fetched; see the
 [C2PA Signing Quickstart](../quickstart/2_c2pa_signing.md) and
 [`actions`](../api/api_c2pa.md#actions). With `trufo[local-full]`, a `watermark`
 action embeds the mark locally; see the
