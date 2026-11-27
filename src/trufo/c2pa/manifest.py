@@ -54,7 +54,8 @@ class RemoteManifestSettings:
     """
 
     fetch: bool = True
-    allowed_hosts: tuple[str, ...] = DEFAULT_REMOTE_MANIFEST_HOSTS
+    # stored as a tuple of lowercase names
+    allowed_hosts: list[str] | tuple[str, ...] = DEFAULT_REMOTE_MANIFEST_HOSTS
 
     def __post_init__(self) -> None:
         if not isinstance(self.fetch, bool):
