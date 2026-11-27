@@ -84,7 +84,7 @@ If your company operates several brands or regional desks:
 - **Separate legal entities that sign under their own legal name** → use an **Organization Group** (one management organization for billing and user administration, plus one sub-organization per legal entity, each with its own OV, API keys, and CAWG identity).
 - **Multiple brands or products under one legal entity** → a single organization is usually simpler (optionally with separate Branded Generator Products if each product needs its own signing identity), avoiding duplicate OV reviews.
 
-See [Account Management](account-management.md) for the full governance and role model.
+See [Account Management](2_account-management.md) for the full governance and role model.
 
 ---
 

@@ -2,7 +2,7 @@
 
 Enroll C2PA Claim Signing certificates from Trufo Certificate Authority (TCA), attach RFC 3161 timestamps (`tsa.trufo.ai`), staple OCSP responses (`ocsp.trufo.ai`), and rotate or revoke certificates.
 
-> **Note:** You only need this if you operate **your own C2PA signer** (`c2pa-rs`, `c2patool`, etc.). If Trufo signs for you via `/c2pa/sign` or Local mode, Trufo handles certificates, timestamps, and OCSP automatically. For the onboarding roadmap and key-custody best practices, see [Build Your Own Generator Product](../guides/build-your-own-generator-product.md).
+> **Note:** You only need this if you operate **your own C2PA signer** (`c2pa-rs`, `c2patool`, etc.). If Trufo signs for you via `/c2pa/sign` or Local mode, Trufo handles certificates, timestamps, and OCSP automatically. For the onboarding roadmap and key-custody best practices, see [Build Your Own Generator Product](../guides/5_build-your-own-generator-product.md).
 
 ---
 

@@ -16,11 +16,11 @@ Pick the guide that best suits your use case to get started with Trufo and C2PA.
 
 | If you are... | Guide |
 | --- | --- |
-| Deciding how you want to approach C2PA, picking products & vendors. | [Choosing Your C2PA Path](docs/guides/choosing-your-c2pa-path.md) |
-| Labeling AI-generated or AI-modified media for compliance (EU AI Act). | [AI Labeling for Compliance](docs/guides/ai-labeling-for-compliance.md) |
-| Adding brand identity or preserving provenance in creative workflows. | [Brands and Creative Workflows](docs/guides/brands-and-creative-workflows.md) |
-| Setting up an in-house C2PA Generator Product (certificates, timestamps). | [Build Your Own Generator Product](docs/guides/build-your-own-generator-product.md) |
-| Managing accounts and organizations on Trufo; roles, billing, validation. | [Account Management](docs/guides/account-management.md) |
+| Deciding how you want to approach C2PA, picking products & vendors. | [1. Choosing Your C2PA Path](docs/guides/1_choosing-your-c2pa-path.md) |
+| Managing accounts and organizations on Trufo; roles, billing, validation. | [2. Account Management](docs/guides/2_account-management.md) |
+| Labeling AI-generated or AI-modified media for compliance (EU AI Act). | [3. AI Labeling for Compliance](docs/guides/3_ai-labeling-for-compliance.md) |
+| Adding brand identity or preserving provenance in creative workflows. | [4. Brands and Creative Workflows](docs/guides/4_brands-and-creative-workflows.md) |
+| Setting up an in-house C2PA Generator Product (certificates, timestamps). | [5. Build Your Own Generator Product](docs/guides/5_build-your-own-generator-product.md) |
 
 ---
 
@@ -46,11 +46,11 @@ In particular, you will want to create a `trufo-api` key so the agent can establ
 
 ### Guides (by use case)
 
-- [Choosing Your C2PA Path](docs/guides/choosing-your-c2pa-path.md)
-- [AI Labeling for Compliance](docs/guides/ai-labeling-for-compliance.md)
-- [Brands and Creative Workflows](docs/guides/brands-and-creative-workflows.md)
-- [Build Your Own Generator Product](docs/guides/build-your-own-generator-product.md)
-- [Account Management](docs/guides/account-management.md)
+1. [Choosing Your C2PA Path](docs/guides/1_choosing-your-c2pa-path.md)
+2. [Account Management](docs/guides/2_account-management.md)
+3. [AI Labeling for Compliance](docs/guides/3_ai-labeling-for-compliance.md)
+4. [Brands and Creative Workflows](docs/guides/4_brands-and-creative-workflows.md)
+5. [Build Your Own Generator Product](docs/guides/5_build-your-own-generator-product.md)
 
 ### Topics (by technical capability)
 

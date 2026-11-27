@@ -76,7 +76,7 @@ You can build and test against `https://test.api.trufo.ai` on day one with a tes
 When preparing for production:
 
 1. **Submit Organization Validation (OV) early** — review typically takes 2–5 business days, and the most common delay is completing the verification callback to a publicly listed company phone number.
-2. **Choose your region intentionally** — `https://api.trufo.ai` (Global) or `https://eu.api.trufo.ai` (Europe). Your endpoint choice determines where Cloud-mode media is processed; see [Account Management](account-management.md#4-regions-and-data-residency).
+2. **Choose your region intentionally** — `https://api.trufo.ai` (Global) or `https://eu.api.trufo.ai` (Europe). Your endpoint choice determines where Cloud-mode media is processed; see [Account Management](2_account-management.md#4-regions-and-data-residency).
 3. **Accept required agreements** in [Organization Settings → Agreements](https://app.trufo.ai/settings/org#agreements) before creating keys or registrations:
    - *Trufo Library License* (required for `sdk-download` keys / Local mode).
    - *Created Assertion Acknowledgement* (required for first-party AI systems).
@@ -87,7 +87,7 @@ When preparing for production:
 
 ## Next Steps
 
-- **AI product or compliance deadline?** Read [AI Labeling for Compliance](ai-labeling-for-compliance.md).
-- **Agency, brand, publisher, or DAM pipeline?** Read [Brands and Creative Workflows](brands-and-creative-workflows.md).
-- **Running your own `c2pa-rs` / camera / desktop signer?** Read [Build Your Own Generator Product](build-your-own-generator-product.md).
+- **AI product or compliance deadline?** Read [AI Labeling for Compliance](3_ai-labeling-for-compliance.md).
+- **Agency, brand, publisher, or DAM pipeline?** Read [Brands and Creative Workflows](4_brands-and-creative-workflows.md).
+- **Running your own `c2pa-rs` / camera / desktop signer?** Read [Build Your Own Generator Product](5_build-your-own-generator-product.md).
 - **Ready to write code?** Go straight to [Setup and Credentials](../topics/setup.md).
