@@ -115,14 +115,29 @@ All RA endpoints run on `api.trufo.ai` / `eu.api.trufo.ai` (or `test.api.trufo.a
 
 ### Generator products
 
-Products and Product Validation (PV) applications are created in the dashboard ([app.trufo.ai](https://app.trufo.ai)).
-
 | Endpoint | Auth | Request | Response |
 | --- | --- | --- | --- |
-| `POST /gproduct/list` | MFA, member+ | `{"oid": "..."}` (optional; inferred from session) | `gproducts[]`: `gp_id`, `name`, `implementation`, `pv_status`, `pv_active`, `validated_expires_at`, `cancel_at` |
+| `POST /gproduct/list` | MFA, member+ | `{"oid": "..."}` (optional; inferred from session) | `gproducts[]`: `gp_id`, `name`, `implementation`, `pv_status`, `pv_active`, `branded`, `bpv_status`, `validated_expires_at`, `cancel_at` |
 | `POST /gproduct/info` | MFA, member+ | `{"gp_id": "..."}` | `gp_id`, `oid`, `name`, `created_by`, `created_at` |
 | `POST /gproduct/info/edit` | MFA, owner/admin | `{"gp_id": "...", "name": "..."}` | `status` |
 | `POST /gproduct/cancel` | MFA, owner/admin | `{"gp_id": "..."}` | `gp_id`, `cancel_at`, `removed` |
+
+### Product Validation (PV) and Branded Product Validation (BPV) drafts, uploads, and status
+
+Drafts can be read, saved, and discarded programmatically, and supporting documents can be uploaded ahead of time. Once a draft is ready, an owner or admin reviews and submits the final application in [app.trufo.ai](https://app.trufo.ai).
+
+| Endpoint | Auth | Request | Response |
+| --- | --- | --- | --- |
+| `GET /gproduct/pv/draft` | MFA, member+ | *(no body)* | `{"draft": {...} \| null}` |
+| `POST /gproduct/pv/draft/save` | MFA, owner/admin | Partial PV draft fields (e.g., `product_name`, `record_id`, `assurance_level`, `spec_version`, `implementation`, contact and security attestation fields, `supporting_files`) | `{"status": "ok"}` |
+| `POST /gproduct/pv/draft/discard` | MFA, owner/admin | `{}` | `{"status": "ok"}` |
+| `POST /gproduct/pv/status` | MFA, member+ | `{"gp_id": "..."}` | `gp_id`, `status`, submitted fields, review status |
+| `POST /gproduct/pv/upload` | MFA, owner/admin | `multipart/form-data`: `file` + optional `gp_id` form field | Uploaded file reference for `supporting_files` |
+| `GET /gproduct/bpv/draft` | MFA, member+ | *(no body)* | `{"draft": {...} \| null}` |
+| `POST /gproduct/bpv/draft/save` | MFA, owner/admin | Partial BPV draft fields (e.g., `c2pa_organization`, `product_name`, `product_description`, `product_architecture`, `product_assertions`, `trademark_evidence_files`) | `{"status": "ok"}` |
+| `POST /gproduct/bpv/draft/discard` | MFA, owner/admin | `{}` | `{"status": "ok"}` |
+| `POST /gproduct/bpv/status` | MFA, member+ | `{"gp_id": "..."}` | `gp_id`, `status`, `application_id`, `submitted_at`, `approved_at`, `validated_expires_at`, `bpv_active`, `reviewer_notes` |
+| `POST /gproduct/bpv/upload` | MFA, owner/admin | `multipart/form-data`: `file` + optional `gp_id` form field | Uploaded file reference for supporting/trademark files |
 
 ### Instances (`/gproduct/instance/*`)
 
@@ -168,9 +183,18 @@ Exchange a signed `client_assertion` JWS for a single-use `csr_jwt`. **Auth:** `
 
 **Auth:** MFA-verified access token, owner/admin (`request_cawg_cert`). **Request:** `{"validity_days"?: 1..366}`. **Response (200):** `{"csr_jwt": "..."}` (for `leaf_type: "cawg-interim"`). **Errors:** `400 InvalidValidityDays`, `403 NoEligiblePlan`, `403 OVNotActive`, `403 OrgNotValidated`.
 
-### Domain Validation
+### Domain Validation (`/domain/dv/*`)
 
-Configured in [app.trufo.ai](https://app.trufo.ai) via DNS verification. Required for `custom` assertions and custom reverse-DNS `redact` reasons (`403 InvalidC2PACustomDomain` without active DV).
+Required for `custom` assertions and custom reverse-DNS `redact` reasons (`403 InvalidC2PACustomDomain` without active DV). Validation uses a DNS `CNAME` record returned by `/domain/dv/submit`.
+
+| Endpoint | Auth | Request | Response |
+| --- | --- | --- | --- |
+| `POST /domain/dv/submit` | MFA, owner/admin | `{"oid": "...", "domain": "example.com", "scope"?: "c2pa_custom_assertion"}` | `dv_id`, `status`, `challenge_name`, `record_type` (`"CNAME"`), `record_value` |
+| `POST /domain/dv/check` | MFA, owner/admin | `{"dv_id": "..."}` | Updated DV record + `dns_evidence` |
+| `POST /domain/dv/status` | MFA, member+ | `{"dv_id": "..."}` | DV record (`status`, `challenge_name`, `record_value`, `validated_at`, `expires_at`) |
+| `POST /domain/dv/list` | MFA, member+ | `{"oid": "..."}` | `domains[]` |
+| `POST /domain/dv/cancel` | MFA, owner/admin | `{"dv_id": "..."}` | `dv_id`, `removed`, `cancel_at` |
+| `POST /domain/dv/uncancel` | MFA, owner/admin | `{"dv_id": "..."}` | `dv_id` |
 
 ### Certificates (`/cert/list`, `/cert/revoke`)
 

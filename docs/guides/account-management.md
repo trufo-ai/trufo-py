@@ -2,7 +2,7 @@
 
 How Trufo accounts, organizations, roles, Organization Validation, regions, and multi-brand organization groups work — and best practices for setting them up cleanly.
 
-All organization administration happens in the dashboard at [app.trufo.ai](https://app.trufo.ai).
+Organization administration is available in the dashboard at [app.trufo.ai](https://app.trufo.ai), and most org, member, API key, billing, and validation-draft operations can also be called programmatically with a `trufo login` session (see the [Account, Organization, and Billing API](../reference/account-and-org-api.md)). MFA changes, switching active organizations, legal agreement acceptances, and final OV/PV/BPV submissions are completed in the dashboard.
 
 ---
 
@@ -122,4 +122,5 @@ Management organization     Central billing, plans, and cross-org user administr
 ## Reference
 
 - Platform auth, regions, API key scopes, and error codes: [Platform API](../reference/platform-api.md)
+- Account, org, member, API key, and billing endpoints: [Account, Organization, and Billing API](../reference/account-and-org-api.md)
 - Credential setup and hosts: [Setup and Credentials](../topics/setup.md)

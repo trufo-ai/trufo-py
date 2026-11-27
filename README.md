@@ -70,6 +70,7 @@ In particular, you will want to create a `trufo-api` key so the agent can establ
 ### Reference (normative specifications)
 
 - [Platform API](docs/reference/platform-api.md)
+- [Account, Organization, and Billing API](docs/reference/account-and-org-api.md)
 - [Signing API](docs/reference/signing-api.md)
 - [Actions and Assertions](docs/reference/actions-and-assertions.md)
 - [Watermarking and Content API](docs/reference/watermarking-api.md)

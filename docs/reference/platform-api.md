@@ -10,7 +10,7 @@ Normative specification for Trufo HTTP conventions, hosts, regions, authenticati
 
 ## HTTP Conventions
 
-- **Method:** Every endpoint is `POST` with a JSON body (including reads); the one exception is `GET /tasks/{task_id}`. Parameterless endpoints accept `{}`.
+- **Method:** Nearly every endpoint is `POST` with a JSON body (including reads); exceptions are `GET /tasks/{task_id}`, `GET /gproduct/pv/draft`, and `GET /gproduct/bpv/draft`, plus file-upload endpoints (`/org/ov/upload`, `/gproduct/pv/upload`, `/gproduct/bpv/upload`) which take `multipart/form-data`. Parameterless `POST` endpoints accept `{}`.
 - **Transport:** TLS 1.3 or later is required; plaintext HTTP is rejected.
 - **Request ID:** Every response carries an `X-Request-ID` header — include it when contacting [support@trufo.ai](mailto:support@trufo.ai).
 - **Organization scoping:** Every credential is bound to a single organization (`org_...`). Endpoints never act cross-organization.
@@ -22,7 +22,7 @@ Send **exactly one** credential per request:
 | Credential | Header | Used for |
 | --- | --- | --- |
 | API key | `X-API-Key: {scope}:{key}` | Programmatic endpoints, scoped per product |
-| Access token | `Authorization: Bearer {jwt}` | Interactive / RA endpoints (obtained via device flow or browser sign-in) |
+| Access token | `Authorization: Bearer {jwt}` | Account, organization, API key, billing, validation draft, and RA endpoints (obtained via `trufo login` / device flow) |
 
 Sending both returns `400 MixedCredentials`. Sending neither returns `401 MissingAuthentication`.
 
@@ -84,7 +84,7 @@ An organization's `default_content_region` setting applies to dashboard workflow
 
 ## API Keys
 
-API keys are created and revoked by an MFA-verified owner or admin at [Organization Settings → API Access](https://app.trufo.ai/settings/org#api-access). Full keys (`{scope}:{key}`) are shown once at creation and expire after up to **390 days**. Revocation propagates within one hour.
+API keys are created and revoked by an MFA-verified owner or admin in [Organization Settings → API Access](https://app.trufo.ai/settings/org#api-access) or via the [`/apikey/*` endpoints](account-and-org-api.md#api-keys). Full keys (`{scope}:{key}`) are shown once at creation and expire after up to **390 days**. Revocation propagates within one hour.
 
 | Scope | Grants | Requires |
 | --- | --- | --- |
@@ -144,6 +144,7 @@ Interactive and Registration Authority endpoints require an MFA-verified `Author
 
 ## Related References
 
+- Account, Organization, and Billing API: [account-and-org-api.md](account-and-org-api.md)
 - Signing & Tasks: [signing-api.md](signing-api.md)
 - Actions & Assertions: [actions-and-assertions.md](actions-and-assertions.md)
 - Watermarking & Content Records: [watermarking-api.md](watermarking-api.md)
