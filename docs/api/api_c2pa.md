@@ -1135,7 +1135,7 @@ A manifest is not fetched, with the `<reason>` in the notice or error, when:
 | The host does not resolve, or resolves to an address that is not public | `'<host>' did not resolve, or resolved to an address that is not public` |
 | The host answers with a redirect or another status than 200 | `'<host>' returned HTTP <status> (only HTTP 200 without redirects is accepted)` |
 | The manifest is over 10 MB | `the manifest at '<host>' exceeds the 10 MB limit` |
-| The request fails or takes over 30 seconds | `the request to '<host>' failed or timed out` |
+| The request fails or takes over 5 seconds | `the request to '<host>' failed or timed out` |
 
 Under `auto` the file is then signed with the manifest recorded as inaccessible
 (`manifest.inaccessible`) on the `parentOf` ingredient, and the reference is removed
