@@ -43,7 +43,7 @@ _HOST_NAME = re.compile(
 )
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, init=False)
 class RemoteManifestSettings:
     """Whether, and from which hosts, Trufo fetches a C2PA manifest that a file references by URL.
 
@@ -53,14 +53,18 @@ class RemoteManifestSettings:
     address. Each entry is an exact host name, with no scheme, port, path or wildcard.
     """
 
-    fetch: bool = True
-    # stored as a tuple of lowercase names
-    allowed_hosts: list[str] | tuple[str, ...] = DEFAULT_REMOTE_MANIFEST_HOSTS
+    fetch: bool
+    # lowercase names
+    allowed_hosts: tuple[str, ...]
 
-    def __post_init__(self) -> None:
-        if not isinstance(self.fetch, bool):
+    def __init__(
+        self,
+        fetch: bool = True,
+        allowed_hosts: list[str] | tuple[str, ...] = DEFAULT_REMOTE_MANIFEST_HOSTS,
+    ) -> None:
+        if not isinstance(fetch, bool):
             raise TypeError("fetch must be bool.")
-        hosts = self.allowed_hosts
+        hosts = allowed_hosts
         if not isinstance(hosts, (list, tuple)) or not all(isinstance(h, str) for h in hosts):
             raise TypeError("allowed_hosts must be a list of host names.")
         hosts = tuple(host.lower() for host in hosts)
@@ -70,6 +74,7 @@ class RemoteManifestSettings:
                     f"allowed_hosts entry {host!r} is not an exact host name such as "
                     "'manifests.example.com'."
                 )
+        object.__setattr__(self, "fetch", fetch)
         object.__setattr__(self, "allowed_hosts", hosts)
 
 
