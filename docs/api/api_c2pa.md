@@ -1144,6 +1144,8 @@ it refuses a request that declares a source type for the input: with a `creation
 `ai_system` entry (or the deprecated `ai_disclosure` entry with `set_source_type`).
 Under `keep` the request is refused. An ingredient's `digital_source_type` is refused
 as for any media that carries a manifest, whether or not the manifest was fetched.
+A supplied `parentOf` ingredient is likewise refused for an input that references a
+manifest, fetched or not: the input is its own parent.
 
 
 **Source class.** Under `auto`, with an `ai_system` entry, Trufo refuses an input
