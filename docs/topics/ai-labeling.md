@@ -2,7 +2,7 @@
 
 Register an AI system once, then reference it when signing to attach compliant C2PA AI disclosures (`digitalSourceType` + `c2pa.ai-disclosure`).
 
-For compliance strategy (EU AI Act Art. 50, California SB 942, first-party vs. third-party models, and `ai_modified` workflows), see [AI Labeling for Compliance](../guides/3_ai-labeling-for-compliance.md).
+For end-to-end compliance setup (first-party vs. third-party models, `digitalSourceType` constraints, and when you need BPV), see [AI Labeling and Compliance](../guides/4-ai-labeling-compliance.md).
 
 ## Requirements
 

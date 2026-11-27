@@ -2,7 +2,7 @@
 
 Enroll C2PA Claim Signing certificates from Trufo Certificate Authority (TCA), rehearse enrollment in Test Flow, store keys in KMS/HSM, and rotate or revoke certificates.
 
-> **Note:** You only need this if you operate **your own C2PA signer** (`c2pa-rs`, `c2patool`, etc.). If Trufo signs for you via `/c2pa/sign` or Local mode, Trufo handles certificates automatically. For the onboarding roadmap and key-custody best practices, see [Build Your Own Generator Product](../guides/5_build-your-own-generator-product.md). For RFC 3161 timestamping and OCSP stapling, see [Timestamping and OCSP](timestamping.md).
+> **Note:** You only need this if you operate **your own C2PA signer** (`c2pa-rs`, `c2patool`, etc.). If Trufo signs for you via `/c2pa/sign` or Local mode, Trufo handles certificates automatically. For the end-to-end enrollment walkthroughs, see [BYO C2PA Certificates](../guides/5-byo-c2pa-certificates.md) and [BYO CAWG Certificates](../guides/6-byo-cawg-certificates.md). For RFC 3161 timestamping and OCSP stapling, see [Timestamping and OCSP](timestamping.md).
 
 ---
 

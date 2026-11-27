@@ -176,7 +176,7 @@ Drafts can be read, saved, and discarded programmatically, and supporting docume
 
 | Field | Type | Notes |
 | --- | --- | --- |
-| `c2pa_organization` | `"own"` \| `"trufo"` | `"own"`: listed under your organization (requires `att_c2pa_agreement`; certificate `O`/`C` from your OV). `"trufo"`: listed under Trufo (certificate carries `O=Trufo Inc.`, `C=US`; `org_unit` is cleared) |
+| `c2pa_organization` | `"own"` \| `"trufo"` | Self-serve submissions in `app.trufo.ai` always set `"trufo"` (certificate carries your Product Name as `CN`, with `O=Trufo Inc.`, `C=US`, and `org_unit` cleared). Contact [support@trufo.ai](mailto:support@trufo.ai) to list under your own organization (`"own"`, which requires `att_c2pa_agreement` and sets `O`/`C` from your OV) |
 | `att_c2pa_agreement` | boolean | C2PA agreement attestation (with `"own"`) |
 | `org_unit`, `product_name`, `product_url` | string | Product identity; `org_unit` is plain ASCII ≤ 64 characters; `product_url` must start with `https://` |
 | `name_has_trademarks`, `att_trademark_clearance` | boolean | Trademark declarations |
