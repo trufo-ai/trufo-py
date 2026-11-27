@@ -57,14 +57,17 @@ In particular, you will want to create a `trufo-api` key so the agent can establ
 | Topic | Covers |
 | --- | --- |
 | [Setup and Credentials](docs/topics/setup.md) | Installing `trufo`, hosts, API key scopes, regions |
-| [Cloud Signing](docs/topics/signing-cloud.md) | Direct signing, S3 async tasks, manifest settings, warnings |
+| [Cloud Signing](docs/topics/signing-cloud.md) | Direct signing, S3 async tasks, signed inputs, warnings |
 | [Local Signing (Python SDK)](docs/topics/signing-local-python.md) | Keeping media on your machine with `trufo[local-sign-only]` / `trufo[local-full]` |
 | [Local Signing (Docker)](docs/topics/signing-local-docker.md) | Self-hosted HTTP sidecar (`ghcr.io/trufo-ai/trufo-local`) for any language |
+| [Storage Options and Privacy](docs/topics/storage-options.md) | `skip_manifest_storage`, thumbnails, EU residency, soft-binding storage, remote manifests |
+| [C2PA Manifests, Actions, and Assertions](docs/topics/c2pa-manifests.md) | Manifest settings, created vs. gathered, actions, digital source types, software agents, C2PA/CAWG & custom assertions |
 | [AI Labeling](docs/topics/ai-labeling.md) | Registering AI systems, `ai_system` assertions, `signed_input_policy` |
 | [CAWG Identity and Metadata](docs/topics/cawg-identity.md) | `cawg_identity`, `cawg_metadata`, `cawg_training` |
 | [Ingredients and Redaction](docs/topics/ingredients-and-redaction.md) | Declaring source assets, action histories, redacting assertions |
 | [Watermarking and Recovery](docs/topics/watermarking.md) | Integrated watermarking, standalone `/bind/*`, recovery, content records |
-| [Certificates, TSA, and OCSP](docs/topics/certificates-and-tsa.md) | Dummy certs, test flow, production EST enrollment, `c2pa-rs` TSA & OCSP |
+| [Certificates](docs/topics/certificates.md) | Dummy certs, test flow, production EST enrollment (`c2pa-l1` / `c2pa-l2`), KMS, rotation, revocation |
+| [Timestamping and OCSP](docs/topics/timestamping.md) | RFC 3161 timestamping (`tsa.trufo.ai`), OCSP stapling (`ocsp.trufo.ai`), `c2pa-rs` & OpenSSL wiring |
 | [Verification](docs/topics/verification.md) | Verifying signed assets and recovered manifests in local & CI pipelines |
 
 ### Reference (normative specifications)

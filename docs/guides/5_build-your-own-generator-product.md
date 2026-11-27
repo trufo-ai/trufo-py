@@ -95,6 +95,7 @@ If you sign C2PA manifests with your own certificates but still want Trufo Pawpr
 
 ## Next Steps
 
-- **Step-by-step enrollment, KMS, `c2pa-rs` TSA & OCSP code:** [Certificates, TSA, and OCSP](../topics/certificates-and-tsa.md)
+- **Certificate enrollment, KMS, rotation, and revocation:** [Certificates](../topics/certificates.md)
+- **RFC 3161 timestamping and OCSP stapling (`c2pa-rs`, `c2patool`, OpenSSL):** [Timestamping and OCSP](../topics/timestamping.md)
 - **Wire specs (EST, JWS `client_assertion`, PKCS#10, OCSP, TSA, RA):** [Certificates, TSA, and OCSP API](../reference/certificates-api.md)
 - **Verifying test and production assets in CI:** [Verification](../topics/verification.md)

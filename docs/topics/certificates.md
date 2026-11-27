@@ -1,8 +1,8 @@
-# Certificates, TSA, and OCSP
+# Certificates
 
-Enroll C2PA Claim Signing certificates from Trufo Certificate Authority (TCA), attach RFC 3161 timestamps (`tsa.trufo.ai`), staple OCSP responses (`ocsp.trufo.ai`), and rotate or revoke certificates.
+Enroll C2PA Claim Signing certificates from Trufo Certificate Authority (TCA), rehearse enrollment in Test Flow, store keys in KMS/HSM, and rotate or revoke certificates.
 
-> **Note:** You only need this if you operate **your own C2PA signer** (`c2pa-rs`, `c2patool`, etc.). If Trufo signs for you via `/c2pa/sign` or Local mode, Trufo handles certificates, timestamps, and OCSP automatically. For the onboarding roadmap and key-custody best practices, see [Build Your Own Generator Product](../guides/5_build-your-own-generator-product.md).
+> **Note:** You only need this if you operate **your own C2PA signer** (`c2pa-rs`, `c2patool`, etc.). If Trufo signs for you via `/c2pa/sign` or Local mode, Trufo handles certificates automatically. For the onboarding roadmap and key-custody best practices, see [Build Your Own Generator Product](../guides/5_build-your-own-generator-product.md). For RFC 3161 timestamping and OCSP stapling, see [Timestamping and OCSP](timestamping.md).
 
 ---
 
@@ -78,6 +78,11 @@ Nothing from the Test Flow carries over to production.
 
 Prerequisites in [app.trufo.ai](https://app.trufo.ai): approved **Organization Validation (OV)**, approved **Product Validation (PV)** (yielding `gp_id`), and an active C2PA Certificate subscription.
 
+### Assurance levels (`c2pa-l1` and `c2pa-l2`)
+
+- **`LeafType.C2PA_L1` (`c2pa-l1`):** C2PA Assurance Level 1, max **366 days** validity.
+- **`LeafType.C2PA_L2` (`c2pa-l2`):** C2PA Assurance Level 2 (hardware-backed keys / HSM / FIPS-validated boundary), max **90 days** validity. Contact [support@trufo.ai](mailto:support@trufo.ai) to enable `c2pa-l2` on your product.
+
 ### 1. Create an instance and register a KMS-backed credential
 
 Model one instance (`gpi_id`) per independent key holder. Storing the instance key (and leaf key) in **AWS KMS** or **Google Cloud KMS** keeps private keys non-exportable:
@@ -136,80 +141,15 @@ For non-Python callers implementing RA `POST /ra/c2pa/csr-jwt` + EST `POST /.wel
 
 ---
 
-## Timestamping (`tsa.trufo.ai`)
+## Rotation and Revocation
 
-Attach an RFC 3161 timestamp to every signature so signed assets remain verifiable after the leaf certificate expires. Authenticate with `X-API-Key: <your-tsa-key>` (include the full `tsa:` prefix).
-
-### With `c2pa-rs` (TSA + OCSP stapling wrapper)
-
-`create_signer::from_keys` accepts a TSA URL but no custom headers. Wrap `Signer` (or `AsyncSigner`) to supply `timestamp_request_headers()` and cached `ocsp_val()`:
-
-```rust
-use c2pa::{create_signer, Builder, Context, Signer, SigningAlg};
-
-struct TrufoSigner {
-    inner: Box<dyn Signer + Send + Sync>,
-    tsa_api_key: String,
-    cached_ocsp_der: Vec<u8>,
-}
-
-impl Signer for TrufoSigner {
-    fn sign(&self, data: &[u8]) -> c2pa::Result<Vec<u8>> { self.inner.sign(data) }
-    fn alg(&self) -> SigningAlg { self.inner.alg() }
-    fn certs(&self) -> c2pa::Result<Vec<Vec<u8>>> { self.inner.certs() }
-    fn reserve_size(&self) -> usize { self.inner.reserve_size() }
-    fn time_authority_url(&self) -> Option<String> {
-        Some("https://tsa.trufo.ai/".to_owned())
-    }
-    fn timestamp_request_headers(&self) -> Option<Vec<(String, String)>> {
-        Some(vec![("X-API-Key".to_owned(), self.tsa_api_key.clone())])
-    }
-    fn ocsp_val(&self) -> Option<Vec<u8>> {
-        // DER OCSP response fetched from https://ocsp.trufo.ai and refreshed before nextUpdate
-        Some(self.cached_ocsp_der.clone())
-    }
-}
-```
-
-To test sending the header before purchasing a `tsa` key, call `https://test.tsa.trufo.ai/api-key` with `X-API-Key: test-api-key-header`.
-
-### With `c2patool` or clients without custom headers
-
-Proxy through a private internal reverse proxy that adds `X-API-Key` (never expose this proxy publicly):
-
-```nginx
-location /tsa {
-    proxy_pass https://tsa.trufo.ai/;
-    proxy_set_header X-API-Key "<YOUR_TSA_API_KEY>";
-}
-```
-
-### Verify TSA directly with OpenSSL
-
-```bash
-echo "Hello, C2PA" > test_data.txt
-openssl ts -query -data test_data.txt -sha256 -cert -out request.tsq
-curl -fsS -H "Content-Type: application/timestamp-query" \
-     -H "X-API-Key: <YOUR_TSA_API_KEY>" \
-     --data-binary @request.tsq https://tsa.trufo.ai/ -o response.tsr
-
-curl -fsS https://ca.trufo.ai/.well-known/est/ctsa/cacerts | base64 -d \
-  | openssl pkcs7 -inform DER -print_certs -out ctsa_chain.pem
-openssl ts -verify -data test_data.txt -in response.tsr -CAfile ctsa_chain.pem
-# Expected: Verification: OK
-```
-
----
-
-## OCSP Stapling, Rotation, and Revocation
-
-- **OCSP stapling:** Fetch one DER OCSP response per active signing certificate from `https://ocsp.trufo.ai` (`https://test.ocsp.trufo.ai` in Test Flow) against its direct issuing CA (`/c2pa-ca.crt`), cache it, and refresh it on a schedule well before its 7-day `nextUpdate` — never fetch OCSP per sign.
-- **Zero-downtime rotation:** Each instance supports up to **2 active credentials** and **3 active certificates**. Register the replacement credential or enroll the replacement leaf cert first, cut over signing traffic, then revoke or let the old one expire.
-- **Revocation:** Revoke compromised or retired certificates in the dashboard or via `POST /cert/revoke` (MFA-verified owner/admin session required; supports optional backdated `revocation_time` in UTC). Revocation is permanent and publishes through OCSP.
+- **Zero-downtime rotation:** Each instance supports up to **2 active credentials** and **3 active (unexpired, unrevoked) certificates**. Register the replacement credential or enroll the replacement leaf cert first, cut over signing traffic, then revoke or let the old one expire.
+- **Listing & revocation:** List issued certificates via `POST /cert/list`, and revoke compromised or retired certificates in the dashboard or via `POST /cert/revoke` (MFA-verified owner/admin session required; supports optional backdated `revocation_time` in UTC). Revocation is permanent and publishes through OCSP (see [Timestamping and OCSP](timestamping.md)).
 
 ---
 
 ## Reference
 
-- Full EST, OCSP, TSA, and RA wire reference: [Certificates, TSA, and OCSP API](../reference/certificates-api.md)
+- Full EST and RA wire reference: [Certificates, TSA, and OCSP API](../reference/certificates-api.md)
+- RFC 3161 timestamping and OCSP stapling: [Timestamping and OCSP](timestamping.md)
 - Complete runnable script: [certificates.py](certificates.py)

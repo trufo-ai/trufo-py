@@ -211,6 +211,8 @@ for w in caught:
 
 ## Reference
 
+- Privacy, `skip_manifest_storage`, and thumbnails: [Storage Options and Privacy](storage-options.md)
+- Manifest settings, actions, assertions, and custom labels: [C2PA Manifests, Actions, and Assertions](c2pa-manifests.md)
 - Signing endpoints, tasks, and `manifest_settings` JSON: [Signing API](../reference/signing-api.md)
 - All actions, assertions, and `signed_input_policy`: [Actions and Assertions](../reference/actions-and-assertions.md)
 - Supported formats and media action rules: [Media Format Support](../reference/media-formats.md)
