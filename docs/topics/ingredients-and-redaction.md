@@ -12,6 +12,8 @@ Each `["ingredient", {...}]` entry belongs in `assertions` (gathered by default)
 - **`componentOf`:** A placed component of a composite image, video, or audio mix.
 - **`parentOf`:** The source asset before external edits produced the input file. Requires `media` and a Branded Generator Product (`branded_gp_id`).
 
+Ingredient `media` is always sent inline as base64 inside the JSON `assertions` (there is no separate upload path for ingredients). In Local mode it stays on your host and only its hashes and lengths reach Trufo.
+
 ```python
 import base64
 from trufo import sign_c2pa_cloud
@@ -47,6 +49,8 @@ Anyone with the signed file can read embedded `data` (notices warn above 8 KB; r
 Recording `parentOf`, `action_history`, `creation`, or `placement: "created"` requires an approved Branded Generator Product (`branded_gp_id`), limited to the source types the product is approved for (on the test host, pass `branded_gp_id="test"`).
 
 ### Linking an externally edited parent (`parentOf` + `action_history`)
+
+The edited input must not carry a C2PA manifest of its own: a readable manifest (even a stale or invalid one left behind by an editing tool) is kept as the input's parent, and a supplied `parentOf` is then refused (`400`). `signed_input_policy` offers only `"auto"` and `"keep"` — neither discards a readable manifest — so strip leftover C2PA data with an external tool before signing. (Under `"auto"`, C2PA data Trufo cannot read at all is removed automatically with a warning.)
 
 ```python
 from trufo import sign_c2pa_cloud
@@ -135,7 +139,7 @@ signed_bytes = sign_c2pa_cloud(
 
 ### Rules to know
 
-- **Supported labels:** `c2pa.metadata` (capture/GPS/device), `cawg.metadata` (byline/credit/rights), `cawg.training-mining`, and `cawg.identity`. To remove a contributor's identity completely, redact **both** `cawg.metadata` and `cawg.identity`.
+- **Supported labels:** `c2pa.metadata` (capture/GPS/device), `cawg.metadata` (byline/credit/rights), `cawg.training-mining`, and `cawg.identity`. To remove a contributor's identity completely, redact **both** `cawg.metadata` and `cawg.identity`. `custom` assertions and the automatic `ai.trufo.identity` assertion cannot be redacted.
 - **Required `reason`:** One of `c2pa.PII.present`, `c2pa.invalid.data`, `c2pa.trade-secret.present`, `c2pa.government.confidential`, or a domain-validated reverse-DNS string (e.g., `com.example.internal-policy`).
 - **Numbered instances:** If a manifest contains repeated labels (`c2pa.metadata`, `c2pa.metadata__1`), a bare label matches only the unnumbered one; add separate `redact` entries for numbered labels.
 - **All-or-nothing:** Redaction fails (`400`) if the input has no C2PA manifest or if any named label does not exist anywhere in its history.

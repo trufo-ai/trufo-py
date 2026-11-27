@@ -97,16 +97,18 @@ Applies to `resize`, `crop`, `trim`, `transcode`, and `repackage`. An action kee
 
 | Target | Holds |
 | --- | --- |
-| `image/jpeg` | DPI, comments, ICC, EXIF (≤ 65,527 B), XMP (≤ 65,504 B) |
+| `image/jpeg` | DPI, comments, ICC, EXIF (≤ 65,527 B), XMP (≤ 65,504 B); IPTC/Photoshop (APP13) from a JPEG input |
 | `image/png` | DPI, comments, ICC, EXIF, XMP |
 | `image/webp`, `image/avif` | ICC, EXIF, XMP |
-| `image/tiff` | DPI, ICC, XMP |
+| `image/tiff` | DPI, ICC, XMP; IPTC and descriptive tags from a TIFF input |
 | `image/gif` | Comments, XMP (without NUL) |
 | `audio/flac` | Cover picture, tags |
 | `audio/wav` | Tags |
 | `audio/mp4`, `audio/mpeg` | Cover picture, chapters, tags |
 | `video/mp4` | JPEG/PNG cover picture, chapters, `mov_text` subtitles, 1 timecode, tags |
 | `video/quicktime` | Chapters, `mov_text` subtitles, 1 timecode, tags |
+
+When the output keeps the input's format (`resize`, `crop`, or a same-format `transcode`), format-specific metadata is also kept: JPEG IPTC/Photoshop (APP13) resources and coding segments, PNG text and hints, WebP background color, and TIFF IPTC and descriptive tags. Converting to another format drops it (with a warning).
 
 **Dropped and named in warnings:**
 - Format-specific metadata when converting away (PNG text/hints, JPEG coding segments, WebP background color, IPTC, TIFF descriptive tags).

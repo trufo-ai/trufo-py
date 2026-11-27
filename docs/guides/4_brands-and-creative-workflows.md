@@ -39,7 +39,7 @@ When an editor modifies an image or video outside Trufo and the editing tool str
 
 - **With a Branded Generator Product (`branded_gp_id`):** Send the edited asset as the input, attach the original unedited file as a `parentOf` ingredient (`media`), and declare what changed in `action_history` (e.g., `c2pa.cropped`, `c2pa.adjustedColor`, `c2pa.edited`, with truthful `digitalSourceType` values such as `humanEdits` or `compositeWithTrainedAlgorithmicMedia`). Set `ManifestSettings(all_actions_included=True)` only when your `action_history` covers every edit since the parent.
 - **Without a Branded Generator Product:** You can still sign the final asset with `cawg_identity`, `cawg_metadata`, and `publish`, and declare contributing assets as gathered `componentOf` / `inputTo` ingredients — just be aware that `parentOf` + `action_history` requires a Branded Generator Product.
-- **Watch out for broken embedded manifests:** If an external tool edited pixels *without* removing the old C2PA box, the file arrives with a mismatched hash. Under default `signed_input_policy: "auto"`, Trufo keeps readable manifests and records their validation failures in the new manifest (with a warning). Keep the clean original file alongside your DAM job if you want to link it cleanly via `parentOf`.
+- **Watch out for broken embedded manifests:** If an external tool edited pixels *without* removing the old C2PA box, the file arrives with a mismatched hash. Under default `signed_input_policy: "auto"`, Trufo keeps readable manifests and records their validation failures in the new manifest (with a warning). If you plan to link the clean original via `parentOf`, strip the broken C2PA box from the edited file before signing — `parentOf` cannot be combined with a kept signed input — and keep the clean original alongside your DAM job.
 
 ---
 
@@ -66,6 +66,7 @@ Before publishing camera originals or partner assets, you may need to remove sen
 - **To fully remove a contributor's identity**, redact *both* `cawg.metadata` and `cawg.identity` — removing only one leaves the other intact.
 - **Redaction is strict and all-or-nothing:** If the input has no C2PA manifest, or if a targeted label doesn't exist anywhere in the input's history, the request fails with `400` and nothing is signed. Inspect incoming manifests (or only send `redact` on inputs known to carry those labels) rather than sending blind redactions on mixed signed/unsigned batches.
 - **Check numbered labels:** If a manifest contains multiple assertions of the same type (`c2pa.metadata`, `c2pa.metadata__1`), a bare label only redacts the unnumbered one.
+- **Know what cannot be redacted:** `redact` supports `c2pa.metadata`, `cawg.metadata`, `cawg.training-mining`, and `cawg.identity`. Upstream `custom` assertions and `ai.trufo.identity` cannot be redacted.
 
 ---
 

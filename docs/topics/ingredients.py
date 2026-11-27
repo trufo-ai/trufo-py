@@ -1,12 +1,12 @@
 # Copyright 2025-2026 Trufo, Inc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-"""Quickstart: redact an assertion from an ingredient's C2PA manifest.
+"""Companion script: redact an assertion from an ingredient's C2PA manifest.
 
 Removes c2pa.metadata from wherever it lives in the input's provenance
 history (the immediate parent, or any earlier generation).
 
-See docs/quickstart/5_ingredients.md for details.
+See docs/topics/ingredients-and-redaction.md for details.
 Requires a c2pa-sign-prod API key — set TRUFO_C2PA_SIGN_PROD_API_KEY
 or save it to ~/.trufo/credentials/c2pa_sign_prod_api_key.
 Requires INPUT_FILE to already have a C2PA manifest.

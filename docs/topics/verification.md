@@ -25,7 +25,7 @@ What to check in a healthy Trufo-signed asset:
 
 ## 2. Verifying Test-Host Assets in CI
 
-Files signed on `https://test.api.trufo.ai` (or with certificates from `https://test.ca.trufo.ai`) chain to **TCA Test Root CA**, which public C2PA trust lists deliberately do not trust.
+Files signed on `https://test.api.trufo.ai`, with Test Flow certificates from `https://test.ca.trufo.ai`, or with dummy certificates (`c2pa-l1-test` / `cawg-interim-test`, enrolled on `https://ca.trufo.ai`) chain to **TCA Test Root CA**, which public C2PA trust lists deliberately do not trust.
 
 To verify test-signed files in local tests or CI without disabling signature checks, download the test root certificate and pass it as a local trust anchor:
 
@@ -50,6 +50,13 @@ trust_anchors = """
 c2patool --settings c2pa_test_settings.toml signed_test.jpg
 ```
 
+The exact settings keys depend on your `c2patool` / `c2pa-rs` version (recent releases group claim-signing, CAWG, and timestamp trust lists under `trust.anchors`); check the settings reference for the version you run.
+
+What to expect from test-host assets even with the test root trusted:
+
+- **Timestamps:** `test.api.trufo.ai` and `https://test.tsa.trufo.ai/` timestamp with a **self-signed test TSA certificate** that does not chain to `test.ca.trufo.ai/root-ca.crt`, so validators report the timestamp as untrusted (`timeStamp.untrusted`). In CI, treat that code as expected for test assets (or disable timestamp-trust verification in your test settings, e.g. `verify.verify_timestamp_trust = false` in `c2pa-rs`) — never in production checks.
+- **`cawg.identity`:** Identity assertions are verified against a separate CAWG trust list, not the claim-signing anchors above. On the test host, `cawg_identity_id="test"` signs with a shared test CAWG certificate (and dummy `cawg-interim-test` certificates are issued) under the TCA Test CAWG Interim Issuing CA, which also chains to TCA Test Root CA — add `test_root.pem` as a CAWG trust anchor too. Production assertions signed with your organization's Trufo-managed interim certificate (`org_interim`) or a `cawg-interim` certificate you enrolled chain through the **Interim CAWG Identity CA** (`https://ca.trufo.ai/temp-cawg-ca.crt`) to `https://ca.trufo.ai/root-ca.crt`; add that root as a CAWG trust anchor if your validator does not already trust it.
+
 *(Production files signed via `api.trufo.ai` / `eu.api.trufo.ai` or with production TCA certificates chain to `Trufo C2PA Root CA`, downloadable at `https://ca.trufo.ai/root-ca.crt`, and validate against the C2PA Trust List.)*
 
 ---
@@ -63,18 +70,62 @@ When a file has been stripped or re-encoded (for example by a social platform), 
 Instead, verify a recovered `per_embed` manifest in two checks:
 
 1. **Cryptographic integrity of the recovered manifest store:** Verify the manifest's COSE signature, certificate chain against the C2PA Trust List, RFC 3161 timestamp, and stapled OCSP response.
-2. **Soft-binding match:** Confirm the recovered manifest contains a `c2pa.soft-binding` assertion with `alg == "ai.trufo.pawprint.watermark"` whose block `value` matches the `wid` decoded from the media (and visually/perceptually compare the manifest's thumbnail if present).
+2. **Soft-binding match:** Confirm the recovered manifest contains a `c2pa.soft-binding` assertion with `alg == "ai.trufo.pawprint.watermark"` whose block `value` is the `wid` decoded from the media (and visually/perceptually compare the manifest's thumbnail if present).
 
-If you only need to inspect fields without a local C2PA library, `recover_content(..., parse_manifest_json=True)` returns `manifest_json` as a convenience parse, not a cryptographic validation result.
+### Recipe
+
+**Step 1 — recover and save the detached store.** `manifest_bytes` is a complete C2PA manifest store (JUMBF), the same bytes a `.c2pa` sidecar holds:
+
+```python
+from trufo import recover_content
+
+result = recover_content(recover_key, media_bytes, parse_manifest_json=True)
+if result.detected and result.manifest_bytes:
+    with open("recovered.c2pa", "wb") as f:
+        f.write(result.manifest_bytes)
+```
+
+`detected=True` with `manifest_bytes=None` is normal — not an error — for `per_ai_system` marks (inspect `result.ai_system` and `result.ai_involvement` instead) and for `per_embed` records another organization has set `inactive` (only detection is disclosed). Your own organization's records always return their manifest.
+
+**Step 2 — validate the store cryptographically.** Load the detached store together with the recovered media in a C2PA library — in `c2pa-rs`, `Reader::from_context(context).with_manifest_data_and_stream(&manifest_bytes, format, stream)` (in the C API, `c2pa_reader_from_context()` then `c2pa_reader_with_manifest_data_and_stream()`) — with your usual trust settings, then read the validation results:
+
+- **Must pass:** claim signature, signing certificate chain and trust, timestamp, and OCSP/revocation status.
+- **Expected to fail on re-encoded media:** hard-binding hash codes such as `assertion.dataHash.mismatch` or `assertion.bmffHash.mismatch`. Ignore only these; any other failure means the store itself is not trustworthy.
+
+**Step 3 — match the soft binding to the decoded `wid`.** The helper below reads Trufo's `result.manifest_json` (crJSON: `manifests` is a list and each manifest's `assertions` is an object keyed by label — not the layout of `c2pa-rs`'s default `Reader::json()`; adapt the lookup if you read your library's report instead). There, the soft-binding block `value` is the `wid`'s UTF-8 bytes; JSON reports render that byte string as a list of byte values, while manifests signed before the byte-string encoding carry plain text:
+
+```python
+def declared_wids(manifest_json: dict) -> set[str]:
+    wids = set()
+    for manifest in manifest_json.get("manifests", []):
+        sb = manifest.get("assertions", {}).get("c2pa.soft-binding")
+        if not sb or sb.get("alg") != "ai.trufo.pawprint.watermark":
+            continue
+        for block in sb.get("blocks", []):
+            value = block.get("value")
+            wids.add(bytes(value).decode("utf-8") if isinstance(value, list) else value)
+    return wids
+
+assert result.wid in declared_wids(result.manifest_json)
+```
+
+*(Older manifests may spell the same ID with a legacy `image.` or `audio.` prefix instead of `v1.`.)* `manifest_json` is a convenience parse with per-manifest validation results removed, so use it only for this field match — the verdict comes from Step 2.
 
 ---
 
 ## 4. Incoming Signed Files and Remote Manifests
 
-When you pass an already-signed file into Trufo's signing API:
+When you pass a file that already carries C2PA data into Trufo's signing API, `signed_input_policy` (input file) and `signed_ingredient_policy` (ingredient `media`) decide what happens. Both accept `"auto"` (default) or `"keep"`:
 
-- Trufo validates the incoming embedded manifest, keeps it as the `parentOf` ingredient, and records its validation results in the new manifest (emitting a `TrufoServerWarning` if the incoming manifest is invalid or chains to an untrusted signer).
-- Check [Signed inputs and ingredients](../reference/actions-and-assertions.md#signed-inputs-and-ingredients) for exact `signed_input_policy` and `signed_ingredient_policy` rules (`auto` vs. `keep`).
+| Existing C2PA data | `"auto"` (default) | `"keep"` |
+| --- | --- | --- |
+| Readable embedded manifest (valid or invalid) | Kept with its validation results recorded — the input file as the `parentOf` ingredient, an ingredient `media` file with the `relationship` you declared; a `TrufoServerWarning` flags an invalid or untrusted incoming manifest. With an `ai_system` assertion, the input file is also subject to the source-class check described after this table | Kept the same way; no source-class check (with `ai_system`, a warning notes that no new source type was declared) |
+| **Remote manifest** — the file only references an external manifest by URL | Refused with `400` | Refused with `400` |
+| Unreadable or malformed C2PA data | Removed with a warning; the file is signed as if it carried no C2PA data (a `redact` on that input then fails) | Refused with `400` |
+
+**Remote manifests:** Trufo does not fetch manifests referenced by URL. If an incoming file points to an external manifest instead of embedding one, the sign is refused under either policy. To sign it, obtain a copy with the manifest embedded (or the original unsigned file) and send that. Trufo's own output always embeds the manifest in the file; see [Storage Options](storage-options.md#remote-manifests).
+
+Under `"auto"`, an `ai_system` assertion additionally triggers a source-class check on the input file's manifest chain (inputs classified as camera-captured or human-created are refused with `400`; `"keep"` skips the check); see [Signed inputs and ingredients](../reference/actions-and-assertions.md#signed-inputs-and-ingredients) for the full rules.
 
 ---
 

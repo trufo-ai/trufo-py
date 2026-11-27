@@ -54,7 +54,7 @@ Model **one instance (`gpi_id`) per independent key holder** — for example, on
 - **Two active credentials per instance:** Register your replacement instance key first, cut over your enrollment job to the new `gpic_id`, then revoke the old credential — zero downtime.
 - **Three active certificates per instance:** Certificates last up to **366 days** (`c2pa-l1`) or **90 days** (`c2pa-l2`). Automate renewal well ahead of expiry (e.g., at 60–75% of lifetime) with a fresh leaf key pair, switch signing to the new cert, and let the old one expire (or revoke it if retired early).
 - **Watch OV and PV expiry:** Enrollment requires active (unexpired) OV and PV (`403 OVNotActive` / `403 PVNotActive`). Track `validated_expires_at` from `/gproduct/list` and renew validations ahead of your certificate renewal window.
-- **Never ship org-scoped credentials to client devices:** Your `tsa` API key and interactive MFA sessions belong on backend infrastructure, never embedded in desktop binaries, mobile apps, or camera firmware. For distributed clients, proxy TSA requests through your own backend.
+- **Never ship org-scoped credentials to client devices:** Your `tsa` API key and interactive MFA sessions belong on backend infrastructure, never embedded in desktop binaries, mobile apps, or camera firmware. Unattended certificate enrollment (`csr-jwt`) authenticates with each instance's registered credential key; MFA sessions are only needed to provision instances and credentials and to revoke. For distributed clients, proxy TSA requests through your own backend.
 
 ---
 
@@ -73,7 +73,7 @@ Without a trusted timestamp and stapled OCSP response, signed assets can become 
 
 - C2PA expects signers to **staple** a DER OCSP response into each COSE signature (`rVals.ocspVals`) rather than forcing every validator to query OCSP live.
 - **Cache, do not fetch per sign:** Trufo OCSP responses are valid for **7 days** (`thisUpdate` to `nextUpdate`). Fetch one response per active signing certificate on a background timer (for example every 12–24 hours, well before `nextUpdate`) and serve the cached bytes from your signer's `ocsp_val()` method.
-- **Build OCSP requests against the direct issuing CA** (`/c2pa-ca.crt` for `c2pa-l1`), not the responder cert; Trufo certificates include `https://ocsp.trufo.ai` in their AIA extension.
+- **Build OCSP requests against the direct issuing CA** (`/c2pa-ca.crt` for `c2pa-l1` and `c2pa-l2`), not the responder cert; Trufo certificates include `https://ocsp.trufo.ai` in their AIA extension.
 
 ---
 

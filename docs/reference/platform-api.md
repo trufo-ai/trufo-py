@@ -13,7 +13,7 @@ Normative specification for Trufo HTTP conventions, hosts, regions, authenticati
 - **Method:** Nearly every endpoint is `POST` with a JSON body (including reads); exceptions are `GET /tasks/{task_id}`, `GET /gproduct/pv/draft`, and `GET /gproduct/bpv/draft`, plus file-upload endpoints (`/org/ov/upload`, `/gproduct/pv/upload`, `/gproduct/bpv/upload`) which take `multipart/form-data`. Parameterless `POST` endpoints accept `{}`.
 - **Transport:** TLS 1.3 or later is required; plaintext HTTP is rejected.
 - **Request ID:** Every response carries an `X-Request-ID` header — include it when contacting [support@trufo.ai](mailto:support@trufo.ai).
-- **Organization scoping:** Every credential is bound to a single organization (`org_...`). Endpoints never act cross-organization.
+- **Organization scoping:** Every API key, and every access token once its account belongs to an organization, is bound to a single organization (`org_...`). Endpoints never act cross-organization. An account with no organization yet can still sign in and call `POST /org/create` or `POST /org/invite/accept`, which return fresh tokens bound to the new organization.
 
 ### Authentication
 
@@ -40,7 +40,7 @@ Errors return JSON with a stable code or message in `detail`:
 
 Two exceptions:
 - Request-shape failures return HTTP `422` with `detail` as a list of `{type, loc, msg}` field errors.
-- Device-authorization endpoints return RFC 8628 lowercase codes (`authorization_pending`, `access_denied`, `expired_token`).
+- Device-authorization and loopback-token endpoints return RFC 8628 / RFC 6749 lowercase codes (`authorization_pending`, `access_denied`, `expired_token`, `invalid_grant`).
 
 | Status | `detail` | Meaning |
 | --- | --- | --- |
@@ -72,11 +72,14 @@ The API host you call determines where Cloud-mode content is processed. There is
 | Data | Scope |
 | --- | --- |
 | Accounts, organizations, API keys | Shared — credentials work on either production endpoint |
+| Generator products, instances, certificates, OV, PV/BPV, domain validation, billing | Shared — managed identically from `api.trufo.ai` or `eu.api.trufo.ai` |
 | Cloud-mode media processing | Regional — calls to `eu.api.trufo.ai` stay in EU infrastructure |
+| Cloud S3 uploads (`/io/get-s3-upload-url`, `TASK` mode) | Regional — upload, submit, and poll against the same endpoint |
 | Signing records and watermark IDs | Shared — content signed via either endpoint is recoverable from either |
 | AI systems (`/ai-system/*`) | Shared — registered once, usable on every endpoint (including test) |
 | Software agent records (`/c2pa/software-agent/*`) | Regional — register on the same endpoint you sign against |
 | Request logs | Regional |
+| CA (`ca.trufo.ai`), OCSP (`ocsp.trufo.ai`), shared TSA (`tsa.trufo.ai`) | Global — dedicated TSA endpoints (including EU capacity) are available via [support@trufo.ai](mailto:support@trufo.ai) |
 
 An organization's `default_content_region` setting applies to dashboard workflows only; it does not restrict which API host accepts your credentials.
 
@@ -88,7 +91,7 @@ API keys are created and revoked by an MFA-verified owner or admin in [Organizat
 
 | Scope | Grants | Requires |
 | --- | --- | --- |
-| `trufo-api` | OAuth 2.0 device authorization flow (`/account/device/*`) | — |
+| `trufo-api` | Sign-in for interactive sessions: device authorization flow (`/account/device/*`) and browser loopback login (`/account/loopback/token`) | — |
 | `c2pa-sign-test` | `/c2pa/sign` on `test.api.trufo.ai`; `/ai-system/*` and `/c2pa/software-agent/*` on production hosts | — |
 | `c2pa-sign-prod` | `/c2pa/sign`, `/io/get-s3-upload-url`, `/tasks/{task_id}`, `/content/{get,list,status}`, `/ai-system/*`, `/c2pa/software-agent/*` on production hosts | C2PA Signing plan |
 | `watermark-test` | `/bind/*` on `test.api.trufo.ai`; `/ai-system/*` on production hosts | — |
@@ -114,6 +117,10 @@ Managed in [app.trufo.ai](https://app.trufo.ai) by an MFA-verified owner or admi
 
 Interactive and Registration Authority endpoints require an MFA-verified `Authorization: Bearer <jwt>` access token. Access tokens last ~2 hours; refresh tokens last **7 days** and rotate on every use (single-use). MFA status carries across refreshes.
 
+Sign-in and refresh (`/account/device/*`, `/account/loopback/token`, `/account/refresh`) are served by both production hosts. `test.api.trufo.ai` does not serve them: it accepts tokens issued by `https://api.trufo.ai`, and `TrufoSession` signs in and refreshes there when it targets the test host.
+
+`trufo login` (and `TrufoSession.init_session()`) uses browser loopback login on the local machine and falls back to the device flow when no browser is available; `trufo login --device` (`use_device=True`) forces the device flow for headless hosts. `TrufoSession.make_request()` sends `POST` with a JSON body only; call the `GET` draft endpoints and `multipart/form-data` upload endpoints with any HTTP client and `Authorization: Bearer <access_token>`.
+
 ### `POST /account/device/authorize`
 
 **Auth:** `X-API-Key` (`trufo-api`). **Request:** `{}`.
@@ -127,6 +134,14 @@ Interactive and Registration Authority endpoints require an MFA-verified `Author
 **Response (200):** `{"access_token": "...", "refresh_token": "..."}`.
 
 **Errors:** `400 authorization_pending`, `400 access_denied`, `400 expired_token`.
+
+### `POST /account/loopback/token`
+
+**Auth:** `X-API-Key` (`trufo-api`). **Request:** `{"code": "<string>", "code_verifier": "<string>", "redirect_uri": "<string>"}` (RFC 8252 loopback redirect with PKCE; used by `trufo login`).
+
+**Response (200):** `{"access_token": "...", "refresh_token": "..."}`.
+
+**Errors:** `400 invalid_grant` (unknown, expired, or already-used code, or mismatched `code_verifier` / `redirect_uri`).
 
 ### `POST /account/refresh`
 

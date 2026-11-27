@@ -8,7 +8,7 @@ Enroll C2PA Claim Signing certificates from Trufo Certificate Authority (TCA), r
 
 ## Dummy Certificate (Conformance Applications)
 
-Obtain a structurally valid test certificate carrying your company and app name — no Trufo account, validation, or plan required. Dummy certificates chain to Trufo's test CA (not trusted by public validators) and are not revocable.
+Obtain a structurally valid test certificate carrying your company and app name — no Trufo account, validation, or plan required. Dummy certificates are enrolled on `https://ca.trufo.ai` under the dummy leaf types (not on `test.ca.trufo.ai`, which serves Test Flow `c2pa-l1` only), chain to **TCA Test Root CA** (not trusted by public validators; downloadable at `https://test.ca.trufo.ai/root-ca.crt` for local verification), and are not listed, revocable, or covered by OCSP.
 
 ```python
 from trufo import generate_keypair, request_c2pa_dummy_cert
@@ -24,7 +24,7 @@ cert_chain_pem = request_c2pa_dummy_cert(
 )
 ```
 
-Use `https://test.tsa.trufo.ai/` for test timestamps alongside dummy certs.
+Dummy enrollment issues Assurance Level 1 certificates only (`c2pa-l1-test`); `c2pa-l2-test` is disabled. Use `https://test.tsa.trufo.ai/` for test timestamps alongside dummy certs.
 
 ---
 
@@ -70,6 +70,9 @@ cert_chain_pem = request_c2pa_cert_test(
 )
 ```
 
+- **`c2pa-l1` only:** Test Flow enrolls `c2pa-l1` certificates; `c2pa-l2` is not available on the test CA.
+- **Sign-in for non-Python callers:** `test.api.trufo.ai` has no sign-in or token-refresh routes. Run device authorization (`/account/device/*`) and token refresh (`/account/refresh`) against `https://api.trufo.ai`, then send the resulting access token to `https://test.api.trufo.ai`. `TrufoSession(base_api_url=TRUFO_API_URL_TEST)` does this routing automatically.
+
 Nothing from the Test Flow carries over to production.
 
 ---
@@ -77,6 +80,16 @@ Nothing from the Test Flow carries over to production.
 ## Production Certificate Enrollment
 
 Prerequisites in [app.trufo.ai](https://app.trufo.ai): approved **Organization Validation (OV)**, approved **Product Validation (PV)** (yielding `gp_id`), and an active C2PA Certificate subscription.
+
+The C2PA Certificate plan is purchased per generator product, for one of three implementation types (the PV `implementation` field). Each type issues `c2pa-l1` certificates, and PV asks you to attest to the matching signing architecture:
+
+| Plan | `implementation` | Where C2PA claim signing happens |
+| --- | --- | --- |
+| `c2pa_cert_lv1_backend` | `backend` | Entirely on your backend servers. |
+| `c2pa_cert_lv1_distributed` | `distributed` | Split between edge devices (for example, cameras) and a central signing backend; every input passed between the two must be cryptographically authenticated, and each edge subsystem uses its own credentials. |
+| `c2pa_cert_lv1_edge` | `edge` | Directly on conformant cameras or other edge devices. |
+
+*(Organizations that sign `cawg.identity` assertions with their own key, rather than letting Trufo sign them, enroll an organization-level CAWG interim certificate with `request_cawg_interim_cert(session, private_key_signer)` — requires approved OV and an active `cawg_cert_organization` subscription. See [CAWG Identity](cawg-identity.md).)*
 
 ### Assurance levels (`c2pa-l1` and `c2pa-l2`)
 
@@ -93,7 +106,7 @@ from trufo import create_instance, register_credential
 from trufo.crypt.kms import AWSKMSPrivateKey
 from trufo.util.credentials import load_session
 
-session = load_session()  # MFA-verified session from TrufoSession.init_session()
+session = load_session()  # reads ~/.trufo/session (written by `trufo login` or save_session()) or session env vars; sign in with MFA
 gpi_id = create_instance(session, gp_id="gp_...", name="Production signer, us-east")
 
 # AWS KMS P-256 key (key spec ECC_NIST_P256, usage SIGN_VERIFY; requires boto3)
@@ -117,6 +130,8 @@ gpic_id = register_credential(
 ```
 
 *(You can also pass PEM bytes from `generate_keypair(SigningAlgorithm.ES256)` for local/HSM workflows.)*
+
+> **Instance credential key types:** `register_credential()` accepts only **EC P-256 (`key_algorithm="ES256"`)** or **Ed25519 (`key_algorithm="EdDSA"`)** public keys; `key_algorithm` must match the key (`400 AlgorithmMismatch`). A P-384 KMS key works as a **leaf** key but cannot be registered as an instance credential.
 
 ### 2. Enroll a leaf certificate (repeat each renewal cycle)
 
@@ -144,6 +159,7 @@ For non-Python callers implementing RA `POST /ra/c2pa/csr-jwt` + EST `POST /.wel
 ## Rotation and Revocation
 
 - **Zero-downtime rotation:** Each instance supports up to **2 active credentials** and **3 active (unexpired, unrevoked) certificates**. Register the replacement credential or enroll the replacement leaf cert first, cut over signing traffic, then revoke or let the old one expire.
+- **Hitting the caps on frequent rotation:** A 4th enrollment while 3 certificates are still active fails with `403` (the error tells you to revoke one or wait for one to expire); a 3rd credential returns `400`. Expired and revoked certificates (and revoked credentials) do not count, so revoking the retired certificate via `POST /cert/revoke` (reason `superseded`) — or the retired credential via `POST /gproduct/instance/credential/revoke` — frees a slot immediately. If you rotate more often than every few months, enroll with a shorter `validity_days` so retired certificates age out on their own.
 - **Listing & revocation:** List issued certificates via `POST /cert/list`, and revoke compromised or retired certificates in the dashboard or via `POST /cert/revoke` (MFA-verified owner/admin session required; supports optional backdated `revocation_time` in UTC). Revocation is permanent and publishes through OCSP (see [Timestamping and OCSP](timestamping.md)).
 
 ---

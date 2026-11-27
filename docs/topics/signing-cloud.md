@@ -1,6 +1,6 @@
 # Cloud Signing
 
-Sign media with a C2PA manifest on Trufo's servers — directly in the request body for images up to 10 MB, or via ephemeral S3 uploads (`ExecutionMode.TASK`) for larger images, audio, and video.
+Sign media with a C2PA manifest on Trufo's servers — directly in the request body for files up to 10 MB, or via ephemeral S3 uploads (`ExecutionMode.TASK`) for larger files and for media actions on audio and video.
 
 To keep media on your own infrastructure, see [Local Signing (Python SDK)](signing-local-python.md) or [Local Signing (Docker)](signing-local-docker.md).
 
@@ -14,7 +14,7 @@ To keep media on your own infrastructure, see [Local Signing (Python SDK)](signi
 
 ## Direct Signing (`REQUEST`)
 
-Use direct signing for images up to **10 MB (10,000,000 bytes)**.
+Use direct signing for files up to **10 MB (10,000,000 bytes)**. Audio, video, and PDF files within that limit can be signed directly too, as long as the request has no media-processing action (`watermark`, `resize`, `crop`, `trim`, `transcode`, `repackage`); those actions on non-image input require `TASK` (`400 task_required` otherwise).
 
 ```python
 from pathlib import Path
@@ -53,7 +53,7 @@ On the test host, pass `branded_gp_id="test"` to `sign_c2pa_cloud_test()` to tes
 
 ## Large Files, Audio, and Video (`TASK` via S3)
 
-Use `ExecutionMode.TASK` for files over 10 MB, and for audio or video watermarking/transcoding. `TASK` mode runs on production hosts only (`api.trufo.ai` and `eu.api.trufo.ai`).
+Use `ExecutionMode.TASK` for files over 10 MB, and for any media-processing action (watermarking, `resize`, `crop`, `trim`, `transcode`, `repackage`) on audio, video, or other non-image input. `TASK` mode runs on production hosts only (`api.trufo.ai` and `eu.api.trufo.ai`).
 
 ### Blocking helper (upload → submit → poll → download)
 
@@ -99,12 +99,12 @@ with Path("input.mp4").open("rb") as source:
 task = submit_c2pa_sign(api_key, upload.media_input_s3)
 print("Submitted task:", task.task_id)
 
-# 4. Poll until completion (default wait_seconds=600)
+# 4. Poll until completion (default wait_seconds=600); emits result warnings as TrufoServerWarning
 completed = wait_for_task(api_key, task.task_id, wait_seconds=600)
 if completed.result.download_url is None:
     raise RuntimeError("The task output has expired.")
 
-# Optional: persist content/watermark IDs when returned
+# Optional: persist the content ID (always set) and watermark ID (None without a watermark)
 print("cid:", completed.result.cid, "wid:", completed.result.wid)
 
 # 5. Stream the signed output to disk
@@ -118,6 +118,7 @@ with requests.get(completed.result.download_url, stream=True, timeout=120) as re
 - `TaskWaitTimeoutError.task_id` lets you resume polling without resubmitting.
 - `TaskFailedError` exposes `.task.error_code`, `.task.error_http_status`, and `.task.error_message`.
 - `download_url` links stay valid for up to 15 minutes; poll `get_task()` for a fresh link until `expires_ts` (24 hours after completion). Treat upload and download links as secrets.
+- `get_task()` does not emit `TrufoServerWarning`; when you poll with it instead of `wait_for_task()`, read non-fatal notices from `task.result.warnings` yourself.
 
 ---
 
@@ -125,7 +126,7 @@ with requests.get(completed.result.download_url, stream=True, timeout=120) as re
 
 ### Titles and thumbnails (`ManifestSettings`)
 
-Pass explicit `manifest_title` and `ingredient_title` (typically filenames) so validators display clean names instead of fallback defaults:
+Pass explicit `manifest_title` and `ingredient_title` (typically filenames) so validators display clean names: an unset `manifest_title` leaves the manifest untitled, and an unset `ingredient_title` falls back to the input's manifest title or `input.<ext>`. That fallback extension is derived by sniffing the bytes, which cannot tell formats that share a container apart (`TIFF` / `DNG`, `HEIC` / `HEIF` / `AVIF`), so always set titles for those formats.
 
 ```python
 from trufo.c2pa import ManifestSettings, ThumbnailPolicy, ThumbnailSettings, ThumbnailSize
@@ -180,7 +181,7 @@ signed_bytes = sign_c2pa_cloud(
 
 ### Catching non-fatal warnings
 
-Non-fatal notices (skipped watermarks, metadata dropped by a media action, untrusted incoming manifests) arrive in `warnings` and are emitted by the SDK as `TrufoServerWarning`:
+Non-fatal notices (skipped watermarks, metadata dropped by a media action, untrusted incoming manifests) arrive in `warnings` and are emitted by the SDK signing helpers (and `wait_for_task()`) as `TrufoServerWarning`:
 
 ```python
 import warnings
@@ -196,7 +197,7 @@ for w in caught:
 
 ### Region selection and retries
 
-- **Europe endpoint:** Pass `trufo_api_url=TRUFO_API_URL_EUROPE` (`https://eu.api.trufo.ai`).
+- **Europe endpoint:** Pass `trufo_api_url=TRUFO_API_URL_EUROPE` (`https://eu.api.trufo.ai`; `from trufo.api.endpoints import TRUFO_API_URL_EUROPE`). Use the same URL for `get_task()` / `wait_for_task()` on tasks submitted there.
 - **Retries:** Signing is metered on completion and is not deduplicated. Use generous client timeouts rather than aggressive automatic retries on network timeouts.
 
 ---

@@ -1,7 +1,7 @@
 # Copyright 2025-2026 Trufo, Inc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-"""Quickstart: embed and recover a Trufo watermark.
+"""Companion script: embed and recover a Trufo watermark.
 
 Demonstrates:
   - signing with a watermark, under each effort level
@@ -9,7 +9,7 @@ Demonstrates:
   - recovering the watermark from the signed media
   - watermarking per AI system, when AI_SYSTEM_ID is set
 
-See docs/quickstart/6_watermarking.md for details.
+See docs/topics/watermarking.md for details.
 Requires a c2pa-sign-test API key, and a content-recover-test key for recovery.
 """
 
@@ -23,12 +23,12 @@ from trufo.util.credentials import TrufoAPIKey, load_api_key
 
 # --- configuration ---
 
-# format eligibility: docs/api/media_format_support.md
+# format eligibility: docs/reference/media-formats.md
 INPUT_FILE = Path("photo.jpg")
 OUTPUT_FILE = Path("watermarked.jpg")
 
 # optional, for step 4: the ai_system_id from POST /ai-system/add ("aisys_…");
-# see docs/quickstart/3_ai_labeling.md
+# see docs/topics/ai-labeling.md
 AI_SYSTEM_ID = ""
 # AI output without a C2PA manifest; a signed camera photo is refused
 AI_INPUT_FILE = Path("generated.png")

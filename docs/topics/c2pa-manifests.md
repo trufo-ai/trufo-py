@@ -25,7 +25,7 @@ settings = ManifestSettings(
 signed_bytes = sign_c2pa_cloud_test(api_key, media_bytes, manifest_settings=settings)
 ```
 
-- **`manifest_title` / `ingredient_title`:** Set `dc:title` on the new manifest and the implicit input parent ingredient (typically filenames). Top-level `manifest_title` / `ingredient_title` fields also exist as aliases; do not set both.
+- **`manifest_title` / `ingredient_title`:** Set `dc:title` on the new manifest and the implicit input parent ingredient (typically filenames). Top-level `manifest_title` / `ingredient_title` fields also exist as aliases; do not set both. When `manifest_title` is unset, the new manifest has no `dc:title`. When `ingredient_title` is unset, the parent ingredient takes the input's existing manifest title or else `input.<ext>`, with `<ext>` derived by sniffing the media bytes — which cannot tell apart formats that share a container (`TIFF` / `DNG`, `HEIC` / `HEIF` / `AVIF`). Always set both titles explicitly for those formats so the intended extension is shown.
 - **`thumbnail_settings`:** Controls claim and ingredient thumbnail generation — see [Storage Options and Privacy](storage-options.md#thumbnail-settings-thumbnail_settings).
 - **`all_actions_included`:** Signals whether the manifest's `c2pa.actions` list is a complete record of actions on the asset. Defaults to `True` on standard signs, and `False` whenever `creation`, `parentOf`, `action_history`, or `placement="created"` is used. Setting `all_actions_included=True` with a `parentOf` ingredient that has no `action_history` is refused (`400 Conflict`).
 
@@ -36,9 +36,9 @@ signed_bytes = sign_c2pa_cloud_test(api_key, media_bytes, manifest_settings=sett
 In C2PA 2.x, assertions sit in one of two buckets:
 
 - **`created` assertions:** Claims the signing generator product attests to directly (for example, `c2pa.actions` for operations Trufo actually performed, `c2pa.hash.data`, or `c2pa.created` under an authorized Branded Generator Product / first-party AI system).
-- **`gathered` assertions:** Information supplied by the caller or external tools (the default for `c2pa_metadata`, `cawg_metadata`, `cawg_training`, `custom`, and non-parent ingredients).
+- **`gathered` assertions:** Information supplied by the caller or external tools (the default for `cawg_training`, `custom`, and non-parent ingredients; `c2pa_metadata` and `cawg_metadata` are **always** gathered — omit `placement` on them).
 
-Requesting `placement="created"` on user-supplied assertions or ingredients — or using `creation`, `parentOf`, or `action_history` — requires an approved `branded_gp_id` (`403 C2PACreatedUserAssertionsNotAuthorized` otherwise). Every manifest also carries `ai.trufo.identity` (`oid` and validated legal name when OV is active), injected automatically.
+Requesting `placement="created"` on the user-supplied assertions and ingredients that allow it — or using `creation`, `parentOf`, or `action_history` — requires an approved `branded_gp_id` (`403 C2PACreatedUserAssertionsNotAuthorized` otherwise). Every manifest also carries `ai.trufo.identity` (`oid` and validated legal name when OV is active), injected automatically.
 
 ---
 
@@ -76,20 +76,38 @@ When using `ai_system`, Trufo sets the appropriate AI `digitalSourceType` automa
 
 ## Software Agents
 
-Software agents identify the tool or service that performed a `creation` or `action_history` step. Register them once per API region (`api.trufo.ai` and `eu.api.trufo.ai` store software-agent records separately):
+Software agents identify the tool or service that performed a `creation` or `action_history` step. Register them once per API region with `POST /c2pa/software-agent/add` (`api.trufo.ai` and `eu.api.trufo.ai` store software-agent records separately; `test.api.trufo.ai` does not serve these routes and resolves agents registered on `api.trufo.ai`):
 
 ```python
-from trufo import add_software_agent, list_software_agents
+import requests
 
-agent_id = add_software_agent(
-    api_key,
-    name="Acme Studio Renderer",
-    version="2.4.0",
-    nickname="studio-renderer-v2",
+from trufo.api.endpoints import (
+    TPS_C2PA_SOFTWARE_AGENT_ADD_PATH,
+    TPS_C2PA_SOFTWARE_AGENT_LIST_PATH,
+    TRUFO_API_URL,
 )
+
+headers = {"X-API-Key": api_key}  # c2pa-sign-prod or c2pa-sign-test
+
+resp = requests.post(
+    TRUFO_API_URL + TPS_C2PA_SOFTWARE_AGENT_ADD_PATH,
+    headers=headers,
+    json={
+        "agent": {"name": "Acme Studio Renderer", "version": "2.4.0"},
+        "nickname": "studio-renderer-v2",
+    },
+    timeout=60,
+)
+resp.raise_for_status()
+agent_id = resp.json()["software_agent_id"]  # "swagent_..."
+
+# List registered agents in this region
+agents = requests.post(
+    TRUFO_API_URL + TPS_C2PA_SOFTWARE_AGENT_LIST_PATH, headers=headers, json={}, timeout=60
+).json()["items"]
 ```
 
-Then pass `{"software_agent_id": agent_id}` inside a `creation` assertion or an `action_history` entry. *(If you use `ai_system`, Trufo automatically uses the registered AI system's name and version as the software agent — you do not need a separate software-agent registration.)*
+Then pass `{"software_agent_id": agent_id}` inside a `creation` assertion or an `action_history` entry. *(If you use `ai_system`, Trufo automatically uses the registered AI system's name and version as the software agent — you do not need a separate software-agent registration.)* See [Software Agents](../reference/actions-and-assertions.md#software-agents-c2pasoftware-agent) for the full request schema.
 
 ---
 
@@ -143,9 +161,11 @@ Attach organization-specific assertions under a reverse-DNS label you control (f
 }]
 ```
 
-- **Domain Validation required:** Your organization must have active Domain Validation for the domain in the label (`example.com`), or signing returns `403 InvalidC2PACustomDomain`. Configure DV in [app.trufo.ai](https://app.trufo.ai) or via `/domain/dv/submit` + DNS `CNAME` + `/domain/dv/check` (see [Certificates, TSA, and OCSP API](../reference/certificates-api.md#domain-validation-domaindv)).
+- **Domain Validation required:** Your organization must have active `c2pa-custom-assertion` Domain Validation for the label's base domain, or signing returns `403 InvalidC2PACustomDomain`. Domain Validation requires the Custom Domain plan (`c2pa_custom_domain`). Configure DV in [app.trufo.ai](https://app.trufo.ai) or via `/domain/dv/submit` + DNS `CNAME` + `/domain/dv/check` (see [Certificates, TSA, and OCSP API](../reference/certificates-api.md#domain-validation-domaindv)).
+- **Domain matching:** The validated domain is reversed and matched as a prefix: validating `example.com` authorizes `com.example` and every label beginning with `com.example.` — including subdomain namespaces such as `com.example.sub.asset-info`. The same check covers custom `redact` reasons and custom `action_history` action names.
 - **Label rules:** Cannot use the `c2pa` namespace or contain `__`.
 - **`.metadata` suffix rule:** Labels ending in `.metadata` (e.g., `com.example.catalog.metadata`) are written as JSON-LD and must include a non-empty `@context` object (`400 InvalidMetadataContext` otherwise).
+- **Not redactable later:** `redact` accepts only `c2pa.metadata`, `cawg.metadata`, `cawg.training-mining`, and `cawg.identity`. A `custom` assertion (like the automatic `ai.trufo.identity`) cannot be removed by a later `redact`, so do not put data in it that you may need to withdraw.
 
 ---
 

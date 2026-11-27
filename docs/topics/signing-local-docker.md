@@ -6,7 +6,7 @@ The Docker image `ghcr.io/trufo-ai/trufo-local` runs C2PA Signing in Local mode 
 
 ## Choose an Image
 
-Both multi-arch (`linux/amd64`, `linux/arm64`) images serve `/health` and `/c2pa/sign` (not standalone `/bind/*` routes):
+Both multi-arch (`linux/amd64`, `linux/arm64`) images serve only `GET /health` and `POST /c2pa/sign`. The container does not proxy other Trufo API routes (`/ai-system/*`, `/c2pa/software-agent/*`, `/bind/*`, `/content/*`) — call those on `TRUFO_API_URL` directly:
 
 - **`ghcr.io/trufo-ai/trufo-local:2.4`** (default): C2PA signing + all media actions (`resize`, `crop`, `trim`, `transcode`, `repackage`, `redact`), no watermarking.
 - **`ghcr.io/trufo-ai/trufo-local:2.4-full`**: Adds CPU watermark embedding for every watermark-supported format (including HEIC, HEIF, and AVIF with bundled `heif-enc` and `ffmpeg`).
@@ -70,7 +70,11 @@ docker compose up -d
 docker compose ps    # wait for "(healthy)" (~5–20s on first start while engine downloads)
 curl -s http://127.0.0.1:8080/health
 # {"status":"healthy","version":"2.4.0","engine_version":"2.4.0"}
+# 2.4-full images also report the watermark engine:
+# {"status":"healthy","version":"2.4.0-full","engine_version":"2.4.0","watermark_engine_version":"<version>"}
 ```
+
+When a new container starts, the entrypoint uses `TRUFO_SDK_DOWNLOAD_API_KEY` to download and hash-verify the engine wheels from `packages.trufo.ai` into `/tmp` before the service becomes healthy (restarting the same container reuses `/tmp`); a refused or missing key stops the container with an explicit message in `docker compose logs`.
 
 ---
 
@@ -96,13 +100,13 @@ curl -s http://127.0.0.1:8080/c2pa/sign \
 | `media_input_path` | Yes | Absolute path inside `TRUFO_LOCAL_INPUT_DIRS` |
 | `media_output_path` | Yes | Absolute path inside `TRUFO_LOCAL_OUTPUT_DIRS` |
 | `actions` | Yes | Same schema as [Actions and Assertions](../reference/actions-and-assertions.md) |
-| `assertions`, `manifest_settings`, `branded_gp_id`, `signed_input_policy`, `signed_ingredient_policy`, `skip_manifest_storage` | No | Same schema as [Signing API](../reference/signing-api.md) |
+| `assertions`, `manifest_settings`, `manifest_title` / `ingredient_title` (top-level aliases; do not combine with the same field in `manifest_settings`), `branded_gp_id`, `signed_input_policy`, `signed_ingredient_policy`, `skip_manifest_storage` | No | Same schema as [Signing API](../reference/signing-api.md) |
 | `watermark_settings` | No | `{"profile": "default"}` or `{"profile": "fast"}` (`2.4-full` only) |
 
 **Important path rules:**
 - **Extension normalization:** The returned `media_output_path` resolves symlinks and normalizes the extension to match the signed format (e.g., `.jpeg` / `.JPG` → `.jpg`, `.tif` → `.tiff`, or the new format after `transcode`/`repackage`). Always read the output path from the response JSON.
 - **Overwrite behavior:** The output path is overwritten if it already exists — send one request per output path at a time and use unique filenames per job.
-- **Ingredient `media`:** Bytes stay on your machine; only hashes/lengths are sent during claim setup, while the finished manifest can include ingredient thumbnails and C2PA history.
+- **Ingredient `media`:** Unlike the input file, ingredient `media` is passed as base64 inside the JSON `assertions` (not as a path). The bytes stay on your machine; only hashes/lengths are sent during claim setup, while the finished manifest can include ingredient thumbnails and C2PA history.
 
 ### AI labeling with Docker
 

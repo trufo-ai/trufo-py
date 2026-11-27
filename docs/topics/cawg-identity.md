@@ -11,8 +11,8 @@ Attach Creator Assertions Working Group (CAWG) assertions to embed creator/right
 ## Requirements
 
 - Production: `c2pa-sign-prod` key + C2PA Signing plan + completed Organization Validation (OV).
-- Using `cawg_identity_id="org_interim"` in production requires the **CAWG Organization Certificate** plan (Trufo provisions and manages your organization's CAWG interim certificate automatically).
-- Test host: `c2pa-sign-test` key + `sign_c2pa_cloud_test()` with `cawg_identity_id="test"`.
+- `cawg_identity_id="org_interim"` selects your organization's **Trufo-managed** CAWG interim certificate: Trufo provisions it and holds its key, so there is nothing to enroll. It requires the **CAWG Organization Certificate** plan and is accepted on production hosts and on `test.api.trufo.ai`. (CAWG certificates you enroll yourself through the [Certificates API](../reference/certificates-api.md) are for your own signing stack and cannot be selected through `cawg_identity_id`.)
+- `cawg_identity_id="test"` selects a shared Trufo test CAWG certificate: `test.api.trufo.ai` only (`c2pa-sign-test` key + `sign_c2pa_cloud_test()`), no plan required. Production hosts reject it with `400 InvalidCawgIdentityId`.
 
 All three CAWG assertions are optional and can be used independently or together. Every manifest signed through Trufo also automatically carries `ai.trufo.identity` with your `oid` and (with active OV) validated legal name.
 
@@ -66,7 +66,7 @@ signed_bytes = sign_c2pa_cloud(
         "dc:rights": "© 2026 [ORGANIZATION NAME]. All rights reserved.",
         "photoshop:DateCreated": "2026-08-31",
         "Iptc4xmpExt:DigitalSourceType":
-            "https://cv.iptc.org/newscodes/digitalsourcetype/digitalCapture",
+            "http://cv.iptc.org/newscodes/digitalsourcetype/digitalCapture",
         "Iptc4xmpExt:LocationCreated": {"Iptc4xmpExt:City": "San Francisco"},
         "Iptc4xmpCore:AltTextAccessibility":
             "Photo of a suspension bridge at sunset.",
@@ -80,7 +80,27 @@ Use `cawg_metadata` for creator, credit, and rights metadata; use `c2pa_metadata
 
 ## `cawg_training` Entries
 
-Standard entry names: `cawg.ai_training`, `cawg.ai_generative_training`, `cawg.ai_inference`, and `cawg.data_mining`. Each maps to `{"use": ...}` with `"allowed"`, `"notAllowed"`, or `"constrained"` (include `"constraint_info"` such as a license URL when `"constrained"`). See [cawg.io/training-and-data-mining/1.1](https://cawg.io/training-and-data-mining/1.1/).
+Standard entry names: `cawg.ai_training`, `cawg.ai_generative_training`, `cawg.ai_inference`, and `cawg.data_mining`. Each maps to `{"use": ...}` with `"allowed"`, `"notAllowed"`, or `"constrained"`. An entry may contain only `"use"` and an optional `"constraint_info"`, which must be a non-empty string (for example, a license URL or policy text) and belongs on `"constrained"` entries:
+
+```python
+["cawg_training", {
+    "assertion": {
+        "entries": {
+            "cawg.ai_generative_training": {"use": "notAllowed"},
+            "cawg.ai_training": {
+                "use": "constrained",
+                "constraint_info": "https://example.com/licensing/ai-training",
+            },
+            "cawg.data_mining": {
+                "use": "constrained",
+                "constraint_info": "Permitted for search indexing only; contact licensing@example.com.",
+            },
+        },
+    },
+}]
+```
+
+See [cawg.io/training-and-data-mining/1.1](https://cawg.io/training-and-data-mining/1.1/).
 
 ---
 

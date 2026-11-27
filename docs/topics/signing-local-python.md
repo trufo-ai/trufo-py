@@ -4,7 +4,7 @@
 
 - **Your original media file stays on your machine.**
 - Trufo's local engine (`trufo-provenance`) builds the manifest, runs any media actions, and embeds any watermark locally.
-- Trufo receives only the signing instructions, signs the claim with Trufo's certificate, and (unless you pass `skip_manifest_storage=True`) stores the finished manifest.
+- Trufo receives the signing instructions and the claim to sign, signs the claim with Trufo's certificate, and receives the finished manifest — storing it unless you pass `skip_manifest_storage=True`.
 
 For non-Python stacks or non-Linux hosts, see [Local Signing (Docker)](signing-local-docker.md).
 
@@ -19,7 +19,7 @@ For non-Python stacks or non-Linux hosts, see [Local Signing (Docker)](signing-l
   - `libmagic` (Debian/Ubuntu: `libmagic1`) for media type detection.
   - `ffprobe` for signing audio/video, plus `ffmpeg` for audio/video media actions or watermarking (Debian/Ubuntu: `ffmpeg`).
   - For watermarking HEIC, HEIF, or AVIF with `trufo[local-full]`: `heif-enc` **1.20.0+** with HEVC/AV1 encoder plugins (`libheif-examples`, `libheif-plugin-x265`, `libheif-plugin-aomenc`). Note that Ubuntu 24.04 ships an older `heif-enc`; the [full Docker image](signing-local-docker.md) bundles a compatible build.
-- **API keys:** An `sdk-download` key (requires an active signing/watermark plan or test-host SDK access from `support@trufo.ai`, plus accepting the *Trufo Library License* in [Agreements](https://app.trufo.ai/settings/org#agreements)), and a `c2pa-sign-prod` or `c2pa-sign-test` key.
+- **API keys:** An `sdk-download` key and a `c2pa-sign-prod` or `c2pa-sign-test` key. Creating an `sdk-download` key requires accepting the *Trufo Library License* in [Agreements](https://app.trufo.ai/settings/org#agreements) and either an active paid signing/watermark plan or test SDK access enabled by [support@trufo.ai](mailto:support@trufo.ai) (see [Try It on the Test Host](#try-it-on-the-test-host)).
 
 ---
 
@@ -82,14 +82,14 @@ api_key = load_api_key(TrufoAPIKey.C2PA_SIGN_PROD)
 signed_bytes = sign_c2pa_local(api_key, media_bytes)
 ```
 
-Both helpers accept the same parameters as `sign_c2pa_cloud()`: `actions`, `assertions`, `manifest_settings`, `branded_gp_id`, `signed_input_policy`, `signed_ingredient_policy`, `skip_manifest_storage`, and `trufo_api_url`. Non-fatal notices are emitted as `TrufoServerWarning`, matching Cloud mode.
+Both helpers take `api_key` and `media_bytes` positionally; everything else is keyword-only: `actions`, `assertions`, `manifest_title` / `ingredient_title`, `manifest_settings`, `watermark_settings`, `branded_gp_id`, `signed_input_policy`, `signed_ingredient_policy`, `skip_manifest_storage`, and `trufo_api_url`. Cloud-only parameters (`execution_mode`, `mime_type`, `wait_seconds`) are not accepted. Non-fatal notices are emitted as `TrufoServerWarning`, matching Cloud mode.
 
 ### Minimizing data sent to Trufo
 
-Original media bytes never leave your machine. By default, Trufo receives and stores the finished manifest (which includes any generated thumbnail unless suppressed). If your privacy policy requires keeping thumbnails and manifest copies local:
+Original media bytes never leave your machine. Trufo does receive your `actions` and `assertions` (ingredient bytes replaced by SHA-256 hashes and lengths), the claim to sign — including `generator_info` recording this host's OS and kernel release (e.g., `Linux 6.8.0-45-generic`) — and the finished manifest, which includes any generated thumbnail unless suppressed. The finished manifest is always transmitted (Trufo reads its manifest ID from it); it is stored unless you opt out. If your privacy policy requires keeping thumbnails and manifest copies off Trufo's storage:
 
-- Pass `ThumbnailSettings(policy=ThumbnailPolicy.NONE)` inside `manifest_settings`.
-- Pass `skip_manifest_storage=True` (compatible with non-watermarked signs and `per_ai_system` watermarks; not permitted with `per_embed` watermarks).
+- Pass `ThumbnailSettings(policy=ThumbnailPolicy.NONE)` inside `manifest_settings` (no new thumbnails are generated).
+- Pass `skip_manifest_storage=True` so Trufo discards the manifest after reading its ID (compatible with non-watermarked signs and `per_ai_system` watermarks; not permitted with `per_embed` watermarks).
 
 ---
 

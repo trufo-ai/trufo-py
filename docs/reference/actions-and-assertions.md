@@ -98,9 +98,11 @@ At most one per request; cannot combine with `creation`. `ai_involvement` must b
   1. `branded_gp_id` set → signed as your branded generator product (`c2pa.created`: `trainedAlgorithmicMedia` for `ai_generated`, `compositeWithTrainedAlgorithmicMedia` for `ai_modified`).
   2. `c2pa_first_party_attestable: true` → `c2pa.created` (`trainedAlgorithmicMedia`) with the AI system as software agent.
   3. `c2pa_first_party_attestable: false` → declared AI parent ingredient (`trainedAlgorithmicMedia`) + `c2pa.opened`.
+- **Signed input (manifest kept under `"auto"` or `"keep"`):** No `c2pa.created` and no new `digitalSourceType` are written, even with `branded_gp_id` or a first-party AI system; the kept manifest becomes the `parentOf` ingredient and a notice is returned in `warnings`. Request-level checks still apply first: `ai_involvement` must match the registration, `ai_modified` still requires `branded_gp_id`, and with `branded_gp_id` the product must be approved for the corresponding source type. Under `"auto"`, the [source-class check](#ai_system-source-class-check-under-auto) may refuse the input.
+- **`parentOf` ingredients:** `ai_system` cannot be combined with a `parentOf` ingredient. On an unsigned input, `parentOf` requires `branded_gp_id`, which makes `ai_system` write `c2pa.created`, and a created asset has no parent (`400`); on a signed input, the kept manifest is already the parent (`400`).
 - `ai_modified` requires `branded_gp_id` approved for `compositeWithTrainedAlgorithmicMedia`.
-- Optional `c2pa_ai_disclosure` from the AI system registration is written as a gathered `c2pa.ai-disclosure` assertion.
-- **Errors:** `404 AISystemNotFound`, `400 AISystemInactive`, `400` mode mismatch / `ai_modified` without `branded_gp_id` / source-class conflict / `parentOf` conflict with `branded_gp_id` on unsigned input, `403 C2PACreatedUserAssertionsNotAuthorized`.
+- **`c2pa.ai-disclosure`:** When the AI system was registered with `c2pa_ai_disclosure`, it is written as a gathered `c2pa.ai-disclosure` assertion on every sign that names the AI system (signed inputs included). When the registration omits `c2pa_ai_disclosure`, no `c2pa.ai-disclosure` assertion is written.
+- **Errors:** `404 AISystemNotFound`, `400 AISystemInactive`, `400` mode mismatch / `ai_modified` without `branded_gp_id` / source-class conflict / `parentOf` conflict, `403 C2PACreatedUserAssertionsNotAuthorized`.
 
 ### `c2pa_metadata`
 
@@ -147,22 +149,39 @@ JSON-LD creator/rights metadata (written as JSON; gathered only). Allowlisted `@
 
 ### `cawg_training`
 
-`assertion` must have a single key `entries` mapping entry names (`cawg.ai_training`, `cawg.ai_generative_training`, `cawg.ai_inference`, `cawg.data_mining`) to `{"use": "allowed" | "notAllowed" | "constrained", "constraint_info"?: "..."}`.
+`assertion` must have a single key `entries` mapping entry names (`cawg.ai_training`, `cawg.ai_generative_training`, `cawg.ai_inference`, `cawg.data_mining`) to `{"use": "allowed" | "notAllowed" | "constrained", "constraint_info"?: "..."}`. Each entry may contain only `use` and optional `constraint_info`; `constraint_info`, when present, must be a non-empty string (for example, a license URL or policy text) and is meant for `"constrained"` entries:
+
+```json
+["cawg_training", {
+  "assertion": {
+    "entries": {
+      "cawg.ai_generative_training": {"use": "notAllowed"},
+      "cawg.ai_training": {
+        "use": "constrained",
+        "constraint_info": "https://example.com/licensing/ai-training"
+      }
+    }
+  }
+}]
+```
 
 ### `cawg_identity`
 
-- `"org_interim"`: Your organization's managed CAWG interim certificate (production and test; requires CAWG Organization Certificate plan).
-- `"test"`: Shared Trufo test CAWG certificate (`test.api.trufo.ai` only; `400 InvalidCawgIdentityId` on production hosts).
+- `"org_interim"`: Your organization's Trufo-managed CAWG interim certificate — Trufo provisions and holds the key, so there is nothing to enroll. Accepted on production hosts and on `test.api.trufo.ai`; requires the CAWG Organization Certificate plan on either host. (CAWG certificates you enroll yourself through `/ra/cawg-interim/csr-jwt` — see [Certificates API](certificates-api.md) — are for your own signing stack and are not selectable here.)
+- `"test"`: Shared Trufo test CAWG certificate (`test.api.trufo.ai` only; `400 InvalidCawgIdentityId` on production hosts). No plan required.
+- Any other value, or a missing `cawg_identity_id`, returns `400 InvalidCawgIdentityId`.
 
 ### `custom`
 
-`{"label": "<reverse-dns>", "assertion": {...}}`. Label cannot use `c2pa` namespace or contain `__`, and requires active Domain Validation for the domain (`403 InvalidC2PACustomDomain`). Labels ending in `.metadata` are written as JSON and require a non-empty `@context` object (`400 InvalidMetadataContext`).
+`{"label": "<reverse-dns>", "assertion": {...}}`. Label cannot use `c2pa` namespace or contain `__`. Labels ending in `.metadata` are written as JSON and require a non-empty `@context` object (`400 InvalidMetadataContext`). `custom` assertions cannot be removed later with `redact`.
+
+**Domain matching (shared by `custom` labels, custom `redact` reasons, and custom `action_history` action names):** Each value must fall under a domain with active `c2pa-custom-assertion` Domain Validation (which requires the Custom Domain plan, `c2pa_custom_domain`), or the request returns `403 InvalidC2PACustomDomain`. The validated domain is reversed and matched as a prefix: `example.com` authorizes `com.example` and anything beginning with `com.example.`, including subdomain namespaces such as `com.example.sub.*`.
 
 ### `ingredient`
 
 | Param | Type | Required | Description |
 | --- | --- | --- | --- |
-| `relationship` | string | Yes | `"inputTo"`, `"componentOf"`, or `"parentOf"` (at most one `parentOf`; requires `branded_gp_id` and `media`; cannot combine with `creation` or a kept signed input) |
+| `relationship` | string | Yes | `"inputTo"`, `"componentOf"`, or `"parentOf"` (at most one `parentOf`; requires `branded_gp_id` and `media`; cannot combine with `creation`, `ai_system`, or a kept signed input) |
 | `title` | string | No | `dc:title`; falls back to media's manifest title, then `ingredient_{n}.{ext}` (or `ingredient_{n}`) |
 | `media` | string | For `parentOf` | Base64 bytes (C2PA-validate eligible format); mutually exclusive with `format` |
 | `format` | string | No | MIME type for declared ingredients (required on `componentOf` without `media`, and on `inputTo` with `data`) |
@@ -200,7 +219,7 @@ Requires `branded_gp_id` and an unsigned input (cannot combine with `parentOf` o
 | --- | --- | --- |
 | Readable manifest (valid or invalid) | Kept as `parentOf` with validation results recorded (unless `ai_system` source-class check refuses an input) | Kept with validation results recorded |
 | Manifest referenced only by URL | Refused (`400`) | Refused (`400`) |
-| Unreadable / malformed C2PA data | Removed with a warning; signed as unsigned (a `redact` or `transcode` on that input then fails) | Refused (`400`) |
+| Unreadable / malformed C2PA data | Removed with a warning; signed as unsigned (a `redact` on that input then fails) | Refused (`400`) |
 
 ### `ai_system` source-class check (under `"auto"`)
 
@@ -233,7 +252,7 @@ Production hosts only (`api.trufo.ai` or `eu.api.trufo.ai`). Registrations are i
 | `version` | string | Yes | Version string (register a new AI system per version) |
 | `ai_involvement_modes` | string[] | Yes | Non-empty subset of `["ai_generated", "ai_modified"]` |
 | `c2pa_first_party_attestable` | boolean | No | Default `false`. Requires Created Assertion Acknowledgement accepted in dashboard (`403` otherwise) |
-| `c2pa_ai_disclosure` | object | No | C2PA 2.4 §18.28 model disclosure: `{modelType (req), modelName?, modelIdentifier?, contentProfile?: {humanOversightLevel: "fully_autonomous" \| "prompt_guided" \| "human_validated"}, scientificDomain?, metadata?}` |
+| `c2pa_ai_disclosure` | object | No | C2PA 2.4 §18.28 `ai-model-disclosure-map`: `{modelType (req), modelName?, modelIdentifier?, contentProfile?: {humanOversightLevel: "fully_autonomous" \| "prompt_guided" \| "human_validated"}, scientificDomain?, metadata?}`. `modelType` must be a C2PA model type such as `"c2pa.types.model"` (or a framework-specific `c2pa.types.model.*` value). Omit to write no `c2pa.ai-disclosure` assertion |
 | `nickname` | string | No | Internal display label |
 
 **Response (201):** `{"ai_system_id": "aisys_..."}`.
@@ -250,7 +269,7 @@ Production hosts only (`api.trufo.ai` or `eu.api.trufo.ai`). Registrations are i
 
 ## Software Agents (`/c2pa/software-agent/*`)
 
-Regional (register on the same endpoint you sign against). **Auth:** `c2pa-sign-prod`, `c2pa-sign-test`, or access token with `c2pa_sign`.
+Production hosts only (`api.trufo.ai` and `eu.api.trufo.ai`); `test.api.trufo.ai` does not serve these routes. Records are regional: register on the production endpoint whose region you sign against. Signing on `test.api.trufo.ai` resolves software agents registered on `api.trufo.ai` (Global), so to test `creation` or `action_history` with a software agent, register it on `api.trufo.ai` (a `c2pa-sign-test` key is accepted) and pass the returned ID to the test host. **Auth:** `c2pa-sign-prod`, `c2pa-sign-test`, or access token with `c2pa_sign`.
 
 - **`POST /c2pa/software-agent/add`:** Request `{"agent": {"name": str, "version"?: str, "operating_system"?: str}, "nickname"?: str}`. Response (201): `{"software_agent_id": "swagent_..."}`.
 - **`POST /c2pa/software-agent/list`:** Request `{}`. Response (200): `{"items": [{software_agent_id, nickname, agent}, ...]}`.

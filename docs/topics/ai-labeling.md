@@ -42,6 +42,8 @@ ai_system_id = resp.json()["ai_system_id"]  # "aisys_..."
 
 Registering an AI system assigns one watermark ID per involvement mode (see [Watermark billing](../reference/watermarking-api.md#watermark-billing)). Its name, version, model disclosure, and your organization's validated legal name can appear publicly in signed manifests and watermark lookups.
 
+`c2pa_ai_disclosure` is optional. When present it must follow the C2PA 2.4 `ai-model-disclosure-map` (`modelType` is required, e.g. `"c2pa.types.model"`), and Trufo writes it as a `c2pa.ai-disclosure` assertion on every sign that names this AI system. When omitted, no `c2pa.ai-disclosure` assertion is written — the AI labeling then relies on the `digitalSourceType` alone. Because registrations are immutable, register a new AI system to add or change the disclosure.
+
 You can list systems with `POST /ai-system/list` and deactivate/reactivate one with `POST /ai-system/status`.
 
 ---
@@ -80,6 +82,8 @@ Signing `ai_modified` content requires a `branded_gp_id` approved for `composite
 
 - Under the default `signed_input_policy: "auto"`, Trufo keeps the existing manifest and declares no new source type — **except** when the input's source class is `camera_captured` or `human_created`, which Trufo rejects (`400`) **regardless of the request's actions**.
 - Setting `signed_input_policy` to `"keep"` skips the source-class check and keeps the existing manifest without declaring a new AI source type.
+- In both cases no `c2pa.created` is written — even with `branded_gp_id` or a first-party AI system — and a notice explains this in `warnings`. The `c2pa.ai-disclosure` assertion (if registered) and a `per_ai_system` watermark are still applied. Request-level checks still run: `ai_modified` needs `branded_gp_id`, and a `branded_gp_id` must be approved for the matching source type.
+- `ai_system` cannot be combined with a `parentOf` ingredient (`400`): a signed input is already its own parent, and on an unsigned input `parentOf` needs `branded_gp_id`, which makes the AI system write `c2pa.created`.
 
 See [Signed inputs and ingredients](../reference/actions-and-assertions.md#signed-inputs-and-ingredients) for the full source-class rules.
 
@@ -102,7 +106,7 @@ signed_bytes = sign_c2pa_cloud(
 )
 ```
 
-See [Watermarking and Recovery](watermarking.md) for `effort_policy` and `per_embed` vs. `per_ai_system` details.
+See [Watermarking and Recovery](watermarking.md) for `effort_policy` and `per_embed` vs. `per_ai_system` details. Note that `effort_policy: "require_if_supported"` checks only the MIME type: a file of an eligible type that fails a per-file restriction (see [Media Format Support](../reference/media-formats.md#watermark-image-restrictions)) still fails the sign; use `"best_effort"` to sign without the watermark in that case.
 
 ---
 

@@ -11,7 +11,7 @@ Control whether Trufo retains signed manifests, whether thumbnails are embedded 
 | **Local mode** (Python SDK or Docker) | Keeps original media and ingredient bytes on your infrastructure | Requires `sdk-download` key and Trufo Library License |
 | `skip_manifest_storage=True` | Prevents Trufo from storing a copy of the finished manifest | Incompatible with `per_embed` watermarking (`400 ManifestStorageRequired`) |
 | `thumbnail_settings.policy` | Controls claim and ingredient thumbnail generation (`auto`, `auto_no_ingredient`, `none`) | `"none"` shrinks manifest size and stops generated thumbnails from leaving your host, at the cost of no validator preview thumbnails |
-| **EU endpoint** (`eu.api.trufo.ai`) | Keeps Cloud-mode media processing and request logs in EU infrastructure | Register software agents on the same region you sign against |
+| **EU endpoint** (`eu.api.trufo.ai`) | Keeps Cloud-mode media processing, `TASK` S3 objects, and request logs in EU infrastructure | Signing records and watermark IDs are shared globally; register software agents on the same region you sign against |
 
 ---
 
@@ -31,7 +31,13 @@ signed_bytes = sign_c2pa_cloud(
 )
 ```
 
-In **Local mode** (`sign_c2pa_local()` or `trufo-local`), original media and ingredient bytes never leave your machine, but the finished manifest is still sent to Trufo unless `skip_manifest_storage=True`. For strict zero-media-and-manifest retention in Local mode, combine both:
+In **Local mode** (`sign_c2pa_local()` or `trufo-local`), original media and ingredient bytes never leave your machine. What does travel to Trufo:
+
+- **Preprocess:** your `actions` and `assertions` (ingredient `media`/`data` replaced by SHA-256 hashes and byte lengths), the input's MIME type, and your policy settings.
+- **Claim signing:** the claim to be signed, including manifest titles and `generator_info` recording your host's OS and kernel release (e.g., `Linux 6.8.0-45-generic`).
+- **Commit:** the finished manifest (thumbnails, embedded `ingredient.data`, prior C2PA history). It is always sent so Trufo can read its manifest ID; with `skip_manifest_storage=True` Trufo discards it after reading the ID instead of persisting it.
+
+`thumbnail_settings.policy="none"` stops new thumbnails from being generated (thumbnails inherited from a signed input's history are kept). For the strictest Local-mode retention, combine both:
 
 ```python
 from trufo import sign_c2pa_local
@@ -90,14 +96,14 @@ Stored content records can be inspected or withdrawn via `/content/get`, `/conte
 
 ## Regional Processing and Ephemeral Task Storage
 
-- **Cloud region selection:** Call `https://eu.api.trufo.ai` (instead of `https://api.trufo.ai`) to keep Cloud-mode media processing and request logs in EU infrastructure. Your organization's `default_content_region` setting applies to dashboard workflows only — configure the API host explicitly in your client.
+- **Cloud region selection:** Call `https://eu.api.trufo.ai` (instead of `https://api.trufo.ai`) to keep Cloud-mode media processing, `TASK` mode's ephemeral S3 objects, and request logs in EU infrastructure. Accounts, API keys, AI system registrations, signing records, and watermark IDs are shared across regions — content signed via either endpoint is recoverable from either (see [Regions](../reference/platform-api.md#regions)). Your organization's `default_content_region` setting applies to dashboard workflows only — configure the API host explicitly in your client.
 - **Async S3 tasks (`TASK` mode):** Ephemeral upload URLs expire after 1 hour; download URLs stay valid for up to 15 minutes (refreshable via `GET /tasks/{task_id}` for 24 hours). Ephemeral S3 input and output objects are deleted automatically after 1–2 days.
 
 ---
 
 ## Remote Manifests
 
-Currently, Trufo embeds C2PA manifests directly inside the signed media file. Hosting manifests remotely (external manifest URLs rather than embedded JUMBF) is not yet supported on signing; if an incoming file references an external manifest by URL, Trufo currently refuses it (`400`) — see [Verification](verification.md#4-incoming-signed-files-and-remote-manifests).
+Trufo embeds C2PA manifests directly inside the signed media file. Hosting manifests remotely (external manifest URLs rather than embedded JUMBF) is not supported on signing; if an incoming file references an external manifest by URL, Trufo refuses it (`400`) — see [Verification](verification.md#4-incoming-signed-files-and-remote-manifests).
 
 ---
 

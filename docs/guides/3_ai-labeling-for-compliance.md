@@ -37,7 +37,7 @@ Your product modifies an existing user-uploaded photo, video, or audio track wit
 
 - **What you need:** A **Branded Generator Product** (`branded_gp_id`, approved via Branded Product Validation) — or your own conformant Generator Product certificate.
 - **Why:** Attesting that an asset was modified by AI (`ai_modified`) or linking an original source via `parentOf` + `action_history` is a `created` assertion that C2PA requires a validated generator product to vouch for.
-- **Handling user uploads that already have a camera/human manifest:** Under the default `signed_input_policy: "auto"`, Trufo rejects signing a `camera_captured` or `human_created` input with an `ai_system` assertion (regardless of actions) so you do not accidentally overwrite a camera photo's history with a conflicting claim. For legitimate AI-editing workflows on user photos, either link the original photo as a `parentOf` ingredient with explicit `action_history` (with your `branded_gp_id`) or set `signed_input_policy: "keep"` when appropriate.
+- **Handling user uploads that already have a camera/human manifest:** Under the default `signed_input_policy: "auto"`, Trufo rejects signing a `camera_captured` or `human_created` input with an `ai_system` assertion (regardless of actions) so you do not accidentally overwrite a camera photo's history with a conflicting claim. `signed_input_policy: "keep"` skips that check but only preserves the incoming manifest — it does not declare a new AI source type. To declare an AI edit on a user photo, sign the edited output (without the old manifest) under your `branded_gp_id`, link the original photo as a `parentOf` ingredient, and declare the edit in `action_history` (e.g., `compositeWithTrainedAlgorithmicMedia`). Leave `ai_system` out of that request: it cannot be combined with `parentOf` when `branded_gp_id` is set.
 
 ### Scenario C: Wrapping third-party hosted models
 
@@ -60,7 +60,7 @@ C2PA manifests are routinely stripped by social platforms, messaging apps, and i
 **Three practical watermarking habits:**
 
 1. **Always put the `watermark` action last.** If you also `resize`, `crop`, `trim`, or `transcode` in the same call, put `watermark` after those actions so transforms don't weaken the mark (Trufo emits a warning if a media action runs after `watermark`).
-2. **Pick the right `effort_policy` for mixed-format pipelines.** A bare `["watermark", {}]` defaults to `"require"` (fails the sign if the format isn't watermarkable, such as PDF or SVG). If your pipeline handles mixed formats and still wants C2PA signing on unsupported formats, use `"require_if_supported"` (or `"best_effort"` if runtime watermark failures should never block delivery) and monitor `TrufoServerWarning` / `warnings`.
+2. **Pick the right `effort_policy` for mixed-format pipelines.** A bare `["watermark", {}]` defaults to `"require"` (fails the sign if the format isn't watermarkable, such as PDF or SVG). If your pipeline handles mixed formats and still wants C2PA signing on unsupported formats, use `"require_if_supported"` (or `"best_effort"` if runtime watermark failures should never block delivery) and monitor `TrufoServerWarning` / `warnings`. Note that `"require_if_supported"` only checks the MIME type: a supported container that fails at embed time (e.g., a CMYK or 1-bit JPEG/TIFF) still fails the sign.
 3. **Never ship without checking the watermark format rules.** Watermarking supports SDR progressive video (H.264, HEVC, ProRes 422), common 8/16-bit images, and mono/stereo or multichannel lossless audio; HDR video and 1-bit/CMYK images are not watermark-encodable. Check [Media Format Support](../reference/media-formats.md) before turning on `"require"` in production.
 
 ---
@@ -68,7 +68,7 @@ C2PA manifests are routinely stripped by social platforms, messaging apps, and i
 ## 4. Scaling Media & Choosing Deployment Topology
 
 - **Images under 10 MB:** Cloud `REQUEST` mode is simplest and requires zero local setup.
-- **Large images (>10 MB), audio, and video in Cloud mode:** Use `ExecutionMode.TASK` (S3 upload → submit → poll → stream download). Note that `TASK` mode runs on production hosts only; use small images on `test.api.trufo.ai` during early integration.
+- **Large files (>10 MB), and any audio or video with media actions (`watermark`, `resize`, `crop`, `trim`, `transcode`, `repackage`) in Cloud mode:** Use `ExecutionMode.TASK` (S3 upload → submit → poll → stream download). `REQUEST` mode only handles files up to 10 MB and applies media actions to images only. Note that `TASK` mode runs on production hosts only; use small images on `test.api.trufo.ai` during early integration.
 - **High-volume video, strict VPC residency, or non-Python backends (Node.js, Go, .NET):**
   - Run **Local mode via Docker** (`ghcr.io/trufo-ai/trufo-local:2.4` or `2.4-full`) as a sidecar alongside your application container — works from any language over local HTTP and keeps raw media inside your network.
   - If you run Python GPU workers and embed video watermarks at scale, **`trufo[local-full]`** automatically uses an NVIDIA CUDA GPU when present (Docker `2.4-full` is CPU-only, where `WatermarkSettings(profile="fast")` offers ~5× faster CPU video watermarking with a modest durability trade-off).
