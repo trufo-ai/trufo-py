@@ -1,14 +1,15 @@
 # Copyright 2025-2026 Trufo, Inc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-"""Quickstart: sign a media file with a C2PA manifest.
+"""Companion script: sign a media file with a C2PA manifest.
 
 Demonstrates Cloud mode and Local mode:
   - Cloud, direct  (media sent in the request body)
-  - Cloud, via S3  (TASK; production only; see the companion guide)
+  - Cloud, via S3  (TASK; production only; see docs/topics/signing-cloud.md)
   - Local          (media never leaves this machine)
 
-See docs/quickstart/2_c2pa_signing.md for details.
+See docs/topics/signing-cloud.md and docs/topics/signing-local-python.md
+for details.
 Requires a c2pa-sign-test API key — set TRUFO_C2PA_SIGN_TEST_API_KEY
 or save it to ~/.trufo/credentials/c2pa_sign_test_api_key.
 """
@@ -55,7 +56,8 @@ for notice in caught:
 
 # --- 2. Cloud mode, large media via S3 ---------------------------------------
 # TASK is not available on the test host. For production, use sign_c2pa_cloud(...,
-# execution_mode=ExecutionMode.TASK, mime_type="image/jpeg"); see the guide.
+# execution_mode=ExecutionMode.TASK, mime_type="image/jpeg"); see
+# docs/topics/signing-cloud.md.
 
 
 # --- 3. Local mode -----------------------------------------------------------
@@ -63,7 +65,7 @@ for notice in caught:
 # media file is not sent.
 #
 # Requires:  pip install "trufo[local-sign-only]"   (or "trufo[local-full]")
-# Platform and setup: see docs/local/python.md.
+# Platform and setup: see docs/topics/signing-local-python.md.
 
 try:
     from trufo import sign_c2pa_local_test

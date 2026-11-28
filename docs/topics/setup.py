@@ -1,15 +1,16 @@
 # Copyright 2025-2026 Trufo, Inc. All rights reserved.
 # SPDX-License-Identifier: Apache-2.0
 
-"""Quickstart: authenticate with the TPS and persist tokens for reuse.
+"""Companion script: authenticate with Trufo and persist tokens for reuse.
 
 Steps:
   1. Load the `trufo-api` API key (env var or disk).
-  2. Run the device authorization flow — visit the printed URL in a browser
-     and approve the device.
-  3. Save the session tokens so future runs skip the device flow.
+  2. Sign in: the loopback flow opens a browser on this machine (nothing to
+     type); on a headless host it falls back to the device flow, which prints
+     a URL and a confirmation code to approve from any browser.
+  3. Save the session tokens so future runs skip sign-in.
 
-See docs/quickstart/0_setup.md for setup instructions.
+See docs/topics/setup.md for setup instructions.
 Requires TRUFO_API_KEY env var or ~/.trufo/credentials/trufo_api_key.
 """
 
@@ -23,14 +24,16 @@ assert (
     api_key
 ), "trufo-api key not found. Set TRUFO_API_KEY or run: trufo set-api-key trufo-api <KEY>"
 
-# --- device authorization flow ---
+# --- sign in (loopback first, device flow as fallback) ---
 
 session = TrufoSession()
 session.init_session(api_key=api_key)
-# Prints two lines, e.g.:
+# Opens a browser on this machine and completes sign-in automatically.
+# Without a local browser it falls back to the device flow and prints, e.g.:
 #   Visit: https://app.trufo.ai/device?code=ABCD-1234
-#   Enter code: ABCD-1234
-# Open the URL in a browser and approve.  The script polls until approved.
+#   Confirm code: ABCD-1234
+# Open the URL in any browser, check the code matches, and approve; the script
+# polls until approved.  Pass use_device=True to skip the loopback attempt.
 
 print("Authenticated.")
 print(f"Access token: {session.access_token[:20]}...")
@@ -40,7 +43,7 @@ print(f"Access token: {session.access_token[:20]}...")
 save_session(session)
 print("Session saved to ~/.trufo/session")
 
-# --- reload in future runs (skips device flow) ---
+# --- reload in future runs (skips sign-in) ---
 
 # session = load_session()
 # data = session.make_request("/some/endpoint", {"key": "value"})
