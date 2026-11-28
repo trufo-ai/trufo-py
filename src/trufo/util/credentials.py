@@ -68,7 +68,7 @@ class TrufoAPIKey(str, Enum):
     TSA = "tsa"
 
 
-# env var name and file path for each key type
+# env var name and file name for each key type
 _SESSION_ACCESS_TOKEN_ENV_VAR = "TRUFO_ACCESS_TOKEN"
 _SESSION_REFRESH_TOKEN_ENV_VAR = "TRUFO_REFRESH_TOKEN"
 
@@ -83,15 +83,16 @@ _API_KEY_ENV_VARS = {
     TrufoAPIKey.WATERMARK_PROD: "TRUFO_WATERMARK_PROD_API_KEY",
     TrufoAPIKey.TSA: "TRUFO_TSA_API_KEY",
 }
-_API_KEY_FILES = {
-    TrufoAPIKey.TRUFO_API: CREDENTIALS_DIR / "trufo_api_key",
-    TrufoAPIKey.C2PA_SIGN_PROD: CREDENTIALS_DIR / "c2pa_sign_prod_api_key",
-    TrufoAPIKey.C2PA_SIGN_TEST: CREDENTIALS_DIR / "c2pa_sign_test_api_key",
-    TrufoAPIKey.CONTENT_RECOVER_TEST: CREDENTIALS_DIR / "content_recover_test_api_key",
-    TrufoAPIKey.CONTENT_RECOVER_PROD: CREDENTIALS_DIR / "content_recover_prod_api_key",
-    TrufoAPIKey.WATERMARK_TEST: CREDENTIALS_DIR / "watermark_test_api_key",
-    TrufoAPIKey.WATERMARK_PROD: CREDENTIALS_DIR / "watermark_prod_api_key",
-    TrufoAPIKey.TSA: CREDENTIALS_DIR / "tsa_api_key",
+# joined to CREDENTIALS_DIR when used
+_API_KEY_FILENAMES = {
+    TrufoAPIKey.TRUFO_API: "trufo_api_key",
+    TrufoAPIKey.C2PA_SIGN_PROD: "c2pa_sign_prod_api_key",
+    TrufoAPIKey.C2PA_SIGN_TEST: "c2pa_sign_test_api_key",
+    TrufoAPIKey.CONTENT_RECOVER_TEST: "content_recover_test_api_key",
+    TrufoAPIKey.CONTENT_RECOVER_PROD: "content_recover_prod_api_key",
+    TrufoAPIKey.WATERMARK_TEST: "watermark_test_api_key",
+    TrufoAPIKey.WATERMARK_PROD: "watermark_prod_api_key",
+    TrufoAPIKey.TSA: "tsa_api_key",
 }
 
 
@@ -153,7 +154,7 @@ def load_api_key(key_type: str | TrufoAPIKey) -> str | None:
     if env_key:
         return env_key.strip()
 
-    key_file = _API_KEY_FILES[kt]
+    key_file = CREDENTIALS_DIR / _API_KEY_FILENAMES[kt]
     if key_file.exists():
         content = key_file.read_text(encoding="utf-8").strip()
         if content:
@@ -173,7 +174,7 @@ def save_api_key(key_type: str | TrufoAPIKey, api_key: str) -> None:
         ValueError: If *key_type* is not a valid API key type.
     """
     kt = _resolve_api_key_type(key_type)
-    _write_private(_API_KEY_FILES[kt], api_key + "\n")
+    _write_private(CREDENTIALS_DIR / _API_KEY_FILENAMES[kt], api_key + "\n")
 
 
 # --- Session tokens ---

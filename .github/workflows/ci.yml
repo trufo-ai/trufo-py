@@ -8,21 +8,36 @@ permissions:
   contents: read
 
 jobs:
-  unit-tests:
+  unit-tests-python:
+    name: unit-tests (Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14", "3.15"]
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
-          python-version: "3.12"
+          python-version: ${{ matrix.python-version }}
       - name: Install package
-        # the engine comes from Trufo's index, so the trufo-local service tests skip here; they
-        # run on release tags in build-images.yml
+        # the engine comes from Trufo's index, so the engine tests (tests/engine) run on release
+        # tags in build-images.yml
         run: pip install -e '.[test]'
       - name: Check formatting
+        if: matrix.python-version == '3.12'
         run: |
           pip install black==26.1.0 isort==8.0.1
           isort --check-only src tests trufo-local docs
           black --check src tests trufo-local docs
       - name: Run unit tests
         run: python -m pytest tests/unit -v
+
+  # the required status check: passes only if the unit tests passed on every Python
+  unit-tests:
+    needs: unit-tests-python
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require the unit tests to pass
+        run: test "${{ needs.unit-tests-python.result }}" = success

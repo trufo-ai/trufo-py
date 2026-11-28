@@ -142,12 +142,9 @@ jobs:
           # (pillow-heif from Trufo's index)
           pip install -e '.[test]' fastapi httpx 'trufo-provenance[c2pa]'
 
-      - name: Run unit tests
-        run: |
-          set -euo pipefail
-          # the tests skip without fastapi or the engine, so a missing one fails here instead
-          python -c "import fastapi, tfprov"
-          python -m pytest tests/unit/trufo_local -v
+      - name: Run engine tests
+        # tests/engine/conftest.py fails the run when fastapi, httpx or the engine is missing
+        run: python -m pytest tests/engine -v
 
       - name: Build images
         id: build

@@ -3,6 +3,7 @@
 
 """Tests for the trufo-local service: path checks, error mapping and sign slots."""
 
+import asyncio
 import importlib.metadata
 import json
 import os
@@ -13,16 +14,12 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from types import SimpleNamespace
 
+import app as service
 import pytest
-
-pytest.importorskip("fastapi")
-pytest.importorskip("tfprov", minversion="2.2.0")
-
-import app as service  # noqa: E402
-import tfprov  # noqa: E402
-from fastapi.testclient import TestClient  # noqa: E402
-from tfprov.c2pa_generator.trufo_actions import WatermarkApplyError  # noqa: E402
-from tfprov.c2pa_py.errors import RedactionError, RemoteSignError  # noqa: E402
+import tfprov
+from fastapi.testclient import TestClient
+from tfprov.c2pa_generator.trufo_actions import WatermarkApplyError
+from tfprov.c2pa_py.errors import RedactionError, RemoteSignError
 
 API_KEY = "c2pa-sign-test:key"
 TRUFO_API_URL = "https://test.api.trufo.ai"
@@ -162,7 +159,7 @@ def test_refused_before_the_engine(sign, folders, engine, fields, status, detail
 
 
 @pytest.mark.parametrize("settings", [None, {}, {"profile": "fast"}])
-def test_accepted(sign, folders, engine, settings):
+def test_sign_passes_resolved_paths_and_returns_output(sign, folders, engine, settings):
     (folders / "in/link.jpg").symlink_to(folders / "in/photo.jpg")
     (folders / "both/signed.jpg").write_bytes(b"old")
     fields = {
@@ -306,23 +303,89 @@ def test_two_signs_at_a_time_while_health_answers(client, sign, folders, engine)
 
 
 def test_docs_are_off(client):
-    assert client.get("/docs").status_code == client.get("/openapi.json").status_code == 404
+    pages = ["/docs", "/redoc", "/openapi.json"]
+    assert [client.get(page).status_code for page in pages] == [404] * 3
 
 
-def test_gone_client_is_not_signed(client, folders, engine):
-    body = {IN: f"{folders}/in/photo.jpg", OUT: f"{folders}/out/signed.jpg", "actions": []}
-    messages = [{"type": "http.request", "body": json.dumps(body).encode()}]
-    sent = []
+@pytest.fixture
+def sign_slots(monkeypatch):
+    """The app's sign slots, which set ``waited`` when a request asks for one while none is free;
+    list it before client, which makes them at start."""
 
-    async def receive():
-        return messages.pop(0) if messages else {"type": "http.disconnect"}
+    class Slots(asyncio.BoundedSemaphore):
+        waited = threading.Event()
 
-    async def send(message):
-        sent.append(message)
+        async def acquire(self):
+            if self.locked():
+                self.waited.set()
+            return await super().acquire()
 
+    monkeypatch.setattr(asyncio, "BoundedSemaphore", Slots)
+    return Slots
+
+
+def test_gone_client_is_not_signed(sign_slots, client, folders, engine):
+    entered, release = threading.Semaphore(0), threading.Event()
+    stays, left = threading.Event(), threading.Event()
+
+    def block(kwargs):
+        entered.release()
+        assert release.wait(10)
+
+    engine.side_effect = block
     headers = [(b"content-type", b"application/json"), (b"x-api-key", API_KEY.encode())]
     scope = {"type": "http", "method": "POST", "path": "/c2pa/sign", "query_string": b""}
-    client.portal.call(service.app, {**scope, "headers": headers}, receive, send)
-    # the request reached the slot: an earlier refusal would carry another status
-    assert sent[0]["status"] == 499
-    assert engine.calls == []
+
+    def post(name, leaves):
+        """Start a sign to out/``name`` on the app, as a task that can be cancelled; its client
+        leaves once ``leaves`` is set. Return the task's future and the messages sent back."""
+        body = {IN: f"{folders}/in/photo.jpg", OUT: f"{folders}/out/{name}", "actions": []}
+        messages = [{"type": "http.request", "body": json.dumps(body).encode()}]
+        sent = []
+
+        async def receive():
+            if messages:
+                return messages.pop(0)
+            # until it leaves, the client sends nothing
+            while not leaves.is_set():
+                await asyncio.sleep(0.01)
+            return {"type": "http.disconnect"}
+
+        async def send(message):
+            sent.append(message)
+
+        task = client.portal.start_task_soon(
+            service.app, {**scope, "headers": headers}, receive, send
+        )
+        return task, sent
+
+    requests = []
+    try:
+        requests += [post(f"{n}.jpg", stays) for n in range(2)]
+        assert entered.acquire(timeout=10) and entered.acquire(timeout=10)
+        requests.append(post("signed.jpg", left))
+        # both slots are taken: it waits for one, and only then leaves
+        assert sign_slots.waited.wait(10)
+        left.set()
+        release.set()
+        for task, _ in requests:
+            task.result(timeout=10)
+    finally:
+        # nothing waits past the test, also when it fails or a slot is never freed
+        release.set()
+        for task, _ in requests:
+            task.cancel()
+    statuses = [sent[0]["status"] for _, sent in requests]
+    assert (statuses, len(engine.calls)) == ([200, 200, 499], 2)
+
+
+def test_key_is_not_logged(sign, folders, engine, logged, capfd):
+    def refuse_the_first(kwargs):
+        if len(engine.calls) == 1:
+            raise RemoteSignError("Failed.", status_code=500, detail="Internal server error.")
+
+    engine.side_effect = refuse_the_first
+    assert [sign().status_code for _ in range(2)] == [502, 200]
+    output = logged() + "".join(capfd.readouterr())
+    written = [path.read_bytes() for path in folders.rglob("*") if path.is_file()]
+    assert API_KEY not in output and not [data for data in written if API_KEY.encode() in data]
