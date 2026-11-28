@@ -15,5 +15,5 @@ for _module in ("tfprov", "fastapi", "httpx"):
     except ImportError as exc:
         raise pytest.UsageError(
             f"The engine tests need {_module}, which cannot be imported: {exc}. Install "
-            '"trufo[local-sign-only]" (see docs/local/python.md), fastapi and httpx.'
+            '"trufo[local-sign-only]" (see docs/topics/signing-local-python.md), fastapi and httpx.'
         ) from None

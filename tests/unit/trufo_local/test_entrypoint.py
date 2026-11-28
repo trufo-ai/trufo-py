@@ -263,7 +263,7 @@ def test_start_lines(start, tmp_path, monkeypatch, check, line):
     expected = line.format(
         tmp=tmp_path,
         user=f"{os.getuid()}:{os.getgid()}",
-        docs="https://github.com/trufo-ai/trufo-py/blob/main/docs/local/docker.md",
+        docs="https://github.com/trufo-ai/trufo-py/blob/main/docs/topics/signing-local-docker.md",
         version=entrypoint.read_pinned_versions()["trufo-provenance"],
     )
     assert (start.run(), start.exec) == (expected, [])
